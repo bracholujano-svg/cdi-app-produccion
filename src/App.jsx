@@ -67,6 +67,51 @@ const getDaysLeft = (targetDate) => {
   } catch(e) { return null; }
 };
 
+// ⚠️ TU URL MAESTRA DEL SCRIPT
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhcbHCuH4qeys0TkvwTdzZ4F10EFXSZcANLm7wbl3dWmZSsVt4usY6Joy6E2JB5s8Uaw/execec"; 
+
+const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
+  return new Promise(async (resolve, reject) => {
+    const pTerm = (pedidoBusqueda || "").trim();
+    const aTerm = (articuloBusqueda || "").trim();
+    if (!pTerm && !aTerm) return reject("INGRESAR PEDIDO O ÚLTIMOS DÍGITOS DEL ARTÍCULO.");
+    if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
+
+    try {
+      const urlParams = new URLSearchParams({ pedido: pTerm, articulo: aTerm });
+      const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+      const data = await response.json();
+      if (data.success) resolve(data.results || [data.result]); 
+      else reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
+    } catch (error) { reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT."); }
+  });
+};
+
+const loginEnGoogle = async (usuario, clave) => {
+  try {
+    const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
+    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: "Error de conexión con el servidor de seguridad." };
+  }
+};
+
+const registrarEnGoogle = async (usuario, clave, nombre, area) => {
+  if (!usuario.endsWith('@cdiexhibiciones.co')) {
+    return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
+  }
+  try {
+    const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area });
+    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: "Error al registrar en el servidor." };
+  }
+};
+
 export default function App() {
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
     const saved = safeStorage.get('cdi_supervisor_session');
@@ -100,7 +145,6 @@ export default function App() {
   const [showCoordinationModal, setShowCoordinationModal] = useState(false);
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
-  const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
   const [showReportPreviewModal, setShowReportPreviewModal] = useState(false);
   
@@ -145,10 +189,14 @@ export default function App() {
   const [inputManualFecha, setInputManualFecha] = useState("");
   const [inputManualDetalle, setInputManualDetalle] = useState("");
 
+  const [excelSearchPedido, setExcelSearchPedido] = useState("");
   const [excelSearchArticulo, setExcelSearchArticulo] = useState("");
   const [excelSearchLoading, setExcelSearchLoading] = useState(false);
   const [excelSearchError, setExcelSearchError] = useState("");
   const [excelSearchSuccess, setExcelSearchSuccess] = useState("");
+
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchSelector, setShowSearchSelector] = useState(false);
 
   const [repDate, setRepDate] = useState(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -194,80 +242,95 @@ export default function App() {
     }
   }, [selectedOrder]);
 
-  // ==========================================
-  // LÓGICA DE BÚSQUEDA REAL EN GOOGLE SHEETS
-  // ==========================================
+  const fillFormWithResult = (result) => {
+    const form = document.getElementById('nuevoRegistroForm');
+    if (form) {
+        form.pedidoNum.value = result.pedido || "";
+        form.codArticulo.value = result.articulo || "";
+        form.cliente.value = result.cliente || "";
+        form.nombre.value = result.nombre || "";
+        form.cantidad.value = result.cantidad || 1;
+    }
+  };
+
   const doExcelSearch = async () => {
-      setExcelSearchLoading(true); 
-      setExcelSearchError(""); 
-      setExcelSearchSuccess("");
-
-      const codigo = excelSearchArticulo.trim();
-      if (!codigo) {
-          setExcelSearchError("POR FAVOR INGRESA EL CÓDIGO DE ARTÍCULO.");
-          setExcelSearchLoading(false);
-          return;
-      }
-
+      setExcelSearchLoading(true); setExcelSearchError(""); setExcelSearchSuccess("");
+      setSearchResults([]); setShowSearchSelector(false);
       try {
-          // Tu URL de Google Apps Script con el parámetro de búsqueda
-          const url = `https://script.google.com/macros/s/AKfycbx6VvvlHp15V5PU5lI9F75b1Yepb5sUD_n3VDGtWLz5b-_w3ZbNvmMEiLupoYG8cPBRMg/exec?codigo=${encodeURIComponent(codigo)}`;
-          
-          const respuesta = await fetch(url);
-          const resultado = await respuesta.json();
-
-          if (resultado.encontrado) {
-              const form = document.getElementById('nuevoRegistroForm');
-              if (form) {
-                  // Mapeamos los datos devueltos por Google Sheets a los inputs del formulario
-                  form.pedidoNum.value = resultado.pedido || "";
-                  form.codArticulo.value = resultado.articulo || codigo;
-                  form.cliente.value = resultado.cliente || "";
-                  form.nombre.value = resultado.producto || ""; 
-                  form.cantidad.value = 1; // Por defecto o si el script lo envía
-              }
-              setExcelSearchSuccess(`✅ Encontrado: ${resultado.producto || 'Artículo'}`);
+          const results = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
+          if (results.length === 1) {
+              fillFormWithResult(results[0]);
+              setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre}`);
           } else {
-              setExcelSearchError(resultado.error || "CÓDIGO NO ENCONTRADO EN LA BASE DE DATOS.");
+              setSearchResults(results);
+              setShowSearchSelector(true);
+              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
           }
       } catch (err) { 
-          setExcelSearchError("ERROR DE CONEXIÓN CON GOOGLE SHEETS."); 
+          setExcelSearchError(err instanceof Error ? err.message : String(err)); 
       } finally { 
           setExcelSearchLoading(false); 
       }
   };
 
   const handleVirtualLogin = async (e) => {
-    e.preventDefault(); setAuthError(""); 
+    e.preventDefault(); 
+    setAuthError(""); 
     const userStr = e.target.username.value.trim().toLowerCase();
+    const passStr = e.target.password.value.trim();
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+
+    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE...");
+
+    const res = await loginEnGoogle(emailFull, passStr);
     
-    const newProfile = { name: userStr.toUpperCase(), email: userStr + '@cdiexhibiciones.co', area: "Administrador / Todos" };
-    setSupervisorProfile(newProfile);
-    safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
-    
-    const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
-    setSavedLogins(newRecent); safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+    if (res.success) {
+      setAuthError("");
+      const newProfile = { 
+        name: res.result.nombre, 
+        email: emailFull, 
+        area: res.result.rol
+      };
+      setSupervisorProfile(newProfile);
+      safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+      
+      const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
+      setSavedLogins(newRecent); 
+      safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+      
+      if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
+        setAreaFilter(newProfile.area);
+      }
+    } else {
+      setAuthError(res.error);
+    }
   };
 
   const handleVirtualRegister = async (e) => {
-    e.preventDefault(); setAuthError("");
+    e.preventDefault(); 
+    setAuthError("");
     const name = e.target.name.value.trim().toUpperCase();
     const userStr = e.target.username.value.trim().toLowerCase();
-    const pass = e.target.password.value;
-    const area = e.target.area.value;
+    const pass = e.target.password.value.trim();
+    const area = e.target.area ? e.target.area.value : 'Pendiente';
     
     if (!/^\d+$/.test(pass) || pass.length < 4) {
-      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); return;
+      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
+      return;
     }
 
-    const newProfile = { name, email: userStr + '@cdiexhibiciones.co', area, username: userStr };
-    setSupervisorProfile(newProfile);
-    safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
+
+    const res = await registrarEnGoogle(emailFull, pass, name, area);
     
-    const newRecent = [{ username: userStr, name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
-    setSavedLogins(newRecent); safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
-    
-    if (area !== "Administrador / Todos") setAreaFilter(area);
+    if (res.success) {
+      setAuthError("");
+      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
+      setIsRegistering(false);
+    } else {
+      setAuthError(res.error);
+    }
   };
 
   const handleLogout = () => { setSupervisorProfile(null); safeStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
@@ -471,7 +534,7 @@ export default function App() {
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
           <div className="flex items-center justify-center gap-2 mb-4 select-none">
-             <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]">CDI</span>
+             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
              <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
              <div className="flex flex-col text-left justify-center">
                <span className="text-[9px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
@@ -519,7 +582,7 @@ export default function App() {
 
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área Asignada</label>
+              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
               <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs focus:ring-2 focus:ring-[#eadcba]">
                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
@@ -552,7 +615,7 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]">CDI</span>
+              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
               <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
               <div className="flex flex-col justify-center">
                 <span className="text-[7px] md:text-[8px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
@@ -580,7 +643,7 @@ export default function App() {
             <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
               <Megaphone size={16} /><span className="hidden md:inline">Coord</span>
             </button>
-            <button type="button" onClick={() => setShowAddModal(true)} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
               <Plus size={16} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
           </div>
@@ -720,23 +783,48 @@ export default function App() {
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
               <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[#a1bdc2]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => setShowAddModal(false)} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[#a1bdc2]">✕</button>
+              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[#a1bdc2]">✕</button>
             </div>
             
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
                 <div className="bg-[#1e293b] p-5 rounded-[1.5rem] border border-[#4a5c70] shadow-inner mb-6">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="p-1.5 bg-[#a1bdc2]/20 rounded-lg"><Search size={14} className="text-[#a1bdc2]"/></div>
-                        <p className="text-[10px] font-black uppercase text-[#a1bdc2] tracking-widest">Buscador en Google Sheets</p>
+                        <p className="text-[10px] font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="INGRESA EL CÓDIGO DE ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
                         <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[#eadcba] text-[#1e293b] px-6 py-3.5 rounded-xl font-black text-xs uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
-                            {excelSearchLoading ? 'BUSCANDO...' : 'BUSCAR'}
+                            {excelSearchLoading ? '...' : 'BUSCAR'}
                         </button>
                     </div>
                     {excelSearchError && <p className="text-red-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><AlertCircle size={12}/>{excelSearchError}</p>}
                     {excelSearchSuccess && <p className="text-green-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={12}/>{excelSearchSuccess}</p>}
+
+                    {showSearchSelector && searchResults.length > 0 && (
+                      <div className="mt-4 p-3 bg-[#2b3746] rounded-xl border border-[#4a5c70] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
+                        <p className="text-[9px] font-black text-[#eadcba] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
+                        {searchResults.map((res, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => {
+                              fillFormWithResult(res);
+                              setShowSearchSelector(false);
+                              setExcelSearchSuccess(`✅ Seleccionado: ${res.nombre} (Pedido ${res.pedido})`);
+                            }}
+                            className="p-2.5 bg-[#1e293b] hover:bg-[#374657] rounded-lg border border-[#4a5c70] cursor-pointer transition-colors flex flex-col"
+                          >
+                            <div className="flex justify-between text-[10px] font-black uppercase text-[#a1bdc2]">
+                              <span>PEDIDO: {res.pedido}</span>
+                              <span>ART: {res.articulo}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-white uppercase truncate mt-1">{res.nombre}</span>
+                            <span className="text-[8px] text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -934,208 +1022,14 @@ export default function App() {
       )}
 
       {showDashboardModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-2 sm:p-4">
-          <div className="theme-bg-main w-full h-full max-w-[1400px] rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col animate-in zoom-in duration-300">
-            {/* Cabecera del Informe */}
-            <div className="p-4 sm:p-5 theme-bg-header border-b theme-border flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#a1bdc2]/20 rounded-xl"><BarChart2 size={24} className="text-[#a1bdc2]" /></div>
-                <div>
-                  <h2 className="text-lg font-black uppercase text-[#a1bdc2] leading-none">Desempeño Operativo</h2>
-                  <p className="text-[10px] font-bold theme-text-muted uppercase tracking-widest mt-1">Inteligencia de Planta CDI</p>
-                </div>
-              </div>
-              
-              <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 overflow-x-auto w-full sm:w-auto custom-scrollbar">
-                {['resumen', 'operaciones', 'calidad'].map(tab => (
-                    <button key={tab} type="button" onClick={() => setDashboardTab(tab)} className={`px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${dashboardTab === tab ? 'bg-[#a1bdc2] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#a1bdc2]'}`}>
-                        {tab}
-                    </button>
-                ))}
-              </div>
-              <button type="button" onClick={() => setShowDashboardModal(false)} className="p-2.5 bg-black/10 hover:bg-black/20 rounded-xl text-[#a1bdc2] transition-colors absolute sm:relative top-4 right-4 sm:top-0 sm:right-0">✕</button>
-            </div>
-
-            {/* Cuerpo del Informe */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-              
-              {/* PESTAÑA: RESUMEN */}
-              {dashboardTab === 'resumen' && (
-                <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-[#a1bdc2] p-5 sm:p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#7d969b] flex flex-col justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Pedidos Totales</p>
-                        <h3 className="text-4xl font-black mt-2">{totalOrders}</h3>
-                    </div>
-                    <div className="bg-[#eadcba] p-5 sm:p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#bdae91] flex flex-col justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">En Producción</p>
-                        <h3 className="text-4xl font-black mt-2">{totalOrders - despachadosCount}</h3>
-                    </div>
-                    <div className="theme-bg-card p-5 sm:p-6 rounded-3xl border theme-border shadow-sm flex flex-col justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest theme-text-muted">Eficiencia Entrega</p>
-                        <h3 className="text-4xl font-black mt-2 text-[#a1bdc2]">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</h3>
-                    </div>
-                    <div className="theme-bg-card p-5 sm:p-6 rounded-3xl border theme-border shadow-sm flex flex-col justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest theme-text-muted">Alertas Críticas</p>
-                        <h3 className="text-4xl font-black mt-2 text-red-500">{coordinationAlerts.length}</h3>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                    {/* Gráfico de Barras CSS: Carga de Trabajo */}
-                    <div className="theme-bg-card p-6 sm:p-8 rounded-[2.5rem] border theme-border shadow-sm">
-                        <h4 className="text-xs font-black uppercase tracking-widest theme-text-muted mb-6">Carga de Trabajo por Sección</h4>
-                        <div className="h-64 flex items-end gap-2 sm:gap-4 mt-4 border-b theme-border pb-2">
-                          {AREAS.filter(a => a !== "Administrador / Todos" && a !== "Comercial / Ventas").map((area, idx) => {
-                             const count = orders.filter(o => o.areaActual === area && o.estadoInterno !== 'DESPACHADO').length;
-                             const max = Math.max(...AREAS.map(a => orders.filter(o => o.areaActual === a && o.estadoInterno !== 'DESPACHADO').length), 1);
-                             const height = `${(count / max) * 100}%`;
-                             if(count === 0) return null;
-                             return (
-                               <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
-                                 <div className="w-full bg-[#a1bdc2] rounded-t-lg relative transition-all duration-500 hover:brightness-110 flex items-start justify-center pt-2" style={{ height: height, minHeight: count > 0 ? '24px' : '0' }}>
-                                    <span className="text-[10px] font-black text-slate-900 opacity-0 group-hover:opacity-100 absolute -top-6 bg-white px-2 py-1 rounded shadow-md">{count}</span>
-                                 </div>
-                                 <span className="text-[8px] font-bold theme-text-muted uppercase text-center truncate w-full" title={area}>{area.substring(0, 10)}...</span>
-                               </div>
-                             );
-                          })}
-                          {orders.filter(o => o.estadoInterno !== 'DESPACHADO').length === 0 && <div className="w-full h-full flex items-center justify-center font-black text-xs uppercase theme-text-muted">Sin carga activa</div>}
-                        </div>
-                    </div>
-
-                    {/* Barras de Progreso: Tiempos / Atrasos */}
-                    <div className="theme-bg-card p-6 sm:p-8 rounded-[2.5rem] border theme-border shadow-sm">
-                        <h4 className="text-xs font-black uppercase tracking-widest theme-text-muted mb-6">Desglose de Tiempos y Retrasos</h4>
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex justify-between text-[10px] font-black uppercase mb-2">
-                                    <span className="text-[#a1bdc2]">A Tiempo (Holgura)</span>
-                                    <span className="theme-text-muted">{cumplidosCount} Pedidos</span>
-                                </div>
-                                <div className="w-full bg-black/5 dark:bg-white/5 h-3 rounded-full overflow-hidden">
-                                    <div className="bg-[#a1bdc2] h-full rounded-full" style={{ width: `${(cumplidosCount/totalOrders)*100 || 0}%` }}></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between text-[10px] font-black uppercase mb-2">
-                                    <span className="text-red-500">Atrasados (Críticos)</span>
-                                    <span className="theme-text-muted">{atrasadosCount} Pedidos</span>
-                                </div>
-                                <div className="w-full bg-black/5 dark:bg-white/5 h-3 rounded-full overflow-hidden">
-                                    <div className="bg-red-500 h-full rounded-full" style={{ width: `${(atrasadosCount/totalOrders)*100 || 0}%` }}></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between text-[10px] font-black uppercase mb-2">
-                                    <span className="text-[#eadcba]">Ya Despachados</span>
-                                    <span className="theme-text-muted">{despachadosCount} Pedidos</span>
-                                </div>
-                                <div className="w-full bg-black/5 dark:bg-white/5 h-3 rounded-full overflow-hidden">
-                                    <div className="bg-[#eadcba] h-full rounded-full" style={{ width: `${(despachadosCount/totalOrders)*100 || 0}%` }}></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* PESTAÑA: OPERACIONES (Explorador) */}
-              {dashboardTab === 'operaciones' && (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                  <div className="bg-[#1e293b] text-white p-6 sm:p-8 rounded-[2.5rem] shadow-xl">
-                      <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[#eadcba]">Explorador de Flujo Operativo</h2>
-                      <p className="text-xs text-slate-300 mt-2">Seguimiento detallado por jerarquía de procesos. Mostrando {orders.length} registros.</p>
-                  </div>
-                  
-                  <div className="theme-bg-card rounded-[2rem] overflow-hidden border theme-border shadow-sm overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                          <thead>
-                              <tr className="theme-bg-header border-b theme-border">
-                                  <th className="p-4 sm:p-5 text-[10px] font-black theme-text-muted uppercase tracking-widest">Pedido</th>
-                                  <th className="p-4 sm:p-5 text-[10px] font-black theme-text-muted uppercase tracking-widest">Cliente / Proyecto</th>
-                                  <th className="p-4 sm:p-5 text-[10px] font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
-                                  <th className="p-4 sm:p-5 text-[10px] font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {orders.map((o, i) => (
-                                <tr key={i} className="border-b theme-border hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                    <td className="p-4 sm:p-5 font-black text-xs text-[#a1bdc2]">#{o.pedidoNum}</td>
-                                    <td className="p-4 sm:p-5">
-                                        <span className="font-bold text-xs uppercase block">{o.cliente}</span>
-                                        <span className="text-[9px] theme-text-muted uppercase">{o.nombre}</span>
-                                    </td>
-                                    <td className="p-4 sm:p-5"><span className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-[#a1bdc2]/20">{o.areaActual}</span></td>
-                                    <td className="p-4 sm:p-5 font-bold text-[10px] uppercase tracking-tight flex items-center gap-2 mt-2">
-                                        <Clock size={12} className="theme-text-muted"/> {o.estadoInterno}
-                                    </td>
-                                </tr>
-                              ))}
-                              {orders.length === 0 && <tr><td colSpan="4" className="p-10 text-center text-xs font-black uppercase theme-text-muted">Sin datos de producción</td></tr>}
-                          </tbody>
-                      </table>
-                  </div>
-                </div>
-              )}
-
-              {/* PESTAÑA: CALIDAD */}
-              {dashboardTab === 'calidad' && (() => {
-                 const bitacoras = orders.flatMap(o => o.bitacoraCalidad || []);
-                 const aprobados = bitacoras.filter(b => b.estado === 'APROBADO').length;
-                 const rechazados = bitacoras.filter(b => b.estado === 'RECHAZADO').length;
-                 const totalInspecciones = aprobados + rechazados;
-                 const tasaAprobacion = totalInspecciones > 0 ? ((aprobados/totalInspecciones)*100).toFixed(1) : 0;
-                 
-                 return (
-                  <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 animate-in fade-in duration-500">
-                    <div className="flex-1 theme-bg-card p-6 sm:p-8 rounded-[2.5rem] border theme-border shadow-sm flex flex-col items-center justify-center">
-                        <h2 className="text-lg font-black uppercase tracking-tight mb-8 self-start w-full text-center">Tasa First-Pass Yield</h2>
-                        
-                        {/* Gráfico de Dona CSS */}
-                        <div className="relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex items-center justify-center shadow-inner" style={{ background: `conic-gradient(#22c55e ${tasaAprobacion}%, #ef4444 ${tasaAprobacion}% 100%)` }}>
-                            <div className="absolute inset-0 m-auto w-32 h-32 sm:w-48 sm:h-48 theme-bg-card rounded-full flex flex-col items-center justify-center shadow-xl border theme-border">
-                                <span className="text-3xl sm:text-5xl font-black text-[#a1bdc2]">{tasaAprobacion}%</span>
-                                <span className="text-[9px] font-bold uppercase theme-text-muted mt-1">Aprobación</span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-8 mt-8">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div><span className="text-[10px] font-black uppercase">Aprobado ({aprobados})</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-[10px] font-black uppercase">Rechazado ({rechazados})</span></div>
-                        </div>
-                    </div>
-                    
-                    <div className="flex-1 space-y-4">
-                        <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/30">
-                            <h4 className="text-xs font-black text-green-600 dark:text-green-400 uppercase mb-2">Inspecciones Aprobadas</h4>
-                            <p className="text-4xl font-black text-green-700 dark:text-green-500">{aprobados}</p>
-                            <p className="text-[10px] text-green-600/70 dark:text-green-400/70 mt-2 font-bold uppercase">Plantilla General CDI</p>
-                        </div>
-                        <div className="bg-red-500/10 p-6 rounded-3xl border border-red-500/30">
-                            <h4 className="text-xs font-black text-red-600 dark:text-red-400 uppercase mb-2">Incidencias / Retrabajos</h4>
-                            <p className="text-4xl font-black text-red-700 dark:text-red-500">{rechazados}</p>
-                            <p className="text-[10px] text-red-600/70 dark:text-red-400/70 mt-2 font-bold uppercase">Requieren atención en planta</p>
-                        </div>
-                        
-                        <div className="theme-bg-input p-6 rounded-3xl border theme-border shadow-sm max-h-[250px] overflow-y-auto custom-scrollbar">
-                            <h4 className="text-xs font-black theme-text-muted uppercase mb-4 sticky top-0 bg-inherit py-1">Últimas Observaciones</h4>
-                            <ul className="space-y-3">
-                                {bitacoras.slice(-5).reverse().map((b, i) => (
-                                    <li key={i} className={`text-[10px] border-l-2 pl-3 py-1 ${b.estado === 'APROBADO' ? 'border-green-500' : 'border-red-500'}`}>
-                                        <span className="font-bold block uppercase mb-1 theme-text-muted">Insp: {b.inspector} - {new Date(b.fecha).toLocaleDateString()}</span>
-                                        <span className="italic">"{b.observacion}"</span>
-                                    </li>
-                                ))}
-                                {bitacoras.length === 0 && <li className="text-[10px] uppercase font-bold theme-text-muted">No hay registros de calidad</li>}
-                            </ul>
-                        </div>
-                    </div>
-                  </div>
-                 );
-              })()}
-
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+          <div className="theme-bg-card w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
+            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center"><div className="flex items-center gap-3"><BarChart2 size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Indicadores Globales</h2></div><button type="button" onClick={() => setShowDashboardModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
+            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="px-4 py-3 bg-blue-500/10 border-b-[3px] border-blue-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-blue-400 leading-none">{totalOrders}</span><span className="text-[9px] font-bold uppercase mt-1 text-blue-400">Total</span></div>
+              <div className="px-4 py-3 bg-green-500/10 border-b-[3px] border-green-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-green-400 leading-none">{cumplidosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-green-400">A Tiempo</span></div>
+              <div className="px-4 py-3 bg-red-500/10 border-b-[3px] border-red-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-red-400 leading-none">{atrasadosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-red-400">Atrasados</span></div>
+              <div className="px-4 py-3 bg-[#eadcba]/10 border-b-[3px] border-[#eadcba]/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-[#eadcba] leading-none">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</span><span className="text-[9px] font-bold uppercase mt-1 text-[#eadcba]">Eficiencia</span></div>
             </div>
           </div>
         </div>
