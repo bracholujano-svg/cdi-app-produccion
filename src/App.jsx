@@ -70,6 +70,7 @@ const getDaysLeft = (targetDate) => {
 // ⚠️ TU URL MAESTRA DEL SCRIPT
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhcbHCuH4qeys0TkvwTdzZ4F10EFXSZcANLm7wbl3dWmZSsVt4usY6Joy6E2JB5s8Uaw/exec"; 
 
+// BUSCADOR MULTI-COINCIDENCIA ROBUSTO
 const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
   return new Promise(async (resolve, reject) => {
     const pTerm = (pedidoBusqueda || "").trim();
@@ -78,34 +79,36 @@ const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
     if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
 
     try {
-      const urlParams = new URLSearchParams({ pedido: pTerm, articulo: aTerm });
+      const urlParams = new URLSearchParams({ action: 'search', pedido: pTerm, articulo: aTerm });
       const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try { data = JSON.parse(text); } 
+      catch (e) { return reject("⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN (Revisa permisos del script)."); }
+
       if (data.success) resolve(data.results || [data.result]); 
       else reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
     } catch (error) { reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT."); }
   });
 };
 
+// SISTEMA DE LOGIN REAL
 const loginEnGoogle = async (usuario, clave) => {
   try {
     const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    
-    // Leemos la respuesta cruda de Google para evitar que el JSON explote
     const text = await response.text();
-    
     try {
-        return JSON.parse(text); // Si es JSON válido, todo salió bien
+        return JSON.parse(text);
     } catch (e) {
-        // Si no es JSON, Google nos devolvió una página de error o bloqueo
         return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica que 'Quién tiene acceso' esté en 'Cualquier persona' en tu Apps Script." };
     }
   } catch (error) {
-    return { success: false, error: "❌ ERROR DE RED: Verifica que tu SCRIPT_URL (Línea 74) sea el correcto." };
+    return { success: false, error: "❌ ERROR DE RED: Verifica que tu SCRIPT_URL sea el correcto." };
   }
 };
 
+// SISTEMA DE REGISTRO REAL
 const registrarEnGoogle = async (usuario, clave, nombre, area) => {
   if (!usuario.endsWith('@cdiexhibiciones.co')) {
     return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
@@ -113,9 +116,7 @@ const registrarEnGoogle = async (usuario, clave, nombre, area) => {
   try {
     const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    
     const text = await response.text();
-    
     try {
         return JSON.parse(text);
     } catch (e) {
@@ -272,10 +273,10 @@ export default function App() {
       setSearchResults([]); setShowSearchSelector(false);
       try {
           const results = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
-          if (results.length === 1) {
+          if (results && results.length === 1) {
               fillFormWithResult(results[0]);
               setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre}`);
-          } else {
+          } else if (results && results.length > 1) {
               setSearchResults(results);
               setShowSearchSelector(true);
               setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
@@ -289,12 +290,10 @@ export default function App() {
 
   const handleVirtualLogin = async (e) => {
     e.preventDefault(); 
-    setAuthError(""); 
+    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE..."); 
     const userStr = e.target.username.value.trim().toLowerCase();
     const passStr = e.target.password.value.trim();
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
-
-    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE...");
 
     const res = await loginEnGoogle(emailFull, passStr);
     
@@ -322,7 +321,7 @@ export default function App() {
 
   const handleVirtualRegister = async (e) => {
     e.preventDefault(); 
-    setAuthError("");
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
     const name = e.target.name.value.trim().toUpperCase();
     const userStr = e.target.username.value.trim().toLowerCase();
     const pass = e.target.password.value.trim();
@@ -334,7 +333,6 @@ export default function App() {
     }
 
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
-    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
 
     const res = await registrarEnGoogle(emailFull, pass, name, area);
     
@@ -449,6 +447,7 @@ export default function App() {
     const updatedOrder = { ...order, areaActual: area, estadoInterno: CONFIG_PROCESOS[area]?.[0] || "En Espera", fechaEntregaPrometida: date, historial: [...(order.historial || []), newHistoryEntry] };
     let newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
     
+    // Auto-Limpieza Inteligente de Alertas al Despachar
     if (updatedOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
         const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
         const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
@@ -487,17 +486,46 @@ export default function App() {
 
   const shareToWhatsApp = (type, savedLog = null) => {
     if (!selectedOrder) return;
-    let text = `📦 *REPORTE CDI - PEDIDO ${selectedOrder.pedidoNum || ''}*\n*Artículo:* ${selectedOrder.codArticulo || ''}\n*Producto:* ${selectedOrder.nombre || ''}\n\n`;
+    
+    // 1. Cabecera estilo Ticket Profesional
+    let text = `🏢 *CDI EXHIBICIONES | REPORTE OFICIAL* 🏢\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📦 *PEDIDO:* ${selectedOrder.pedidoNum || 'S/N'}\n`;
+    text += `🏷️ *CÓDIGO:* ${selectedOrder.codArticulo || 'S/N'}\n`;
+    text += `🛋️ *PRODUCTO:* ${selectedOrder.nombre || 'S/N'}\n`;
+    text += `🏢 *CLIENTE:* ${selectedOrder.cliente || 'S/N'}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    // 2. Cuerpo del mensaje estructurado según el tipo
     if (type === 'tech') {
         const log = savedLog || { supervisor: supervisorProfile?.name, operario: tempOperario, actividad: tempShiftActivity, nota: shiftNoteText };
-        text += `🏭 *AVANCE PRODUCCIÓN*\n*Actividad:* ${log.actividad}\n*Op:* ${log.operario}\n*Novedad:* ${log.nota}`;
+        text += `🏭 *AVANCE DE PRODUCCIÓN*\n`;
+        text += `🔹 *Fase / Actividad:* ${log.actividad}\n`;
+        text += `👷 *Operario Asignado:* ${log.operario}\n`;
+        text += `📝 *Novedades / Faltantes:* _${log.nota || 'Sin novedades'}_\n`;
+        text += `👨‍💼 *Supervisa:* ${log.supervisor}\n`;
     } else if (type === 'trazabilidad') {
-        text += `🔄 *ENTREGA SECCIÓN*\n*Acción:* ${savedLog.accion}\n*Entrega:* ${savedLog.entrega}\n*Recibe:* ${savedLog.recibe}\n*Obs:* ${savedLog.nota || 'N/A'}`;
+        text += `🔄 *ACTA DE ENTREGA DE SECCIÓN*\n`;
+        text += `🔹 *Movimiento:* ${savedLog.accion}\n`;
+        text += `📤 *Entrega:* ${savedLog.entrega}\n`;
+        text += `📥 *Recibe:* ${savedLog.recibe}\n`;
+        text += `📝 *Observaciones:* _${savedLog.nota || 'Sin observaciones'}_\n`;
     } else if (type === 'calidad') {
         const log = savedLog || { estado: calidadState, inspector: calidadInspector, observacion: calidadNota };
-        text += `🔍 *INSPECCIÓN CALIDAD*\n*Estado:* ${log.estado}\n*Inspector:* ${log.inspector}\n*Obs:* ${log.observacion}`;
+        const iconoEstado = log.estado === 'APROBADO' ? '✅' : '❌';
+        text += `🔍 *INSPECCIÓN DE CALIDAD*\n`;
+        text += `${iconoEstado} *DICTAMEN:* *${log.estado}*\n`;
+        text += `🕵️ *Inspector:* ${log.inspector}\n`;
+        text += `📝 *Observaciones:* _${log.observacion || 'Ninguna'}_\n`;
     }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, 'whatsapp_cdi_tab');
+
+    // 3. Pie de página automatizado
+    text += `\n⏱️ _Reporte generado: ${new Date().toLocaleString('es-CO')}_\n`;
+    text += `📱 *Sistema CDI Planta*`;
+
+    // 4. URL Optimizada para re-uso de pestañas en navegadores
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, 'whatsapp_cdi_tab');
   };
 
   const generateShiftReport = () => {
@@ -515,7 +543,7 @@ export default function App() {
     if (!o) return false;
     const matchSearch = (o.pedidoNum || "").toLowerCase().includes(searchTerm.toLowerCase()) || (o.nombre || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter;
-    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0 && o.estadoInterno !== 'DESPACHADO';
+    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
     if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && o.estadoInterno === 'DESPACHADO';
     return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO';
   });
@@ -530,20 +558,22 @@ export default function App() {
   const groupedArray = Object.values(groupedOrders);
   const activeGroupObj = groupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
+  // CORRECCIÓN MATEMÁTICA DE MÉTRICAS (SOLO ACTIVOS)
   const totalOrders = orders.length;
-  const atrasadosCount = orders.filter(o => o && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0 && o.estadoInterno !== 'DESPACHADO').length;
+  const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
-  const cumplidosCount = totalOrders - atrasadosCount - despachadosCount;
+  const cumplidosCount = totalOrders - atrasadosCount - despachadosCount; // Pedidos activos a tiempo + despachados
 
   const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
   const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
 
-  // NUEVOS CÁLCULOS DE PRODUCCIÓN Y CALIDAD PARA EL DASHBOARD
+  // CÁLCULOS DEL DASHBOARD AVANZADO
   const productionLogsCount = orders.reduce((sum, o) => sum + (o?.bitacoraTurnos?.length || 0), 0);
   const activeProductionCount = orders.filter(o => o?.estadoInterno && o.estadoInterno !== 'En Espera' && o.estadoInterno !== 'DESPACHADO').length;
   const qualityApprovedCount = orders.reduce((sum, o) => sum + (o?.bitacoraCalidad?.filter(q => q.estado === 'APROBADO').length || 0), 0);
   const qualityRejectedCount = orders.reduce((sum, o) => sum + (o?.bitacoraCalidad?.filter(q => q.estado === 'RECHAZADO').length || 0), 0);
 
+  // RESTAURACIÓN DE LA GRILLA DINÁMICA
   let gridColsClass = 'lg:grid-cols-3';
   if (gridColumns === 4) gridColsClass = 'lg:grid-cols-4';
   if (gridColumns === 5) gridColsClass = 'lg:grid-cols-5';
@@ -727,7 +757,7 @@ export default function App() {
       </div>
 
       <main className="max-w-[1600px] mx-auto p-4 md:p-6 min-h-screen">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridColsClass} gap-4 md:gap-5`}>
           {groupedArray.map(group => {
              const daysLeft = getDaysLeft(group?.fechaEntregaPrometida);
              const isAtrasado = daysLeft !== null && daysLeft < 0 && viewFilter !== 'DESPACHADOS';
@@ -770,6 +800,8 @@ export default function App() {
         </div>
       </main>
 
+      {/* --- INICIO SECCIÓN MODALES DEDUPLICADOS --- */}
+      
       {activeGroupObj && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
           <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -896,6 +928,7 @@ export default function App() {
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
               
+              {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
                  <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
@@ -940,6 +973,7 @@ export default function App() {
                  )}
               </div>
 
+              {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
                  <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
@@ -987,6 +1021,7 @@ export default function App() {
                  )}
               </div>
 
+              {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
                  <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
@@ -1041,53 +1076,70 @@ export default function App() {
         </div>
       )}
 
+      {/* DASHBOARD AVANZADO */}
       {showDashboardModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
+          <div className="theme-bg-card w-full max-w-4xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh] animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3"><BarChart2 size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Tablero de Control</h2></div>
+              <div className="flex items-center gap-3">
+                <BarChart2 size={24} className="text-[#eadcba]" />
+                <h2 className="text-xl font-black uppercase text-[#a1bdc2]">Tablero de Control y Analítica</h2>
+              </div>
               <button type="button" onClick={() => setShowDashboardModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2] hover:bg-black/20 transition-all">✕</button>
             </div>
             
             <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
               {/* Sección 1: Globales */}
               <div>
-                <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-3">Eficiencia Global</h3>
+                <h3 className="text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-3 flex items-center gap-2"><LayoutList size={16}/> Eficiencia Logística Global</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="px-4 py-3 bg-blue-500/10 border-b-[3px] border-blue-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-blue-400 leading-none">{totalOrders}</span><span className="text-[9px] font-bold uppercase mt-1 text-blue-400">Total Pedidos</span></div>
-                  <div className="px-4 py-3 bg-green-500/10 border-b-[3px] border-green-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-green-400 leading-none">{cumplidosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-green-400">A Tiempo</span></div>
-                  <div className="px-4 py-3 bg-red-500/10 border-b-[3px] border-red-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-red-400 leading-none">{atrasadosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-red-400">Atrasados</span></div>
-                  <div className="px-4 py-3 bg-[#eadcba]/10 border-b-[3px] border-[#eadcba]/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-[#eadcba] leading-none">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</span><span className="text-[9px] font-bold uppercase mt-1 text-[#eadcba]">Desempeño</span></div>
+                  <div className="p-4 bg-blue-500/10 border-b-[4px] border-blue-500/50 rounded-2xl flex flex-col items-center shadow-sm transition-transform hover:-translate-y-1">
+                    <span className="text-4xl font-black text-blue-400 leading-none drop-shadow-md">{totalOrders}</span>
+                    <span className="text-[10px] font-bold uppercase mt-2 text-blue-400/80 text-center tracking-widest">Total Pedidos<br/>Sistema</span>
+                  </div>
+                  <div className="p-4 bg-green-500/10 border-b-[4px] border-green-500/50 rounded-2xl flex flex-col items-center shadow-sm transition-transform hover:-translate-y-1">
+                    <span className="text-4xl font-black text-green-400 leading-none drop-shadow-md">{cumplidosCount}</span>
+                    <span className="text-[10px] font-bold uppercase mt-2 text-green-400/80 text-center tracking-widest">A Tiempo o<br/>Despachados</span>
+                  </div>
+                  <div className="p-4 bg-red-500/10 border-b-[4px] border-red-500/50 rounded-2xl flex flex-col items-center shadow-sm transition-transform hover:-translate-y-1 relative overflow-hidden group">
+                    {atrasadosCount > 0 && <div className="absolute inset-0 bg-red-500/10 animate-pulse"></div>}
+                    <span className="text-4xl font-black text-red-500 leading-none drop-shadow-md relative z-10">{atrasadosCount}</span>
+                    <span className="text-[10px] font-bold uppercase mt-2 text-red-500/80 text-center tracking-widest relative z-10">Atrasos<br/>Críticos</span>
+                  </div>
+                  <div className="p-4 bg-[#eadcba]/10 border-b-[4px] border-[#eadcba]/50 rounded-2xl flex flex-col items-center shadow-sm transition-transform hover:-translate-y-1">
+                    <span className="text-4xl font-black text-[#eadcba] leading-none drop-shadow-md">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</span>
+                    <span className="text-[10px] font-bold uppercase mt-2 text-[#eadcba]/80 text-center tracking-widest">Índice de<br/>Desempeño</span>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Sección 2: Producción */}
-                <div className="theme-bg-input p-5 rounded-2xl border theme-border">
-                  <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><History size={14}/> Producción en Piso</h3>
+                <div className="theme-bg-input p-6 rounded-[1.5rem] border theme-border shadow-inner">
+                  <h3 className="text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><History size={16}/> Avance en Piso</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="px-3 py-4 bg-[#1e293b] border border-[#4a5c70] rounded-xl flex flex-col items-center text-center">
+                    <div className="p-4 bg-[#1e293b] border border-[#4a5c70] rounded-2xl flex flex-col items-center text-center shadow-sm">
                       <span className="text-3xl font-black text-blue-400 leading-none">{activeProductionCount}</span>
-                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400">Pedidos Activos<br/>(En Proceso)</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400 tracking-widest">Órdenes Activas<br/>(En Proceso)</span>
                     </div>
-                    <div className="px-3 py-4 bg-[#1e293b] border border-[#4a5c70] rounded-xl flex flex-col items-center text-center">
+                    <div className="p-4 bg-[#1e293b] border border-[#4a5c70] rounded-2xl flex flex-col items-center text-center shadow-sm">
                       <span className="text-3xl font-black text-[#eadcba] leading-none">{productionLogsCount}</span>
-                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400">Registros de<br/>Actividad</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400 tracking-widest">Registros de<br/>Actividad (Turnos)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Sección 3: Calidad */}
-                <div className="theme-bg-input p-5 rounded-2xl border theme-border">
-                  <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><UserCheck size={14}/> Control de Calidad</h3>
+                <div className="theme-bg-input p-6 rounded-[1.5rem] border theme-border shadow-inner">
+                  <h3 className="text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><UserCheck size={16}/> Control de Calidad</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="px-3 py-4 bg-green-500/10 border border-green-500/30 rounded-xl flex flex-col items-center text-center">
+                    <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl flex flex-col items-center text-center shadow-sm">
                       <span className="text-3xl font-black text-green-500 leading-none">{qualityApprovedCount}</span>
-                      <span className="text-[9px] font-bold uppercase mt-2 text-green-500">Inspecciones<br/>Aprobadas</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-green-500/70 tracking-widest">Inspecciones<br/>Aprobadas</span>
                     </div>
-                    <div className="px-3 py-4 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col items-center text-center">
+                    <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl flex flex-col items-center text-center shadow-sm">
                       <span className="text-3xl font-black text-red-500 leading-none">{qualityRejectedCount}</span>
-                      <span className="text-[9px] font-bold uppercase mt-2 text-red-500">Inspecciones<br/>Rechazadas</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-red-500/70 tracking-widest">Inspecciones<br/>Rechazadas</span>
                     </div>
                   </div>
                 </div>
