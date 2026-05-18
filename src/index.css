@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, [data-theme="light"] {
+    --bg-main: #f1f5f9; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-input: #f8fafc; --text-main: #0f172a; --text-muted: #475569; --border-color: #cbd5e1;
+}
+[data-theme="dark"] {
+    --bg-main: #2b3746; --bg-card: #374657; --bg-header: #222c39; --bg-input: #1e293b; --text-main: #f8fafc; --text-muted: #a1bdc2; --border-color: #4a5c70;
+}
+
+body, input, button, select, textarea { font-family: 'Montserrat', sans-serif !important; }
+body { background-color: var(--bg-main); color: var(--text-main); }
+.theme-bg-main { background-color: var(--bg-main); color: var(--text-main); }
+.theme-bg-card { background-color: var(--bg-card); color: var(--text-main); }
+.theme-bg-header { background-color: var(--bg-header); color: var(--text-main); }
+.theme-bg-input { background-color: var(--bg-input); color: var(--text-main); }
+.theme-border { border-color: var(--border-color); }
+.theme-text-muted { color: var(--text-muted); }
+
+@keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+.animate-marquee { display: inline-block; animation: marquee 20s linear infinite; }
+@keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.4); } }
+.animate-pulse-red { animation: pulse-red 2s infinite; }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
