@@ -67,7 +67,7 @@ const getDaysLeft = (targetDate) => {
   } catch(e) { return null; }
 };
 
-// ⚠️ TU URL MAESTRA (Asegúrate de que sea tu enlace real /exec)
+// ⚠️ TU URL MAESTRA
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhcbHCuH4qeys0TkvwTdzZ4F10EFXSZcANLm7wbl3dWmZSsVt4usY6Joy6E2JB5s8Uaw/exec"; 
 
 const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
@@ -81,33 +81,29 @@ const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
       const urlParams = new URLSearchParams({ pedido: pTerm, articulo: aTerm });
       const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
       const data = await response.json();
-      if (data.success) resolve(data.result);
+      if (data.success) resolve(data.results); 
       else reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
     } catch (error) { reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT."); }
   });
 };
 
-// NUEVA FUNCIÓN: CONEXIÓN REAL DE LOGIN
 const loginEnGoogle = async (usuario, clave) => {
   try {
     const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
     const data = await response.json();
-    return data; // Devuelve { success: true/false, result/error }
+    return data;
   } catch (error) {
     return { success: false, error: "Error de conexión con el servidor de seguridad." };
   }
 };
 
-// NUEVA FUNCIÓN: CONEXIÓN REAL DE REGISTRO + FILTRO CORPORATIVO
-const registrarEnGoogle = async (usuario, clave, nombre) => {
-  // 🔒 CANDADO EXTRA: Si no es correo de la empresa, se rechaza de inmediato sin ir a Google
+const registrarEnGoogle = async (usuario, clave, nombre, area) => {
   if (!usuario.endsWith('@cdiexhibiciones.co')) {
     return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
   }
-
   try {
-    const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: 'Pendiente' });
+    const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area }); // Puedes usar 'Pendiente' en vez de 'area' si prefieres aprobación manual
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
     const data = await response.json();
     return data;
@@ -117,7 +113,6 @@ const registrarEnGoogle = async (usuario, clave, nombre) => {
 };
 
 export default function App() {
-  // Inicializar estado desde LocalStorage (Sin Firebase)
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
     const saved = safeStorage.get('cdi_supervisor_session');
     try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
@@ -200,6 +195,9 @@ export default function App() {
   const [excelSearchError, setExcelSearchError] = useState("");
   const [excelSearchSuccess, setExcelSearchSuccess] = useState("");
 
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchSelector, setShowSearchSelector] = useState(false);
+
   const [repDate, setRepDate] = useState(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
@@ -244,19 +242,30 @@ export default function App() {
     }
   }, [selectedOrder]);
 
+  const fillFormWithResult = (result) => {
+    const form = document.getElementById('nuevoRegistroForm');
+    if (form) {
+        form.pedidoNum.value = result.pedido || "";
+        form.codArticulo.value = result.articulo || "";
+        form.cliente.value = result.cliente || "";
+        form.nombre.value = result.nombre || "";
+        form.cantidad.value = result.cantidad || 1;
+    }
+  };
+
   const doExcelSearch = async () => {
       setExcelSearchLoading(true); setExcelSearchError(""); setExcelSearchSuccess("");
+      setSearchResults([]); setShowSearchSelector(false);
       try {
-          const result = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
-          const form = document.getElementById('nuevoRegistroForm');
-          if (form) {
-              form.pedidoNum.value = result.pedido;
-              form.codArticulo.value = result.articulo;
-              form.cliente.value = result.cliente;
-              form.nombre.value = result.nombre;
-              form.cantidad.value = result.cantidad;
+          const results = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
+          if (results.length === 1) {
+              fillFormWithResult(results[0]);
+              setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre}`);
+          } else {
+              setSearchResults(results);
+              setShowSearchSelector(true);
+              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
           }
-          setExcelSearchSuccess(`✅ Extraído: ${result.nombre}`);
       } catch (err) { 
           setExcelSearchError(err instanceof Error ? err.message : String(err)); 
       } finally { 
@@ -264,7 +273,7 @@ export default function App() {
       }
   };
 
-const handleVirtualLogin = async (e) => {
+  const handleVirtualLogin = async (e) => {
     e.preventDefault(); 
     setAuthError(""); 
     const userStr = e.target.username.value.trim().toLowerCase();
@@ -280,7 +289,7 @@ const handleVirtualLogin = async (e) => {
       const newProfile = { 
         name: res.result.nombre, 
         email: emailFull, 
-        area: res.result.rol // Lee el rol real asignado por ti en el Excel
+        area: res.result.rol
       };
       setSupervisorProfile(newProfile);
       safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
@@ -293,7 +302,7 @@ const handleVirtualLogin = async (e) => {
         setAreaFilter(newProfile.area);
       }
     } else {
-      setAuthError(res.error); // Aquí mostrará el mensaje si está "Pendiente" o si la clave está mal
+      setAuthError(res.error);
     }
   };
 
@@ -303,6 +312,7 @@ const handleVirtualLogin = async (e) => {
     const name = e.target.name.value.trim().toUpperCase();
     const userStr = e.target.username.value.trim().toLowerCase();
     const pass = e.target.password.value.trim();
+    const area = e.target.area ? e.target.area.value : 'Pendiente';
     
     if (!/^\d+$/.test(pass) || pass.length < 4) {
       setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
@@ -312,14 +322,14 @@ const handleVirtualLogin = async (e) => {
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
     setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
 
-    const res = await registrarEnGoogle(emailFull, pass, name);
+    const res = await registrarEnGoogle(emailFull, pass, name, area);
     
     if (res.success) {
       setAuthError("");
-      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
-      setIsRegistering(false); // Cierra la pantalla de registro y lo manda al login
+      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Puedes iniciar sesión inmediatamente.");
+      setIsRegistering(false);
     } else {
-      setAuthError(res.error); // Aquí frena si no es correo corporativo o si ya existía
+      setAuthError(res.error);
     }
   };
 
@@ -524,7 +534,7 @@ const handleVirtualLogin = async (e) => {
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
           <div className="flex items-center justify-center gap-2 mb-4 select-none">
-             <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]">CDI</span>
+             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
              <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
              <div className="flex flex-col text-left justify-center">
                <span className="text-[9px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
@@ -572,7 +582,7 @@ const handleVirtualLogin = async (e) => {
 
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área Asignada</label>
+              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
               <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs focus:ring-2 focus:ring-[#eadcba]">
                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
@@ -605,7 +615,7 @@ const handleVirtualLogin = async (e) => {
         <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]">CDI</span>
+              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
               <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
               <div className="flex flex-col justify-center">
                 <span className="text-[7px] md:text-[8px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
@@ -633,7 +643,7 @@ const handleVirtualLogin = async (e) => {
             <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
               <Megaphone size={16} /><span className="hidden md:inline">Coord</span>
             </button>
-            <button type="button" onClick={() => setShowAddModal(true)} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
               <Plus size={16} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
           </div>
@@ -773,17 +783,17 @@ const handleVirtualLogin = async (e) => {
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
               <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[#a1bdc2]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => setShowAddModal(false)} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[#a1bdc2]">✕</button>
+              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[#a1bdc2]">✕</button>
             </div>
             
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
                 <div className="bg-[#1e293b] p-5 rounded-[1.5rem] border border-[#4a5c70] shadow-inner mb-6">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="p-1.5 bg-[#a1bdc2]/20 rounded-lg"><Search size={14} className="text-[#a1bdc2]"/></div>
-                        <p className="text-[10px] font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Simulación en Vista Previa)</p>
+                        <p className="text-[10px] font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO (Prueba: 123)" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
                         <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
                         <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[#eadcba] text-[#1e293b] px-6 py-3.5 rounded-xl font-black text-xs uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
                             {excelSearchLoading ? '...' : 'BUSCAR'}
@@ -791,6 +801,30 @@ const handleVirtualLogin = async (e) => {
                     </div>
                     {excelSearchError && <p className="text-red-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><AlertCircle size={12}/>{excelSearchError}</p>}
                     {excelSearchSuccess && <p className="text-green-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={12}/>{excelSearchSuccess}</p>}
+
+                    {showSearchSelector && searchResults.length > 0 && (
+                      <div className="mt-4 p-3 bg-[#2b3746] rounded-xl border border-[#4a5c70] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
+                        <p className="text-[9px] font-black text-[#eadcba] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
+                        {searchResults.map((res, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => {
+                              fillFormWithResult(res);
+                              setShowSearchSelector(false);
+                              setExcelSearchSuccess(`✅ Seleccionado: ${res.nombre} (Pedido ${res.pedido})`);
+                            }}
+                            className="p-2.5 bg-[#1e293b] hover:bg-[#374657] rounded-lg border border-[#4a5c70] cursor-pointer transition-colors flex flex-col"
+                          >
+                            <div className="flex justify-between text-[10px] font-black uppercase text-[#a1bdc2]">
+                              <span>PEDIDO: {res.pedido}</span>
+                              <span>ART: {res.articulo}</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-white uppercase truncate mt-1">{res.nombre}</span>
+                            <span className="text-[8px] text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
