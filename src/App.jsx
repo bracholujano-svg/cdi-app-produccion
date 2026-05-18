@@ -91,10 +91,18 @@ const loginEnGoogle = async (usuario, clave) => {
   try {
     const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    const data = await response.json();
-    return data;
+    
+    // Leemos la respuesta cruda de Google para evitar que el JSON explote
+    const text = await response.text();
+    
+    try {
+        return JSON.parse(text); // Si es JSON válido, todo salió bien
+    } catch (e) {
+        // Si no es JSON, Google nos devolvió una página de error o bloqueo
+        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica que 'Quién tiene acceso' esté en 'Cualquier persona' en tu Apps Script." };
+    }
   } catch (error) {
-    return { success: false, error: "Error de conexión con el servidor de seguridad." };
+    return { success: false, error: "❌ ERROR DE RED: Verifica que tu SCRIPT_URL (Línea 74) sea el correcto." };
   }
 };
 
@@ -105,10 +113,16 @@ const registrarEnGoogle = async (usuario, clave, nombre, area) => {
   try {
     const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    const data = await response.json();
-    return data;
+    
+    const text = await response.text();
+    
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica los permisos de despliegue en Apps Script." };
+    }
   } catch (error) {
-    return { success: false, error: "Error al registrar en el servidor." };
+    return { success: false, error: "❌ ERROR DE RED: Verifica la URL del Script." };
   }
 };
 
@@ -523,6 +537,12 @@ export default function App() {
 
   const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
   const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
+
+  // NUEVOS CÁLCULOS DE PRODUCCIÓN Y CALIDAD PARA EL DASHBOARD
+  const productionLogsCount = orders.reduce((sum, o) => sum + (o?.bitacoraTurnos?.length || 0), 0);
+  const activeProductionCount = orders.filter(o => o?.estadoInterno && o.estadoInterno !== 'En Espera' && o.estadoInterno !== 'DESPACHADO').length;
+  const qualityApprovedCount = orders.reduce((sum, o) => sum + (o?.bitacoraCalidad?.filter(q => q.estado === 'APROBADO').length || 0), 0);
+  const qualityRejectedCount = orders.reduce((sum, o) => sum + (o?.bitacoraCalidad?.filter(q => q.estado === 'RECHAZADO').length || 0), 0);
 
   let gridColsClass = 'lg:grid-cols-3';
   if (gridColumns === 4) gridColsClass = 'lg:grid-cols-4';
@@ -1023,13 +1043,56 @@ export default function App() {
 
       {showDashboardModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="theme-bg-card w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center"><div className="flex items-center gap-3"><BarChart2 size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Indicadores Globales</h2></div><button type="button" onClick={() => setShowDashboardModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="px-4 py-3 bg-blue-500/10 border-b-[3px] border-blue-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-blue-400 leading-none">{totalOrders}</span><span className="text-[9px] font-bold uppercase mt-1 text-blue-400">Total</span></div>
-              <div className="px-4 py-3 bg-green-500/10 border-b-[3px] border-green-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-green-400 leading-none">{cumplidosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-green-400">A Tiempo</span></div>
-              <div className="px-4 py-3 bg-red-500/10 border-b-[3px] border-red-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-red-400 leading-none">{atrasadosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-red-400">Atrasados</span></div>
-              <div className="px-4 py-3 bg-[#eadcba]/10 border-b-[3px] border-[#eadcba]/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-[#eadcba] leading-none">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</span><span className="text-[9px] font-bold uppercase mt-1 text-[#eadcba]">Eficiencia</span></div>
+          <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
+            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3"><BarChart2 size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Tablero de Control</h2></div>
+              <button type="button" onClick={() => setShowDashboardModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2] hover:bg-black/20 transition-all">✕</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+              {/* Sección 1: Globales */}
+              <div>
+                <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-3">Eficiencia Global</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="px-4 py-3 bg-blue-500/10 border-b-[3px] border-blue-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-blue-400 leading-none">{totalOrders}</span><span className="text-[9px] font-bold uppercase mt-1 text-blue-400">Total Pedidos</span></div>
+                  <div className="px-4 py-3 bg-green-500/10 border-b-[3px] border-green-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-green-400 leading-none">{cumplidosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-green-400">A Tiempo</span></div>
+                  <div className="px-4 py-3 bg-red-500/10 border-b-[3px] border-red-500/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-red-400 leading-none">{atrasadosCount}</span><span className="text-[9px] font-bold uppercase mt-1 text-red-400">Atrasados</span></div>
+                  <div className="px-4 py-3 bg-[#eadcba]/10 border-b-[3px] border-[#eadcba]/30 rounded-xl flex flex-col items-center"><span className="text-2xl font-black text-[#eadcba] leading-none">{totalOrders ? Math.round((cumplidosCount/totalOrders)*100) : 0}%</span><span className="text-[9px] font-bold uppercase mt-1 text-[#eadcba]">Desempeño</span></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Sección 2: Producción */}
+                <div className="theme-bg-input p-5 rounded-2xl border theme-border">
+                  <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><History size={14}/> Producción en Piso</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="px-3 py-4 bg-[#1e293b] border border-[#4a5c70] rounded-xl flex flex-col items-center text-center">
+                      <span className="text-3xl font-black text-blue-400 leading-none">{activeProductionCount}</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400">Pedidos Activos<br/>(En Proceso)</span>
+                    </div>
+                    <div className="px-3 py-4 bg-[#1e293b] border border-[#4a5c70] rounded-xl flex flex-col items-center text-center">
+                      <span className="text-3xl font-black text-[#eadcba] leading-none">{productionLogsCount}</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-slate-400">Registros de<br/>Actividad</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección 3: Calidad */}
+                <div className="theme-bg-input p-5 rounded-2xl border theme-border">
+                  <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-4 flex items-center gap-2"><UserCheck size={14}/> Control de Calidad</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="px-3 py-4 bg-green-500/10 border border-green-500/30 rounded-xl flex flex-col items-center text-center">
+                      <span className="text-3xl font-black text-green-500 leading-none">{qualityApprovedCount}</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-green-500">Inspecciones<br/>Aprobadas</span>
+                    </div>
+                    <div className="px-3 py-4 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col items-center text-center">
+                      <span className="text-3xl font-black text-red-500 leading-none">{qualityRejectedCount}</span>
+                      <span className="text-[9px] font-bold uppercase mt-2 text-red-500">Inspecciones<br/>Rechazadas</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
