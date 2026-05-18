@@ -67,30 +67,53 @@ const getDaysLeft = (targetDate) => {
   } catch(e) { return null; }
 };
 
+// ⚠️ TU URL MAESTRA (Asegúrate de que sea tu enlace real /exec)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0Ed1pCRcuN1JT68x6KREy7n6InICLQe0DBaweOfkT5H__5yxkcy89Yy4nlSL1G_cbJQ/exec"; 
+
 const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
   return new Promise(async (resolve, reject) => {
     const pTerm = (pedidoBusqueda || "").trim();
     const aTerm = (articuloBusqueda || "").trim();
-    
     if (!pTerm && !aTerm) return reject("INGRESAR PEDIDO O ÚLTIMOS DÍGITOS DEL ARTÍCULO.");
     if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
 
-    // ⚠️ PEGA AQUÍ TU ENLACE DE GOOGLE QUE TERMINA EN /exec (MANTÉN LAS COMILLAS)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwz0z1VSiGi1jhhTuK8-nrXFM6wcUwhzpeL38U_ngRPhD8_PWDs6E8mEV2s9xYIXNs/exec";
     try {
       const urlParams = new URLSearchParams({ pedido: pTerm, articulo: aTerm });
       const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
       const data = await response.json();
-      
-      if (data.success) {
-        resolve(data.result);
-      } else {
-        reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
-      }
-    } catch (error) {
-      reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT. Verifica tu enlace /exec");
-    }
+      if (data.success) resolve(data.result);
+      else reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
+    } catch (error) { reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT."); }
   });
+};
+
+// NUEVA FUNCIÓN: CONEXIÓN REAL DE LOGIN
+const loginEnGoogle = async (usuario, clave) => {
+  try {
+    const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
+    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+    const data = await response.json();
+    return data; // Devuelve { success: true/false, result/error }
+  } catch (error) {
+    return { success: false, error: "Error de conexión con el servidor de seguridad." };
+  }
+};
+
+// NUEVA FUNCIÓN: CONEXIÓN REAL DE REGISTRO + FILTRO CORPORATIVO
+const registrarEnGoogle = async (usuario, clave, nombre) => {
+  // 🔒 CANDADO EXTRA: Si no es correo de la empresa, se rechaza de inmediato sin ir a Google
+  if (!usuario.endsWith('@cdiexhibiciones.co')) {
+    return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
+  }
+
+  try {
+    const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: 'Pendiente' });
+    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: "Error al registrar en el servidor." };
+  }
 };
 
 export default function App() {
@@ -241,37 +264,63 @@ export default function App() {
       }
   };
 
-  const handleVirtualLogin = async (e) => {
-    e.preventDefault(); setAuthError(""); 
+const handleVirtualLogin = async (e) => {
+    e.preventDefault(); 
+    setAuthError(""); 
     const userStr = e.target.username.value.trim().toLowerCase();
+    const passStr = e.target.password.value.trim();
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+
+    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE...");
+
+    const res = await loginEnGoogle(emailFull, passStr);
     
-    const newProfile = { name: userStr.toUpperCase(), email: userStr + '@cdiexhibiciones.co', area: "Administrador / Todos" };
-    setSupervisorProfile(newProfile);
-    safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
-    
-    const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
-    setSavedLogins(newRecent); safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+    if (res.success) {
+      setAuthError("");
+      const newProfile = { 
+        name: res.result.nombre, 
+        email: emailFull, 
+        area: res.result.rol // Lee el rol real asignado por ti en el Excel
+      };
+      setSupervisorProfile(newProfile);
+      safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+      
+      const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
+      setSavedLogins(newRecent); 
+      safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+      
+      if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
+        setAreaFilter(newProfile.area);
+      }
+    } else {
+      setAuthError(res.error); // Aquí mostrará el mensaje si está "Pendiente" o si la clave está mal
+    }
   };
 
   const handleVirtualRegister = async (e) => {
-    e.preventDefault(); setAuthError("");
+    e.preventDefault(); 
+    setAuthError("");
     const name = e.target.name.value.trim().toUpperCase();
     const userStr = e.target.username.value.trim().toLowerCase();
-    const pass = e.target.password.value;
-    const area = e.target.area.value;
+    const pass = e.target.password.value.trim();
     
     if (!/^\d+$/.test(pass) || pass.length < 4) {
-      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); return;
+      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
+      return;
     }
 
-    const newProfile = { name, email: userStr + '@cdiexhibiciones.co', area, username: userStr };
-    setSupervisorProfile(newProfile);
-    safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
+
+    const res = await registrarEnGoogle(emailFull, pass, name);
     
-    const newRecent = [{ username: userStr, name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
-    setSavedLogins(newRecent); safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
-    
-    if (area !== "Administrador / Todos") setAreaFilter(area);
+    if (res.success) {
+      setAuthError("");
+      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
+      setIsRegistering(false); // Cierra la pantalla de registro y lo manda al login
+    } else {
+      setAuthError(res.error); // Aquí frena si no es correo corporativo o si ya existía
+    }
   };
 
   const handleLogout = () => { setSupervisorProfile(null); safeStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
