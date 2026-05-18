@@ -68,7 +68,7 @@ const getDaysLeft = (targetDate) => {
 };
 
 // ⚠️ TU URL MAESTRA (Asegúrate de que sea tu enlace real /exec)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0Ed1pCRcuN1JT68x6KREy7n6InICLQe0DBaweOfkT5H__5yxkcy89Yy4nlSL1G_cbJQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyEO6cEIK1JOHfKv0Fd1hJIJgOZhafvH-3jUA1T2l5jZTTlgZ4SsNccoiE_xfbGyzAvPA/exec"; 
 
 const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
   return new Promise(async (resolve, reject) => {
