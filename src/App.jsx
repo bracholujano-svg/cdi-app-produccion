@@ -123,16 +123,12 @@ const registrarEnGoogle = async (usuario, clave, nombre, area) => {
   }
 };
 
-// ============================================================================
-// COMPONENTE: DASHBOARD EJECUTIVO (Integrado con datos reales)
-// ============================================================================
 const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => {
     const [activeTab, setActiveTab] = useState('resumen');
     const [dashSearch, setDashSearch] = useState('');
     const [dashArea, setDashArea] = useState('TODAS');
     const chartsRef = useRef({});
 
-    // 1. Cálculos de Datos Reales
     const totalOrders = orders.length;
     const despachadosCount = orders.filter(o => o.estadoInterno === 'DESPACHADO').length;
     const atrasadosCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
@@ -141,14 +137,12 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const eficiencia = totalOrders > 0 ? Math.round((aTiempoCount / totalOrders) * 100) : 100;
     const urgentesCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) >= 0 && getDaysLeft(o.fechaEntregaPrometida) <= 3).length;
 
-    // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
         const matchSearch = (o.pedidoNum || "").toLowerCase().includes(dashSearch.toLowerCase()) || (o.cliente || "").toLowerCase().includes(dashSearch.toLowerCase());
         const matchArea = dashArea === 'TODAS' || o.areaActual === dashArea;
         return matchSearch && matchArea;
     });
 
-    // Carga de trabajo por área (Top)
     const areaCounts = {};
     orders.filter(o => o.estadoInterno !== 'DESPACHADO').forEach(o => {
         areaCounts[o.areaActual] = (areaCounts[o.areaActual] || 0) + 1;
@@ -157,7 +151,6 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const areaLabels = sortedAreas.map(a => a[0]);
     const areaData = sortedAreas.map(a => a[1]);
 
-    // Calidad
     let calidadAprobados = 0;
     let calidadRechazados = 0;
     orders.forEach(o => {
@@ -170,7 +163,6 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "100";
     const tasaRechazo = totalCalidad > 0 ? ((calidadRechazados / totalCalidad) * 100).toFixed(1) : "0";
 
-    // Cargar Scripts (Chart.js y Plotly) de forma segura y renderizar gráficos
     useEffect(() => {
         const loadScriptsAndDraw = async () => {
             if (!window.Chart) {
@@ -185,17 +177,13 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                 document.head.appendChild(plotlyScript);
                 await new Promise(r => plotlyScript.onload = r);
             }
-
             drawCharts();
         };
 
         const drawCharts = () => {
             if (!window.Chart || !window.Plotly) return;
-
-            // Destruir instancias previas
             Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy());
 
-            // --- TAB RESUMEN ---
             if (activeTab === 'resumen') {
                 const ctxCarga = document.getElementById('chartCargaAreas');
                 if (ctxCarga) {
@@ -203,19 +191,13 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'bar',
                         data: {
                             labels: areaLabels.length > 0 ? areaLabels : ['Sin Datos'],
-                            datasets: [{
-                                label: 'Órdenes Activas',
-                                data: areaData.length > 0 ? areaData : [0],
-                                backgroundColor: '#a1bdc2',
-                                borderRadius: 8
-                            }]
+                            datasets: [{ label: 'Órdenes Activas', data: areaData.length > 0 ? areaData : [0], backgroundColor: '#a1bdc2', borderRadius: 8 }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } }
                     });
                 }
             }
 
-            // --- TAB LOGÍSTICA ---
             if (activeTab === 'logistica') {
                 const ctxLog = document.getElementById('chartLogistica');
                 if (ctxLog) {
@@ -223,18 +205,13 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'line',
                         data: {
                             labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-                            datasets: [{
-                                label: 'Entregas Programadas',
-                                data: [12, 19, 15, 22, 30, 8], // Mocked trend para estética visual, ya que requiere histórico extenso
-                                borderColor: '#eadcba', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
-                            }]
+                            datasets: [{ label: 'Entregas Programadas', data: [12, 19, 15, 22, 30, 8], borderColor: '#eadcba', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4 }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
                     });
                 }
             }
 
-            // --- TAB CALIDAD ---
             if (activeTab === 'calidad') {
                 const ctxCal = document.getElementById('chartCalidad');
                 if (ctxCal) {
@@ -242,11 +219,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'doughnut',
                         data: {
                             labels: ['Aprobado', 'Rechazado', 'Retrabajo'],
-                            datasets: [{
-                                data: [calidadAprobados || 10, calidadRechazados || 1, 2], // Fallback a mock si no hay inspecciones
-                                backgroundColor: ['#a1bdc2', '#ef4444', '#eadcba'],
-                                borderWidth: 0
-                            }]
+                            datasets: [{ data: [calidadAprobados || 10, calidadRechazados || 1, 2], backgroundColor: ['#a1bdc2', '#ef4444', '#eadcba'], borderWidth: 0 }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
                     });
@@ -255,16 +228,12 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
         };
 
         loadScriptsAndDraw();
-
-        return () => {
-            Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy());
-        };
+        return () => Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy());
     }, [activeTab, orders]);
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] overflow-y-auto">
             <div className="min-h-screen bg-[#f1f5f9] text-[#1e293b] font-sans pb-10">
-                {/* NAV */}
                 <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16 items-center">
@@ -278,11 +247,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             </div>
                             <div className="hidden md:flex space-x-6 h-full">
                                 {['resumen', 'operaciones', 'logistica', 'calidad'].map(tab => (
-                                    <button 
-                                        key={tab} 
-                                        onClick={() => setActiveTab(tab)} 
-                                        className={`px-1 py-5 text-xs font-black uppercase tracking-widest border-b-4 transition-colors ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-                                    >
+                                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-1 py-5 text-xs font-black uppercase tracking-widest border-b-4 transition-colors ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
                                         {tab}
                                     </button>
                                 ))}
@@ -293,16 +258,13 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                 </nav>
 
                 <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                    
-                    {/* TAB: RESUMEN */}
+                    {/* Resumen Tab Content */}
                     {activeTab === 'resumen' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
                                     <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado de Planta Actual</h1>
-                                    <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-2xl">
-                                        Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
-                                    </p>
+                                    <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-2xl">Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.</p>
                                 </div>
                                 <div className="bg-green-50 px-6 py-4 rounded-2xl border border-green-100 text-center shrink-0">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Eficiencia Global</p>
@@ -331,28 +293,21 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
-                                    <div className="relative w-full h-[300px]">
-                                        <canvas id="chartCargaAreas"></canvas>
-                                    </div>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección</h4>
+                                    <div className="relative w-full h-[300px]"><canvas id="chartCargaAreas"></canvas></div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado Base Operativa)</h4>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado)</h4>
                                     <div className="space-y-5">
                                         {[
                                             { label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[#a1bdc2]' },
                                             { label: 'Soldadura y Metal', time: '3.8 Días', pct: '70%', bg: 'bg-[#eadcba]' },
-                                            { label: 'Pintura Líquida/Polvo', time: '4.1 Días', pct: '85%', bg: 'bg-slate-400' },
-                                            { label: 'Ensamble y Empaque', time: '1.2 Días', pct: '25%', bg: 'bg-green-400' },
+                                            { label: 'Pintura', time: '4.1 Días', pct: '85%', bg: 'bg-slate-400' },
+                                            { label: 'Ensamble', time: '1.2 Días', pct: '25%', bg: 'bg-green-400' }
                                         ].map((item, idx) => (
                                             <div key={idx}>
-                                                <div className="flex justify-between text-[10px] font-black uppercase mb-1">
-                                                    <span>{item.label}</span>
-                                                    <span>{item.time}</span>
-                                                </div>
-                                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                                    <div className={`${item.bg} h-full`} style={{ width: item.pct }}></div>
-                                                </div>
+                                                <div className="flex justify-between text-[10px] font-black uppercase mb-1"><span>{item.label}</span><span>{item.time}</span></div>
+                                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden"><div className={`${item.bg} h-full`} style={{ width: item.pct }}></div></div>
                                             </div>
                                         ))}
                                     </div>
@@ -361,34 +316,27 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
-                    {/* TAB: OPERACIONES */}
+                    {/* Operaciones Tab Content */}
                     {activeTab === 'operaciones' && (
                         <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                             <div className="bg-slate-800 text-white p-8 rounded-[2.5rem] shadow-xl">
                                 <h2 className="text-2xl font-black uppercase tracking-tighter text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Explorador de Flujo Operativo</h2>
-                                <p className="text-sm text-slate-300 mt-2">Seguimiento detallado por jerarquía de procesos y estados de producción.</p>
                             </div>
-
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
-                                <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs uppercase shadow-sm bg-white" />
-                                </div>
+                                <div className="flex-1"><input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs uppercase shadow-sm bg-white" /></div>
                                 <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-[10px] uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
                             </div>
-
                             <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm overflow-x-auto">
                                 <table className="w-full text-left border-collapse min-w-[800px]">
-                                    <thead>
-                                        <tr className="bg-gray-50 border-b border-gray-100">
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pedido</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Área Actual</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado Interno</th>
-                                        </tr>
-                                    </thead>
+                                    <thead><tr className="bg-gray-50 border-b border-gray-100">
+                                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pedido</th>
+                                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
+                                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Área Actual</th>
+                                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado Interno</th>
+                                    </tr></thead>
                                     <tbody>
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
@@ -405,35 +353,24 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
-                    {/* TAB: LOGÍSTICA */}
+                    {/* Logistica & Calidad Tabs Content */}
                     {activeTab === 'logistica' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Compromisos de Entrega Próximos (Tendencia)</h2>
-                                    <div className="relative w-full h-[300px]">
-                                        <canvas id="chartLogistica"></canvas>
-                                    </div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Compromisos de Entrega</h2>
+                                    <div className="relative w-full h-[300px]"><canvas id="chartLogistica"></canvas></div>
                                 </div>
                                 <div className="bg-[#1e293b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
-                                    <div>
-                                        <h2 className="text-xl font-black uppercase text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Resumen Logístico</h2>
-                                        <p className="text-xs text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
-                                    </div>
+                                    <div><h2 className="text-xl font-black uppercase text-[#eadcba]">Resumen Logístico</h2></div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
                                             <div className="w-10 h-10 bg-[#a1bdc2] rounded-xl flex items-center justify-center font-black text-slate-900">{despachadosCount}</div>
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase text-slate-400">Total Despachados</p>
-                                                <p className="text-xs font-bold text-slate-200">Pedidos fuera de planta</p>
-                                            </div>
+                                            <div><p className="text-[9px] font-black uppercase text-slate-400">Total Despachados</p></div>
                                         </div>
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-yellow-500/30">
                                             <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center font-black text-white">{coordinationAlerts.length}</div>
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase text-yellow-400">Alertas de Coordinación</p>
-                                                <p className="text-xs font-bold text-slate-200">Prioridades altas marcadas</p>
-                                            </div>
+                                            <div><p className="text-[9px] font-black uppercase text-yellow-400">Alertas de Coordinación</p></div>
                                         </div>
                                     </div>
                                 </div>
@@ -441,43 +378,26 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
-                    {/* TAB: CALIDAD */}
                     {activeTab === 'calidad' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
                                     <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Dictámenes de Calidad</h2>
-                                    <div className="relative w-full h-[300px]">
-                                        <canvas id="chartCalidad"></canvas>
-                                    </div>
+                                    <div className="relative w-full h-[300px]"><canvas id="chartCalidad"></canvas></div>
                                 </div>
                                 <div className="flex-1 space-y-4">
                                     <div className="bg-green-50 p-6 rounded-3xl border border-green-100">
-                                        <h4 className="text-xs font-black text-green-700 uppercase mb-2">Tasa de Aprobación First-Pass</h4>
+                                        <h4 className="text-xs font-black text-green-700 uppercase mb-2">Tasa de Aprobación</h4>
                                         <p className="text-4xl font-black text-green-800">{tasaAprobacion}%</p>
-                                        <p className="text-[10px] text-green-600 mt-2 font-bold uppercase">De {totalCalidad} inspecciones registradas</p>
                                     </div>
                                     <div className="bg-red-50 p-6 rounded-3xl border border-red-100">
                                         <h4 className="text-xs font-black text-red-700 uppercase mb-2">Incidencias de Rechazo</h4>
                                         <p className="text-4xl font-black text-red-800">{tasaRechazo}%</p>
-                                        <p className="text-[10px] text-red-600 mt-2 font-bold uppercase">Retrabajos documentados</p>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm max-h-48 overflow-y-auto custom-scrollbar">
-                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-4">Últimas Observaciones (Planta Real)</h4>
-                                        <ul className="space-y-3">
-                                            {orders.flatMap(o => o.bitacoraCalidad || []).slice(-5).reverse().map((q, i) => (
-                                                <li key={i} className={`text-[10px] border-l-2 pl-3 font-medium ${q.estado === 'APROBADO' ? 'border-green-400 text-slate-600' : 'border-red-400 text-red-600'}`}>
-                                                    <span className="font-black uppercase">{q.inspector}:</span> "{q.observacion}"
-                                                </li>
-                                            ))}
-                                            {totalCalidad === 0 && <li className="text-[10px] text-gray-400 italic">No hay registros de calidad en el sistema.</li>}
-                                        </ul>
                                     </div>
                                 </div>
                             </div>
                         </section>
                     )}
-
                 </main>
             </div>
         </div>
@@ -575,6 +495,10 @@ export default function App() {
   });
   const [repSupervisor, setRepSupervisor] = useState("");
   const [generatedReportData, setGeneratedReportData] = useState([]);
+
+  // New Alert State for replacing alert()
+  const [appAlert, setAppAlert] = useState(null);
+  const showAlert = (message) => setAppAlert(message);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -695,7 +619,7 @@ export default function App() {
     
     if (res.success) {
       setAuthError("");
-      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
+      showAlert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
       setIsRegistering(false);
     } else {
       setAuthError(res.error);
@@ -992,6 +916,21 @@ export default function App() {
           </p>
         </form>
       </div>
+      
+      {/* Global App Alert for Auth Screen */}
+      {appAlert && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 text-center animate-in zoom-in">
+                  <div className="mb-4 flex justify-center text-[#a1bdc2]">
+                      <Info size={48} />
+                  </div>
+                  <p className="font-bold whitespace-pre-wrap text-sm">{appAlert}</p>
+                  <button onClick={() => setAppAlert(null)} className="mt-6 w-full bg-[#a1bdc2] text-slate-900 font-black uppercase py-3 rounded-xl hover:brightness-110">
+                      Entendido
+                  </button>
+              </div>
+          </div>
+      )}
     </div>
   );
 
@@ -1037,6 +976,7 @@ export default function App() {
         </div>
       </header>
 
+      {}
       <div className={`theme-bg-card border-b theme-border shadow-sm sticky ${mostUrgentOrder ? 'top-[104px]' : 'top-[68px]'} z-40`}>
         <div className="max-w-[1600px] mx-auto p-2 md:p-3 flex gap-3 overflow-x-auto whitespace-nowrap items-center px-4 custom-scrollbar">
           
@@ -1051,6 +991,12 @@ export default function App() {
              </button>
              <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
                Atrasos ({atrasadosCount})
+             </button>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
+               Despachados ({despachadosCount})
+             </button>
+             <button type="button" className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all theme-text-muted opacity-50 cursor-not-allowed`}>
+               Nuevos Pedidos
              </button>
           </div>
           
@@ -1093,6 +1039,7 @@ export default function App() {
         </div>
       </div>
 
+      {}
       <main className="max-w-[1600px] mx-auto p-4 md:p-6 min-h-screen">
         <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5`}>
           {groupedArray.map(group => {
@@ -1137,7 +1084,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* --- INICIO SECCIÓN MODALES DEDUPLICADOS --- */}
+      {}
       
       {activeGroupObj && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
@@ -1252,6 +1199,7 @@ export default function App() {
         </div>
       )}
 
+      {}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-end p-0 sm:p-2">
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
@@ -1292,15 +1240,24 @@ export default function App() {
                         </div>
                         
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <h4 className="text-[9px] font-black theme-text-muted uppercase tracking-widest mb-2">Histórico Producción</h4>
-                            {(selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
-                                <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
-                                    <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
-                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.nota}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span></div>
+                            <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex justify-between items-center bg-[#a1bdc2]/10 p-3 rounded-xl border border-[#a1bdc2]/20 text-[#a1bdc2] hover:bg-[#a1bdc2]/20 transition-all">
+                                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><History size={14}/> Histórico Producción</span>
+                                {showHistoryPlanta ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                            </button>
+                            {showHistoryPlanta && (
+                                <div className="space-y-2 mt-2 animate-in slide-in-from-top-2">
+                                    {(selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
+                                        <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
+                                            <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                            <div className="flex justify-between items-center mb-1 pr-8"><span className="text-[10px] font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                            <p className="text-[10px] italic theme-text-muted my-1">"{n.nota}"</p>
+                                            {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
+                                            <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span></div>
+                                        </div>
+                                    ))}
+                                    {(selectedOrder.bitacoraTurnos?.length || 0) === 0 && <p className="text-[10px] text-center text-gray-500 py-2">No hay registros</p>}
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                  )}
@@ -1336,15 +1293,24 @@ export default function App() {
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <h4 className="text-[9px] font-black theme-text-muted uppercase tracking-widest mb-2">Histórico Calidad</h4>
-                            {(selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
-                                <div key={i} className={`theme-bg-input p-3 rounded-xl border relative ${n.estado==='APROBADO' ? 'border-green-500/30' : 'border-red-500/30'}`}>
-                                    <div className="flex justify-between items-center mb-1"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
-                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span></div>
+                            <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex justify-between items-center bg-[#a1bdc2]/10 p-3 rounded-xl border border-[#a1bdc2]/20 text-[#a1bdc2] hover:bg-[#a1bdc2]/20 transition-all">
+                                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><UserCheck size={14}/> Histórico Calidad</span>
+                                {showHistoryCalidad ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                            </button>
+                            {showHistoryCalidad && (
+                                <div className="space-y-2 mt-2 animate-in slide-in-from-top-2">
+                                    {(selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
+                                        <div key={i} className={`theme-bg-input p-3 rounded-xl border relative ${n.estado==='APROBADO' ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                                            <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                            <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                            <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
+                                            {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
+                                            <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span></div>
+                                        </div>
+                                    ))}
+                                    {(selectedOrder.bitacoraCalidad?.length || 0) === 0 && <p className="text-[10px] text-center text-gray-500 py-2">No hay registros</p>}
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                  )}
@@ -1383,16 +1349,24 @@ export default function App() {
                         }} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <h4 className="text-[9px] font-black theme-text-muted uppercase tracking-widest mb-2 flex items-center gap-2"><ArrowRightLeft size={12}/> Trazabilidad Custodia</h4>
-                            {(selectedOrder.historial || []).slice().reverse().map((h, i) => (
-                                <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
-                                    <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
-                                    <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-[7px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-[7px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
-                                    {h.nota && <p className="text-[9px] italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Acta Firmada</button>}
+                            <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex justify-between items-center bg-[#a1bdc2]/10 p-3 rounded-xl border border-[#a1bdc2]/20 text-[#a1bdc2] hover:bg-[#a1bdc2]/20 transition-all">
+                                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><ArrowRightLeft size={14}/> Trazabilidad Custodia</span>
+                                {showHistoryEntrega ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                            </button>
+                            {showHistoryEntrega && (
+                                <div className="space-y-2 mt-2 animate-in slide-in-from-top-2">
+                                    {(selectedOrder.historial || []).slice().reverse().map((h, i) => (
+                                        <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
+                                            <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                            <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
+                                            <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-[7px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-[7px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
+                                            {h.nota && <p className="text-[9px] italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
+                                            {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Acta Firmada</button>}
+                                        </div>
+                                    ))}
+                                    {(selectedOrder.historial?.length || 0) === 0 && <p className="text-[10px] text-center text-gray-500 py-2">No hay registros</p>}
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                  )}
@@ -1402,7 +1376,7 @@ export default function App() {
         </div>
       )}
 
-      {/* DASHBOARD INTEGRADO HTML -> REACT */}
+      {}
       {showDashboardModal && (
         <AdvancedExecutiveDashboard 
             orders={orders} 
@@ -1513,6 +1487,22 @@ export default function App() {
         </div>
       )}
 
+      {/* Global App Alert Overlay (replaces native alerts) */}
+      {appAlert && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 text-center animate-in zoom-in">
+                  <div className="mb-4 flex justify-center text-[#a1bdc2]">
+                      <Info size={48} />
+                  </div>
+                  <p className="font-bold whitespace-pre-wrap text-sm">{appAlert}</p>
+                  <button onClick={() => setAppAlert(null)} className="mt-6 w-full bg-[#a1bdc2] text-slate-900 font-black uppercase py-3 rounded-xl hover:brightness-110">
+                      Entendido
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@700&display=swap');
         
