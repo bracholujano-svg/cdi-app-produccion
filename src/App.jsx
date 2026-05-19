@@ -805,14 +805,40 @@ export default function App() {
   };
 
   const generateShiftReport = () => {
-    if (!repSupervisor || !repDate) return;
+    if (!repSupervisor || !repDate) {
+      showAlert("⚠️ Por favor selecciona un supervisor y una fecha para generar el reporte.");
+      return;
+    }
+    
     let entries = [];
     orders.forEach(order => {
-      const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.supervisor === repSupervisor);
-      tech.forEach(n => entries.push({ ...n, type: 'Producción', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, client: order?.cliente, time: new Date(n.fecha).toLocaleTimeString(), nota: n.nota, operario: n.operario }));
+      const tech = (order?.bitacoraTurnos || []).filter(n => {
+        const isDateMatch = getLocalYYYYMMDD(n?.fecha) === repDate;
+        const isSupMatch = repSupervisor === 'TODOS' || (n?.supervisor || "").toLowerCase().includes(repSupervisor.toLowerCase());
+        return isDateMatch && isSupMatch;
+      });
+      
+      tech.forEach(n => entries.push({ 
+        ...n, 
+        type: 'Producción', 
+        orderOC: order?.pedidoNum, 
+        codArticulo: order?.codArticulo, 
+        orderName: order?.nombre, 
+        client: order?.cliente, 
+        time: new Date(n.fecha).toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit'}), 
+        nota: n.nota, 
+        operario: n.operario 
+      }));
     });
+    
+    if (entries.length === 0) {
+      showAlert(`⚠️ No se encontraron actividades en planta para ${repSupervisor === 'TODOS' ? 'los supervisores' : repSupervisor} en la fecha ${repDate}.`);
+      return;
+    }
+
     setGeneratedReportData(entries.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)));
-    setShowReportConfigModal(false); setShowReportPreviewModal(true);
+    setShowReportConfigModal(false); 
+    setShowReportPreviewModal(true);
   };
 
   const filteredOrders = orders.filter(o => {
@@ -1445,7 +1471,14 @@ export default function App() {
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[#a1bdc2]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]"><option value="">Seleccione...</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Supervisor</label>
+                <select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]">
+                  <option value="">Seleccione...</option>
+                  <option value="TODOS">Todos los Supervisores</option>
+                  {SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
               <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]" /></div>
               <button type="button" onClick={generateShiftReport} className="w-full bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs py-4 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
             </div>
@@ -1454,28 +1487,28 @@ export default function App() {
       )}
 
       {showReportPreviewModal && (
-        <div className="fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black">
-          <div className="max-w-5xl mx-auto w-full p-4 md:p-8">
+        <div id="print-area" className="fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black print:static print:block print:overflow-visible print:w-full">
+          <div className="max-w-5xl mx-auto w-full p-4 md:p-8 print:p-0 print:m-0 print:max-w-full">
             <div className="flex justify-between items-center mb-6 print:hidden">
               <h2 className="text-lg md:text-xl font-black uppercase text-slate-800">Vista Previa Impresión</h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-blue-800 active:border-b-0 active:translate-y-[3px] flex items-center gap-2"><Printer size={14}/> Imprimir</button>
+                <button type="button" onClick={() => { try { window.print(); } catch(e) { console.error("Error al imprimir", e); } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-blue-800 active:border-b-0 active:translate-y-[3px] flex items-center gap-2"><Printer size={14}/> Guardar PDF / Imprimir</button>
                 <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-[10px] border-b-[3px] border-slate-300 active:border-b-0 active:translate-y-[3px]">Cerrar</button>
               </div>
             </div>
-            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs">
+            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs w-full">
               <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6">
                 <div><h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Reporte de Turno</h1><h2 className="text-sm font-bold uppercase text-slate-500 mt-1">CDI EXHIBICIONES</h2></div>
                 <div className="text-right text-slate-900"><p className="text-[10px] font-black uppercase">Sup: {repSupervisor}</p><p className="text-[10px] font-black uppercase">Fecha: {repDate}</p></div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[700px] text-slate-900 text-[10px]">
-                  <thead><tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black">
+              <div className="overflow-x-auto print:overflow-visible w-full">
+                <table className="w-full text-left border-collapse min-w-[700px] print:min-w-full text-slate-900 text-[10px]">
+                  <thead className="table-header-group"><tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black">
                     <th className="p-2 font-black uppercase border border-slate-700 w-12">Hora</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Pedido</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Artículo</th><th className="p-2 font-black uppercase border border-slate-700">Producto</th><th className="p-2 font-black uppercase border border-slate-700">Actividad</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Operario</th>
                   </tr></thead>
                   <tbody>{generatedReportData.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-300">
-                      <td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 font-bold border-x border-slate-300 truncate max-w-[150px]">{item.orderName}</td><td className="p-2 italic border-x border-slate-300">{item.actividad}: {item.nota}</td><td className="p-2 font-bold border-x border-slate-300">{item.operario}</td>
+                    <tr key={idx} className="border-b border-slate-300 break-inside-avoid">
+                      <td className="p-2 font-bold border-x border-slate-300">{item.time}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 font-bold border-x border-slate-300 truncate max-w-[150px] print:max-w-none print:whitespace-normal">{item.orderName}</td><td className="p-2 italic border-x border-slate-300">{item.actividad}: {item.nota}</td><td className="p-2 font-bold border-x border-slate-300">{item.operario}</td>
                     </tr>
                   ))}
                   {generatedReportData.length === 0 && <tr><td colSpan="6" className="p-6 text-center font-black uppercase text-slate-400 border border-slate-200">Sin actividades registradas</td></tr>}
@@ -1531,6 +1564,23 @@ export default function App() {
 
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        
+        @media print {
+          body * { visibility: hidden; }
+          #print-area, #print-area * { visibility: visible; }
+          #print-area {
+            position: absolute !important;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+            z-index: 9999;
+          }
+          .print\\:hidden { display: none !important; }
+          @page { margin: 10mm; size: auto; }
+        }
       `}</style>
     </div>
   );
