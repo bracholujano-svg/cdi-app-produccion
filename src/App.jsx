@@ -570,6 +570,9 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchSelector, setShowSearchSelector] = useState(false);
 
+  const [itemSearchTerm, setItemSearchTerm] = useState("");
+  const [duplicateError, setDuplicateError] = useState("");
+
   const [repDate, setRepDate] = useState(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
@@ -742,13 +745,22 @@ export default function App() {
     e.preventDefault();
     const form = e.target;
     const pedNum = (form.pedidoNum.value || "").trim().toUpperCase();
+    const codArt = (form.codArticulo.value || "").trim().toUpperCase();
     const areaIni = form.areaRecibe.value;
+    
+    setDuplicateError("");
+    const isDuplicate = orders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt && o.estadoInterno !== 'DESPACHADO');
+    if (isDuplicate) {
+        setDuplicateError(`El artículo ${codArt} del pedido ${pedNum} ya se encuentra activo en producción.`);
+        return;
+    }
+
     const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
     
     const newOrder = {
       id: Date.now().toString(),
       pedidoNum: pedNum,
-      codArticulo: (form.codArticulo.value || "").trim().toUpperCase(),
+      codArticulo: codArt,
       nombre: (form.nombre.value || "").trim().toUpperCase(),
       cantidad: Number(form.cantidad.value) || 1,
       cliente: (form.cliente.value || "").trim().toUpperCase(),
@@ -1059,7 +1071,7 @@ export default function App() {
             <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
               <Megaphone size={16} /><span className="hidden md:inline">Coord</span>
             </button>
-            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
               <Plus size={16} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
           </div>
@@ -1101,33 +1113,37 @@ export default function App() {
 
         </div>
 
-        <div className="theme-bg-input border-t theme-border p-2 px-4 flex flex-col md:flex-row gap-2">
+        <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
             <div className="relative flex-1 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 theme-text-muted" size={16} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={14} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-[10px] md:text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2">
-                <select className="w-full sm:w-48 theme-bg-card px-4 py-3 rounded-xl font-black text-[10px] uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+            <div className="flex gap-2 justify-between">
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-[9px] uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
-                <div className="flex justify-between sm:justify-start theme-bg-card border theme-border rounded-xl p-1 gap-1 shrink-0 overflow-x-auto">
-                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors md:hidden ${gridColumns===1 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
-                        <LayoutList size={18} />
+                <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0">
+                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
+                        <LayoutList size={16} />
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors md:hidden ${gridColumns===2 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-2 rounded-lg transition-colors ${gridColumns===4 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>
+
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-2 rounded-lg transition-colors ${gridColumns===5 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
+                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
+                    </button>
+                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
                     </button>
                 </div>
             </div>
@@ -1135,36 +1151,30 @@ export default function App() {
       </div>
 
       <main className="max-w-[1600px] mx-auto p-4 md:p-6 min-h-screen">
-        <div className={`grid gap-4 md:gap-5 ${gridColsClass}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5`}>
           {groupedArray.map(group => {
              const daysLeft = getDaysLeft(group?.fechaEntregaPrometida);
              const isAtrasado = daysLeft !== null && daysLeft < 0 && viewFilter !== 'DESPACHADOS';
              const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && viewFilter !== 'DESPACHADOS';
              const isCumplido = (daysLeft !== null && daysLeft > 3) || viewFilter === 'DESPACHADOS';
 
-             const titleSize = gridColumns === 5 ? 'text-base md:text-lg' : gridColumns === 4 ? 'text-lg md:text-xl' : 'text-xl md:text-2xl';
-             const badgeSize = gridColumns === 5 ? 'text-[7px] px-1.5 py-0.5' : 'text-[9px] px-2 py-1';
-             const paddingSize = gridColumns === 5 ? 'p-4' : 'p-5 md:p-6';
-             const bottomTextSize = gridColumns === 5 ? 'text-[8px]' : 'text-[10px]';
-             const pedidoPrefix = gridColumns === 5 ? 'PED:' : 'PEDIDO:';
-
              return (
-              <div key={group.pedidoNum} onClick={() => setSelectedGroupPedido(group.pedidoNum)} className={`rounded-3xl ${paddingSize} cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50 animate-pulse-red' : 'theme-border'}`}>
+              <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50 animate-pulse-red' : 'theme-border'} flex flex-col min-w-0`}>
                 
-                <div className="flex justify-between items-start mb-3 gap-2">
-                  <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis ${badgeSize} ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#a1bdc2]/10 text-[#a1bdc2] border border-[#a1bdc2]/20'}`}>
+                <div className="flex justify-between items-start mb-2 gap-2">
+                  <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-[8px] px-1.5 py-1 ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#a1bdc2]/10 text-[#a1bdc2] border border-[#a1bdc2]/20'}`}>
                     {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D` : (viewFilter === 'DESPACHADOS' ? '✅ DESPACHADO' : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES` : 'S/F'))}
                   </div>
-                  <FolderOpen size={16} className={`${isAtrasado || isUrgent ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
+                  <FolderOpen size={14} className={`${isAtrasado || isUrgent ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
                 </div>
                 
-                <h3 title={group.pedidoNum} className={`${titleSize} font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[#a1bdc2]'}`}>
-                  {pedidoPrefix} {group.pedidoNum}
+                <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[#a1bdc2]'}`}>
+                  PED: {group.pedidoNum}
                 </h3>
-                <p title={group.cliente} className={`font-black theme-text-muted uppercase mt-0.5 truncate ${titleSize}`}>{group.cliente}</p>
+                <p title={group.cliente} className={`font-black theme-text-muted uppercase mt-0.5 truncate text-[10px]`}>{group.cliente}</p>
                 
-                <div className="mt-4 pt-4 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2">
-                  <span className={`px-2.5 py-1 theme-bg-input rounded-md font-black text-[#a1bdc2] ${bottomTextSize}`}>{group.products?.length || 0} PROD.</span>
+                <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2">
+                  <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[#a1bdc2] text-[9px]`}>{group.products?.length || 0} PROD.</span>
                 </div>
               </div>
             );
@@ -1182,14 +1192,32 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
           <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-              <div>
-                 <h2 className="text-xl font-black text-[#a1bdc2]">ORDEN: {activeGroupObj.pedidoNum}</h2>
-                 <p className="text-[10px] font-bold theme-text-muted uppercase">{activeGroupObj.cliente}</p>
+              <div className="flex-1 min-w-0 pr-4">
+                 <h2 className="text-xl font-black text-[#a1bdc2] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
+                 <p className="text-[10px] font-bold theme-text-muted uppercase truncate">{activeGroupObj.cliente}</p>
               </div>
-              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[#a1bdc2]">✕</button>
+              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[#a1bdc2] shrink-0">✕</button>
             </div>
+
+            <div className="p-4 border-b theme-border bg-black/5 shrink-0">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={14} />
+                    <input 
+                        type="text" 
+                        placeholder="🔍 Filtrar artículo o producto (Ej: 1234)..." 
+                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] text-current"
+                        value={itemSearchTerm} 
+                        onChange={(e) => setItemSearchTerm(e.target.value)} 
+                    />
+                </div>
+            </div>
+
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 custom-scrollbar">
-              {(activeGroupObj.products || []).map(p => (
+              {(activeGroupObj.products || []).filter(p => {
+                  const st = itemSearchTerm.toLowerCase().trim();
+                  if (!st) return true;
+                  return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
+              }).map(p => (
                 <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[#a1bdc2] shadow-sm transition-all active:scale-95 bg-[#1e293b]">
                   <div className="flex justify-between items-center mb-2">
                      <span className="text-[9px] bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-1 rounded border border-[#a1bdc2]/30 font-black truncate">CÓD: {p.codArticulo}</span>
@@ -1254,6 +1282,8 @@ export default function App() {
                       </div>
                     )}
                 </div>
+
+                {duplicateError && <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-[10px] font-black uppercase mb-4 flex items-center gap-2"><AlertCircle size={16} className="shrink-0"/> {duplicateError}</div>}
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
