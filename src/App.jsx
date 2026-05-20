@@ -183,7 +183,8 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     
     const totalCalidad = calidadAprobados + calidadRechazados + calidadRetrabajos;
     const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "0.0";
-    const tasaRechazo = totalCalidad > 0 ? (((calidadRechazados + calidadRetrabajos) / totalCalidad) * 100).toFixed(1) : "0.0";
+    const tasaRechazo = totalCalidad > 0 ? ((calidadRechazados / totalCalidad) * 100).toFixed(1) : "0.0";
+    const tasaRetrabajo = totalCalidad > 0 ? ((calidadRetrabajos / totalCalidad) * 100).toFixed(1) : "0.0";
 
     // Cargar Scripts (Chart.js y Plotly) de forma segura y renderizar gráficos
     useEffect(() => {
@@ -468,15 +469,22 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-4">
-                                    <div className="bg-green-50 p-6 rounded-3xl border border-green-100">
-                                        <h4 className="text-xs font-black text-green-700 uppercase mb-2">Tasa de Aprobación First-Pass</h4>
-                                        <p className="text-4xl font-black text-green-800">{tasaAprobacion}%</p>
-                                        <p className="text-[10px] text-green-600 mt-2 font-bold uppercase">De {totalCalidad} inspecciones registradas</p>
-                                    </div>
-                                    <div className="bg-red-50 p-6 rounded-3xl border border-red-100">
-                                        <h4 className="text-xs font-black text-red-700 uppercase mb-2">Incidencias de Rechazo</h4>
-                                        <p className="text-4xl font-black text-red-800">{tasaRechazo}%</p>
-                                        <p className="text-[10px] text-red-600 mt-2 font-bold uppercase">Retrabajos documentados</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="bg-green-50 p-4 rounded-2xl border border-green-200 shadow-sm">
+                                            <h4 className="text-[9px] font-black text-green-700 uppercase mb-1">Aprobación</h4>
+                                            <p className="text-2xl font-black text-green-800">{tasaAprobacion}%</p>
+                                            <p className="text-[8px] text-green-600 mt-1 font-bold uppercase">{calidadAprobados} registros</p>
+                                        </div>
+                                        <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 shadow-sm">
+                                            <h4 className="text-[9px] font-black text-yellow-700 uppercase mb-1">Reprocesos</h4>
+                                            <p className="text-2xl font-black text-yellow-800">{tasaRetrabajo}%</p>
+                                            <p className="text-[8px] text-yellow-700 mt-1 font-bold uppercase">{calidadRetrabajos} incidencias</p>
+                                        </div>
+                                        <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-sm">
+                                            <h4 className="text-[9px] font-black text-red-700 uppercase mb-1">Rechazos</h4>
+                                            <p className="text-2xl font-black text-red-800">{tasaRechazo}%</p>
+                                            <p className="text-[8px] text-red-600 mt-1 font-bold uppercase">{calidadRechazados} incidencias</p>
+                                        </div>
                                     </div>
                                     
                                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
@@ -781,6 +789,26 @@ export default function App() {
       safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
   };
 
+  const updateAlertDate = (alertId, newDate) => {
+      if (!newDate) return;
+      const updatedAlerts = coordinationAlerts.map(a => 
+          a.id === alertId ? { ...a, fechaEntrega: newDate } : a
+      );
+      setCoordinationAlerts(updatedAlerts);
+      safeStorage.set('cdi_local_alerts', JSON.stringify(updatedAlerts));
+
+      const alertObj = coordinationAlerts.find(a => a.id === alertId);
+      if (alertObj) {
+          const updatedOrders = orders.map(o => 
+              (o.pedidoNum || "").toUpperCase() === (alertObj.pedidoNum || "").toUpperCase() 
+              ? { ...o, fechaEntregaPrometida: newDate } 
+              : o
+          );
+          setOrders(updatedOrders);
+          safeStorage.set('cdi_local_orders', JSON.stringify(updatedOrders));
+      }
+  };
+
   const createOrder = (e) => {
     e.preventDefault();
     const form = e.target;
@@ -937,17 +965,29 @@ export default function App() {
   const generateShiftReport = () => {
     if (!repSupervisor || !repDate) return;
     let entries = [];
+    
+    // Función para normalizar nombres y permitir búsquedas parciales (ignora mayúsculas y tildes)
+    const normalizeName = (name) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    
+    const checkMatch = (savedName) => {
+        if (repSupervisor === "TODOS") return true;
+        const selParts = normalizeName(repSupervisor).split(" ").filter(p => p.trim() !== "");
+        const savNorm = normalizeName(savedName);
+        // Retorna verdadero si TODAS las palabras seleccionadas (ej. "Deyvis", "Bracho") están dentro del nombre completo guardado
+        return selParts.every(part => savNorm.includes(part));
+    };
+
     orders.forEach(order => {
       // Producción
-      const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
+      const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
       tech.forEach(n => entries.push({ ...n, type: 'PRODUCCIÓN', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.actividad}: ${n.nota}`, person: `OP: ${n.operario}`, status: 'AVANCE' }));
       
       // Calidad
-      const cal = (order?.bitacoraCalidad || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
+      const cal = (order?.bitacoraCalidad || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
       cal.forEach(n => entries.push({ ...n, type: 'CALIDAD', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `Obs: ${n.observacion}`, person: `INSP: ${n.inspector}`, status: n.estado }));
       
       // Entregas (Trazabilidad)
-      const mov = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.accion?.includes('Entrega a') && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
+      const mov = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.accion?.includes('Entrega a') && checkMatch(n?.supervisor));
       mov.forEach(n => entries.push({ ...n, type: 'TRASLADO', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.accion} | Obs: ${n.nota || 'N/A'}`, person: `DE: ${n.entrega} A: ${n.recibe}`, status: 'ENTREGADO' }));
     });
     
@@ -1590,13 +1630,29 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {coordinationAlerts.map(alertItem => (
-                  <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative">
+                  <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative flex flex-col">
                      {supervisorProfile?.area === "Administrador / Todos" && (
                          <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={16}/></button>
                      )}
                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
                      <h4 className="text-sm font-black text-[#a1bdc2] uppercase mt-1 truncate">{alertItem.cliente}</h4>
-                     <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-[#4a5c70]"><span className="text-[8px] font-black theme-text-muted uppercase block tracking-widest">Compromiso</span><p className="text-base font-black flex items-center gap-2 mt-0.5 text-[#eadcba]"><Calendar size={16} /> {formatLocalDate(alertItem.fechaEntrega)}</p></div>
+                     
+                     {supervisorProfile?.area === "Administrador / Todos" ? (
+                         <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
+                            <span className="text-[8px] font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
+                            <input 
+                                type="date" 
+                                value={alertItem.fechaEntrega} 
+                                onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
+                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[#eadcba] text-[#eadcba]" 
+                            />
+                         </div>
+                     ) : (
+                         <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-[#4a5c70] flex-1 flex flex-col justify-end">
+                            <span className="text-[8px] font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
+                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[#eadcba]"><Calendar size={16} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
+                         </div>
+                     )}
                   </div>
                 ))}
                 {coordinationAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[#a1bdc2]/50">No hay alertas logísticas activas</p>}
