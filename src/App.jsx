@@ -130,6 +130,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const [activeTab, setActiveTab] = useState('resumen');
     const [dashSearch, setDashSearch] = useState('');
     const [dashArea, setDashArea] = useState('TODAS');
+    const [showQualityObs, setShowQualityObs] = useState(false);
     const chartsRef = useRef({});
 
     // 1. Cálculos de Datos Reales
@@ -160,15 +161,29 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     // Calidad
     let calidadAprobados = 0;
     let calidadRechazados = 0;
+    let calidadRetrabajos = 0;
+    const allQualityNotes = [];
+    
     orders.forEach(o => {
         (o.bitacoraCalidad || []).forEach(q => {
             if (q.estado === 'APROBADO') calidadAprobados++;
             if (q.estado === 'RECHAZADO') calidadRechazados++;
+            if (q.estado === 'RETRABAJO') calidadRetrabajos++;
+            
+            allQualityNotes.push({
+                ...q,
+                pedidoNum: o.pedidoNum || "S/N",
+                codArticulo: o.codArticulo || "S/N",
+                cliente: o.cliente || "S/N"
+            });
         });
     });
-    const totalCalidad = calidadAprobados + calidadRechazados;
-    const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "100";
-    const tasaRechazo = totalCalidad > 0 ? ((calidadRechazados / totalCalidad) * 100).toFixed(1) : "0";
+    
+    allQualityNotes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).reverse();
+    
+    const totalCalidad = calidadAprobados + calidadRechazados + calidadRetrabajos;
+    const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "0.0";
+    const tasaRechazo = totalCalidad > 0 ? (((calidadRechazados + calidadRetrabajos) / totalCalidad) * 100).toFixed(1) : "0.0";
 
     // Cargar Scripts (Chart.js y Plotly) de forma segura y renderizar gráficos
     useEffect(() => {
@@ -238,17 +253,18 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
             if (activeTab === 'calidad') {
                 const ctxCal = document.getElementById('chartCalidad');
                 if (ctxCal) {
+                    const hasData = totalCalidad > 0;
                     chartsRef.current.calidad = new window.Chart(ctxCal, {
                         type: 'doughnut',
                         data: {
-                            labels: ['Aprobado', 'Rechazado', 'Retrabajo'],
+                            labels: hasData ? ['Aprobado', 'Rechazado', 'Retrabajo'] : ['Sin Inspecciones'],
                             datasets: [{
-                                data: [calidadAprobados || 10, calidadRechazados || 1, 2], // Fallback a mock si no hay inspecciones
-                                backgroundColor: ['#a1bdc2', '#ef4444', '#eadcba'],
+                                data: hasData ? [calidadAprobados, calidadRechazados, calidadRetrabajos] : [1],
+                                backgroundColor: hasData ? ['#a1bdc2', '#ef4444', '#eadcba'] : ['#e2e8f0'],
                                 borderWidth: 0
                             }]
                         },
-                        options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                        options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { enabled: hasData } } }
                     });
                 }
             }
@@ -462,17 +478,41 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                         <p className="text-4xl font-black text-red-800">{tasaRechazo}%</p>
                                         <p className="text-[10px] text-red-600 mt-2 font-bold uppercase">Retrabajos documentados</p>
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm max-h-48 overflow-y-auto custom-scrollbar">
-                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-4">Últimas Observaciones (Planta Real)</h4>
-                                        <ul className="space-y-3">
-                                            {orders.flatMap(o => o.bitacoraCalidad || []).slice(-5).reverse().map((q, i) => (
-                                                <li key={i} className={`text-[10px] border-l-2 pl-3 font-medium ${q.estado === 'APROBADO' ? 'border-green-400 text-slate-600' : 'border-red-400 text-red-600'}`}>
-                                                    <span className="font-black uppercase">{q.inspector}:</span> "{q.observacion}"
-                                                </li>
-                                            ))}
-                                            {totalCalidad === 0 && <li className="text-[10px] text-gray-400 italic">No hay registros de calidad en el sistema.</li>}
-                                        </ul>
+                                    
+                                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                        <button type="button" onClick={() => setShowQualityObs(!showQualityObs)} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                            <h4 className="text-xs font-black text-gray-400 uppercase">Últimas Observaciones (Planta Real)</h4>
+                                            {showQualityObs ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
+                                        </button>
+                                        
+                                        {showQualityObs && (
+                                            <div className="p-6 pt-0 border-t border-gray-50 max-h-80 overflow-y-auto custom-scrollbar">
+                                                <ul className="space-y-4 mt-4">
+                                                    {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
+                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-[10px] ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <span className="font-black text-xs uppercase text-slate-800">PED: {q.pedidoNum}</span>
+                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-[9px] ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
+                                                            </div>
+                                                            <div className="flex gap-2 text-slate-500 mb-3 font-bold uppercase text-[9px]">
+                                                                <span>ART: {q.codArticulo}</span>
+                                                                <span>•</span>
+                                                                <span className="truncate">{q.cliente}</span>
+                                                            </div>
+                                                            <p className="font-medium text-slate-700 mb-3 text-xs italic">"{q.observacion}"</p>
+                                                            <div className="text-[9px] text-slate-400 flex justify-between items-end uppercase font-black">
+                                                                <span>INSP: {q.inspector}</span>
+                                                                <span>{new Date(q.fecha).toLocaleDateString()}</span>
+                                                            </div>
+                                                        </li>
+                                                    )) : (
+                                                        <li className="text-[10px] text-gray-400 italic text-center py-4">No hay registros de calidad en el sistema.</li>
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
+
                                 </div>
                             </div>
                         </section>
@@ -879,7 +919,7 @@ export default function App() {
         text += `📝 *Observaciones:* _${savedLog.nota || 'Sin observaciones'}_\n`;
     } else if (type === 'calidad') {
         const log = savedLog || { estado: calidadState, inspector: calidadInspector, observacion: calidadNota, supervisor: supervisorProfile?.name };
-        const iconoEstado = log.estado === 'APROBADO' ? '✅' : '❌';
+        const iconoEstado = log.estado === 'APROBADO' ? '✅' : log.estado === 'RETRABAJO' ? '⚠️' : '❌';
         text += `🔍 *INSPECCIÓN DE CALIDAD*\n`;
         text += `${iconoEstado} *DICTAMEN:* *${log.estado}*\n`;
         text += `🕵️ *Inspector:* ${log.inspector}\n`;
@@ -1398,6 +1438,7 @@ export default function App() {
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
                         <div className="flex gap-2">
                             <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RETRABAJO</button>
                             <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RECHAZADO</button>
                         </div>
                         <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE INSPECTOR..." />
@@ -1426,9 +1467,9 @@ export default function App() {
                                 {showHistoryCalidad ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
                             </button>
                             {showHistoryCalidad && (selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
-                                <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                                <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : n.estado==='RETRABAJO' ? 'border-yellow-500/30' : 'border-red-500/30'}`}>
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
                                     {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
                                     <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
