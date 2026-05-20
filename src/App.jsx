@@ -98,15 +98,17 @@ const loginEnGoogle = async (usuario, clave) => {
     try {
         return JSON.parse(text);
     } catch (e) {
-        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica permisos Apps Script." };
+        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica que 'Quién tiene acceso' esté en 'Cualquier persona' en tu Apps Script." };
     }
   } catch (error) {
-    return { success: false, error: "❌ ERROR DE RED." };
+    return { success: false, error: "❌ ERROR DE RED: Verifica que tu SCRIPT_URL sea el correcto." };
   }
 };
 
 const registrarEnGoogle = async (usuario, clave, nombre, area) => {
-  if (!usuario.endsWith('@cdiexhibiciones.co')) return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS (@cdiexhibiciones.co)" };
+  if (!usuario.endsWith('@cdiexhibiciones.co')) {
+    return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
+  }
   try {
     const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area });
     const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
@@ -114,19 +116,23 @@ const registrarEnGoogle = async (usuario, clave, nombre, area) => {
     try {
         return JSON.parse(text);
     } catch (e) {
-        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN." };
+        return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica los permisos de despliegue en Apps Script." };
     }
   } catch (error) {
-    return { success: false, error: "❌ ERROR DE RED." };
+    return { success: false, error: "❌ ERROR DE RED: Verifica la URL del Script." };
   }
 };
 
+// ============================================================================
+// COMPONENTE: DASHBOARD EJECUTIVO (Integrado con datos reales)
+// ============================================================================
 const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => {
     const [activeTab, setActiveTab] = useState('resumen');
     const [dashSearch, setDashSearch] = useState('');
     const [dashArea, setDashArea] = useState('TODAS');
     const chartsRef = useRef({});
 
+    // 1. Cálculos de Datos Reales
     const totalOrders = orders.length;
     const despachadosCount = orders.filter(o => o.estadoInterno === 'DESPACHADO').length;
     const atrasadosCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
@@ -135,12 +141,14 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const eficiencia = totalOrders > 0 ? Math.round((aTiempoCount / totalOrders) * 100) : 100;
     const urgentesCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) >= 0 && getDaysLeft(o.fechaEntregaPrometida) <= 3).length;
 
+    // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
         const matchSearch = (o.pedidoNum || "").toLowerCase().includes(dashSearch.toLowerCase()) || (o.cliente || "").toLowerCase().includes(dashSearch.toLowerCase());
         const matchArea = dashArea === 'TODAS' || o.areaActual === dashArea;
         return matchSearch && matchArea;
     });
 
+    // Carga de trabajo por área (Top)
     const areaCounts = {};
     orders.filter(o => o.estadoInterno !== 'DESPACHADO').forEach(o => {
         areaCounts[o.areaActual] = (areaCounts[o.areaActual] || 0) + 1;
@@ -149,6 +157,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const areaLabels = sortedAreas.map(a => a[0]);
     const areaData = sortedAreas.map(a => a[1]);
 
+    // Calidad
     let calidadAprobados = 0;
     let calidadRechazados = 0;
     orders.forEach(o => {
@@ -161,6 +170,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "100";
     const tasaRechazo = totalCalidad > 0 ? ((calidadRechazados / totalCalidad) * 100).toFixed(1) : "0";
 
+    // Cargar Scripts (Chart.js y Plotly) de forma segura y renderizar gráficos
     useEffect(() => {
         const loadScriptsAndDraw = async () => {
             if (!window.Chart) {
@@ -175,13 +185,17 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                 document.head.appendChild(plotlyScript);
                 await new Promise(r => plotlyScript.onload = r);
             }
+
             drawCharts();
         };
 
         const drawCharts = () => {
             if (!window.Chart || !window.Plotly) return;
+
+            // Destruir instancias previas
             Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy());
 
+            // --- TAB RESUMEN ---
             if (activeTab === 'resumen') {
                 const ctxCarga = document.getElementById('chartCargaAreas');
                 if (ctxCarga) {
@@ -189,13 +203,19 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'bar',
                         data: {
                             labels: areaLabels.length > 0 ? areaLabels : ['Sin Datos'],
-                            datasets: [{ label: 'Órdenes Activas', data: areaData.length > 0 ? areaData : [0], backgroundColor: '#a1bdc2', borderRadius: 8 }]
+                            datasets: [{
+                                label: 'Órdenes Activas',
+                                data: areaData.length > 0 ? areaData : [0],
+                                backgroundColor: '#a1bdc2',
+                                borderRadius: 8
+                            }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } }
                     });
                 }
             }
 
+            // --- TAB LOGÍSTICA ---
             if (activeTab === 'logistica') {
                 const ctxLog = document.getElementById('chartLogistica');
                 if (ctxLog) {
@@ -203,13 +223,18 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'line',
                         data: {
                             labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-                            datasets: [{ label: 'Entregas Programadas', data: [12, 19, 15, 22, 30, 8], borderColor: '#eadcba', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4 }]
+                            datasets: [{
+                                label: 'Entregas Programadas',
+                                data: [12, 19, 15, 22, 30, 8], // Mocked trend para estética visual, ya que requiere histórico extenso
+                                borderColor: '#eadcba', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
+                            }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
                     });
                 }
             }
 
+            // --- TAB CALIDAD ---
             if (activeTab === 'calidad') {
                 const ctxCal = document.getElementById('chartCalidad');
                 if (ctxCal) {
@@ -217,7 +242,11 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         type: 'doughnut',
                         data: {
                             labels: ['Aprobado', 'Rechazado', 'Retrabajo'],
-                            datasets: [{ data: [calidadAprobados || 10, calidadRechazados || 1, 2], backgroundColor: ['#a1bdc2', '#ef4444', '#eadcba'], borderWidth: 0 }]
+                            datasets: [{
+                                data: [calidadAprobados || 10, calidadRechazados || 1, 2], // Fallback a mock si no hay inspecciones
+                                backgroundColor: ['#a1bdc2', '#ef4444', '#eadcba'],
+                                borderWidth: 0
+                            }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
                     });
@@ -226,55 +255,61 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
         };
 
         loadScriptsAndDraw();
-        return () => { Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy()); };
+
+        return () => {
+            Object.values(chartsRef.current).forEach(chart => chart && chart.destroy && chart.destroy());
+        };
     }, [activeTab, orders]);
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] overflow-y-auto">
             <div className="min-h-screen bg-[#f1f5f9] text-[#1e293b] font-sans pb-10">
+                {/* NAV */}
                 <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex flex-col md:flex-row justify-between md:h-16 items-center py-2 md:py-0 gap-2 md:gap-0">
-                            <div className="flex items-center gap-2 w-full md:w-auto justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-3xl font-black text-[#a1bdc2] tracking-tighter">CDI</span>
-                                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                                    <div className="flex flex-col leading-none">
-                                        <span className="text-[8px] font-bold tracking-widest text-gray-400">INFORME</span>
-                                        <span className="text-[10px] font-black text-[#a1bdc2] uppercase">Ejecutivo</span>
-                                    </div>
+                        <div className="flex justify-between h-16 items-center">
+                            <div className="flex items-center gap-2">
+                                <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-3xl font-black text-[#a1bdc2] tracking-tighter">CDI</span>
+                                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                                <div className="flex flex-col leading-none">
+                                    <span className="text-[8px] font-bold tracking-widest text-gray-400">INFORME</span>
+                                    <span className="text-[10px] font-black text-[#a1bdc2] uppercase">Ejecutivo</span>
                                 </div>
-                                <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors md:hidden">✕</button>
                             </div>
-                            <div className="flex space-x-2 md:space-x-6 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 custom-scrollbar">
+                            <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center">
                                 {['resumen', 'operaciones', 'logistica', 'calidad'].map(tab => (
                                     <button 
                                         key={tab} 
                                         onClick={() => setActiveTab(tab)} 
-                                        className={`px-3 py-3 md:py-5 text-xs font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-[10px] md:text-xs font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={onClose} className="hidden md:block p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">✕</button>
+                            <button onClick={onClose} className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors ml-2 shrink-0">✕</button>
                         </div>
                     </div>
                 </nav>
 
                 <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                    
+                    {/* TAB: RESUMEN */}
                     {activeTab === 'resumen' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
                                     <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado de Planta Actual</h1>
-                                    <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-2xl">Reporte en vivo del flujo de producción de CDI Exhibiciones.</p>
+                                    <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-2xl">
+                                        Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
+                                    </p>
                                 </div>
                                 <div className="bg-green-50 px-6 py-4 rounded-2xl border border-green-100 text-center shrink-0">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Eficiencia Global</p>
                                     <p className="text-4xl font-black text-green-700">{eficiencia}%</p>
                                 </div>
                             </div>
+
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-[#a1bdc2] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#7d969b]">
                                     <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Pedidos Activos</p>
@@ -293,18 +328,31 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     <h3 className="text-4xl font-black mt-1 text-red-500">{atrasadosCount}</h3>
                                 </div>
                             </div>
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección</h4>
-                                    <div className="relative w-full h-[300px]"><canvas id="chartCargaAreas"></canvas></div>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
+                                    <div className="relative w-full h-[300px]">
+                                        <canvas id="chartCargaAreas"></canvas>
+                                    </div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulados)</h4>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado Base Operativa)</h4>
                                     <div className="space-y-5">
-                                        {[{ label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[#a1bdc2]' }, { label: 'Soldadura', time: '3.8 Días', pct: '70%', bg: 'bg-[#eadcba]' }, { label: 'Pintura', time: '4.1 Días', pct: '85%', bg: 'bg-slate-400' }].map((item, idx) => (
+                                        {[
+                                            { label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[#a1bdc2]' },
+                                            { label: 'Soldadura y Metal', time: '3.8 Días', pct: '70%', bg: 'bg-[#eadcba]' },
+                                            { label: 'Pintura Líquida/Polvo', time: '4.1 Días', pct: '85%', bg: 'bg-slate-400' },
+                                            { label: 'Ensamble y Empaque', time: '1.2 Días', pct: '25%', bg: 'bg-green-400' },
+                                        ].map((item, idx) => (
                                             <div key={idx}>
-                                                <div className="flex justify-between text-[10px] font-black uppercase mb-1"><span>{item.label}</span><span>{item.time}</span></div>
-                                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden"><div className={`${item.bg} h-full`} style={{ width: item.pct }}></div></div>
+                                                <div className="flex justify-between text-[10px] font-black uppercase mb-1">
+                                                    <span>{item.label}</span>
+                                                    <span>{item.time}</span>
+                                                </div>
+                                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                                    <div className={`${item.bg} h-full`} style={{ width: item.pct }}></div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -313,15 +361,24 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
+                    {/* TAB: OPERACIONES */}
                     {activeTab === 'operaciones' && (
                         <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                            <div className="bg-slate-800 text-white p-8 rounded-[2.5rem] shadow-xl">
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Explorador de Flujo Operativo</h2>
+                                <p className="text-sm text-slate-300 mt-2">Seguimiento detallado por jerarquía de procesos y estados de producción.</p>
+                            </div>
+
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
-                                <div className="flex-1"><input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs uppercase shadow-sm bg-white" /></div>
+                                <div className="flex-1">
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs uppercase shadow-sm bg-white" />
+                                </div>
                                 <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-[10px] uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
                             </div>
+
                             <div className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm overflow-x-auto">
                                 <table className="w-full text-left border-collapse min-w-[800px]">
                                     <thead>
@@ -341,25 +398,42 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                                 <td className="p-5 font-bold text-[10px] text-gray-500 uppercase tracking-tight">{o.estadoInterno}</td>
                                             </tr>
                                         ))}
+                                        {tableOrders.length === 0 && <tr><td colSpan="4" className="p-10 text-center text-gray-400 font-black uppercase text-xs">No hay resultados</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
                         </section>
                     )}
 
+                    {/* TAB: LOGÍSTICA */}
                     {activeTab === 'logistica' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Compromisos de Entrega</h2>
-                                    <div className="relative w-full h-[300px]"><canvas id="chartLogistica"></canvas></div>
+                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Compromisos de Entrega Próximos (Tendencia)</h2>
+                                    <div className="relative w-full h-[300px]">
+                                        <canvas id="chartLogistica"></canvas>
+                                    </div>
                                 </div>
                                 <div className="bg-[#1e293b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
-                                    <div><h2 className="text-xl font-black uppercase text-[#eadcba]">Resumen Logístico</h2></div>
+                                    <div>
+                                        <h2 className="text-xl font-black uppercase text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Resumen Logístico</h2>
+                                        <p className="text-xs text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
+                                    </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
                                             <div className="w-10 h-10 bg-[#a1bdc2] rounded-xl flex items-center justify-center font-black text-slate-900">{despachadosCount}</div>
-                                            <div><p className="text-[9px] font-black uppercase text-slate-400">Total Despachados</p></div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-slate-400">Total Despachados</p>
+                                                <p className="text-xs font-bold text-slate-200">Pedidos fuera de planta</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-yellow-500/30">
+                                            <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center font-black text-white">{coordinationAlerts.length}</div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-yellow-400">Alertas de Coordinación</p>
+                                                <p className="text-xs font-bold text-slate-200">Prioridades altas marcadas</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -367,16 +441,43 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
+                    {/* TAB: CALIDAD */}
                     {activeTab === 'calidad' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
                                     <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Dictámenes de Calidad</h2>
-                                    <div className="relative w-full h-[300px]"><canvas id="chartCalidad"></canvas></div>
+                                    <div className="relative w-full h-[300px]">
+                                        <canvas id="chartCalidad"></canvas>
+                                    </div>
+                                </div>
+                                <div className="flex-1 space-y-4">
+                                    <div className="bg-green-50 p-6 rounded-3xl border border-green-100">
+                                        <h4 className="text-xs font-black text-green-700 uppercase mb-2">Tasa de Aprobación First-Pass</h4>
+                                        <p className="text-4xl font-black text-green-800">{tasaAprobacion}%</p>
+                                        <p className="text-[10px] text-green-600 mt-2 font-bold uppercase">De {totalCalidad} inspecciones registradas</p>
+                                    </div>
+                                    <div className="bg-red-50 p-6 rounded-3xl border border-red-100">
+                                        <h4 className="text-xs font-black text-red-700 uppercase mb-2">Incidencias de Rechazo</h4>
+                                        <p className="text-4xl font-black text-red-800">{tasaRechazo}%</p>
+                                        <p className="text-[10px] text-red-600 mt-2 font-bold uppercase">Retrabajos documentados</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm max-h-48 overflow-y-auto custom-scrollbar">
+                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-4">Últimas Observaciones (Planta Real)</h4>
+                                        <ul className="space-y-3">
+                                            {orders.flatMap(o => o.bitacoraCalidad || []).slice(-5).reverse().map((q, i) => (
+                                                <li key={i} className={`text-[10px] border-l-2 pl-3 font-medium ${q.estado === 'APROBADO' ? 'border-green-400 text-slate-600' : 'border-red-400 text-red-600'}`}>
+                                                    <span className="font-black uppercase">{q.inspector}:</span> "{q.observacion}"
+                                                </li>
+                                            ))}
+                                            {totalCalidad === 0 && <li className="text-[10px] text-gray-400 italic">No hay registros de calidad en el sistema.</li>}
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </section>
                     )}
+
                 </main>
             </div>
         </div>
@@ -472,7 +573,7 @@ export default function App() {
   const [repDate, setRepDate] = useState(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
-  const [repSupervisor, setRepSupervisor] = useState("TODOS");
+  const [repSupervisor, setRepSupervisor] = useState("");
   const [generatedReportData, setGeneratedReportData] = useState([]);
 
   useEffect(() => {
@@ -535,7 +636,7 @@ export default function App() {
           } else if (results && results.length > 1) {
               setSearchResults(results);
               setShowSearchSelector(true);
-              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias.`);
+              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
           }
       } catch (err) { 
           setExcelSearchError(err instanceof Error ? err.message : String(err)); 
@@ -567,7 +668,7 @@ export default function App() {
       setSavedLogins(newRecent); 
       safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
       
-      if (!newProfile.area.toLowerCase().includes('administrador') && AREAS.includes(newProfile.area)) {
+      if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
         setAreaFilter(newProfile.area);
       }
     } else {
@@ -577,24 +678,28 @@ export default function App() {
 
   const handleVirtualRegister = async (e) => {
     e.preventDefault(); 
-    setAuthError("⏳ REGISTRANDO EN GOOGLE...");
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
     const name = e.target.name.value.trim().toUpperCase();
     const userStr = e.target.username.value.trim().toLowerCase();
     const pass = e.target.password.value.trim();
     const area = e.target.area ? e.target.area.value : 'Pendiente';
     
     if (!/^\d+$/.test(pass) || pass.length < 4) {
-      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); return;
+      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
+      return;
     }
 
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+
     const res = await registrarEnGoogle(emailFull, pass, name, area);
     
     if (res.success) {
       setAuthError("");
-      alert("🎉 ¡REGISTRO CORRECTO! Quedaste en estado 'Pendiente de Aprobación'.");
+      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
       setIsRegistering(false);
-    } else { setAuthError(res.error); }
+    } else {
+      setAuthError(res.error);
+    }
   };
 
   const handleLogout = () => { setSupervisorProfile(null); safeStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
@@ -627,6 +732,12 @@ export default function App() {
     else { activeDictationTarget.current = target; recognitionRef.current.start(); setIsListening(true); }
   };
 
+  const deleteAlert = (alertId) => {
+      const newAlerts = coordinationAlerts.filter(a => a?.id !== alertId);
+      setCoordinationAlerts(newAlerts);
+      safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+  };
+
   const createOrder = (e) => {
     e.preventDefault();
     const form = e.target;
@@ -635,16 +746,30 @@ export default function App() {
     const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
     
     const newOrder = {
-      id: Date.now().toString(), pedidoNum: pedNum, codArticulo: (form.codArticulo.value || "").trim().toUpperCase(),
-      nombre: (form.nombre.value || "").trim().toUpperCase(), cantidad: Number(form.cantidad.value) || 1,
-      cliente: (form.cliente.value || "").trim().toUpperCase(), areaActual: areaIni, estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
-      prioridad: existingAlert ? 'ALTA' : 'NORMAL', fechaIngresoArea: new Date().toISOString(), 
+      id: Date.now().toString(),
+      pedidoNum: pedNum,
+      codArticulo: (form.codArticulo.value || "").trim().toUpperCase(),
+      nombre: (form.nombre.value || "").trim().toUpperCase(),
+      cantidad: Number(form.cantidad.value) || 1,
+      cliente: (form.cliente.value || "").trim().toUpperCase(),
+      areaActual: areaIni,
+      estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
+      prioridad: existingAlert ? 'ALTA' : 'NORMAL',
+      fechaIngresoArea: new Date().toISOString(), 
       fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : null,
-      bitacoraTurnos: [], bitacoraCalidad: [], historial: [{ fecha: new Date().toISOString(), accion: `Ingreso Inicial en ${areaIni}`, entrega: (form.entregaPersona.value || "S/N").toUpperCase(), recibe: (form.recibePersona.value || "S/N").toUpperCase() }]
+      bitacoraTurnos: [],
+      bitacoraCalidad: [],
+      historial: [{
+          fecha: new Date().toISOString(),
+          accion: `Ingreso Inicial en ${areaIni}`,
+          entrega: (form.entregaPersona.value || "S/N").toUpperCase(),
+          recibe: (form.recibePersona.value || "S/N").toUpperCase()
+      }]
     };
     
     const newOrdersList = [...orders, newOrder];
-    setOrders(newOrdersList); safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+    setOrders(newOrdersList); 
+    safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
     setShowAddModal(false);
   };
 
@@ -675,14 +800,49 @@ export default function App() {
   const updateTransfer = (id, area, date, en, re) => {
     const order = orders.find(o => o?.id === id);
     if (!order) return;
-    const newHistoryEntry = { fecha: new Date().toISOString(), accion: `Entrega a ${area}`, supervisor: supervisorProfile?.name || "S/N", entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
+    const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
     const updatedOrder = { ...order, areaActual: area, estadoInterno: CONFIG_PROCESOS[area]?.[0] || "En Espera", fechaEntregaPrometida: date, historial: [...(order.historial || []), newHistoryEntry] };
     let newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
+    
+    if (updatedOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
+        const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
+        const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+        if (allDispatched) {
+            const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
+            if (alertObj) {
+                const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                setCoordinationAlerts(newAlerts);
+                safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+            }
+        }
+    }
+
     setOrders(newOrdersList); setSelectedOrder(null); safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+  };
+
+  const addItemToCoordList = () => {
+    if (!inputManualPedido || !inputManualFecha || !inputManualCliente) return;
+    const newItem = { id: Date.now(), pedidoNum: inputManualPedido.trim().toUpperCase(), cliente: inputManualCliente.trim().toUpperCase(), fechaEntrega: inputManualFecha, detalle: inputManualDetalle ? inputManualDetalle.trim() : '', creadoEn: new Date().toISOString() };
+    setCoordList([...coordList, newItem]);
+    setInputManualPedido(""); setInputManualCliente(""); setInputManualDetalle("");
+  };
+
+  const saveBatchCoordination = () => {
+    const newAlerts = [...coordinationAlerts, ...coordList];
+    setCoordinationAlerts(newAlerts); safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+    
+    let updatedOrders = [...orders];
+    coordList.forEach(item => {
+        updatedOrders = updatedOrders.map(o => (o?.pedidoNum || "").toUpperCase() === item.pedidoNum ? { ...o, prioridad: 'ALTA', fechaEntregaPrometida: item.fechaEntrega } : o);
+    });
+    setOrders(updatedOrders); safeStorage.set('cdi_local_orders', JSON.stringify(updatedOrders));
+    
+    setCoordList([]); setShowCoordinationModal(false);
   };
 
   const shareToWhatsApp = (type, savedLog = null) => {
     if (!selectedOrder) return;
+    
     let text = `🏢 *CDI EXHIBICIONES | REPORTE OFICIAL* 🏢\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `📦 *PEDIDO:* ${selectedOrder.pedidoNum || 'S/N'}\n`;
@@ -693,15 +853,31 @@ export default function App() {
 
     if (type === 'tech') {
         const log = savedLog || { supervisor: supervisorProfile?.name, operario: tempOperario, actividad: tempShiftActivity, nota: shiftNoteText };
-        text += `🏭 *AVANCE DE PRODUCCIÓN*\n🔹 *Actividad:* ${log.actividad}\n👷 *Operario:* ${log.operario}\n📝 *Nota:* _${log.nota || 'Sin novedades'}_\n👨‍💼 *Supervisa:* ${log.supervisor}\n`;
+        text += `🏭 *AVANCE DE PRODUCCIÓN*\n`;
+        text += `🔹 *Fase / Actividad:* ${log.actividad}\n`;
+        text += `👷 *Operario Asignado:* ${log.operario}\n`;
+        text += `📝 *Novedades / Faltantes:* _${log.nota || 'Sin novedades'}_\n`;
+        text += `👨‍💼 *Supervisa:* ${log.supervisor}\n`;
     } else if (type === 'trazabilidad') {
-        text += `🔄 *ACTA DE ENTREGA DE SECCIÓN*\n🔹 *Movimiento:* ${savedLog.accion}\n📤 *Entrega:* ${savedLog.entrega}\n📥 *Recibe:* ${savedLog.recibe}\n📝 *Obs:* _${savedLog.nota || 'Sin observaciones'}_\n👨‍💼 *Supervisa:* ${savedLog.supervisor}\n`;
+        text += `🔄 *ACTA DE ENTREGA DE SECCIÓN*\n`;
+        text += `🔹 *Movimiento:* ${savedLog.accion}\n`;
+        text += `📤 *Entrega:* ${savedLog.entrega}\n`;
+        text += `📥 *Recibe:* ${savedLog.recibe}\n`;
+        text += `👨‍💼 *Supervisa:* ${savedLog.supervisor || supervisorProfile?.name || 'S/N'}\n`;
+        text += `📝 *Observaciones:* _${savedLog.nota || 'Sin observaciones'}_\n`;
     } else if (type === 'calidad') {
         const log = savedLog || { estado: calidadState, inspector: calidadInspector, observacion: calidadNota, supervisor: supervisorProfile?.name };
-        text += `🔍 *INSPECCIÓN DE CALIDAD*\n${log.estado === 'APROBADO' ? '✅' : '❌'} *DICTAMEN:* *${log.estado}*\n🕵️ *Inspector:* ${log.inspector}\n📝 *Obs:* _${log.observacion || 'Ninguna'}_\n👨‍💼 *Supervisa:* ${log.supervisor}\n`;
+        const iconoEstado = log.estado === 'APROBADO' ? '✅' : '❌';
+        text += `🔍 *INSPECCIÓN DE CALIDAD*\n`;
+        text += `${iconoEstado} *DICTAMEN:* *${log.estado}*\n`;
+        text += `🕵️ *Inspector:* ${log.inspector}\n`;
+        text += `👨‍💼 *Supervisa:* ${log.supervisor}\n`;
+        text += `📝 *Observaciones:* _${log.observacion || 'Ninguna'}_\n`;
     }
 
-    text += `\n⏱️ _Generado: ${new Date().toLocaleString('es-CO')}_\n📱 *Sistema CDI Planta*`;
+    text += `\n⏱️ _Reporte generado: ${new Date().toLocaleString('es-CO')}_\n`;
+    text += `📱 *Sistema CDI Planta*`;
+
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, 'whatsapp_cdi_tab');
   };
@@ -710,30 +886,41 @@ export default function App() {
     if (!repSupervisor || !repDate) return;
     let entries = [];
     orders.forEach(order => {
+      // Producción
       const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
-      tech.forEach(n => entries.push({ ...n, type: 'Producción', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, client: order?.cliente, time: new Date(n.fecha).toLocaleTimeString(), nota: n.nota, operario: n.operario }));
-
+      tech.forEach(n => entries.push({ ...n, type: 'PRODUCCIÓN', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.actividad}: ${n.nota}`, person: `OP: ${n.operario}`, status: 'AVANCE' }));
+      
+      // Calidad
       const cal = (order?.bitacoraCalidad || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
-      cal.forEach(n => entries.push({ ...n, type: 'Calidad', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, client: order?.cliente, time: new Date(n.fecha).toLocaleTimeString(), nota: `Inspección: ${n.estado} - ${n.observacion}`, operario: n.inspector }));
-
-      const traz = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
-      traz.forEach(n => entries.push({ ...n, type: 'Trazabilidad', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, client: order?.cliente, time: new Date(n.fecha).toLocaleTimeString(), nota: `${n.accion} (E: ${n.entrega} - R: ${n.recibe})`, operario: 'N/A' }));
+      cal.forEach(n => entries.push({ ...n, type: 'CALIDAD', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `Obs: ${n.observacion}`, person: `INSP: ${n.inspector}`, status: n.estado }));
+      
+      // Entregas (Trazabilidad)
+      const mov = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.accion?.includes('Entrega a') && (repSupervisor === "TODOS" || n?.supervisor === repSupervisor));
+      mov.forEach(n => entries.push({ ...n, type: 'TRASLADO', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.accion} | Obs: ${n.nota || 'N/A'}`, person: `DE: ${n.entrega} A: ${n.recibe}`, status: 'ENTREGADO' }));
     });
-
+    
     if(entries.length === 0) {
-        alert(`No hay registros generados por ${repSupervisor} en la fecha seleccionada.`);
+        alert("⚠️ No hay registros de actividades para este supervisor en la fecha seleccionada.");
         return;
     }
-
+    
     setGeneratedReportData(entries.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)));
-    setShowReportConfigModal(false); 
-    setShowReportPreviewModal(true);
+    setShowReportConfigModal(false); setShowReportPreviewModal(true);
   };
 
   const filteredOrders = orders.filter(o => {
     if (!o) return false;
-    const st = searchTerm.toLowerCase();
-    const matchSearch = (o.pedidoNum || "").toLowerCase().includes(st) || (o.nombre || "").toLowerCase().includes(st) || (o.codArticulo || "").toLowerCase().includes(st);
+    
+    const st = searchTerm.toLowerCase().trim();
+    const searchTerms = st ? st.split(/\s+/) : [];
+    
+    const matchSearch = searchTerms.length === 0 || searchTerms.every(term => 
+        (String(o.pedidoNum || "")).toLowerCase().includes(term) || 
+        (String(o.nombre || "")).toLowerCase().includes(term) || 
+        (String(o.codArticulo || "")).toLowerCase().includes(term) ||
+        (String(o.cliente || "")).toLowerCase().includes(term)
+    );
+
     const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter;
     if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
     if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
@@ -754,13 +941,16 @@ export default function App() {
   const totalOrders = orders.length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
   const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
+  const cumplidosCount = totalOrders - atrasadosCount - despachadosCount; 
 
   const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
   const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
 
-  let gridColsClass = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-  if (gridColumns === 4) gridColsClass = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4';
-  if (gridColumns === 5) gridColsClass = 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5';
+  let gridColsClass = 'grid-cols-1 md:grid-cols-3';
+  if (gridColumns === 2) gridColsClass = 'grid-cols-2 lg:grid-cols-3';
+  if (gridColumns === 3) gridColsClass = 'grid-cols-3 lg:grid-cols-3';
+  if (gridColumns === 4) gridColsClass = 'grid-cols-3 lg:grid-cols-4';
+  if (gridColumns === 5) gridColsClass = 'grid-cols-3 lg:grid-cols-5';
 
   if (!supervisorProfile) return (
     <div className="min-h-screen theme-bg-main flex flex-col items-center justify-center p-4 transition-colors duration-300" data-theme={appTheme}>
@@ -884,19 +1074,18 @@ export default function App() {
             <span className="text-[8px] font-bold theme-text-muted uppercase mt-1">{supervisorProfile.area}</span>
           </div>
 
-          {}
           <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0">
              <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[#a1bdc2] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#a1bdc2]'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
-             <button type="button" disabled className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all opacity-50 cursor-not-allowed theme-text-muted hover:text-[#a1bdc2]`}>
-               Nuevos Pedidos
-             </button>
              <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
                Atrasos ({atrasadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-[#eadcba] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#eadcba]'}`}>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
                Despachados ({despachadosCount})
+             </button>
+             <button type="button" className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all theme-text-muted opacity-50 cursor-not-allowed`}>
+               Nuevos Ped. (0)
              </button>
           </div>
           
@@ -909,6 +1098,7 @@ export default function App() {
           <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-[10px] font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
             <FileText size={14} /><span>Reporte</span>
           </button>
+
         </div>
 
         <div className="theme-bg-input border-t theme-border p-2 px-4 flex flex-col md:flex-row gap-2">
@@ -917,20 +1107,26 @@ export default function App() {
                 <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
-            <div className="flex gap-2">
-                <select disabled={!supervisorProfile.area.toLowerCase().includes("administrador")} className="flex-1 md:w-48 theme-bg-card px-4 py-3 rounded-xl font-black text-[10px] uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] disabled:opacity-70 cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+            <div className="flex flex-col sm:flex-row gap-2">
+                <select className="w-full sm:w-48 theme-bg-card px-4 py-3 rounded-xl font-black text-[10px] uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
-                <div className="flex theme-bg-card border theme-border rounded-xl p-1 gap-1 shrink-0 overflow-x-auto">
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`p-2 rounded-lg transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
+                <div className="flex justify-between sm:justify-start theme-bg-card border theme-border rounded-xl p-1 gap-1 shrink-0 overflow-x-auto">
+                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors md:hidden ${gridColumns===1 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
+                        <LayoutList size={18} />
+                    </button>
+                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors md:hidden ${gridColumns===2 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`p-2 rounded-lg transition-colors ${gridColumns===4 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex-1 sm:flex-none flex justify-center p-2 rounded-lg transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`p-2 rounded-lg transition-colors ${gridColumns===5 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-2 rounded-lg transition-colors ${gridColumns===4 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>
+                    </button>
+                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-2 rounded-lg transition-colors ${gridColumns===5 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
                     </button>
                 </div>
@@ -938,9 +1134,8 @@ export default function App() {
         </div>
       </div>
 
-      {}
       <main className="max-w-[1600px] mx-auto p-4 md:p-6 min-h-screen">
-        <div className={`grid ${gridColsClass} gap-4 md:gap-5`}>
+        <div className={`grid gap-4 md:gap-5 ${gridColsClass}`}>
           {groupedArray.map(group => {
              const daysLeft = getDaysLeft(group?.fechaEntregaPrometida);
              const isAtrasado = daysLeft !== null && daysLeft < 0 && viewFilter !== 'DESPACHADOS';
@@ -983,7 +1178,6 @@ export default function App() {
         </div>
       </main>
 
-      {}
       {activeGroupObj && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
           <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -1012,7 +1206,6 @@ export default function App() {
         </div>
       )}
 
-      {}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
@@ -1098,7 +1291,6 @@ export default function App() {
         </div>
       )}
 
-      {}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-end p-0 sm:p-2">
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
@@ -1112,10 +1304,14 @@ export default function App() {
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
               
+              {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
-                    <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
-                    <span className="font-black text-xs uppercase tracking-wide">Avance en Planta</span>
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
+                        <span className="font-black text-xs uppercase tracking-wide">Avance en Planta</span>
+                    </div>
+                    {openSection === 'planta' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                  </button>
                  {openSection === 'planta' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
@@ -1126,43 +1322,47 @@ export default function App() {
                             <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <Camera size={16}/> {tempPhoto ? 'FOTO LISTA' : 'TOMA CÁMARA'}
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
+                                <Camera size={16}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-black/10 border border-black/20 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/20 transition-all">
-                                <ImageIcon size={16}/> GALERÍA
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={16}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
                         </div>
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
-                        <button type="button" onClick={addShiftNote} className="w-full bg-[#eadcba] text-[#1e293b] font-black uppercase text-[10px] py-4 rounded-xl shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[#eadcba] text-[#1e293b] font-black uppercase text-[10px] py-3.5 rounded-xl border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
+                        </div>
                         
-                        <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex justify-between items-center bg-black/10 py-3 px-4 rounded-xl font-black text-[10px] uppercase text-[#a1bdc2] hover:bg-black/20 transition-all">
-                            <span>Ver Histórico de Planta...</span>{showHistoryPlanta ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                        </button>
-
-                        {showHistoryPlanta && (
-                          <div className="mt-2 space-y-2 animate-in fade-in">
-                              {(selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
-                                  <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
-                                      <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                      <div className="flex justify-between items-center mb-1 pr-6"><span className="text-[10px] font-black text-[#a1bdc2] uppercase truncate">{n.actividad}</span><span className="text-[8px] font-bold theme-text-muted shrink-0 ml-2">{new Date(n.fecha).toLocaleString()}</span></div>
-                                      <p className="text-[10px] italic theme-text-muted my-1">"{n.nota}"</p>
-                                      {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                      <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span><span className="text-[8px] font-black text-[#eadcba] uppercase">SUP: {n.supervisor}</span></div>
-                                  </div>
-                              ))}
-                          </div>
-                        )}
+                        <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
+                            <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                                <span>Ver Histórico Producción ({selectedOrder.bitacoraTurnos?.length || 0})</span>
+                                {showHistoryPlanta ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                            </button>
+                            {showHistoryPlanta && (selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
+                                <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
+                                    <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-[10px] font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.nota}"</p>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                  )}
               </div>
 
+              {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
-                    <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
-                    <span className="font-black text-xs uppercase tracking-wide">Inspección Calidad</span>
+                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
+                        <span className="font-black text-xs uppercase tracking-wide">Inspección Calidad</span>
+                    </div>
+                    {openSection === 'calidad' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                  </button>
                  {openSection === 'calidad' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
@@ -1176,43 +1376,47 @@ export default function App() {
                             <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <Camera size={16}/> {calidadPhoto ? 'FOTO LISTA' : 'TOMA CÁMARA'}
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
+                                <Camera size={16}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-black/10 border border-black/20 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/20 transition-all">
-                                <ImageIcon size={16}/> GALERÍA
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={16}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
                         </div>
                         {calidadPhoto && <img src={calidadPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
-                        <button type="button" onClick={addQualityNote} className="w-full bg-[#a1bdc2] text-[#1e293b] py-4 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-[10px] py-3.5 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
+                        </div>
 
-                        <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex justify-between items-center bg-black/10 py-3 px-4 rounded-xl font-black text-[10px] uppercase text-[#a1bdc2] hover:bg-black/20 transition-all">
-                            <span>Ver Histórico de Calidad...</span>{showHistoryCalidad ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                        </button>
-
-                        {showHistoryCalidad && (
-                          <div className="mt-2 space-y-2 animate-in fade-in">
-                              {(selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
-                                  <div key={i} className={`theme-bg-input p-3 rounded-xl border relative group ${n.estado==='APROBADO' ? 'border-green-500/30' : 'border-red-500/30'}`}>
-                                      <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                      <div className="flex justify-between items-center mb-1 pr-6"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted shrink-0 ml-2">{new Date(n.fecha).toLocaleString()}</span></div>
-                                      <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
-                                      {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                      <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-[8px] font-black text-[#eadcba] uppercase">SUP: {n.supervisor}</span></div>
-                                  </div>
-                              ))}
-                          </div>
-                        )}
+                        <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
+                            <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                                <span>Ver Histórico Calidad ({selectedOrder.bitacoraCalidad?.length || 0})</span>
+                                {showHistoryCalidad ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                            </button>
+                            {showHistoryCalidad && (selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
+                                <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                                    <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                  )}
               </div>
 
+              {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center gap-3 bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
-                    <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
-                    <span className="font-black text-xs uppercase tracking-wide">Entregas Sección</span>
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
+                        <span className="font-black text-xs uppercase tracking-wide">Entregas Sección</span>
+                    </div>
+                    {openSection === 'entrega' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                  </button>
                  {openSection === 'entrega' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
@@ -1227,12 +1431,12 @@ export default function App() {
                             <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <Camera size={16}/> {transferPhoto ? 'FOTO LISTA' : 'TOMA CÁMARA'}
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
+                                <Camera size={16}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-black/10 border border-black/20 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/20 transition-all">
-                                <ImageIcon size={16}/> GALERÍA
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={16}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
                         </div>
@@ -1244,24 +1448,22 @@ export default function App() {
                             if(en && re && tempTransferDate) updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, re);
                         }} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
 
-                        <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex justify-between items-center bg-black/10 py-3 px-4 rounded-xl font-black text-[10px] uppercase text-[#a1bdc2] hover:bg-black/20 transition-all">
-                            <span>Ver Histórico de Entregas...</span>{showHistoryEntrega ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                        </button>
-
-                        {showHistoryEntrega && (
-                          <div className="mt-2 space-y-2 animate-in fade-in">
-                              {(selectedOrder.historial || []).slice().reverse().map((h, i) => (
-                                  <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group">
-                                      <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                      <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#a1bdc2]/30 truncate">{h.accion}</span><span className="text-[8px] font-bold theme-text-muted shrink-0 ml-2">{new Date(h.fecha).toLocaleString()}</span></div>
-                                      <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-[7px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-[7px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
-                                      {h.nota && <p className="text-[9px] italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                      {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Acta Firmada</button>}
-                                      <div className="flex justify-end mt-2"><span className="text-[8px] font-black text-[#eadcba] uppercase">SUP: {h.supervisor || 'N/D'}</span></div>
-                                  </div>
-                              ))}
-                          </div>
-                        )}
+                        <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
+                            <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                                <span>Ver Histórico Entregas ({selectedOrder.historial?.length || 0})</span>
+                                {showHistoryEntrega ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                            </button>
+                            {showHistoryEntrega && (selectedOrder.historial || []).slice().reverse().map((h, i) => (
+                                <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
+                                    <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
+                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-[7px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-[7px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
+                                    {h.nota && <p className="text-[9px] italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
+                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Acta Firmada</button>}
+                                    <div className="flex justify-end items-end mt-2"><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                  )}
               </div>
@@ -1270,9 +1472,12 @@ export default function App() {
         </div>
       )}
 
-      {}
       {showDashboardModal && (
-        <AdvancedExecutiveDashboard orders={orders} coordinationAlerts={coordinationAlerts} onClose={() => setShowDashboardModal(false)} />
+        <AdvancedExecutiveDashboard 
+            orders={orders} 
+            coordinationAlerts={coordinationAlerts} 
+            onClose={() => setShowDashboardModal(false)} 
+        />
       )}
 
       {showCoordinationModal && (
@@ -1315,8 +1520,8 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {coordinationAlerts.map(alertItem => (
                   <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative">
-                     {supervisorProfile?.area.toLowerCase().includes("administrador") && (
-                         <button type="button" onClick={() => setCoordinationAlerts(coordinationAlerts.filter(a => a.id !== alertItem.id))} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={16}/></button>
+                     {supervisorProfile?.area === "Administrador / Todos" && (
+                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={16}/></button>
                      )}
                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
                      <h4 className="text-sm font-black text-[#a1bdc2] uppercase mt-1 truncate">{alertItem.cliente}</h4>
@@ -1335,11 +1540,7 @@ export default function App() {
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[#a1bdc2]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Supervisor</label>
-              <select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]">
-                <option value="TODOS">TODOS LOS SUPERVISORES</option>
-                {SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}
-              </select></div>
+              <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]" /></div>
               <button type="button" onClick={generateShiftReport} className="w-full bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs py-4 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
             </div>
@@ -1348,16 +1549,16 @@ export default function App() {
       )}
 
       {showReportPreviewModal && (
-        <div className="print-modal-container fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black print:overflow-visible">
+        <div className="fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black">
           <div className="max-w-5xl mx-auto w-full p-4 md:p-8">
-            <div className="flex justify-between items-center mb-6 no-print">
+            <div className="flex justify-between items-center mb-6 print:hidden">
               <h2 className="text-lg md:text-xl font-black uppercase text-slate-800">Vista Previa Impresión</h2>
               <div className="flex gap-2">
                 <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-blue-800 active:border-b-0 active:translate-y-[3px] flex items-center gap-2"><Printer size={14}/> Imprimir</button>
                 <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-[10px] border-b-[3px] border-slate-300 active:border-b-0 active:translate-y-[3px]">Cerrar</button>
               </div>
             </div>
-            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs print-content">
+            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs w-full overflow-hidden block">
               <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6">
                 <div><h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Reporte de Turno</h1><h2 className="text-sm font-bold uppercase text-slate-500 mt-1">CDI EXHIBICIONES</h2></div>
                 <div className="text-right text-slate-900"><p className="text-[10px] font-black uppercase">Sup: {repSupervisor}</p><p className="text-[10px] font-black uppercase">Fecha: {repDate}</p></div>
@@ -1365,14 +1566,14 @@ export default function App() {
               <div className="overflow-x-auto print:overflow-visible">
                 <table className="w-full text-left border-collapse min-w-[700px] text-slate-900 text-[10px]">
                   <thead><tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black">
-                    <th className="p-2 font-black uppercase border border-slate-700 w-12">Hora</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Pedido</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Artículo</th><th className="p-2 font-black uppercase border border-slate-700">Producto</th><th className="p-2 font-black uppercase border border-slate-700">Actividad</th><th className="p-2 font-black uppercase border border-slate-700 w-20">Operario</th>
+                    <th className="p-2 font-black uppercase border border-slate-700 w-16">Tipo</th><th className="p-2 font-black uppercase border border-slate-700 w-12">Hora</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Pedido</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Artículo</th><th className="p-2 font-black uppercase border border-slate-700">Producto / Detalle</th><th className="p-2 font-black uppercase border border-slate-700 w-24">Involucrado</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Estado</th>
                   </tr></thead>
                   <tbody>{generatedReportData.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-300">
-                      <td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 font-bold border-x border-slate-300 truncate max-w-[150px]">{item.orderName}</td><td className="p-2 italic border-x border-slate-300">({item.type}) {item.actividad || 'N/A'}: {item.nota}</td><td className="p-2 font-bold border-x border-slate-300">{item.operario}</td>
+                    <tr key={idx} className="border-b border-slate-300 break-inside-avoid">
+                      <td className="p-2 font-black border-x border-slate-300">{item.type}</td><td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 border-x border-slate-300"><span className="font-bold block truncate max-w-[150px]">{item.orderName}</span><span className="italic text-slate-600">{item.detail}</span></td><td className="p-2 font-bold border-x border-slate-300 text-[9px]">{item.person}</td><td className="p-2 font-black border-x border-slate-300">{item.status}</td>
                     </tr>
                   ))}
-                  {generatedReportData.length === 0 && <tr><td colSpan="6" className="p-6 text-center font-black uppercase text-slate-400 border border-slate-200">Sin actividades registradas</td></tr>}
+                  {generatedReportData.length === 0 && <tr><td colSpan="7" className="p-6 text-center font-black uppercase text-slate-400 border border-slate-200">Sin actividades registradas</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -1381,7 +1582,6 @@ export default function App() {
         </div>
       )}
 
-      {}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@700&display=swap');
         
@@ -1408,15 +1608,20 @@ export default function App() {
         @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.4); } }
         .animate-pulse-red { animation: pulse-red 2s infinite; }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-
+        
         @media print {
             body * { visibility: hidden; }
-            .print-modal-container, .print-modal-container * { visibility: visible; }
-            .print-modal-container { position: absolute; left: 0; top: 0; width: 100%; z-index: 9999; }
-            .no-print { display: none !important; }
-            tr { page-break-inside: avoid; }
+            .fixed.inset-0.bg-white.z-\\[130\\] { position: absolute; left: 0; top: 0; right: 0; visibility: visible; height: auto !important; overflow: visible !important; }
+            .fixed.inset-0.bg-white.z-\\[130\\] * { visibility: visible; }
+            .print\\:hidden { display: none !important; }
+            .print\\:border-0 { border: none !important; }
+            .print\\:p-0 { padding: 0 !important; }
+            .print\\:bg-slate-200 { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
+            .print\\:text-black { color: #000 !important; }
+            .print\\:overflow-visible { overflow: visible !important; }
+            @page { margin: 10mm; size: auto; }
         }
       `}</style>
     </div>
