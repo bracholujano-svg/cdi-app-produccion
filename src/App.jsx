@@ -158,18 +158,28 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     const areaLabels = sortedAreas.map(a => a[0]);
     const areaData = sortedAreas.map(a => a[1]);
 
-    // Calidad
-    let calidadAprobados = 0;
-    let calidadRechazados = 0;
-    let calidadRetrabajos = 0;
+    // Calidad (Lógica ISO 9001 basada en población total)
+    let itemsAprobados = 0;
+    let itemsRechazados = 0;
+    let itemsRetrabajo = 0;
+    let itemsSinInspeccion = 0;
+    let totalInspeccionesRealizadas = 0;
     const allQualityNotes = [];
     
     orders.forEach(o => {
-        (o.bitacoraCalidad || []).forEach(q => {
-            if (q.estado === 'APROBADO') calidadAprobados++;
-            if (q.estado === 'RECHAZADO') calidadRechazados++;
-            if (q.estado === 'RETRABAJO') calidadRetrabajos++;
+        if (!o.bitacoraCalidad || o.bitacoraCalidad.length === 0) {
+            itemsSinInspeccion++;
+        } else {
+            // ISO 9001: El estado actual del producto lo dicta su ÚLTIMA inspección registrada
+            const lastQ = o.bitacoraCalidad[o.bitacoraCalidad.length - 1];
+            if (lastQ.estado === 'APROBADO') itemsAprobados++;
+            if (lastQ.estado === 'RECHAZADO') itemsRechazados++;
+            if (lastQ.estado === 'RETRABAJO') itemsRetrabajo++;
             
+            totalInspeccionesRealizadas += o.bitacoraCalidad.length;
+        }
+
+        (o.bitacoraCalidad || []).forEach(q => {
             allQualityNotes.push({
                 ...q,
                 pedidoNum: o.pedidoNum || "S/N",
@@ -181,10 +191,56 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
     
     allQualityNotes.sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).reverse();
     
-    const totalCalidad = calidadAprobados + calidadRechazados + calidadRetrabajos;
-    const tasaAprobacion = totalCalidad > 0 ? ((calidadAprobados / totalCalidad) * 100).toFixed(1) : "0.0";
-    const tasaRechazo = totalCalidad > 0 ? ((calidadRechazados / totalCalidad) * 100).toFixed(1) : "0.0";
-    const tasaRetrabajo = totalCalidad > 0 ? ((calidadRetrabajos / totalCalidad) * 100).toFixed(1) : "0.0";
+    // Mejora Continua: Análisis de Reprocesos por Sección
+    const seccionesReprocesos = {};
+    orders.forEach(o => {
+        const seccion = o.areaActual;
+        if (!seccion) return;
+        
+        if (!seccionesReprocesos[seccion]) {
+            seccionesReprocesos[seccion] = { totalItems: 0, retrabajos: 0, causasRaw: [] };
+        }
+        seccionesReprocesos[seccion].totalItems++;
+        
+        (o.bitacoraCalidad || []).forEach(q => {
+            if (q.estado === 'RETRABAJO') {
+                seccionesReprocesos[seccion].retrabajos++;
+                if (q.observacion) seccionesReprocesos[seccion].causasRaw.push(q.observacion);
+            }
+        });
+    });
+
+    // Filtra las causas repetidas para mostrar el top 3
+    const extractTopCauses = (arr) => {
+        const counts = {};
+        arr.forEach(item => {
+            const clean = item.trim();
+            if(clean && clean !== "Sin observaciones") counts[clean] = (counts[clean] || 0) + 1;
+        });
+        return Object.entries(counts).sort((a,b) => b[1] - a[1]).map(e => e[0]).slice(0, 3);
+    };
+
+    const sortedSecciones = Object.entries(seccionesReprocesos)
+        .map(([nombre, stats]) => {
+            const tasa = stats.totalItems > 0 ? (stats.retrabajos / stats.totalItems) * 100 : 0;
+            return { nombre, tasa, causas: extractTopCauses(stats.causasRaw), retrabajos: stats.retrabajos };
+        })
+        .filter(s => s.retrabajos > 0) // Solo secciones con reprocesos reales
+        .sort((a, b) => b.tasa - a.tasa);
+
+    // Matemáticas de color degradado dinámico (Rojo -> Verde)
+    const maxTasa = sortedSecciones.length > 0 ? sortedSecciones[0].tasa : 0;
+    const barColors = sortedSecciones.map(s => {
+        const ratio = maxTasa > 0 ? s.tasa / maxTasa : 0;
+        return `hsl(${(1 - ratio) * 120}, 84%, 55%)`; 
+    });
+
+    const basePlanta = totalOrders; // Población Total de la Planta
+    const itemsInspeccionados = itemsAprobados + itemsRechazados + itemsRetrabajo;
+    const porcentajeInspeccionado = basePlanta > 0 ? ((itemsInspeccionados / basePlanta) * 100).toFixed(1) : "0.0";
+    const porcentajeAprobado = basePlanta > 0 ? ((itemsAprobados / basePlanta) * 100).toFixed(1) : "0.0";
+    const porcentajeRetrabajo = basePlanta > 0 ? ((itemsRetrabajo / basePlanta) * 100).toFixed(1) : "0.0";
+    const porcentajeRechazo = basePlanta > 0 ? ((itemsRechazados / basePlanta) * 100).toFixed(1) : "0.0";
 
     // Cargar Scripts (Chart.js y Plotly) de forma segura y renderizar gráficos
     useEffect(() => {
@@ -254,18 +310,40 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
             if (activeTab === 'calidad') {
                 const ctxCal = document.getElementById('chartCalidad');
                 if (ctxCal) {
-                    const hasData = totalCalidad > 0;
+                    const hasData = basePlanta > 0;
                     chartsRef.current.calidad = new window.Chart(ctxCal, {
                         type: 'doughnut',
                         data: {
-                            labels: hasData ? ['Aprobado', 'Rechazado', 'Retrabajo'] : ['Sin Inspecciones'],
+                            labels: hasData ? ['Aprobados (OK)', 'Reprocesos (WIP)', 'Rechazos (Scrap)', 'Sin Inspeccionar (Riesgo)'] : ['Sin Datos'],
                             datasets: [{
-                                data: hasData ? [calidadAprobados, calidadRechazados, calidadRetrabajos] : [1],
-                                backgroundColor: hasData ? ['#a1bdc2', '#ef4444', '#eadcba'] : ['#e2e8f0'],
+                                data: hasData ? [itemsAprobados, itemsRetrabajo, itemsRechazados, itemsSinInspeccion] : [1],
+                                backgroundColor: hasData ? ['#22c55e', '#eab308', '#ef4444', '#cbd5e1'] : ['#e2e8f0'],
                                 borderWidth: 0
                             }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { enabled: hasData } } }
+                    });
+                }
+                
+                // Gráfico de Barras de Reprocesos
+                const ctxBarras = document.getElementById('chartBarrasReproceso');
+                if (ctxBarras && sortedSecciones.length > 0) {
+                    chartsRef.current.barras = new window.Chart(ctxBarras, {
+                        type: 'bar',
+                        data: {
+                            labels: sortedSecciones.map(s => s.nombre),
+                            datasets: [{
+                                label: 'Tasa de Reproceso (%)',
+                                data: sortedSecciones.map(s => s.tasa.toFixed(1)),
+                                backgroundColor: barColors,
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, suggestedMax: maxTasa + 5 } }
+                        }
                     });
                 }
             }
@@ -462,28 +540,40 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                     {activeTab === 'calidad' && (
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="flex flex-col md:flex-row gap-8">
-                                <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Dictámenes de Calidad</h2>
-                                    <div className="relative w-full h-[300px]">
+                                <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                                    <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado Global de Calidad</h2>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
+                                    <div className="relative w-full h-[300px] flex-1">
                                         <canvas id="chartCalidad"></canvas>
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-4">
+                                    <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl text-white flex justify-between items-center">
+                                        <div>
+                                            <h4 className="text-[9px] font-black text-[#a1bdc2] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
+                                            <p className="text-2xl font-black text-[#eadcba]">{porcentajeInspeccionado}%</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
+                                            <p className="text-[8px] text-slate-500 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="bg-green-50 p-4 rounded-2xl border border-green-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-green-700 uppercase mb-1">Aprobación</h4>
-                                            <p className="text-2xl font-black text-green-800">{tasaAprobacion}%</p>
-                                            <p className="text-[8px] text-green-600 mt-1 font-bold uppercase">{calidadAprobados} registros</p>
+                                            <h4 className="text-[9px] font-black text-green-700 uppercase mb-1">Tasa Aprobación</h4>
+                                            <p className="text-2xl font-black text-green-800">{porcentajeAprobado}%</p>
+                                            <p className="text-[8px] text-green-600 mt-1 font-bold uppercase">{itemsAprobados} productos OK</p>
                                         </div>
                                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-yellow-700 uppercase mb-1">Reprocesos</h4>
-                                            <p className="text-2xl font-black text-yellow-800">{tasaRetrabajo}%</p>
-                                            <p className="text-[8px] text-yellow-700 mt-1 font-bold uppercase">{calidadRetrabajos} incidencias</p>
+                                            <h4 className="text-[9px] font-black text-yellow-700 uppercase mb-1">Tasa Reprocesos</h4>
+                                            <p className="text-2xl font-black text-yellow-800">{porcentajeRetrabajo}%</p>
+                                            <p className="text-[8px] text-yellow-700 mt-1 font-bold uppercase">{itemsRetrabajo} en corrección</p>
                                         </div>
                                         <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-red-700 uppercase mb-1">Rechazos</h4>
-                                            <p className="text-2xl font-black text-red-800">{tasaRechazo}%</p>
-                                            <p className="text-[8px] text-red-600 mt-1 font-bold uppercase">{calidadRechazados} incidencias</p>
+                                            <h4 className="text-[9px] font-black text-red-700 uppercase mb-1">Tasa Rechazos</h4>
+                                            <p className="text-2xl font-black text-red-800">{porcentajeRechazo}%</p>
+                                            <p className="text-[8px] text-red-600 mt-1 font-bold uppercase">{itemsRechazados} mermas/scrap</p>
                                         </div>
                                     </div>
                                     
@@ -523,6 +613,44 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
                                 </div>
                             </div>
+                            
+                            {/* NUEVO BLOQUE: Análisis de Mejora Continua */}
+                            {sortedSecciones.length > 0 && (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Frecuencia de Reprocesos</h2>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
+                                        <div className="relative w-full h-[250px] flex-1">
+                                            <canvas id="chartBarrasReproceso"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Análisis de Causas Raíz</h2>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Top errores en secciones críticas</p>
+                                        <div className="overflow-y-auto max-h-[250px] custom-scrollbar pr-2 space-y-3">
+                                            {sortedSecciones.map((sec, idx) => {
+                                                const ratio = maxTasa > 0 ? sec.tasa / maxTasa : 0;
+                                                const hue = (1 - ratio) * 120;
+                                                const borderColor = `hsl(${hue}, 84%, 45%)`;
+                                                const bgColor = `hsl(${hue}, 84%, 97%)`;
+                                                return (
+                                                    <div key={idx} className="p-4 rounded-2xl border-l-4 shadow-sm" style={{ borderColor: borderColor, backgroundColor: bgColor }}>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <h4 className="font-bold text-xs text-gray-800 uppercase">{sec.nombre}</h4>
+                                                            <span className="font-black text-xs" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-600 mt-2 font-medium">
+                                                            {sec.causas.length > 0 ? `🔹 Top fallos: ${sec.causas.join(', ')}` : "🔹 Sin descripciones registradas."}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                         </section>
                     )}
 
