@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 
 const SUPERVISORES = [
-  "Deyvis Bracho", "Juan Esteban", "Guillermo Alzate", "Alejandro", 
-  "Elquin", "Eliana Soto", "Diana", "Cristian Osa", "Cristina", 
-  "Marilu Osa", "Yoni", "Elexander Alzate", "Eddy"
+  "DEYVIS BRACHO", "JUAN ESTEBAN", "GUILLERMO ALZATE", "ALEJANDRO", 
+  "ELQUIN", "ELIANA SOTO", "DIANA", "CRISTIAN OSA", "CRISTINA", 
+  "MARILU OSA", "YONI", "ELEXANDER ALZATE", "EDDY"
 ];
 
 const CONFIG_PROCESOS = {
