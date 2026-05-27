@@ -67,7 +67,7 @@ const getDaysLeft = (targetDate) => {
   } catch (e) { return null; }
 };
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhcbHCuH4qeys0TkvwTdzZ4F10EFXSZcANLm7wbl3dWmZSsVt4usY6Joy6E2JB5s8Uaw/exec";
+// La conexión ahora se hace mediante Supabase (línea 10)
 
 const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
   return new Promise(async (resolve, reject) => {
@@ -77,31 +77,56 @@ const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
     if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
 
     try {
-      const urlParams = new URLSearchParams({ action: 'search', pedido: pTerm, articulo: aTerm });
-      const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-      const text = await response.text();
-      let data;
-      try { data = JSON.parse(text); }
-      catch (e) { return reject("⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN (Revisa permisos del script)."); }
+      // ⚠️ Asegúrate de que la tabla se llame 'pedidos' en Supabase y tenga las columnas correctas (pedido, articulo, etc.)
+      let query = supabase.from('pedidos').select('*');
+      
+      if (pTerm) {
+        query = query.ilike('pedido', `%${pTerm}%`);
+      }
+      if (aTerm) {
+        query = query.ilike('articulo', `%${aTerm}%`);
+      }
 
-      if (data.success) resolve(data.results || [data.result]);
-      else reject(data.error || "❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
-    } catch (error) { reject("ERROR DE CONEXIÓN CON GOOGLE SCRIPT."); }
+      const { data, error } = await query;
+
+      if (error) {
+        return reject(`❌ ERROR EN SUPABASE: ${error.message}`);
+      }
+
+      if (data && data.length > 0) {
+        resolve(data);
+      } else {
+        reject("❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO EN SUPABASE.");
+      }
+    } catch (error) {
+      reject("ERROR DE CONEXIÓN CON SUPABASE.");
+    }
   });
 };
 
 const loginEnGoogle = async (usuario, clave) => {
   try {
-    const urlParams = new URLSearchParams({ action: 'login', usuario, clave });
-    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    const text = await response.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica que 'Quién tiene acceso' esté en 'Cualquier persona' en tu Apps Script." };
+    // ⚠️ Asegúrate de que la tabla se llame 'usuarios' y las columnas coincidan.
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('usuario', usuario)
+      .eq('clave', clave)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: "❌ CREDENCIALES INVÁLIDAS O USUARIO NO ENCONTRADO." };
     }
+
+    return { 
+      success: true, 
+      result: {
+        nombre: data.nombre,
+        rol: data.rol
+      }
+    };
   } catch (error) {
-    return { success: false, error: "❌ ERROR DE RED: Verifica que tu SCRIPT_URL sea el correcto." };
+    return { success: false, error: "❌ ERROR DE CONEXIÓN CON SUPABASE." };
   }
 };
 
@@ -110,16 +135,23 @@ const registrarEnGoogle = async (usuario, clave, nombre, area) => {
     return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
   }
   try {
-    const urlParams = new URLSearchParams({ action: 'register', usuario, clave, nombre, rol: area });
-    const response = await fetch(`${SCRIPT_URL}?${urlParams.toString()}`);
-    const text = await response.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      return { success: false, error: "⚠️ GOOGLE BLOQUEÓ LA CONEXIÓN: Verifica los permisos de despliegue en Apps Script." };
+    // ⚠️ Asegúrate de que la tabla se llame 'usuarios'
+    const { error } = await supabase
+      .from('usuarios')
+      .insert([
+        { usuario, clave, nombre, rol: area, estado: 'Pendiente de Aprobación' }
+      ]);
+
+    if (error) {
+      if (error.code === '23505') {
+        return { success: false, error: "❌ ESTE USUARIO YA ESTÁ REGISTRADO." };
+      }
+      return { success: false, error: `⚠️ ERROR EN SUPABASE: ${error.message}` };
     }
+
+    return { success: true, result: "Registrado correctamente" };
   } catch (error) {
-    return { success: false, error: "❌ ERROR DE RED: Verifica la URL del Script." };
+    return { success: false, error: "❌ ERROR DE RED AL CONECTAR CON SUPABASE." };
   }
 };
 
