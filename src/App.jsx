@@ -686,21 +686,63 @@ export default function App() {
     try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
   });
   
-  const [orders, setOrders] = useState(() => {
-    const saved = safeStorage.get('cdi_local_orders');
-    try { 
-      const parsed = saved ? JSON.parse(saved) : []; 
-      return Array.isArray(parsed) ? parsed.filter(o => o && typeof o === 'object') : [];
-    } catch(e) { return []; }
-  });
+  const [orders, setOrders] = useState([]);
   
-  const [coordinationAlerts, setCoordinationAlerts] = useState(() => {
-    const saved = safeStorage.get('cdi_local_alerts');
-    try { 
-      const parsed = saved ? JSON.parse(saved) : []; 
-      return Array.isArray(parsed) ? parsed.filter(a => a && typeof a === 'object') : [];
-    } catch(e) { return []; }
-  });
+  const syncOrderToSupabase = async (orderObject, isDelete = false) => {
+    if (!orderObject || !orderObject.id) return;
+    try {
+      if (isDelete) {
+        await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
+      } else {
+        await supabase.from('produccion_pedidos').upsert({
+          id: orderObject.id,
+          pedido_num: orderObject.pedidoNum || '',
+          cliente: orderObject.cliente || '',
+          data_completa: orderObject
+        });
+      }
+    } catch (e) { console.error("Error al sincronizar orden", e); }
+  };
+  
+  const [coordinationAlerts, setCoordinationAlerts] = useState([]);
+
+  const syncAlertToSupabase = async (alertObject, isDelete = false) => {
+    if (!alertObject || !alertObject.id) return;
+    try {
+      if (isDelete) {
+        await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
+      } else {
+        await supabase.from('coordinacion_alertas').upsert({
+          id: alertObject.id,
+          data_completa: alertObject
+        });
+      }
+    } catch (e) { console.error("Error al sincronizar alerta", e); }
+  };
+
+  useEffect(() => {
+    const fetchProduccion = async () => {
+      try {
+        const { data: pedidosData } = await supabase.from('produccion_pedidos').select('data_completa');
+        if (pedidosData) setOrders(pedidosData.map(row => row.data_completa));
+        
+        const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
+        if (alertasData) setCoordinationAlerts(alertasData.map(row => row.data_completa));
+      } catch (err) {}
+    };
+    fetchProduccion();
+
+    const subPedidos = supabase.channel('pedidos-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, fetchProduccion).subscribe();
+      
+    const subAlertas = supabase.channel('alertas-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, fetchProduccion).subscribe();
+
+    return () => {
+      supabase.removeChannel(subPedidos);
+      supabase.removeChannel(subAlertas);
+    };
+  }, []);
 
   const [selectedGroupPedido, setSelectedGroupPedido] = useState(null); 
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -1009,7 +1051,7 @@ export default function App() {
     };
     const updatedOrder = { ...selectedOrder, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
     const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
-    setOrders(newOrdersList); setSelectedOrder(updatedOrder); safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+    setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
     setShiftNoteText(""); setTempPhoto(null);
   };
 
@@ -1045,7 +1087,7 @@ export default function App() {
         }
     }
 
-    setOrders(newOrdersList); setSelectedOrder(null); safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+    setOrders(newOrdersList); setSelectedOrder(null); syncOrderToSupabase(updatedOrder);
   };
 
   const addItemToCoordList = () => {
@@ -1057,13 +1099,13 @@ export default function App() {
 
   const saveBatchCoordination = () => {
     const newAlerts = [...coordinationAlerts, ...coordList];
-    setCoordinationAlerts(newAlerts); safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+    setCoordinationAlerts(newAlerts); coordList.forEach(a => syncAlertToSupabase(a));
     
     let updatedOrders = [...orders];
     coordList.forEach(item => {
         updatedOrders = updatedOrders.map(o => (o?.pedidoNum || "").toUpperCase() === item.pedidoNum ? { ...o, prioridad: 'ALTA', fechaEntregaPrometida: item.fechaEntrega } : o);
     });
-    setOrders(updatedOrders); safeStorage.set('cdi_local_orders', JSON.stringify(updatedOrders));
+    setOrders(updatedOrders); updatedOrders.filter(o => coordList.some(c => c.pedidoNum === o.pedidoNum)).forEach(o => syncOrderToSupabase(o));
     
     setCoordList([]); setShowCoordinationModal(false);
   };
