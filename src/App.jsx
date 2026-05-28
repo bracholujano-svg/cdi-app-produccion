@@ -976,16 +976,18 @@ export default function App() {
   const deleteAlert = (alertId) => {
       const newAlerts = coordinationAlerts.filter(a => a?.id !== alertId);
       setCoordinationAlerts(newAlerts);
-      safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+      syncAlertToSupabase({ id: alertId }, true);
   };
 
   const updateAlertDate = (alertId, newDate) => {
       if (!newDate) return;
-      const updatedAlerts = coordinationAlerts.map(a => 
-          a.id === alertId ? { ...a, fechaEntrega: newDate } : a
-      );
+      let alertToUpdate = null;
+      const updatedAlerts = coordinationAlerts.map(a => {
+          if (a.id === alertId) { alertToUpdate = { ...a, fechaEntrega: newDate }; return alertToUpdate; }
+          return a;
+      });
       setCoordinationAlerts(updatedAlerts);
-      safeStorage.set('cdi_local_alerts', JSON.stringify(updatedAlerts));
+      if (alertToUpdate) syncAlertToSupabase(alertToUpdate);
 
       const alertObj = coordinationAlerts.find(a => a.id === alertId);
       if (alertObj) {
@@ -995,7 +997,11 @@ export default function App() {
               : o
           );
           setOrders(updatedOrders);
-          safeStorage.set('cdi_local_orders', JSON.stringify(updatedOrders));
+          updatedOrders.forEach(o => {
+              if ((o.pedidoNum || "").toUpperCase() === (alertObj.pedidoNum || "").toUpperCase()) {
+                  syncOrderToSupabase(o);
+              }
+          });
       }
   };
 
@@ -1039,7 +1045,7 @@ export default function App() {
     
     const newOrdersList = [...orders, newOrder];
     setOrders(newOrdersList); 
-    safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+    syncOrderToSupabase(newOrder);
     setShowAddModal(false);
   };
 
@@ -1063,7 +1069,7 @@ export default function App() {
     };
     const updatedOrder = { ...selectedOrder, bitacoraCalidad: [...(selectedOrder.bitacoraCalidad || []), newNote] };
     const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
-    setOrders(newOrdersList); setSelectedOrder(updatedOrder); safeStorage.set('cdi_local_orders', JSON.stringify(newOrdersList));
+    setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
     setCalidadNota(""); setCalidadPhoto(null);
   };
 
@@ -1082,7 +1088,7 @@ export default function App() {
             if (alertObj) {
                 const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
                 setCoordinationAlerts(newAlerts);
-                safeStorage.set('cdi_local_alerts', JSON.stringify(newAlerts));
+                syncAlertToSupabase(alertObj, true);
             }
         }
     }
