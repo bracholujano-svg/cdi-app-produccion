@@ -19,7 +19,7 @@ export default function SCEntonacion({ supabase, inventario }) {
   const [filasReceta, setFilasReceta] = useState([]); // { id_referencia, descripcion, gramos }
   const [selectedPPG, setSelectedPPG] = useState(null);
   const [gramosInput, setGramosInput] = useState('');
-  
+  const [gramosExtra, setGramosExtra] = useState({});
   // Escáner
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const scannerRef = useRef(null);
@@ -128,6 +128,18 @@ export default function SCEntonacion({ supabase, inventario }) {
     
     setGramosInput('');
     setSelectedPPG(null);
+  };
+
+  const sumarGramosFila = (idRef) => {
+    const extra = Number(gramosExtra[idRef]);
+    if (!extra || isNaN(extra) || extra <= 0) return;
+
+    setFilasReceta(prev => prev.map(f => f.id_referencia === idRef 
+      ? { ...f, gramos: f.gramos + extra } 
+      : f
+    ));
+
+    setGramosExtra(prev => ({ ...prev, [idRef]: '' }));
   };
 
   const eliminarFila = (idRef) => {
@@ -291,7 +303,7 @@ export default function SCEntonacion({ supabase, inventario }) {
                   <th className="p-4 pl-6 text-xs font-black text-slate-400 uppercase tracking-widest">Base / Descripción</th>
                   <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">Gramos</th>
                   <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">% Calculado</th>
-                  <th className="p-4 w-16"></th>
+                  <th className="p-4 w-48"></th>
                 </tr>
               </thead>
               <tbody>
@@ -316,9 +328,25 @@ export default function SCEntonacion({ supabase, inventario }) {
                       <td className="p-4 text-lg font-bold text-slate-500 text-right">
                         {((f.gramos / totalGramosActual) * 100).toFixed(1)}%
                       </td>
-                      <td className="p-4 text-right pr-6">
-                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all opacity-0 group-hover:opacity-100">
-                          <X size={20} strokeWidth={3}/>
+                      <td className="p-4 text-right pr-6 flex items-center justify-end gap-2 h-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <input 
+                          type="number"
+                          placeholder="+g"
+                          value={gramosExtra[f.id_referencia] || ''}
+                          onChange={(e) => setGramosExtra(prev => ({ ...prev, [f.id_referencia]: e.target.value }))}
+                          onKeyDown={(e) => e.key === 'Enter' && sumarGramosFila(f.id_referencia)}
+                          className="w-16 px-2 py-1.5 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button 
+                          onClick={() => sumarGramosFila(f.id_referencia)} 
+                          disabled={!gramosExtra[f.id_referencia] || Number(gramosExtra[f.id_referencia]) <= 0}
+                          className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Sumar gramos a esta base"
+                        >
+                          <Plus size={16} strokeWidth={3}/>
+                        </button>
+                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all" title="Eliminar fila">
+                          <X size={16} strokeWidth={3}/>
                         </button>
                       </td>
                     </tr>
