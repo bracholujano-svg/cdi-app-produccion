@@ -24,6 +24,10 @@ export default function SCEntonacion({ supabase, inventario }) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const scannerRef = useRef(null);
 
+  // Estados para cálculo de producción
+  const [targetGramos, setTargetGramos] = useState('');
+  const [ppgInputValue, setPpgInputValue] = useState('');
+
   // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
   const ppgOptions = useMemo(() => {
     if (!inventario) return [];
@@ -226,7 +230,21 @@ export default function SCEntonacion({ supabase, inventario }) {
                     isClearable
                     options={ppgOptions}
                     value={selectedPPG}
-                    onChange={setSelectedPPG}
+                    inputValue={ppgInputValue}
+                    onInputChange={(val, actionMeta) => {
+                      if (actionMeta.action !== 'input-blur' && actionMeta.action !== 'menu-close') {
+                        setPpgInputValue(val);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (ppgInputValue && !selectedPPG) {
+                        setSelectedPPG({ value: ppgInputValue, label: ppgInputValue, descripcion: ppgInputValue });
+                      }
+                    }}
+                    onChange={(val) => {
+                      setSelectedPPG(val);
+                      setPpgInputValue('');
+                    }}
                     placeholder="Escribe (ej. Amarillo 900) o busca en inventario..."
                     className="text-base font-bold shadow-sm"
                     styles={{ 
@@ -486,15 +504,29 @@ export default function SCEntonacion({ supabase, inventario }) {
           </div>
           <div className="md:col-span-2">
             <div className="theme-bg-card rounded-[2rem] theme-border shadow-xl overflow-hidden h-full flex flex-col">
-              <div className="p-6 bg-slate-800 flex items-center gap-3 text-white">
-                <CheckCircle2 size={24} className="text-emerald-400" />
-                <h3 className="font-black text-lg uppercase tracking-widest">FÓRMULA APROBADA EN PLANTA</h3>
+              <div className="p-6 bg-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 text-white">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={24} className="text-emerald-400" />
+                  <h3 className="font-black text-lg uppercase tracking-widest">FÓRMULA APROBADA EN PLANTA</h3>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
+                    <span className="text-xs font-bold text-slate-300 uppercase">Preparar:</span>
+                    <input 
+                        type="number" 
+                        value={targetGramos}
+                        onChange={(e) => setTargetGramos(e.target.value)}
+                        placeholder="Ej. 15000"
+                        className="w-24 bg-slate-900 border-none rounded-lg p-2 text-right font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                    <span className="text-xs font-bold text-slate-400">g</span>
+                </div>
               </div>
-              <div className="p-0 flex-1 bg-white dark:bg-slate-900">
-                <table className="w-full text-left border-collapse">
+              <div className="p-0 flex-1 bg-white dark:bg-slate-900 overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-b-2 border-slate-100">
                       <th className="p-5 pl-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Base / Descripción PPG</th>
+                      <th className="p-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Gramos a Aplicar</th>
                       <th className="p-5 pr-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Porcentaje</th>
                     </tr>
                   </thead>
@@ -504,6 +536,15 @@ export default function SCEntonacion({ supabase, inventario }) {
                         <td className="p-5 pl-8">
                           <span className="block text-xs font-black text-blue-500/70 uppercase tracking-wider mb-1">{req.id_referencia_ppg !== req.nombre_base ? req.id_referencia_ppg : 'CREADO MANUALMENTE'}</span>
                           <span className="block text-lg font-black text-slate-800 dark:text-white">{req.nombre_base}</span>
+                        </td>
+                        <td className="p-5 text-center">
+                          {targetGramos > 0 ? (
+                             <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block shadow-sm">
+                               {((req.porcentaje_final / 100) * parseFloat(targetGramos)).toFixed(1)} g
+                             </span>
+                          ) : (
+                             <span className="text-sm font-bold text-slate-300 dark:text-slate-600">-</span>
+                          )}
                         </td>
                         <td className="p-5 pr-8 text-right">
                           <div className="inline-flex items-center justify-end h-full">
