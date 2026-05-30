@@ -3,7 +3,7 @@ import CreatableSelect from 'react-select/creatable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2 } from 'lucide-react';
 
-export default function SCEntonacion({ supabase, inventario }) {
+export default function SCEntonacion({ supabase, inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
   const [sistemaColor, setSistemaColor] = useState('PANTONE');
   const [codigoObjetivo, setCodigoObjetivo] = useState('');
@@ -158,22 +158,32 @@ export default function SCEntonacion({ supabase, inventario }) {
     
     try {
       const totalGramos = filasReceta.reduce((sum, f) => sum + f.gramos, 0);
-      
       const codObj = codigoObjetivo.trim().toUpperCase();
-      const { data: nuevoColor, error: colorError } = await supabase
-        .from('colores_aprobados')
-        .insert({
-          sistema_color: sistemaColor,
-          codigo_objetivo: codObj,
-          color_hexadecimal: '#cccccc' 
-        })
-        .select()
-        .single();
-        
-      if (colorError) throw colorError;
+      let colorId;
+
+      if (colorEncontrado && colorEncontrado.id) {
+        // Updating existing recipe
+        colorId = colorEncontrado.id;
+        const { error: delErr } = await supabase.from('recetas_detalle').delete().eq('id_color', colorId);
+        if (delErr) throw delErr;
+      } else {
+        // Creating new recipe
+        const { data: nuevoColor, error: colorError } = await supabase
+          .from('colores_aprobados')
+          .insert({
+            sistema_color: sistemaColor,
+            codigo_objetivo: codObj,
+            color_hexadecimal: '#cccccc' 
+          })
+          .select()
+          .single();
+          
+        if (colorError) throw colorError;
+        colorId = nuevoColor.id;
+      }
       
       const detalles = filasReceta.map(f => ({
-        id_color: nuevoColor.id,
+        id_color: colorId,
         id_referencia_ppg: f.id_referencia,
         nombre_base: f.descripcion,
         porcentaje_final: Number(((f.gramos / totalGramos) * 100).toFixed(2))
@@ -195,6 +205,43 @@ export default function SCEntonacion({ supabase, inventario }) {
       setSearchFeedback(`❌ Error al guardar: ${e.message || e.details || JSON.stringify(e)}`);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleEditRecipe = async () => {
+    if (!supervisorProfile || !supervisorProfile.email) {
+       alert("Error: Sesión de usuario no encontrada.");
+       return;
+    }
+    const pwd = prompt("Por seguridad, ingresa tu clave para modificar esta receta:");
+    if (!pwd) return;
+    
+    setIsSearching(true);
+    setSearchFeedback("Validando credenciales...");
+    try {
+        const { data, error } = await supabase.from('usuarios')
+            .select('id')
+            .eq('usuario', supervisorProfile.email)
+            .eq('clave', pwd)
+            .single();
+            
+        if (error || !data) {
+            alert("❌ Clave incorrecta. No tienes permiso para editar esta receta.");
+            return;
+        }
+        
+        // Pass validation, setup formulation state
+        setFilasReceta(recetaExistente.map(req => ({
+            id_referencia: req.id_referencia_ppg,
+            descripcion: req.nombre_base,
+            gramos: req.porcentaje_final
+        })));
+        setShowFormulacion(true);
+    } catch(e) {
+        alert("Error validando: " + e.message);
+    } finally {
+        setIsSearching(false);
+        setSearchFeedback("");
     }
   };
 
@@ -509,16 +556,24 @@ export default function SCEntonacion({ supabase, inventario }) {
                   <CheckCircle2 size={24} className="text-emerald-400" />
                   <h3 className="font-black text-lg uppercase tracking-widest">FÓRMULA APROBADA EN PLANTA</h3>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
-                    <span className="text-xs font-bold text-slate-300 uppercase">Preparar:</span>
-                    <input 
-                        type="number" 
-                        value={targetGramos}
-                        onChange={(e) => setTargetGramos(e.target.value)}
-                        placeholder="Ej. 15000"
-                        className="w-24 bg-slate-900 border-none rounded-lg p-2 text-right font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                    <span className="text-xs font-bold text-slate-400">g</span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                        onClick={handleEditRecipe}
+                        className="px-4 py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-yellow-500/30 transition-colors"
+                    >
+                        Modificar Receta
+                    </button>
+                    <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
+                        <span className="text-xs font-bold text-slate-300 uppercase">Preparar:</span>
+                        <input 
+                            type="number" 
+                            value={targetGramos}
+                            onChange={(e) => setTargetGramos(e.target.value)}
+                            placeholder="Ej. 15000"
+                            className="w-24 bg-slate-900 border-none rounded-lg p-2 text-right font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                        <span className="text-xs font-bold text-slate-400">g</span>
+                    </div>
                 </div>
               </div>
               <div className="p-0 flex-1 bg-white dark:bg-slate-900 overflow-x-auto">
