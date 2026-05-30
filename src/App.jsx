@@ -82,12 +82,23 @@ const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
 
     try {
       let query = supabase.from('ribisoft_pedidos').select('*');
-      if (pTerm) query = query.ilike('pedido', `%${pTerm}%`);
-      if (aTerm) query = query.ilike('articulo', `%${aTerm}%`);
+      if (pTerm) query = query.ilike('PedidoSIN', `%${pTerm}%`);
+      if (aTerm) query = query.ilike('Código Ítem', `%${aTerm}%`);
       
       const { data, error } = await query;
       if (error) throw error;
-      if (data && data.length > 0) resolve(data);
+      if (data && data.length > 0) {
+        const mappedData = data.map(item => ({
+           pedido: item['PedidoSIN'],
+           articulo: item['Código Ítem'],
+           descripcion: item['Descripción'],
+           cliente: item['Cliente'],
+           nombre: item['Nombre Proyecto'],
+           proyecto: item['Nombre Proyecto'],
+           cantidad: item['Cantidad']
+        }));
+        resolve(mappedData);
+      }
       else reject("❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
     } catch (error) { reject("ERROR DE CONEXIÓN CON SUPABASE."); }
   });
@@ -664,8 +675,23 @@ export default function App() {
       try {
         const { data: inv } = await supabase.from('inventario').select('*');
         const { data: req } = await supabase.from('requerimientos_pedido').select('*');
+        
+        const invMap = inv ? inv.map(item => ({
+          id_referencia: item['Id Referencia'],
+          descripcion: item['Referencia'],
+          cantidad_disponible: Number(item['Saldo'] || 0)
+        })) : [];
+
+        const reqMap = req ? req.map(item => ({
+          pedido_num: item['pedidosin'],
+          id_referencia: item['Id Referencia'],
+          cantidad_requerida: Number(item['Cantidad'] || 0),
+          cantidad_oc: Number(item['Cant.OC'] || 0),
+          descripcion: item['Descripcion']
+        })) : [];
+
         if (inv && req) {
-          setSupabaseData({ inventario: inv, pedidosInsumos: req });
+          setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
         }
       } catch(e) { console.error("Error fetching Supabase", e); }
     };

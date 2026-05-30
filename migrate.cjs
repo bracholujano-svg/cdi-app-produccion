@@ -14,13 +14,17 @@ const runMigration = async () => {
   console.log('Migrando Hoja 1 (ribisoft_pedidos)...');
   const hoja1 = xlsx.utils.sheet_to_json(workbook.Sheets['Hoja 1'], { defval: "" });
   const pedidosData = hoja1.map(row => ({
-    pedido: String(row['PedidoSIN'] || ''),
-    articulo: String(row['Código Ítem'] || ''),
-    descripcion: String(row['Descripción'] || ''),
-    cliente: String(row['Cliente'] || ''),
-    proyecto: String(row['Nombre Proyecto'] || ''),
-    cantidad: Number(row['Cantidad'] || 0)
-  })).filter(p => p.pedido !== '');
+    "PedidoSIN": String(row['PedidoSIN'] || ''),
+    "Código Ítem": String(row['Código Ítem'] || ''),
+    "Descripción": String(row['Descripción'] || ''),
+    "Cliente": String(row['Cliente'] || ''),
+    "Nombre Proyecto": String(row['Nombre Proyecto'] || ''),
+    "Estado": String(row['Estado'] || ''),
+    "Programador": String(row['Programador'] || ''),
+    "Cantidad": Number(row['Cantidad'] || 0),
+    "btnadjunto": String(row['btnadjunto'] || ''),
+    "btnplano": String(row['btnplano'] || '')
+  })).filter(p => p["PedidoSIN"] !== '');
 
   if (pedidosData.length > 0) {
     const { error } = await supabase.from('ribisoft_pedidos').insert(pedidosData);
