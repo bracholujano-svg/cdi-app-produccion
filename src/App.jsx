@@ -718,15 +718,22 @@ export default function App() {
   const syncOrderToSupabase = async (orderObject, isDelete = false) => {
     if (!orderObject || !orderObject.id) return;
     try {
+      let dbError = null;
       if (isDelete) {
-        await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
+        const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
+        dbError = error;
       } else {
-        await supabase.from('produccion_pedidos').upsert({
+        const { error } = await supabase.from('produccion_pedidos').upsert({
           id: orderObject.id,
           pedido_num: orderObject.pedidoNum || '',
           cliente: orderObject.cliente || '',
           data_completa: orderObject
         });
+        dbError = error;
+      }
+      if (dbError) {
+        console.error("DB Error al sincronizar orden:", dbError);
+        alert(`❌ Error al guardar en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
       }
     } catch (e) { console.error("Error al sincronizar orden", e); }
   };
@@ -736,13 +743,20 @@ export default function App() {
   const syncAlertToSupabase = async (alertObject, isDelete = false) => {
     if (!alertObject || !alertObject.id) return;
     try {
+      let dbError = null;
       if (isDelete) {
-        await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
+        const { error } = await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
+        dbError = error;
       } else {
-        await supabase.from('coordinacion_alertas').upsert({
+        const { error } = await supabase.from('coordinacion_alertas').upsert({
           id: alertObject.id,
           data_completa: alertObject
         });
+        dbError = error;
+      }
+      if (dbError) {
+        console.error("DB Error al sincronizar alerta:", dbError);
+        alert(`❌ Error al guardar alerta en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
       }
     } catch (e) { console.error("Error al sincronizar alerta", e); }
   };
