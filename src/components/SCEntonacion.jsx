@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2 } from 'lucide-react';
 
@@ -24,14 +24,14 @@ export default function SCEntonacion({ supabase, inventario }) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const scannerRef = useRef(null);
 
-  // Memorizar opciones de inventario (solo POL-)
+  // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
   const ppgOptions = useMemo(() => {
     if (!inventario) return [];
     return inventario
-      .filter(item => item.id_referencia && item.id_referencia.startsWith('POL-'))
+      .filter(item => item.descripcion && (item.descripcion.toUpperCase().includes('POL-') || item.descripcion.toUpperCase().includes('(PPG)')))
       .map(item => ({
         value: item.id_referencia,
-        label: `${item.id_referencia} - ${item.descripcion}`,
+        label: item.descripcion,
         descripcion: item.descripcion
       }));
   }, [inventario]);
@@ -43,10 +43,19 @@ export default function SCEntonacion({ supabase, inventario }) {
       scannerRef.current = scanner;
       
       scanner.render((decodedText) => {
-        // Encontrar en el inventario
+        // Encontrar en el inventario por código de barras (generalmente el value o id_referencia)
         const found = ppgOptions.find(opt => opt.value === decodedText || decodedText.includes(opt.value));
         if (found) {
           setSelectedPPG(found);
+          setIsScannerOpen(false);
+          scanner.clear();
+        } else {
+          // Si escanea algo nuevo, crearlo temporalmente
+          setSelectedPPG({
+            value: decodedText,
+            label: decodedText,
+            descripcion: decodedText
+          });
           setIsScannerOpen(false);
           scanner.clear();
         }
@@ -69,7 +78,6 @@ export default function SCEntonacion({ supabase, inventario }) {
     setSearchFeedback('');
     
     try {
-      // 1. Buscar el color en colores_aprobados
       const { data: colorData, error: colorError } = await supabase
         .from('colores_aprobados')
         .select('*')
@@ -80,7 +88,6 @@ export default function SCEntonacion({ supabase, inventario }) {
       if (colorError || !colorData) {
         setColorEncontrado(false);
       } else {
-        // 2. Si existe, buscar receta_detalle
         const { data: recetaData } = await supabase
           .from('recetas_detalle')
           .select('*')
@@ -102,16 +109,20 @@ export default function SCEntonacion({ supabase, inventario }) {
     
     const gramos = Number(gramosInput);
     
+    // Si fue creado manualmente (__isNew__), usamos el label como todo
+    const idRef = selectedPPG.value;
+    const desc = selectedPPG.descripcion || selectedPPG.label;
+    
     setFilasReceta(prev => {
-      const existe = prev.find(f => f.id_referencia === selectedPPG.value);
+      const existe = prev.find(f => f.id_referencia === idRef);
       if (existe) {
         // Acumulativo
-        return prev.map(f => f.id_referencia === selectedPPG.value 
+        return prev.map(f => f.id_referencia === idRef 
           ? { ...f, gramos: f.gramos + gramos } 
           : f
         );
       } else {
-        return [...prev, { id_referencia: selectedPPG.value, descripcion: selectedPPG.descripcion, gramos }];
+        return [...prev, { id_referencia: idRef, descripcion: desc, gramos }];
       }
     });
     
@@ -132,21 +143,19 @@ export default function SCEntonacion({ supabase, inventario }) {
     try {
       const totalGramos = filasReceta.reduce((sum, f) => sum + f.gramos, 0);
       
-      // 1. Crear el color
       const codObj = codigoObjetivo.trim().toUpperCase();
       const { data: nuevoColor, error: colorError } = await supabase
         .from('colores_aprobados')
         .insert({
           sistema_color: sistemaColor,
           codigo_objetivo: codObj,
-          color_hexadecimal: '#cccccc' // Podría ser un color picker a futuro
+          color_hexadecimal: '#cccccc' 
         })
         .select()
         .single();
         
       if (colorError) throw colorError;
       
-      // 2. Calcular porcentajes e insertar receta
       const detalles = filasReceta.map(f => ({
         id_color: nuevoColor.id,
         id_referencia_ppg: f.id_referencia,
@@ -163,7 +172,7 @@ export default function SCEntonacion({ supabase, inventario }) {
       setSearchFeedback('✅ ¡Receta formulada y guardada con éxito!');
       setShowFormulacion(false);
       setFilasReceta([]);
-      handleBuscar(); // recargar para mostrar lo recién guardado
+      handleBuscar();
       
     } catch (e) {
       console.error(e);
@@ -177,52 +186,66 @@ export default function SCEntonacion({ supabase, inventario }) {
   if (showFormulacion) {
     const totalGramosActual = filasReceta.reduce((s, f) => s + f.gramos, 0);
     return (
-      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
-        <div className="flex items-center justify-between">
+      <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-12">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 uppercase flex items-center gap-2">
-              <FlaskConical className="text-blue-500" />
-              Nueva Formulación
+            <h2 className="text-3xl font-black text-slate-800 uppercase flex items-center gap-3">
+              <FlaskConical className="text-blue-600" size={32} />
+              NUEVA FORMULACIÓN
             </h2>
-            <p className="text-sm font-bold text-slate-500">Color Objetivo: {sistemaColor} {codigoObjetivo}</p>
+            <p className="text-lg font-bold mt-2">
+              <span className="text-slate-400 uppercase tracking-widest text-xs mr-2">COLOR OBJETIVO:</span>
+              <span className="bg-slate-800 text-white px-3 py-1 rounded-lg">{sistemaColor}</span>
+              <span className="text-blue-600 ml-2">{codigoObjetivo}</span>
+            </p>
           </div>
-          <button onClick={() => setShowFormulacion(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm transition-all">
+          <button onClick={() => setShowFormulacion(false)} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black uppercase tracking-wider rounded-xl text-sm transition-all">
             CANCELAR
           </button>
         </div>
 
-        <div className="theme-bg-card p-6 rounded-3xl theme-border shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-            <div className="col-span-12 md:col-span-6">
-              <label className="block text-[10px] font-black text-[#a1bdc2] uppercase mb-1">Base PPG</label>
+        <div className="theme-bg-card p-6 md:p-8 rounded-[2rem] theme-border shadow-sm bg-gradient-to-br from-white to-slate-50">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+            <div className="col-span-12 md:col-span-7">
+              <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 1: Selecciona o Escribe la Base PPG</label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <Select
+                  <CreatableSelect
+                    isClearable
                     options={ppgOptions}
                     value={selectedPPG}
                     onChange={setSelectedPPG}
-                    placeholder="Escribe POL- o color..."
-                    className="text-sm font-bold"
-                    styles={{ control: (base) => ({ ...base, borderRadius: '0.75rem', borderColor: '#e2e8f0', padding: '2px' }) }}
+                    placeholder="Escribe (ej. Amarillo 900) o busca en inventario..."
+                    className="text-base font-bold shadow-sm"
+                    styles={{ 
+                      control: (base) => ({ 
+                        ...base, 
+                        borderRadius: '0.75rem', 
+                        borderColor: '#cbd5e1', 
+                        padding: '6px',
+                        backgroundColor: '#ffffff'
+                      }) 
+                    }}
+                    formatCreateLabel={(inputValue) => `Crear "${inputValue}" manualmente`}
                   />
                 </div>
                 <button 
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-3 rounded-xl transition-all"
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-4 rounded-xl transition-all flex items-center justify-center shrink-0 shadow-sm"
                   title="Escanear Código"
                 >
-                  <Camera size={20} />
+                  <Camera size={24} />
                 </button>
               </div>
             </div>
-            <div className="col-span-8 md:col-span-4">
-              <label className="block text-[10px] font-black text-[#a1bdc2] uppercase mb-1">Gramos (g)</label>
+            <div className="col-span-8 md:col-span-3">
+              <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 2: Gramos pesados</label>
               <input 
                 type="number" 
                 value={gramosInput}
                 onChange={e => setGramosInput(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full bg-white border border-slate-300 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 onKeyDown={e => e.key === 'Enter' && agregarGramos()}
               />
             </div>
@@ -230,108 +253,139 @@ export default function SCEntonacion({ supabase, inventario }) {
               <button 
                 onClick={agregarGramos}
                 disabled={!selectedPPG || !gramosInput}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-3 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 h-full"
               >
-                <Plus size={18} /> AÑADIR
+                <Plus size={20} strokeWidth={3} /> AÑADIR
               </button>
             </div>
           </div>
           
-          {/* Escáner UI */}
           {isScannerOpen && (
-            <div className="mt-4 p-4 border-2 border-dashed border-blue-300 rounded-2xl bg-blue-50 relative">
-              <button onClick={() => setIsScannerOpen(false)} className="absolute top-2 right-2 text-slate-500 hover:text-red-500 z-10"><X size={20}/></button>
-              <div id="reader" className="w-full max-w-sm mx-auto overflow-hidden rounded-xl"></div>
-              <p className="text-center text-xs font-bold text-blue-700 mt-2">Apunta el código de barras o QR de la lata PPG</p>
+            <div className="mt-6 p-6 border-4 border-dashed border-blue-300 rounded-[2rem] bg-blue-50/50 relative backdrop-blur-sm">
+              <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white p-2 rounded-full shadow-sm"><X size={24}/></button>
+              <div id="reader" className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-blue-200 bg-black"></div>
+              <p className="text-center text-sm font-black text-blue-800 uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
+                <Camera size={18}/> Apunta el código de barras de la lata
+              </p>
             </div>
           )}
         </div>
 
-        {/* Tabla Acumulativa */}
-        {filasReceta.length > 0 && (
-          <div className="theme-bg-card rounded-3xl theme-border shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-black text-slate-700 text-sm">RECETA EN CURSO</h3>
-              <span className="font-black text-blue-600 bg-blue-100 px-3 py-1 rounded-lg text-xs">TOTAL: {totalGramosActual}g</span>
-            </div>
-            <div className="p-0">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="p-3 text-[10px] font-black text-[#a1bdc2] uppercase">CÓDIGO</th>
-                    <th className="p-3 text-[10px] font-black text-[#a1bdc2] uppercase">BASE</th>
-                    <th className="p-3 text-[10px] font-black text-[#a1bdc2] uppercase text-right">GRAMOS</th>
-                    <th className="p-3 text-[10px] font-black text-[#a1bdc2] uppercase text-right">% ACTUAL</th>
-                    <th className="p-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filasReceta.map(f => (
-                    <tr key={f.id_referencia} className="border-b border-slate-50 hover:bg-slate-50/50">
-                      <td className="p-3 text-xs font-bold text-slate-600">{f.id_referencia}</td>
-                      <td className="p-3 text-xs font-bold text-slate-800">{f.descripcion}</td>
-                      <td className="p-3 text-sm font-black text-blue-600 text-right">{f.gramos}g</td>
-                      <td className="p-3 text-xs font-bold text-slate-500 text-right">
-                        {((f.gramos / totalGramosActual) * 100).toFixed(1)}%
-                      </td>
-                      <td className="p-3 text-right">
-                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 transition-colors p-1"><X size={14}/></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100">
-              <button 
-                onClick={guardarReceta}
-                disabled={isSearching}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2"
-              >
-                <Save size={20} />
-                {isSearching ? 'GUARDANDO...' : 'GUARDAR RECETA DEFINITIVA'}
-              </button>
+        {/* Tabla Acumulativa (Siempre visible) */}
+        <div className="theme-bg-card rounded-[2rem] theme-border shadow-xl overflow-hidden border-2 border-slate-100">
+          <div className="p-6 bg-slate-800 flex justify-between items-center text-white">
+            <h3 className="font-black text-lg flex items-center gap-2 tracking-widest uppercase">
+              <CheckCircle2 className="text-emerald-400" />
+              RECETA EN CURSO
+            </h3>
+            <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
+              <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Suma Total</span>
+              <span className="font-black text-emerald-400 text-2xl">{totalGramosActual}g</span>
             </div>
           </div>
-        )}
+          
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b-2 border-slate-200">
+                  <th className="p-4 pl-6 text-xs font-black text-slate-400 uppercase tracking-widest">Base / Descripción</th>
+                  <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">Gramos</th>
+                  <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">% Calculado</th>
+                  <th className="p-4 w-16"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filasReceta.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center bg-slate-50/50">
+                      <div className="inline-flex flex-col items-center justify-center opacity-40">
+                        <FlaskConical size={48} className="mb-4 text-slate-400" />
+                        <span className="text-sm font-black uppercase tracking-widest text-slate-500">Receta vacía</span>
+                        <span className="text-xs font-bold text-slate-400 mt-1">Añade bases PPG en la sección superior para comenzar</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filasReceta.map(f => (
+                    <tr key={f.id_referencia} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors group">
+                      <td className="p-4 pl-6">
+                        <span className="block text-[10px] font-black text-blue-500/70 uppercase tracking-wider mb-1">{f.id_referencia !== f.descripcion ? f.id_referencia : 'CREADO MANUALMENTE'}</span>
+                        <span className="block text-base font-black text-slate-800">{f.descripcion}</span>
+                      </td>
+                      <td className="p-4 text-xl font-black text-blue-700 text-right">{f.gramos}g</td>
+                      <td className="p-4 text-lg font-bold text-slate-500 text-right">
+                        {((f.gramos / totalGramosActual) * 100).toFixed(1)}%
+                      </td>
+                      <td className="p-4 text-right pr-6">
+                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                          <X size={20} strokeWidth={3}/>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-6 bg-slate-50 border-t-2 border-slate-100">
+            <button 
+              onClick={guardarReceta}
+              disabled={isSearching || filasReceta.length === 0}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:shadow-none text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-3 text-lg uppercase tracking-widest"
+            >
+              <Save size={24} />
+              {isSearching ? 'GUARDANDO RECETA...' : 'GUARDAR RECETA DEFINITIVA EN BASE DE DATOS'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   // Vista 1: Buscador
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
-          <FlaskConical className="text-blue-500" size={32} />
+    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-12">
+      <div className="mb-10 text-center md:text-left">
+        <h1 className="text-3xl md:text-5xl font-black text-slate-800 uppercase tracking-tighter flex flex-col md:flex-row items-center gap-4">
+          <div className="p-4 bg-blue-100 rounded-2xl text-blue-600">
+            <FlaskConical size={40} />
+          </div>
           SC Entonación
         </h1>
-        <p className="text-sm font-bold theme-text-muted mt-1">Busca y formula recetas de colores industriales.</p>
+        <p className="text-base font-bold theme-text-muted mt-3 md:ml-20 tracking-wide">Módulo de búsqueda y formulación dinámica de recetas de pintura industrial.</p>
       </div>
 
-      <div className="theme-bg-card p-6 md:p-8 rounded-[2rem] theme-border shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+      <div className="theme-bg-card p-6 md:p-10 rounded-[2rem] theme-border shadow-xl border-t-4 border-t-blue-500 relative overflow-hidden">
+        {/* Decoración fondo */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end relative z-10">
           <div className="col-span-12 md:col-span-4">
-            <label className="block text-[10px] font-black text-[#a1bdc2] uppercase mb-2">Sistema de Color</label>
-            <select 
-              value={sistemaColor}
-              onChange={e => setSistemaColor(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-all"
-            >
-              <option value="PANTONE">PANTONE</option>
-              <option value="RAL">RAL</option>
-              <option value="SHERWIN WILLIAMS">SHERWIN WILLIAMS</option>
-              <option value="PINTUCO">PINTUCO</option>
-            </select>
+            <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Sistema de Color</label>
+            <div className="relative">
+              <select 
+                value={sistemaColor}
+                onChange={e => setSistemaColor(e.target.value)}
+                className="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all cursor-pointer shadow-sm"
+              >
+                <option value="PANTONE">PANTONE</option>
+                <option value="RAL">RAL</option>
+                <option value="SHERWIN WILLIAMS">SHERWIN WILLIAMS</option>
+                <option value="PINTUCO">PINTUCO</option>
+              </select>
+              <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
           </div>
           <div className="col-span-12 md:col-span-6">
-            <label className="block text-[10px] font-black text-[#a1bdc2] uppercase mb-2">Código Objetivo / Nombre</label>
+            <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Código Objetivo / Nombre</label>
             <input 
               type="text" 
               value={codigoObjetivo}
               onChange={e => setCodigoObjetivo(e.target.value.toUpperCase())}
               placeholder="Ej. 7005 C"
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all uppercase"
+              className="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase shadow-sm placeholder:font-normal placeholder:text-slate-400"
               onKeyDown={e => e.key === 'Enter' && handleBuscar()}
             />
           </div>
@@ -339,30 +393,36 @@ export default function SCEntonacion({ supabase, inventario }) {
             <button 
               onClick={handleBuscar}
               disabled={isSearching || !codigoObjetivo}
-              className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center justify-center gap-2 h-[60px]"
             >
-              {isSearching ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Search size={18} />}
+              {isSearching ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"/> : <Search size={24} strokeWidth={3} />}
             </button>
           </div>
         </div>
       </div>
 
-      {searchFeedback && <p className="text-center font-bold text-sm text-blue-600">{searchFeedback}</p>}
+      {searchFeedback && (
+        <div className="animate-fade-in text-center p-4">
+          <span className="inline-block px-6 py-2 bg-blue-100 text-blue-800 font-black text-sm rounded-full tracking-widest">{searchFeedback}</span>
+        </div>
+      )}
 
       {/* Resultados */}
       {colorEncontrado === false && (
-        <div className="mt-8 animate-slide-up">
-          <div className="bg-orange-50 border border-orange-200 rounded-3xl p-8 text-center flex flex-col items-center justify-center space-y-4">
-            <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-2">
-              <AlertTriangle size={32} />
+        <div className="mt-12 animate-slide-up">
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-[2rem] p-10 md:p-16 text-center flex flex-col items-center justify-center space-y-6 shadow-xl shadow-orange-500/5">
+            <div className="w-24 h-24 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-2 shadow-inner border border-orange-200">
+              <AlertTriangle size={48} strokeWidth={2.5} />
             </div>
-            <h3 className="text-xl font-black text-orange-800 uppercase">Color no registrado</h3>
-            <p className="text-sm font-bold text-orange-600/80 max-w-md mx-auto">
-              Color no registrado en el histórico de planta. Remítase a la plataforma del proveedor para la formulación inicial.
-            </p>
+            <div>
+              <h3 className="text-3xl font-black text-orange-800 uppercase tracking-tighter">Color no registrado</h3>
+              <p className="text-lg font-bold text-orange-700/70 max-w-lg mx-auto mt-2">
+                No existen registros históricos en planta para este código. Remítase a la plataforma del proveedor para calcular la fórmula inicial.
+              </p>
+            </div>
             <button 
               onClick={() => { setShowFormulacion(true); setColorEncontrado(null); }}
-              className="mt-6 px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:-translate-y-1"
+              className="mt-8 px-10 py-5 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-500/40 transition-all hover:-translate-y-1"
             >
               REGISTRAR Y FORMULAR NUEVO COLOR
             </button>
@@ -371,51 +431,57 @@ export default function SCEntonacion({ supabase, inventario }) {
       )}
 
       {colorEncontrado && (
-        <div className="mt-8 animate-slide-up grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mt-12 animate-slide-up grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-1">
-            <div className="theme-bg-card p-6 rounded-3xl theme-border shadow-sm flex flex-col items-center justify-center h-full space-y-4">
+            <div className="theme-bg-card p-8 rounded-[2rem] theme-border shadow-xl flex flex-col items-center justify-center h-full space-y-6 border-t-4 border-t-emerald-500">
               <div 
-                className="w-32 h-32 rounded-full shadow-inner border-4 border-white"
+                className="w-40 h-40 rounded-full shadow-2xl border-8 border-white ring-1 ring-slate-200"
                 style={{ backgroundColor: colorEncontrado.color_hexadecimal || '#ccc' }}
               ></div>
-              <div className="text-center">
-                <span className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-wider">{colorEncontrado.sistema_color}</span>
-                <h3 className="text-2xl font-black text-slate-800 uppercase">{colorEncontrado.codigo_objetivo}</h3>
+              <div className="text-center w-full">
+                <span className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">{colorEncontrado.sistema_color}</span>
+                <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{colorEncontrado.codigo_objetivo}</h3>
               </div>
-              <p className="text-[9px] font-bold text-slate-400 text-center leading-tight mt-4 px-2">
-                Referencia visual aproximada. Guiarse estrictamente por la muestra física aprobada.
-              </p>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 w-full text-center">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">
+                  <AlertTriangle size={14} className="inline mr-1 text-orange-400 -mt-1"/>
+                  Referencia visual aproximada.<br/>Guiarse estrictamente por la muestra física aprobada.
+                </p>
+              </div>
             </div>
           </div>
           <div className="md:col-span-2">
-            <div className="theme-bg-card rounded-3xl theme-border shadow-sm overflow-hidden h-full flex flex-col">
-              <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-emerald-500" />
-                <h3 className="font-black text-slate-700 text-sm">FÓRMULA APROBADA</h3>
+            <div className="theme-bg-card rounded-[2rem] theme-border shadow-xl overflow-hidden h-full flex flex-col">
+              <div className="p-6 bg-slate-800 flex items-center gap-3 text-white">
+                <CheckCircle2 size={24} className="text-emerald-400" />
+                <h3 className="font-black text-lg uppercase tracking-widest">FÓRMULA APROBADA EN PLANTA</h3>
               </div>
-              <div className="p-0 flex-1">
+              <div className="p-0 flex-1 bg-white">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="p-4 text-[10px] font-black text-[#a1bdc2] uppercase">BASE / DESCRIPCIÓN</th>
-                      <th className="p-4 text-[10px] font-black text-[#a1bdc2] uppercase text-right">PORCENTAJE</th>
+                    <tr className="bg-slate-50 border-b-2 border-slate-100">
+                      <th className="p-5 pl-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Base / Descripción PPG</th>
+                      <th className="p-5 pr-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Porcentaje</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recetaExistente.map(req => (
-                      <tr key={req.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4">
-                          <span className="block text-xs font-black text-slate-500">{req.id_referencia_ppg}</span>
-                          <span className="block text-sm font-bold text-slate-800">{req.nombre_base}</span>
+                      <tr key={req.id} className="border-b border-slate-50 hover:bg-emerald-50/30 transition-colors">
+                        <td className="p-5 pl-8">
+                          <span className="block text-xs font-black text-blue-500/70 uppercase tracking-wider mb-1">{req.id_referencia_ppg !== req.nombre_base ? req.id_referencia_ppg : 'CREADO MANUALMENTE'}</span>
+                          <span className="block text-lg font-black text-slate-800">{req.nombre_base}</span>
                         </td>
-                        <td className="p-4 text-right">
-                          <span className="text-lg font-black text-blue-600">{req.porcentaje_final}%</span>
+                        <td className="p-5 pr-8 text-right">
+                          <div className="inline-flex items-center justify-end h-full">
+                            <span className="text-3xl font-black text-slate-800 tracking-tighter">{req.porcentaje_final}</span>
+                            <span className="text-lg font-bold text-slate-400 ml-1">%</span>
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {recetaExistente.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="p-8 text-center text-sm font-bold text-slate-400">Sin componentes registrados.</td>
+                        <td colSpan={2} className="p-16 text-center text-sm font-bold text-slate-400">Sin componentes registrados.</td>
                       </tr>
                     )}
                   </tbody>
