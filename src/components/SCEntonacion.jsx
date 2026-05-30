@@ -188,7 +188,7 @@ export default function SCEntonacion({ supabase, inventario }) {
       
     } catch (e) {
       console.error(e);
-      setSearchFeedback('❌ Error al guardar. Intenta de nuevo.');
+      setSearchFeedback(`❌ Error al guardar: ${e.message || e.details || JSON.stringify(e)}`);
     } finally {
       setIsSearching(false);
     }
@@ -290,9 +290,15 @@ export default function SCEntonacion({ supabase, inventario }) {
               <CheckCircle2 className="text-emerald-400" />
               RECETA EN CURSO
             </h3>
-            <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
-              <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Suma Total</span>
-              <span className="font-black text-emerald-400 text-2xl">{totalGramosActual}g</span>
+            <div className="flex gap-4">
+              <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
+                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Galones (Aprox)</span>
+                <span className="font-black text-blue-400 text-2xl">{(totalGramosActual / 3800).toFixed(2)} gal</span>
+              </div>
+              <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
+                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Suma Total</span>
+                <span className="font-black text-emerald-400 text-2xl">{totalGramosActual}g</span>
+              </div>
             </div>
           </div>
           
