@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import SCEntonacion from './components/SCEntonacion';
 
 const SUPABASE_URL = 'https://klapeabwtphxqdspiggv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_WJgO75r7N5OQ82XBmrvjsA_r3YCPENt';
@@ -10,7 +11,7 @@ import {
   MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, 
   AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, 
   BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon,
-  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen
+  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical
 } from 'lucide-react';
 
 const SUPERVISORES = [
@@ -778,6 +779,7 @@ export default function App() {
   const [gridColumns, setGridColumns] = useState(3);
   
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRecetarioModal, setShowRecetarioModal] = useState(false);
   const [showCoordinationModal, setShowCoordinationModal] = useState(false);
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
@@ -1376,6 +1378,9 @@ export default function App() {
             <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
               <Plus size={16} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
+            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
+              <FlaskConical size={16} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
+            </button>
           </div>
         </div>
       </header>
@@ -1550,6 +1555,24 @@ export default function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRecetarioModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4 animate-fade-in">
+          <div className="theme-bg-card w-full h-full md:max-w-6xl md:h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border relative">
+            <div className="absolute top-4 right-4 z-[120]">
+              <button 
+                onClick={() => setShowRecetarioModal(false)} 
+                className="p-3 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-colors shadow-sm"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+              <SCEntonacion supabase={supabase} inventario={supabaseData.inventario} />
             </div>
           </div>
         </div>
