@@ -201,7 +201,7 @@ export default function SCEntonacion({ supabase, inventario }) {
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-12">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div>
-            <h2 className="text-3xl font-black text-slate-800 uppercase flex items-center gap-3">
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white uppercase flex items-center gap-3">
               <FlaskConical className="text-blue-600" size={32} />
               NUEVA FORMULACIÓN
             </h2>
@@ -211,7 +211,7 @@ export default function SCEntonacion({ supabase, inventario }) {
               <span className="text-blue-600 ml-2">{codigoObjetivo}</span>
             </p>
           </div>
-          <button onClick={() => setShowFormulacion(false)} className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black uppercase tracking-wider rounded-xl text-sm transition-all">
+          <button onClick={() => setShowFormulacion(false)} className="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider rounded-xl text-sm transition-all">
             CANCELAR
           </button>
         </div>
@@ -257,7 +257,7 @@ export default function SCEntonacion({ supabase, inventario }) {
                 value={gramosInput}
                 onChange={e => setGramosInput(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full bg-white border border-slate-300 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 onKeyDown={e => e.key === 'Enter' && agregarGramos()}
               />
             </div>
@@ -274,7 +274,7 @@ export default function SCEntonacion({ supabase, inventario }) {
           
           {isScannerOpen && (
             <div className="mt-6 p-6 border-4 border-dashed border-blue-300 rounded-[2rem] bg-blue-50/50 relative backdrop-blur-sm">
-              <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white p-2 rounded-full shadow-sm"><X size={24}/></button>
+              <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm"><X size={24}/></button>
               <div id="reader" className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-blue-200 bg-black"></div>
               <p className="text-center text-sm font-black text-blue-800 uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
                 <Camera size={18}/> Apunta el código de barras de la lata
@@ -299,7 +299,7 @@ export default function SCEntonacion({ supabase, inventario }) {
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b-2 border-slate-200">
+                <tr className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-b-2 border-slate-200">
                   <th className="p-4 pl-6 text-xs font-black text-slate-400 uppercase tracking-widest">Base / Descripción</th>
                   <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">Gramos</th>
                   <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">% Calculado</th>
@@ -309,7 +309,7 @@ export default function SCEntonacion({ supabase, inventario }) {
               <tbody>
                 {filasReceta.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-12 text-center bg-slate-50/50">
+                    <td colSpan={4} className="p-12 text-center bg-slate-50 dark:bg-slate-800 dark:border-slate-700/50">
                       <div className="inline-flex flex-col items-center justify-center opacity-40">
                         <FlaskConical size={48} className="mb-4 text-slate-400" />
                         <span className="text-sm font-black uppercase tracking-widest text-slate-500">Receta vacía</span>
@@ -322,7 +322,7 @@ export default function SCEntonacion({ supabase, inventario }) {
                     <tr key={f.id_referencia} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors group">
                       <td className="p-4 pl-6">
                         <span className="block text-[10px] font-black text-blue-500/70 uppercase tracking-wider mb-1">{f.id_referencia !== f.descripcion ? f.id_referencia : 'CREADO MANUALMENTE'}</span>
-                        <span className="block text-base font-black text-slate-800">{f.descripcion}</span>
+                        <span className="block text-base font-black text-slate-800 dark:text-white">{f.descripcion}</span>
                       </td>
                       <td className="p-4 text-xl font-black text-blue-700 text-right">{f.gramos}g</td>
                       <td className="p-4 text-lg font-bold text-slate-500 text-right">
@@ -335,7 +335,7 @@ export default function SCEntonacion({ supabase, inventario }) {
                           value={gramosExtra[f.id_referencia] || ''}
                           onChange={(e) => setGramosExtra(prev => ({ ...prev, [f.id_referencia]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && sumarGramosFila(f.id_referencia)}
-                          className="w-16 px-2 py-1.5 text-sm font-bold text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-16 px-2 py-1.5 text-sm font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button 
                           onClick={() => sumarGramosFila(f.id_referencia)} 
@@ -355,7 +355,7 @@ export default function SCEntonacion({ supabase, inventario }) {
               </tbody>
             </table>
           </div>
-          <div className="p-6 bg-slate-50 border-t-2 border-slate-100">
+          <div className="p-6 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-t-2 border-slate-100">
             <button 
               onClick={guardarReceta}
               disabled={isSearching || filasReceta.length === 0}
@@ -374,7 +374,7 @@ export default function SCEntonacion({ supabase, inventario }) {
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-12">
       <div className="mb-10 text-center md:text-left">
-        <h1 className="text-3xl md:text-5xl font-black text-slate-800 uppercase tracking-tighter flex flex-col md:flex-row items-center gap-4">
+        <h1 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex flex-col md:flex-row items-center gap-4">
           <div className="p-4 bg-blue-100 rounded-2xl text-blue-600">
             <FlaskConical size={40} />
           </div>
@@ -394,7 +394,7 @@ export default function SCEntonacion({ supabase, inventario }) {
               <select 
                 value={sistemaColor}
                 onChange={e => setSistemaColor(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all cursor-pointer shadow-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all cursor-pointer shadow-sm"
               >
                 <option value="PANTONE">PANTONE</option>
                 <option value="RAL">RAL</option>
@@ -413,7 +413,7 @@ export default function SCEntonacion({ supabase, inventario }) {
               value={codigoObjetivo}
               onChange={e => setCodigoObjetivo(e.target.value.toUpperCase())}
               placeholder="Ej. 7005 C"
-              className="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase shadow-sm placeholder:font-normal placeholder:text-slate-400"
+              className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase shadow-sm placeholder:font-normal placeholder:text-slate-400"
               onKeyDown={e => e.key === 'Enter' && handleBuscar()}
             />
           </div>
@@ -468,9 +468,9 @@ export default function SCEntonacion({ supabase, inventario }) {
               ></div>
               <div className="text-center w-full">
                 <span className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">{colorEncontrado.sistema_color}</span>
-                <h3 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">{colorEncontrado.codigo_objetivo}</h3>
+                <h3 className="text-4xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{colorEncontrado.codigo_objetivo}</h3>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 w-full text-center">
+              <div className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 p-4 rounded-xl border border-slate-100 w-full text-center">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">
                   <AlertTriangle size={14} className="inline mr-1 text-orange-400 -mt-1"/>
                   Referencia visual aproximada.<br/>Guiarse estrictamente por la muestra física aprobada.
@@ -484,10 +484,10 @@ export default function SCEntonacion({ supabase, inventario }) {
                 <CheckCircle2 size={24} className="text-emerald-400" />
                 <h3 className="font-black text-lg uppercase tracking-widest">FÓRMULA APROBADA EN PLANTA</h3>
               </div>
-              <div className="p-0 flex-1 bg-white">
+              <div className="p-0 flex-1 bg-white dark:bg-slate-900">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b-2 border-slate-100">
+                    <tr className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-b-2 border-slate-100">
                       <th className="p-5 pl-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Base / Descripción PPG</th>
                       <th className="p-5 pr-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Porcentaje</th>
                     </tr>
@@ -497,11 +497,11 @@ export default function SCEntonacion({ supabase, inventario }) {
                       <tr key={req.id} className="border-b border-slate-50 hover:bg-emerald-50/30 transition-colors">
                         <td className="p-5 pl-8">
                           <span className="block text-xs font-black text-blue-500/70 uppercase tracking-wider mb-1">{req.id_referencia_ppg !== req.nombre_base ? req.id_referencia_ppg : 'CREADO MANUALMENTE'}</span>
-                          <span className="block text-lg font-black text-slate-800">{req.nombre_base}</span>
+                          <span className="block text-lg font-black text-slate-800 dark:text-white">{req.nombre_base}</span>
                         </td>
                         <td className="p-5 pr-8 text-right">
                           <div className="inline-flex items-center justify-end h-full">
-                            <span className="text-3xl font-black text-slate-800 tracking-tighter">{req.porcentaje_final}</span>
+                            <span className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">{req.porcentaje_final}</span>
                             <span className="text-lg font-bold text-slate-400 ml-1">%</span>
                           </div>
                         </td>

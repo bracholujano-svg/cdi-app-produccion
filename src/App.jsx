@@ -1563,16 +1563,16 @@ export default function App() {
       {showRecetarioModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4 animate-fade-in">
           <div className="theme-bg-card w-full h-full md:max-w-6xl md:h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border relative">
-            <div className="absolute top-4 right-4 z-[120]">
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+              <SCEntonacion supabase={supabase} inventario={supabaseData.inventario} onClose={() => setShowRecetarioModal(false)} />
+            </div>
+            <div className="p-4 md:p-6 border-t theme-border flex justify-end bg-slate-50 dark:bg-slate-900 shrink-0">
               <button 
                 onClick={() => setShowRecetarioModal(false)} 
-                className="p-3 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl transition-colors shadow-sm"
+                className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest rounded-xl transition-colors shadow-lg shadow-red-500/20"
               >
-                ✕ Cerrar
+                CERRAR
               </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-              <SCEntonacion supabase={supabase} inventario={supabaseData.inventario} />
             </div>
           </div>
         </div>
