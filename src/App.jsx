@@ -782,7 +782,7 @@ export default function App() {
         const dateA = a.fechaEntregaPrometida ? new Date(a.fechaEntregaPrometida).getTime() : Infinity;
         const dateB = b.fechaEntregaPrometida ? new Date(b.fechaEntregaPrometida).getTime() : Infinity;
         if (dateA !== dateB) return dateA - dateB;
-        return (a.pedidoNum || "").localeCompare(b.pedidoNum || "");
+        return String(a.pedidoNum || "").localeCompare(String(b.pedidoNum || ""));
     });
 
     const orderMaterialStatus = {};
@@ -790,12 +790,26 @@ export default function App() {
     activeOrders.forEach(o => {
       const pNum = o.pedidoNum;
       orderMaterialStatus[pNum] = [];
-      const reqs = supabaseData.pedidosInsumos.filter(r => r.pedido_num === pNum);
+      const reqs = supabaseData.pedidosInsumos.filter(r => String(r.pedido_num).trim().toUpperCase() === String(pNum).trim().toUpperCase());
       
       reqs.forEach(req => {
           const id_ref = req.id_referencia;
           const cantidadRequerida = req.cantidad_requerida - (req.cantidad_oc || 0);
-          if (cantidadRequerida <= 0) return;
+          
+          if (cantidadRequerida <= 0) {
+              // El material está 100% cubierto por Orden de Compra
+              orderMaterialStatus[pNum].push({
+                  ...req,
+                  id_referencia: id_ref,
+                  descripcion: supabaseData.inventario.find(i => i.id_referencia === id_ref)?.descripcion || req.descripcion || id_ref,
+                  requerida: req.cantidad_requerida,
+                  asignada: req.cantidad_requerida, // Completamente asignada
+                  faltante: 0,
+                  stockRestanteGlobal: virtualStock[id_ref] || 0,
+                  sinOC: false
+              });
+              return;
+          }
           
           let available = virtualStock[id_ref] || 0;
           let asignado = 0;
