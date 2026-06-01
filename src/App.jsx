@@ -291,7 +291,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             datasets: [{
                                 label: 'Órdenes Activas',
                                 data: areaData.length > 0 ? areaData : [0],
-                                backgroundColor: '#a1bdc2',
+                                backgroundColor: 'var(--accent)',
                                 borderRadius: 8
                             }]
                         },
@@ -311,7 +311,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             datasets: [{
                                 label: 'Entregas Programadas',
                                 data: [12, 19, 15, 22, 30, 8], // Mocked trend para estética visual, ya que requiere histórico extenso
-                                borderColor: '#eadcba', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
+                                borderColor: 'var(--highlight)', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
                             }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
@@ -371,17 +371,17 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] overflow-y-auto">
-            <div className="min-h-screen bg-[#f1f5f9] text-[#1e293b] font-sans pb-10">
+            <div className="min-h-screen bg-[#f1f5f9] text-[var(--card-inner)] font-sans pb-10">
                 {/* NAV */}
                 <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16 items-center">
                             <div className="flex items-center gap-2">
-                                <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-3xl font-black text-[#a1bdc2] tracking-tighter">CDI</span>
+                                <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black text-[var(--accent)] tracking-tighter">CDI</span>
                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                                 <div className="flex flex-col leading-none">
                                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold tracking-widest text-gray-400">INFORME</span>
-                                    <span className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase">Ejecutivo</span>
+                                    <span className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase">Ejecutivo</span>
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center">
@@ -389,7 +389,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     <button 
                                         key={tab} 
                                         onClick={() => setActiveTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
@@ -407,7 +407,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado de Planta Actual</h1>
+                                    <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tight" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado de Planta Actual</h1>
                                     <p className="mt-4 text-gray-500 text-sm leading-relaxed max-w-2xl">
                                         Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
                                     </p>
@@ -419,17 +419,17 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-[#a1bdc2] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#7d969b]">
+                                <div className="bg-[var(--accent)] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[var(--accent-dark)]">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Pedidos Activos</p>
                                     <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
                                 </div>
-                                <div className="bg-[#eadcba] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#bdae91]">
+                                <div className="bg-[var(--highlight)] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#bdae91]">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Próximos a Entrega</p>
                                     <h3 className="text-4xl font-black mt-1">{urgentesCount}</h3>
                                 </div>
                                 <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-gray-400">Despachados</p>
-                                    <h3 className="text-4xl font-black mt-1 text-[#a1bdc2]">{despachadosCount}</h3>
+                                    <h3 className="text-4xl font-black mt-1 text-[var(--accent)]">{despachadosCount}</h3>
                                 </div>
                                 <div className="bg-white p-6 rounded-3xl border border-red-200 shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-400">Atrasos Críticos</p>
@@ -448,8 +448,8 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado Base Operativa)</h4>
                                     <div className="space-y-5">
                                         {[
-                                            { label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[#a1bdc2]' },
-                                            { label: 'Soldadura y Metal', time: '3.8 Días', pct: '70%', bg: 'bg-[#eadcba]' },
+                                            { label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[var(--accent)]' },
+                                            { label: 'Soldadura y Metal', time: '3.8 Días', pct: '70%', bg: 'bg-[var(--highlight)]' },
                                             { label: 'Pintura Líquida/Polvo', time: '4.1 Días', pct: '85%', bg: 'bg-slate-400' },
                                             { label: 'Ensamble y Empaque', time: '1.2 Días', pct: '25%', bg: 'bg-green-400' },
                                         ].map((item, idx) => (
@@ -473,15 +473,15 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                     {activeTab === 'operaciones' && (
                         <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                             <div className="bg-slate-800 text-white p-8 rounded-[2.5rem] shadow-xl">
-                                <h2 className="text-2xl font-black uppercase tracking-tighter text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Explorador de Flujo Operativo</h2>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-[var(--highlight)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Explorador de Flujo Operativo</h2>
                                 <p className="text-sm text-slate-300 mt-2">Seguimiento detallado por jerarquía de procesos y estados de producción.</p>
                             </div>
 
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
                                 <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm bg-white" />
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[var(--accent)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm bg-white" />
                                 </div>
-                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer">
+                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--accent)] cursor-pointer">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
@@ -502,7 +502,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                             <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                                 <td className="p-5 font-black text-xs md:text-sm lg:text-base text-slate-800">#{o.pedidoNum}</td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500">{o.cliente}</td>
-                                                <td className="p-5"><span className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[#a1bdc2]/30">{o.areaActual}</span></td>
+                                                <td className="p-5"><span className="bg-[var(--accent)]/10 text-[var(--accent)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--accent)]/30">{o.areaActual}</span></td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500 uppercase tracking-tight">{o.estadoInterno}</td>
                                             </tr>
                                         ))}
@@ -518,19 +518,19 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "'Oswald', sans-serif" }}>Compromisos de Entrega Próximos (Tendencia)</h2>
+                                    <h2 className="text-xl font-black uppercase tracking-tight mb-6" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Compromisos de Entrega Próximos (Tendencia)</h2>
                                     <div className="relative w-full h-[300px]">
                                         <canvas id="chartLogistica"></canvas>
                                     </div>
                                 </div>
-                                <div className="bg-[#1e293b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
+                                <div className="bg-[var(--card-inner)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
-                                        <h2 className="text-xl font-black uppercase text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Resumen Logístico</h2>
+                                        <h2 className="text-xl font-black uppercase text-[var(--highlight)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
-                                            <div className="w-10 h-10 bg-[#a1bdc2] rounded-xl flex items-center justify-center font-black text-slate-900">{despachadosCount}</div>
+                                            <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center font-black text-slate-900">{despachadosCount}</div>
                                             <div>
                                                 <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
                                                 <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>
@@ -554,7 +554,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
-                                    <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado Global de Calidad</h2>
+                                    <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado Global de Calidad</h2>
                                     <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
                                     <div className="relative w-full h-[300px] flex-1">
                                         <canvas id="chartCalidad"></canvas>
@@ -563,8 +563,8 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <div className="flex-1 space-y-4">
                                     <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl text-white flex justify-between items-center">
                                         <div>
-                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
-                                            <p className="text-2xl font-black text-[#eadcba]">{porcentajeInspeccionado}%</p>
+                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
+                                            <p className="text-2xl font-black text-[var(--highlight)]">{porcentajeInspeccionado}%</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
@@ -631,7 +631,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             {sortedSecciones.length > 0 && (
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                                     <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
-                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Frecuencia de Reprocesos</h2>
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Frecuencia de Reprocesos</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
                                         <div className="relative w-full h-[250px] flex-1">
                                             <canvas id="chartBarrasReproceso"></canvas>
@@ -639,7 +639,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     </div>
 
                                     <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
-                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Análisis de Causas Raíz</h2>
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Análisis de Causas Raíz</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Top errores en secciones críticas</p>
                                         <div className="overflow-y-auto max-h-[250px] custom-scrollbar pr-2 space-y-3">
                                             {sortedSecciones.map((sec, idx) => {
@@ -1322,21 +1322,21 @@ export default function App() {
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
           <div className="flex items-center justify-center gap-2 mb-4 select-none">
-             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
+             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[var(--accent)] transform scale-y-[1.1]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>CDI</span>
              <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
              <div className="flex flex-col text-left justify-center">
                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
-               <span className="text-[12px] font-black leading-none tracking-[0.05em] text-[#a1bdc2]">EXHIBICIÓN</span>
+               <span className="text-[12px] font-black leading-none tracking-[0.05em] text-[var(--accent)]">EXHIBICIÓN</span>
              </div>
           </div>
-          <h2 className="text-[#eadcba] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
+          <h2 className="text-[var(--highlight)] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
         </div>
         
         <form onSubmit={isRegistering ? handleVirtualRegister : handleVirtualLogin} className="p-8 space-y-5">
           {savedLogins.length > 0 && !isRegistering && (
              <div className="flex flex-wrap gap-2 justify-center mb-4">
                {savedLogins.map((u, i) => (
-                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1.5 rounded-xl text-xs md:text-sm lg:text-base font-black border border-[#a1bdc2]/30 hover:bg-[#a1bdc2]/20 transition-colors">
+                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[var(--accent)]/10 text-[var(--accent)] px-3 py-1.5 rounded-xl text-xs md:text-sm lg:text-base font-black border border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 transition-colors">
                    {u?.name?.split(' ')[0]}
                  </button>
                ))}
@@ -1348,13 +1348,13 @@ export default function App() {
           {isRegistering && (
             <div className="space-y-1">
               <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
-              <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[#eadcba]" placeholder="EJ: JUAN PEREZ" />
+              <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--highlight)]" placeholder="EJ: JUAN PEREZ" />
             </div>
           )}
 
           <div className="space-y-1">
             <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
-            <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[#eadcba] transition-all">
+            <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--highlight)] transition-all">
               <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
               <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-xs md:text-sm lg:text-base sm:text-xs md:text-sm lg:text-base flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
@@ -1363,24 +1363,24 @@ export default function App() {
           <div className="space-y-1">
             <div className="flex justify-between items-center px-1">
               <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave / PIN</label>
-              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-[#eadcba] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 4 dígitos</span>
+              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-[var(--highlight)] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 4 dígitos</span>
             </div>
-            <input name="password" type="password" inputMode="numeric" pattern="\d*" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[#eadcba]" placeholder="••••" />
+            <input name="password" type="password" inputMode="numeric" pattern="\d*" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--highlight)]" placeholder="••••" />
           </div>
 
           {isRegistering && (
             <div className="space-y-1">
               <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
-              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs md:text-sm lg:text-base focus:ring-2 focus:ring-[#eadcba]">
+              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs md:text-sm lg:text-base focus:ring-2 focus:ring-[var(--highlight)]">
                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
           )}
 
-          <button type="submit" className="w-full bg-[#eadcba] text-[#1e293b] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 border-[#bdae91] transition-all">
+          <button type="submit" className="w-full bg-[var(--highlight)] text-[var(--card-inner)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 border-[#bdae91] transition-all">
             {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
           </button>
-          <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[#eadcba] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
+          <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[var(--highlight)] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
             {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
           </p>
         </form>
@@ -1403,11 +1403,11 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
+              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[var(--accent)] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>CDI</span>
               <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
               <div className="flex flex-col justify-center">
                 <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] md:text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
-                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] font-black leading-none tracking-[0.05em] text-[#a1bdc2]">EXHIBICIÓN</span>
+                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] font-black leading-none tracking-[0.05em] text-[var(--accent)]">EXHIBICIÓN</span>
               </div>
             </div>
           </div>
@@ -1417,16 +1417,16 @@ export default function App() {
             <button type="button" onClick={handleLogout} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><LogOut size={18} /></button>
             <div className="w-px h-6 bg-current opacity-20 mx-1"></div>
             
-            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-inner)] border-b-[3px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[3px]">
               <BarChart2 size={"1.2em"} /><span className="hidden md:inline">Indicadores</span>
             </button>
-            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[var(--highlight)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-inner)] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
               <Megaphone size={"1.2em"} /><span className="hidden md:inline">Coord</span>
             </button>
-            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-inner)] border-b-[3px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[3px]">
               <Plus size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
-            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
+            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[var(--highlight)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-inner)] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
               <FlaskConical size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
             </button>
           </div>
@@ -1437,12 +1437,12 @@ export default function App() {
         <div className="max-w-[1600px] mx-auto p-2 md:p-3 flex gap-3 overflow-x-auto whitespace-nowrap items-center px-4 custom-scrollbar">
           
           <div className="flex flex-col text-left border-r-2 theme-border pr-4 mr-1 shrink-0">
-            <span className="text-[11px] font-black text-[#eadcba] uppercase leading-none">{supervisorProfile.name}</span>
+            <span className="text-[11px] font-black text-[var(--highlight)] uppercase leading-none">{supervisorProfile.name}</span>
             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase mt-1">{supervisorProfile.area}</span>
           </div>
 
           <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[#a1bdc2] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#a1bdc2]'}`}>
+             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[var(--accent)] text-[var(--card-inner)] shadow-sm' : 'theme-text-muted hover:text-[var(--accent)]'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
              <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
@@ -1458,11 +1458,11 @@ export default function App() {
           
           <div className="w-px h-6 bg-current opacity-20 mx-1 shrink-0"></div>
 
-          <button type="button" onClick={() => setShowCoordViewModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
-            <Bell size={"1.2em"} className={coordinationAlerts.length > 0 ? 'animate-bounce text-[#eadcba]' : ''} /><span>Alertas ({coordinationAlerts.length})</span>
+          <button type="button" onClick={() => setShowCoordViewModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[var(--accent)] transition-colors py-4 px-2">
+            <Bell size={"1.2em"} className={coordinationAlerts.length > 0 ? 'animate-bounce text-[var(--highlight)]' : ''} /><span>Alertas ({coordinationAlerts.length})</span>
           </button>
 
-          <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
+          <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[var(--accent)] transition-colors py-4 px-2">
             <FileText size={"1.2em"} /><span>Reporte</span>
           </button>
 
@@ -1471,33 +1471,33 @@ export default function App() {
         <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--accent)]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--accent)] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
                 <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0">
-                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
+                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
                         <LayoutList size={"1.2em"} />
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
+                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
 
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--accent)] text-[var(--card-inner)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
                     </button>
                 </div>
@@ -1529,7 +1529,7 @@ export default function App() {
                 
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <div className="flex flex-col gap-1 w-full">
-                    <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#a1bdc2]/10 text-[#a1bdc2] border border-[#a1bdc2]/20'}`}>
+                    <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'}`}>
                       {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D` : (viewFilter === 'DESPACHADOS' ? '✅ DESPACHADO' : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES` : 'S/F'))}
                     </div>
                     {hasAlert && (
@@ -1542,13 +1542,13 @@ export default function App() {
                   <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
                 </div>
                 
-                <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[#a1bdc2]'}`}>
+                <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[var(--accent)]'}`}>
                   PED: {group.pedidoNum}
                 </h3>
                 <p title={group.cliente} className={`font-black theme-text-muted uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base`}>{group.cliente}</p>
                 
                 <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2">
-                  <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[#a1bdc2] text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm`}>{group.products?.length || 0} PROD.</span>
+                  <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--accent)] text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm`}>{group.products?.length || 0} PROD.</span>
                 </div>
               </div>
             );
@@ -1567,10 +1567,10 @@ export default function App() {
           <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
-                 <h2 className="text-xl font-black text-[#a1bdc2] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
+                 <h2 className="text-xl font-black text-[var(--accent)] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
                  <p className="text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase truncate">{activeGroupObj.cliente}</p>
               </div>
-              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[#a1bdc2] shrink-0">✕</button>
+              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--accent)] shrink-0">✕</button>
             </div>
 
             <div className="p-4 border-b theme-border bg-black/5 shrink-0">
@@ -1579,7 +1579,7 @@ export default function App() {
                     <input 
                         type="text" 
                         placeholder="🔍 Filtrar artículo o producto (Ej: 1234)..." 
-                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] text-current"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--accent)] text-current"
                         value={itemSearchTerm} 
                         onChange={(e) => setItemSearchTerm(e.target.value)} 
                     />
@@ -1592,13 +1592,13 @@ export default function App() {
                   if (!st) return true;
                   return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
               }).map(p => (
-                <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[#a1bdc2] shadow-sm transition-all active:scale-95 bg-[#1e293b]">
+                <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--accent)] shadow-sm transition-all active:scale-95 bg-[var(--card-inner)]">
                   <div className="flex justify-between items-center mb-2">
-                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-1 rounded border border-[#a1bdc2]/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[var(--accent)]/20 text-[var(--accent)] px-2 py-1 rounded border border-[var(--accent)]/30 font-black truncate">CÓD: {p.codArticulo}</span>
                   </div>
-                  <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[#a1bdc2]">{p.nombre}</h4>
-                  <div className="mt-4 p-2 bg-[#2b3746] rounded-xl border border-[#4a5c70]">
-                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
+                  <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--accent)]">{p.nombre}</h4>
+                  <div className="mt-4 p-2 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-strong)]">
+                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--highlight)] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
                     <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
                   </div>
                 </div>
@@ -1636,20 +1636,20 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
-              <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[#a1bdc2]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[#a1bdc2]">✕</button>
+              <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[var(--accent)]"><Plus size={20} /> Nuevo Registro Planta</h2>
+              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[var(--accent)]">✕</button>
             </div>
             
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
-                <div className="bg-[#1e293b] p-5 rounded-[1.5rem] border border-[#4a5c70] shadow-inner mb-6">
+                <div className="bg-[var(--card-inner)] p-5 rounded-[1.5rem] border border-[var(--border-strong)] shadow-inner mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="p-1.5 bg-[#a1bdc2]/20 rounded-lg"><Search size={"1.2em"} className="text-[#a1bdc2]"/></div>
-                        <p className="text-xs md:text-sm lg:text-base font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Autocompletar)</p>
+                        <div className="p-1.5 bg-[var(--accent)]/20 rounded-lg"><Search size={"1.2em"} className="text-[var(--accent)]"/></div>
+                        <p className="text-xs md:text-sm lg:text-base font-black uppercase text-[var(--accent)] tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
-                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
-                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[#eadcba] text-[#1e293b] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
+                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase placeholder:text-black/30" />
+                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[var(--highlight)] text-[var(--card-inner)] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
                             {excelSearchLoading ? '...' : 'BUSCAR'}
                         </button>
                     </div>
@@ -1657,8 +1657,8 @@ export default function App() {
                     {excelSearchSuccess && <p className="text-green-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={"1.2em"}/>{excelSearchSuccess}</p>}
 
                     {showSearchSelector && searchResults.length > 0 && (
-                      <div className="mt-4 p-3 bg-[#2b3746] rounded-xl border border-[#4a5c70] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
-                        <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
+                      <div className="mt-4 p-3 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-strong)] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
+                        <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--highlight)] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
                         {searchResults.map((res, idx) => (
                           <div 
                             key={idx} 
@@ -1667,9 +1667,9 @@ export default function App() {
                               setShowSearchSelector(false);
                               setExcelSearchSuccess(`✅ Seleccionado: ${res.nombre} (Pedido ${res.pedido})`);
                             }}
-                            className="p-2.5 bg-[#1e293b] hover:bg-[#374657] rounded-lg border border-[#4a5c70] cursor-pointer transition-colors flex flex-col"
+                            className="p-2.5 bg-[var(--card-inner)] hover:bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-strong)] cursor-pointer transition-colors flex flex-col"
                           >
-                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase text-[#a1bdc2]">
+                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase text-[var(--accent)]">
                               <span>PEDIDO: {res.pedido}</span>
                               <span>ART: {res.articulo}</span>
                             </div>
@@ -1685,34 +1685,34 @@ export default function App() {
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
-                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
+                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
                     
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
-                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="EJ: 12345" /></div>
+                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="EJ: 12345" /></div>
 
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
-                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CÓDIGO..." /></div>
+                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="CÓDIGO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Marca / Cliente</label>
-                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
+                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1 mt-2">
                         <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
-                        <select name="areaRecibe" className="w-full p-4 bg-[#a1bdc2] text-[#1e293b] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[#7d969b] outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-white">
+                        <select name="areaRecibe" className="w-full p-4 bg-[var(--accent)] text-[var(--card-inner)] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[var(--accent-dark)] outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-white">
                             {AREAS_RECEPCION.map(a => <option key={a}>{a}</option>)}
                         </select>
                     </div>
 
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Entrega</label>
-                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN ENTREGA..." /></div>
+                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="QUIEN ENTREGA..." /></div>
                     
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Recibe</label>
-                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN RECIBE..." /></div>
+                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="QUIEN RECIBE..." /></div>
                     
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Cantidad a Producir</label>
-                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CANTIDAD..." /></div>
+                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="CANTIDAD..." /></div>
                     
-                    <button type="submit" className="md:col-span-2 mt-4 bg-[#a1bdc2] text-[#1e293b] py-5 rounded-[1.5rem] font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[4px] border-[#7d969b] active:border-b-0 active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
+                    <button type="submit" className="md:col-span-2 mt-4 bg-[var(--accent)] text-[var(--card-inner)] py-5 rounded-[1.5rem] font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[4px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
                 </form>
             </div>
           </div>
@@ -1724,17 +1724,17 @@ export default function App() {
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
-                <h2 className="text-base font-black uppercase truncate text-[#a1bdc2]">PED: {selectedOrder.pedidoNum}</h2>
+                <h2 className="text-base font-black uppercase truncate text-[var(--accent)]">PED: {selectedOrder.pedidoNum}</h2>
                 <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
               </div>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-all text-[#a1bdc2] shrink-0">✕</button>
+              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-all text-[var(--accent)] shrink-0">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
               
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-inner)] text-[var(--accent)] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -1742,26 +1742,26 @@ export default function App() {
                     {openSection === 'planta' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'planta' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
-                        <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE OPERARIO..." />
-                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[#a1bdc2]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-secondary)]">
+                        <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="NOMBRE OPERARIO..." />
+                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--accent)]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
-                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--accent)]/20 text-[var(--accent)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--accent)]/20 transition-all">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
                         </div>
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[#eadcba] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
+                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--highlight)] text-[var(--card-inner)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[var(--highlight-dark)] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
                         </div>
                         
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
@@ -1772,10 +1772,10 @@ export default function App() {
                             {showHistoryPlanta && (selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.nota}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--highlight)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[var(--accent)]">OP: {n.operario}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -1785,7 +1785,7 @@ export default function App() {
 
               {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--card-inner)] text-[var(--accent)] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Inspección Calidad</span>
@@ -1793,30 +1793,30 @@ export default function App() {
                     {openSection === 'calidad' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'calidad' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-secondary)]">
                         <div className="flex gap-2">
-                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>APROBADO</button>
-                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RETRABAJO</button>
-                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RECHAZADO</button>
+                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--accent)] border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--accent)] border-transparent'}`}>RETRABAJO</button>
+                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--accent)] border-transparent'}`}>RECHAZADO</button>
                         </div>
-                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE INSPECTOR..." />
+                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="NOMBRE INSPECTOR..." />
                         <div className="relative">
-                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--accent)]/20 text-[var(--accent)]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--accent)]/20 transition-all">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
                         </div>
                         {calidadPhoto && <img src={calidadPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
+                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-inner)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
@@ -1829,8 +1829,8 @@ export default function App() {
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.observacion}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--highlight)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[var(--accent)]">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -1840,7 +1840,7 @@ export default function App() {
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--card-inner)] text-[var(--accent)] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -1848,23 +1848,23 @@ export default function App() {
                     {openSection === 'entrega' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'entrega' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
-                        <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
-                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-secondary)]">
+                        <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] uppercase text-[var(--accent)]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] text-[var(--accent)]" />
                         <div className="grid grid-cols-2 gap-2">
-                            <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA ENTREGA" />
-                            <input id="recibidoPor" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA RECIBE" />
+                            <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="FIRMA ENTREGA" />
+                            <input id="recibidoPor" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="FIRMA RECIBE" />
                         </div>
                         <div className="relative">
-                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--accent)] placeholder:text-[var(--accent)]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--accent)]/20 text-[var(--accent)]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--accent)]/20 transition-all">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
@@ -1875,7 +1875,7 @@ export default function App() {
                             const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
                             const re = document.getElementById('recibidoPor').value.trim().toUpperCase();
                             if(en && re && tempTransferDate) updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, re);
-                        }} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
+                        }} className="w-full bg-[var(--highlight)] text-[var(--card-inner)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[var(--highlight-dark)] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
@@ -1885,10 +1885,10 @@ export default function App() {
                             {showHistoryEntrega && (selectedOrder.historial || []).slice().reverse().map((h, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
-                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
+                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[var(--accent)]/20 text-[var(--accent)] px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--accent)]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[var(--accent)] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[var(--accent)] block uppercase">RECIBE</span>{h.recibe}</div></div>
                                     {h.nota && <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
+                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--highlight)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
                                     <div className="flex justify-end items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
                                 </div>
                             ))}
@@ -1912,28 +1912,28 @@ export default function App() {
       {showCoordinationModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><Megaphone size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Coordinación Logística</h2></div><button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
+            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><Megaphone size={20} className="text-[var(--highlight)]" /><h2 className="text-lg font-black uppercase text-[var(--accent)]">Coordinación Logística</h2></div><button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--accent)]">✕</button></div>
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
               <div className="theme-bg-main p-5 rounded-2xl border theme-border">
-                <h3 className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
+                <h3 className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
-                  <input value={inputManualCliente} onChange={e=>setInputManualCliente(e.target.value)} placeholder="CLIENTE / MARCA" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
-                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
-                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" /></div>
-                  <button type="button" onClick={addItemToCoordList} className="bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Añadir a Lista</button>
+                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] uppercase text-[var(--accent)] placeholder:text-[var(--accent)]/40" />
+                  <input value={inputManualCliente} onChange={e=>setInputManualCliente(e.target.value)} placeholder="CLIENTE / MARCA" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] uppercase text-[var(--accent)] placeholder:text-[var(--accent)]/40" />
+                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] text-[var(--accent)]" />
+                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--highlight)] uppercase text-[var(--accent)] placeholder:text-[var(--accent)]/40" /></div>
+                  <button type="button" onClick={addItemToCoordList} className="bg-[var(--accent)] text-[var(--card-inner)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border-b-[3px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[3px]">Añadir a Lista</button>
                 </div>
               </div>
               {coordList.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs md:text-sm lg:text-base font-black text-[#eadcba] uppercase tracking-widest">Lista Pendiente por Guardar</h3>
+                  <h3 className="text-xs md:text-sm lg:text-base font-black text-[var(--highlight)] uppercase tracking-widest">Lista Pendiente por Guardar</h3>
                   {coordList.map(item => (
                     <div key={item.id} className="flex justify-between items-center theme-bg-main p-3.5 rounded-xl border theme-border">
-                      <div><span className="font-black uppercase text-xs md:text-sm lg:text-base block text-[#a1bdc2]">{item.pedidoNum} - {item.cliente}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
+                      <div><span className="font-black uppercase text-xs md:text-sm lg:text-base block text-[var(--accent)]">{item.pedidoNum} - {item.cliente}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
                       <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={"1.2em"}/></button>
                     </div>
                   ))}
-                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px] mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
+                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[var(--highlight)] text-[var(--card-inner)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[var(--highlight-dark)] active:border-b-0 active:translate-y-[3px] mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
                 </div>
               )}
             </div>
@@ -1944,7 +1944,7 @@ export default function App() {
       {showCoordViewModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-4xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-            <div className="p-5 bg-[#eadcba] text-[#1e293b] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-all">✕</button></div>
+            <div className="p-5 bg-[var(--highlight)] text-[var(--card-inner)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-all">✕</button></div>
             <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {coordinationAlerts.map(alertItem => (
@@ -1953,27 +1953,27 @@ export default function App() {
                          <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={"1.2em"}/></button>
                      )}
                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
-                     <h4 className="text-sm font-black text-[#a1bdc2] uppercase mt-1 truncate">{alertItem.cliente}</h4>
+                     <h4 className="text-sm font-black text-[var(--accent)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
                      
                      {supervisorProfile?.area === "Administrador / Todos" ? (
-                         <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
+                         <div className="mt-4 p-3 bg-[var(--card-inner)] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
                             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
                             <input 
                                 type="date" 
                                 value={alertItem.fechaEntrega} 
                                 onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs md:text-sm lg:text-base border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[#eadcba] text-[#eadcba]" 
+                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs md:text-sm lg:text-base border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[var(--highlight)] text-[var(--highlight)]" 
                             />
                          </div>
                      ) : (
-                         <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-[#4a5c70] flex-1 flex flex-col justify-end">
+                         <div className="mt-4 p-3 bg-[var(--card-inner)] rounded-xl border border-[var(--border-strong)] flex-1 flex flex-col justify-end">
                             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
-                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[#eadcba]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
+                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--highlight)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
                          </div>
                      )}
                   </div>
                 ))}
-                {coordinationAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[#a1bdc2]/50">No hay alertas logísticas activas</p>}
+                {coordinationAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--accent)]/50">No hay alertas logísticas activas</p>}
               </div>
             </div>
           </div>
@@ -1983,11 +1983,11 @@ export default function App() {
       {showReportConfigModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[#a1bdc2]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
+            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--accent)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--accent)]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]" /></div>
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)]" /></div>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--accent)] text-[var(--card-inner)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border-b-[3px] border-[var(--accent-dark)] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>
@@ -2061,23 +2061,64 @@ export default function App() {
       )}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Oswald:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Space+Grotesk:wght@500;700;900&display=swap');
         
         :root, [data-theme="light"] {
-            --bg-main: #f1f5f9; --bg-card: #ffffff; --bg-header: #e2e8f0; --bg-input: #f8fafc; --text-main: #0f172a; --text-muted: #475569; --border-color: #cbd5e1;
+            --bg-main: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --bg-header: #F1F5F9;
+            --bg-input: #FFFFFF;
+            --bg-secondary: #F1F5F9;
+            --bg-tertiary: #E2E8F0;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --border-strong: #CBD5E1;
+            
+            /* Vibrant Light Mode Accents */
+            --accent: #0284C7; /* Sky Blue Deep */
+            --accent-dark: #0369A1;
+            --highlight: #EA580C; /* Vibrant Orange/Amber */
+            --highlight-dark: #C2410C;
+            --card-inner: #F8FAFC;
         }
         [data-theme="dark"] {
-            --bg-main: #2b3746; --bg-card: #374657; --bg-header: #222c39; --bg-input: #1e293b; --text-main: #f8fafc; --text-muted: #a1bdc2; --border-color: #4a5c70;
+            --bg-main: #09090B; /* Deep Zinc / Pitch */
+            --bg-card: rgba(24, 24, 27, 0.7); /* Translucent dark zinc for glassmorphism */
+            --bg-header: rgba(9, 9, 11, 0.9);
+            --bg-input: #18181B;
+            --bg-secondary: rgba(39, 39, 42, 0.5);
+            --bg-tertiary: rgba(63, 63, 70, 0.4);
+            --text-main: #FAFAFA;
+            --text-muted: #A1A1AA;
+            --border-color: rgba(63, 63, 70, 0.5);
+            --border-strong: rgba(82, 82, 91, 0.8);
+            
+            /* Neon/Vibrant Dark Mode Accents */
+            --accent: #06B6D4; /* Bright Cyan */
+            --accent-dark: #0891B2;
+            --highlight: #F59E0B; /* Electric Amber */
+            --highlight-dark: #D97706;
+            --card-inner: rgba(9, 9, 11, 0.6);
         }
 
         .theme-bg-main { background-color: var(--bg-main); color: var(--text-main); }
-        .theme-bg-card { background-color: var(--bg-card); color: var(--text-main); }
-        .theme-bg-header { background-color: var(--bg-header); color: var(--text-main); }
+        .theme-bg-card { 
+           background-color: var(--bg-card); 
+           color: var(--text-main);
+           backdrop-filter: blur(16px);
+           -webkit-backdrop-filter: blur(16px);
+           box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .theme-bg-header { background-color: var(--bg-header); color: var(--text-main); backdrop-filter: blur(8px); }
         .theme-bg-input { background-color: var(--bg-input); color: var(--text-main); }
         .theme-border { border-color: var(--border-color); }
         .theme-text-muted { color: var(--text-muted); }
 
-        body, input, button, select, textarea { font-family: 'Montserrat', sans-serif !important; }
+        /* Typography Override */
+        body, input, button, select, textarea { font-family: 'Outfit', sans-serif !important; }
+        h1, h2, h3, h4, .font-oswald { font-family: 'Space Grotesk', sans-serif !important; letter-spacing: -0.02em; }
+        
         body { background-color: var(--bg-main); color: var(--text-main); }
         
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
@@ -2091,17 +2132,15 @@ export default function App() {
         
         @media print {
             body * { visibility: hidden; }
-            .fixed.inset-0.bg-white.z-\\[130\\] { position: absolute; left: 0; top: 0; right: 0; visibility: visible; height: auto !important; overflow: visible !important; }
-            .fixed.inset-0.bg-white.z-\\[130\\] * { visibility: visible; }
-            .print\\:hidden { display: none !important; }
-            .print\\:border-0 { border: none !important; }
-            .print\\:p-0 { padding: 0 !important; }
-            .print\\:bg-slate-200 { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
-            .print\\:text-black { color: #000 !important; }
-            .print\\:overflow-visible { overflow: visible !important; }
-            @page { margin: 10mm; size: auto; }
+            .fixed.inset-0.bg-white.z-\[130\] { position: absolute; left: 0; top: 0; right: 0; visibility: visible; height: auto !important; overflow: visible !important; }
+            .fixed.inset-0.bg-white.z-\[130\] * { visibility: visible; }
+            .print\:hidden { display: none !important; }
+            .print\:border-0 { border: none !important; }
+            .print\:p-0 { padding: 0 !important; }
+            .print\:bg-slate-200 { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
+            .print\:text-black { color: #000 !important; }
         }
-      `}</style>
+`}</style>
     </div>
   );
 }
