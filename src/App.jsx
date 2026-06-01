@@ -715,17 +715,24 @@ export default function App() {
         const { data: inv } = await supabase.from('inventario').select('*');
         const { data: req } = await supabase.from('requerimientos_pedido').select('*');
         
+        const parseNumber = (val) => {
+            if (val === null || val === undefined || val === '') return 0;
+            const strVal = String(val).replace(/\./g, '').replace(',', '.');
+            const num = Number(strVal);
+            return isNaN(num) ? 0 : num;
+        };
+
         const invMap = inv ? inv.map(item => ({
           id_referencia: item['Id Referencia'],
           descripcion: item['Referencia'],
-          cantidad_disponible: Number(item['Saldo'] || 0)
+          cantidad_disponible: parseNumber(item['Saldo'])
         })) : [];
 
         const reqRaw = req ? req.map(item => ({
           pedido_num: item['pedidosin'],
           id_referencia: item['Id Referencia'],
-          cantidad_requerida: Number(item['Cantidad'] || 0),
-          cantidad_oc: Number(item['Cant.OC'] || 0),
+          cantidad_requerida: parseNumber(item['Cantidad']),
+          cantidad_oc: parseNumber(item['Cant.OC']),
           descripcion: item['Descripcion']
         })) : [];
 
