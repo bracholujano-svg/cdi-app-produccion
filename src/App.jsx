@@ -11,7 +11,7 @@ import {
   MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, 
   AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, 
   BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon,
-  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical
+  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X
 } from 'lucide-react';
 
 const SUPERVISORES = [
@@ -822,6 +822,7 @@ export default function App() {
   const [viewFilter, setViewFilter] = useState('TODOS'); 
   const [gridColumns, setGridColumns] = useState(3);
   
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRecetarioModal, setShowRecetarioModal] = useState(false);
   const [recetarioMaximized, setRecetarioMaximized] = useState(false);
@@ -1399,6 +1400,40 @@ export default function App() {
         </div>
       )}
 
+      {/* SIDEBAR TRIGGER FLOTANTE */}
+      <button 
+        onClick={() => setIsSidebarOpen(true)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60] bg-[var(--card-bg)] text-white p-3 md:p-4 rounded-r-2xl border-y border-r border-[var(--border-color)] shadow-xl hover:bg-[var(--primary)] hover:border-[var(--primary)] transition-all duration-300 group"
+      >
+        <Menu size={"1.5em"} className="group-hover:scale-110 transition-transform duration-200" />
+      </button>
+
+      {/* BACKDROP DEL SIDEBAR */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
+
+      {/* CAJÓN OCULTO (SIDEBAR) */}
+      <div className={`fixed top-0 left-0 h-full w-[110px] md:w-[130px] bg-[var(--bg-main)] z-[80] border-r border-[var(--border-color)] shadow-[10px_0_30px_rgba(0,0,0,0.8)] transform transition-transform duration-300 ease-in-out flex flex-col items-center py-6 gap-6 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <button onClick={() => setIsSidebarOpen(false)} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white transition-colors">
+          <X size={"1.5em"} />
+        </button>
+        <div className="mt-12 flex flex-col gap-4 w-full px-4">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+              <BarChart2 size={"2em"} /><span className="text-center leading-tight">Indicadores</span>
+            </button>
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+              <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>
+            </button>
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+              <Plus size={"2em"} strokeWidth={3} /><span className="text-center leading-tight">Nuevo</span>
+            </button>
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+              <FlaskConical size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">SC Color</span>
+            </button>
+        </div>
+      </div>
+
       <header className={`theme-bg-header p-3 md:p-4 sticky ${mostUrgentOrder ? 'top-[36px]' : 'top-0'} z-50 shadow-md border-b theme-border transition-all`}>
         <div className="w-full px-4 md:px-8 flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
@@ -1415,20 +1450,6 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all"><Sun size={18} /></button>
             <button type="button" onClick={handleLogout} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><LogOut size={18} /></button>
-            <div className="w-px h-6 bg-current opacity-20 mx-1"></div>
-            
-            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[var(--primary)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
-              <BarChart2 size={"1.2em"} /><span className="hidden md:inline">Indicadores</span>
-            </button>
-            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
-              <Megaphone size={"1.2em"} /><span className="hidden md:inline">Coord</span>
-            </button>
-            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--primary)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
-              <Plus size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
-            </button>
-            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
-              <FlaskConical size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
-            </button>
           </div>
         </div>
       </header>
