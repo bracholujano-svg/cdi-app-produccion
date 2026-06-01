@@ -738,7 +738,24 @@ export default function App() {
         
         const parseNumber = (val) => {
             if (val === null || val === undefined || val === '') return 0;
-            const strVal = String(val).replace(/\./g, '').replace(',', '.');
+            if (typeof val === 'number') return val;
+            
+            let strVal = String(val).trim();
+            
+            if (strVal.includes(',') && !strVal.includes('.')) {
+                // Formato "0,20" -> "0.20"
+                strVal = strVal.replace(/,/g, '.');
+            } else if (strVal.includes(',') && strVal.includes('.')) {
+                const lastComma = strVal.lastIndexOf(',');
+                const lastDot = strVal.lastIndexOf('.');
+                if (lastComma > lastDot) {
+                    // Formato "1.200,50"
+                    strVal = strVal.replace(/\./g, '').replace(/,/g, '.');
+                } else {
+                    // Formato "1,200.50"
+                    strVal = strVal.replace(/,/g, '');
+                }
+            }
             const num = Number(strVal);
             return isNaN(num) ? 0 : num;
         };
