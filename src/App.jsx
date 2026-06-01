@@ -46,6 +46,13 @@ const safeStorage = {
   remove: (key) => { try { localStorage.removeItem(key); } catch(e) {} }
 };
 
+const safeSessionStorage = {
+  get: (key) => { try { return sessionStorage.getItem(key); } catch(e) { return null; } },
+  set: (key, val) => { try { sessionStorage.setItem(key, val); } catch(e) {} },
+  remove: (key) => { try { sessionStorage.removeItem(key); } catch(e) {} }
+};
+
+
 const getLocalYYYYMMDD = (isoString) => {
   if (!isoString) return "";
   try {
@@ -709,7 +716,7 @@ export default function App() {
   }, []);
 
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
-    const saved = safeStorage.get('cdi_supervisor_session');
+    const saved = safeSessionStorage.get('cdi_supervisor_session');
     try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
   });
   
@@ -765,10 +772,20 @@ export default function App() {
     const fetchProduccion = async () => {
       try {
         const { data: pedidosData } = await supabase.from('produccion_pedidos').select('data_completa');
-        if (pedidosData) setOrders(pedidosData.map(row => row.data_completa));
+        if (pedidosData) {
+          setOrders(pedidosData
+            .map(row => row.data_completa)
+            .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum)
+          );
+        }
         
         const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
-        if (alertasData) setCoordinationAlerts(alertasData.map(row => row.data_completa));
+        if (alertasData) {
+          setCoordinationAlerts(alertasData
+            .map(row => row.data_completa)
+            .filter(a => a && typeof a === 'object' && a.id && a.pedidoNum)
+          );
+        }
       } catch (err) {}
     };
     fetchProduccion();
@@ -946,7 +963,7 @@ export default function App() {
         area: res.result.rol
       };
       setSupervisorProfile(newProfile);
-      safeStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+      safeSessionStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
       
       const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
       setSavedLogins(newRecent); 
@@ -986,7 +1003,7 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => { setSupervisorProfile(null); safeStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
+  const handleLogout = () => { setSupervisorProfile(null); safeSessionStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
 
   const handleImageUpload = (e, setter) => {
     const file = e.target.files[0];
