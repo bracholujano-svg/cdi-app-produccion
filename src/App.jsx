@@ -709,6 +709,63 @@ export default function App() {
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
   const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
 
+  useEffect(() => {
+    const fetchSupabaseData = async () => {
+      try {
+        const { data: inv } = await supabase.from('inventario').select('*');
+        const { data: req } = await supabase.from('requerimientos_pedido').select('*');
+        
+        const invMap = inv ? inv.map(item => ({
+          id_referencia: item['Id Referencia'],
+          descripcion: item['Referencia'],
+          cantidad_disponible: Number(item['Saldo'] || 0)
+        })) : [];
+
+        const reqRaw = req ? req.map(item => ({
+          pedido_num: item['pedidosin'],
+          id_referencia: item['Id Referencia'],
+          cantidad_requerida: Number(item['Cantidad'] || 0),
+          cantidad_oc: Number(item['Cant.OC'] || 0),
+          descripcion: item['Descripcion']
+        })) : [];
+
+        // Agrupar requerimientos por pedido y por referencia
+        const groupedReqs = {};
+        reqRaw.forEach(item => {
+          const key = `${item.pedido_num}_${item.id_referencia}`;
+          if (!groupedReqs[key]) {
+            groupedReqs[key] = { ...item };
+          } else {
+            groupedReqs[key].cantidad_requerida += item.cantidad_requerida;
+            groupedReqs[key].cantidad_oc += item.cantidad_oc;
+          }
+        });
+        const reqMap = Object.values(groupedReqs);
+
+        if (inv && req) {
+          setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
+        }
+      } catch(e) { console.error("Error fetching Supabase", e); }
+    };
+    fetchSupabaseData();
+    
+    // Optional: Realtime subscription for Supabase
+    try {
+        const channels = supabase.channel('custom-all-channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, fetchSupabaseData)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, fetchSupabaseData)
+          .subscribe();
+        return () => { supabase.removeChannel(channels); };
+    } catch(e) {}
+  }, []);
+
+  const [supervisorProfile, setSupervisorProfile] = useState(() => {
+    const saved = safeSessionStorage.get('cdi_supervisor_session');
+    try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
+  });
+  
+  const [orders, setOrders] = useState([]);
+  
   const inventoryReservations = useMemo(() => {
     const virtualStock = {};
     if (supabaseData?.inventario) {
@@ -767,63 +824,6 @@ export default function App() {
     });
     return orderMaterialStatus;
   }, [orders, supabaseData]);
-
-  useEffect(() => {
-    const fetchSupabaseData = async () => {
-      try {
-        const { data: inv } = await supabase.from('inventario').select('*');
-        const { data: req } = await supabase.from('requerimientos_pedido').select('*');
-        
-        const invMap = inv ? inv.map(item => ({
-          id_referencia: item['Id Referencia'],
-          descripcion: item['Referencia'],
-          cantidad_disponible: Number(item['Saldo'] || 0)
-        })) : [];
-
-        const reqRaw = req ? req.map(item => ({
-          pedido_num: item['pedidosin'],
-          id_referencia: item['Id Referencia'],
-          cantidad_requerida: Number(item['Cantidad'] || 0),
-          cantidad_oc: Number(item['Cant.OC'] || 0),
-          descripcion: item['Descripcion']
-        })) : [];
-
-        // Agrupar requerimientos por pedido y por referencia
-        const groupedReqs = {};
-        reqRaw.forEach(item => {
-          const key = `${item.pedido_num}_${item.id_referencia}`;
-          if (!groupedReqs[key]) {
-            groupedReqs[key] = { ...item };
-          } else {
-            groupedReqs[key].cantidad_requerida += item.cantidad_requerida;
-            groupedReqs[key].cantidad_oc += item.cantidad_oc;
-          }
-        });
-        const reqMap = Object.values(groupedReqs);
-
-        if (inv && req) {
-          setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
-        }
-      } catch(e) { console.error("Error fetching Supabase", e); }
-    };
-    fetchSupabaseData();
-    
-    // Optional: Realtime subscription for Supabase
-    try {
-        const channels = supabase.channel('custom-all-channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, fetchSupabaseData)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, fetchSupabaseData)
-          .subscribe();
-        return () => { supabase.removeChannel(channels); };
-    } catch(e) {}
-  }, []);
-
-  const [supervisorProfile, setSupervisorProfile] = useState(() => {
-    const saved = safeSessionStorage.get('cdi_supervisor_session');
-    try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
-  });
-  
-  const [orders, setOrders] = useState([]);
   
   const syncOrderToSupabase = async (orderObject, isDelete = false) => {
     if (!orderObject || !orderObject.id) return;
