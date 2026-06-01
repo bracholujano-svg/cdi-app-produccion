@@ -1064,8 +1064,10 @@ export default function App() {
 
     const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
     
+    const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+
     const newOrder = {
-      id: Date.now().toString(),
+      id: generateUUID(),
       pedidoNum: pedNum,
       codArticulo: codArt,
       nombre: (form.nombre.value || "").trim().toUpperCase(),
@@ -1141,7 +1143,8 @@ export default function App() {
 
   const addItemToCoordList = () => {
     if (!inputManualPedido || !inputManualFecha || !inputManualCliente) return;
-    const newItem = { id: Date.now(), pedidoNum: inputManualPedido.trim().toUpperCase(), cliente: inputManualCliente.trim().toUpperCase(), fechaEntrega: inputManualFecha, detalle: inputManualDetalle ? inputManualDetalle.trim() : '', creadoEn: new Date().toISOString() };
+    const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+    const newItem = { id: generateUUID(), pedidoNum: inputManualPedido.trim().toUpperCase(), cliente: inputManualCliente.trim().toUpperCase(), fechaEntrega: inputManualFecha, detalle: inputManualDetalle ? inputManualDetalle.trim() : '', creadoEn: new Date().toISOString() };
     setCoordList([...coordList, newItem]);
     setInputManualPedido(""); setInputManualCliente(""); setInputManualDetalle("");
   };
