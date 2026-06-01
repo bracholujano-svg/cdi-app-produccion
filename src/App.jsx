@@ -380,8 +380,8 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <span style={{ fontFamily: "Impact, 'Oswald', sans-serif" }} className="text-3xl font-black text-[#a1bdc2] tracking-tighter">CDI</span>
                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                                 <div className="flex flex-col leading-none">
-                                    <span className="text-[8px] font-bold tracking-widest text-gray-400">INFORME</span>
-                                    <span className="text-[10px] font-black text-[#a1bdc2] uppercase">Ejecutivo</span>
+                                    <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold tracking-widest text-gray-400">INFORME</span>
+                                    <span className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase">Ejecutivo</span>
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center">
@@ -389,7 +389,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     <button 
                                         key={tab} 
                                         onClick={() => setActiveTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-[10px] md:text-xs font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#a1bdc2] text-[#a1bdc2]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
@@ -413,39 +413,39 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     </p>
                                 </div>
                                 <div className="bg-green-50 px-6 py-4 rounded-2xl border border-green-100 text-center shrink-0">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Eficiencia Global</p>
+                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-green-600">Eficiencia Global</p>
                                     <p className="text-4xl font-black text-green-700">{eficiencia}%</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-[#a1bdc2] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#7d969b]">
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Pedidos Activos</p>
+                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Pedidos Activos</p>
                                     <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
                                 </div>
                                 <div className="bg-[#eadcba] p-6 rounded-3xl text-slate-900 shadow-sm border-b-4 border-[#bdae91]">
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Próximos a Entrega</p>
+                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Próximos a Entrega</p>
                                     <h3 className="text-4xl font-black mt-1">{urgentesCount}</h3>
                                 </div>
                                 <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Despachados</p>
+                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-gray-400">Despachados</p>
                                     <h3 className="text-4xl font-black mt-1 text-[#a1bdc2]">{despachadosCount}</h3>
                                 </div>
                                 <div className="bg-white p-6 rounded-3xl border border-red-200 shadow-sm">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-red-400">Atrasos Críticos</p>
+                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-400">Atrasos Críticos</p>
                                     <h3 className="text-4xl font-black mt-1 text-red-500">{atrasadosCount}</h3>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
+                                    <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-gray-400 mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
                                     <div className="relative w-full h-[300px]">
                                         <canvas id="chartCargaAreas"></canvas>
                                     </div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado Base Operativa)</h4>
+                                    <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-gray-400 mb-6">Tiempos de Ciclo (Simulado Base Operativa)</h4>
                                     <div className="space-y-5">
                                         {[
                                             { label: 'Madera / CNC', time: '2.4 Días', pct: '45%', bg: 'bg-[#a1bdc2]' },
@@ -454,7 +454,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                             { label: 'Ensamble y Empaque', time: '1.2 Días', pct: '25%', bg: 'bg-green-400' },
                                         ].map((item, idx) => (
                                             <div key={idx}>
-                                                <div className="flex justify-between text-[10px] font-black uppercase mb-1">
+                                                <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase mb-1">
                                                     <span>{item.label}</span>
                                                     <span>{item.time}</span>
                                                 </div>
@@ -479,9 +479,9 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
                                 <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs uppercase shadow-sm bg-white" />
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#a1bdc2] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm bg-white" />
                                 </div>
-                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-[10px] uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer">
+                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="bg-white p-4 rounded-2xl border border-gray-200 font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
@@ -491,22 +491,22 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <table className="w-full text-left border-collapse min-w-[800px]">
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-100">
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pedido</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Área Actual</th>
-                                            <th className="p-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado Interno</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Pedido</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Cliente</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Área Actual</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Estado Interno</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                                                <td className="p-5 font-black text-xs text-slate-800">#{o.pedidoNum}</td>
-                                                <td className="p-5 font-bold text-xs text-gray-500">{o.cliente}</td>
-                                                <td className="p-5"><span className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1 rounded-full text-[9px] font-black uppercase border border-[#a1bdc2]/30">{o.areaActual}</span></td>
-                                                <td className="p-5 font-bold text-[10px] text-gray-500 uppercase tracking-tight">{o.estadoInterno}</td>
+                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base text-slate-800">#{o.pedidoNum}</td>
+                                                <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500">{o.cliente}</td>
+                                                <td className="p-5"><span className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[#a1bdc2]/30">{o.areaActual}</span></td>
+                                                <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500 uppercase tracking-tight">{o.estadoInterno}</td>
                                             </tr>
                                         ))}
-                                        {tableOrders.length === 0 && <tr><td colSpan="4" className="p-10 text-center text-gray-400 font-black uppercase text-xs">No hay resultados</td></tr>}
+                                        {tableOrders.length === 0 && <tr><td colSpan="4" className="p-10 text-center text-gray-400 font-black uppercase text-xs md:text-sm lg:text-base">No hay resultados</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
@@ -526,21 +526,21 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <div className="bg-[#1e293b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
                                         <h2 className="text-xl font-black uppercase text-[#eadcba]" style={{ fontFamily: "'Oswald', sans-serif" }}>Resumen Logístico</h2>
-                                        <p className="text-xs text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
+                                        <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
                                             <div className="w-10 h-10 bg-[#a1bdc2] rounded-xl flex items-center justify-center font-black text-slate-900">{despachadosCount}</div>
                                             <div>
-                                                <p className="text-[9px] font-black uppercase text-slate-400">Total Despachados</p>
-                                                <p className="text-xs font-bold text-slate-200">Pedidos fuera de planta</p>
+                                                <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
+                                                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-yellow-500/30">
                                             <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center font-black text-white">{coordinationAlerts.length}</div>
                                             <div>
-                                                <p className="text-[9px] font-black uppercase text-yellow-400">Alertas de Coordinación</p>
-                                                <p className="text-xs font-bold text-slate-200">Prioridades altas marcadas</p>
+                                                <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-yellow-400">Alertas de Coordinación</p>
+                                                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Prioridades altas marcadas</p>
                                             </div>
                                         </div>
                                     </div>
@@ -555,7 +555,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="flex-1 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
                                     <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Estado Global de Calidad</h2>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
+                                    <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
                                     <div className="relative w-full h-[300px] flex-1">
                                         <canvas id="chartCalidad"></canvas>
                                     </div>
@@ -563,61 +563,61 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <div className="flex-1 space-y-4">
                                     <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl text-white flex justify-between items-center">
                                         <div>
-                                            <h4 className="text-[9px] font-black text-[#a1bdc2] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
+                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
                                             <p className="text-2xl font-black text-[#eadcba]">{porcentajeInspeccionado}%</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
-                                            <p className="text-[8px] text-slate-500 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
+                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
+                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-slate-500 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="bg-green-50 p-4 rounded-2xl border border-green-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-green-700 uppercase mb-1">Tasa Aprobación</h4>
+                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-green-700 uppercase mb-1">Tasa Aprobación</h4>
                                             <p className="text-2xl font-black text-green-800">{porcentajeAprobado}%</p>
-                                            <p className="text-[8px] text-green-600 mt-1 font-bold uppercase">{itemsAprobados} productos OK</p>
+                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-green-600 mt-1 font-bold uppercase">{itemsAprobados} productos OK</p>
                                         </div>
                                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-yellow-700 uppercase mb-1">Tasa Reprocesos</h4>
+                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-yellow-700 uppercase mb-1">Tasa Reprocesos</h4>
                                             <p className="text-2xl font-black text-yellow-800">{porcentajeRetrabajo}%</p>
-                                            <p className="text-[8px] text-yellow-700 mt-1 font-bold uppercase">{itemsRetrabajo} en corrección</p>
+                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-yellow-700 mt-1 font-bold uppercase">{itemsRetrabajo} en corrección</p>
                                         </div>
                                         <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-sm">
-                                            <h4 className="text-[9px] font-black text-red-700 uppercase mb-1">Tasa Rechazos</h4>
+                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-red-700 uppercase mb-1">Tasa Rechazos</h4>
                                             <p className="text-2xl font-black text-red-800">{porcentajeRechazo}%</p>
-                                            <p className="text-[8px] text-red-600 mt-1 font-bold uppercase">{itemsRechazados} mermas/scrap</p>
+                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-red-600 mt-1 font-bold uppercase">{itemsRechazados} mermas/scrap</p>
                                         </div>
                                     </div>
                                     
                                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                                         <button type="button" onClick={() => setShowQualityObs(!showQualityObs)} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                            <h4 className="text-xs font-black text-gray-400 uppercase">Últimas Observaciones (Planta Real)</h4>
-                                            {showQualityObs ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
+                                            <h4 className="text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase">Últimas Observaciones (Planta Real)</h4>
+                                            {showQualityObs ? <ChevronUp size={"1.2em"} className="text-gray-400"/> : <ChevronDown size={"1.2em"} className="text-gray-400"/>}
                                         </button>
                                         
                                         {showQualityObs && (
                                             <div className="p-6 pt-0 border-t border-gray-50 max-h-80 overflow-y-auto custom-scrollbar">
                                                 <ul className="space-y-4 mt-4">
                                                     {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
-                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-[10px] ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
+                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-xs md:text-sm lg:text-base ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
                                                             <div className="flex justify-between items-start mb-2">
-                                                                <span className="font-black text-xs uppercase text-slate-800">PED: {q.pedidoNum}</span>
-                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-[9px] ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
+                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase text-slate-800">PED: {q.pedidoNum}</span>
+                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
                                                             </div>
-                                                            <div className="flex gap-2 text-slate-500 mb-3 font-bold uppercase text-[9px]">
+                                                            <div className="flex gap-2 text-slate-500 mb-3 font-bold uppercase text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">
                                                                 <span>ART: {q.codArticulo}</span>
                                                                 <span>•</span>
                                                                 <span className="truncate">{q.cliente}</span>
                                                             </div>
-                                                            <p className="font-medium text-slate-700 mb-3 text-xs italic">"{q.observacion}"</p>
-                                                            <div className="text-[9px] text-slate-400 flex justify-between items-end uppercase font-black">
+                                                            <p className="font-medium text-slate-700 mb-3 text-xs md:text-sm lg:text-base italic">"{q.observacion}"</p>
+                                                            <div className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 flex justify-between items-end uppercase font-black">
                                                                 <span>INSP: {q.inspector}</span>
                                                                 <span>{new Date(q.fecha).toLocaleDateString()}</span>
                                                             </div>
                                                         </li>
                                                     )) : (
-                                                        <li className="text-[10px] text-gray-400 italic text-center py-4">No hay registros de calidad en el sistema.</li>
+                                                        <li className="text-xs md:text-sm lg:text-base text-gray-400 italic text-center py-4">No hay registros de calidad en el sistema.</li>
                                                     )}
                                                 </ul>
                                             </div>
@@ -632,7 +632,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                                     <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
                                         <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Frecuencia de Reprocesos</h2>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
+                                        <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
                                         <div className="relative w-full h-[250px] flex-1">
                                             <canvas id="chartBarrasReproceso"></canvas>
                                         </div>
@@ -640,7 +640,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
                                     <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
                                         <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>Análisis de Causas Raíz</h2>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-6">Top errores en secciones críticas</p>
+                                        <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Top errores en secciones críticas</p>
                                         <div className="overflow-y-auto max-h-[250px] custom-scrollbar pr-2 space-y-3">
                                             {sortedSecciones.map((sec, idx) => {
                                                 const ratio = maxTasa > 0 ? sec.tasa / maxTasa : 0;
@@ -650,10 +650,10 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                                 return (
                                                     <div key={idx} className="p-4 rounded-2xl border-l-4 shadow-sm" style={{ borderColor: borderColor, backgroundColor: bgColor }}>
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <h4 className="font-bold text-xs text-gray-800 uppercase">{sec.nombre}</h4>
-                                                            <span className="font-black text-xs" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
+                                                            <h4 className="font-bold text-xs md:text-sm lg:text-base text-gray-800 uppercase">{sec.nombre}</h4>
+                                                            <span className="font-black text-xs md:text-sm lg:text-base" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
                                                         </div>
-                                                        <p className="text-[10px] text-gray-600 mt-2 font-medium">
+                                                        <p className="text-xs md:text-sm lg:text-base text-gray-600 mt-2 font-medium">
                                                             {sec.causas.length > 0 ? `🔹 Top fallos: ${sec.causas.join(', ')}` : "🔹 Sin descripciones registradas."}
                                                         </p>
                                                     </div>
@@ -1325,53 +1325,53 @@ export default function App() {
              <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
              <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
              <div className="flex flex-col text-left justify-center">
-               <span className="text-[9px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
+               <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
                <span className="text-[12px] font-black leading-none tracking-[0.05em] text-[#a1bdc2]">EXHIBICIÓN</span>
              </div>
           </div>
-          <h2 className="text-[#eadcba] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={16}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
+          <h2 className="text-[#eadcba] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
         </div>
         
         <form onSubmit={isRegistering ? handleVirtualRegister : handleVirtualLogin} className="p-8 space-y-5">
           {savedLogins.length > 0 && !isRegistering && (
              <div className="flex flex-wrap gap-2 justify-center mb-4">
                {savedLogins.map((u, i) => (
-                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1.5 rounded-xl text-[10px] font-black border border-[#a1bdc2]/30 hover:bg-[#a1bdc2]/20 transition-colors">
+                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[#a1bdc2]/10 text-[#a1bdc2] px-3 py-1.5 rounded-xl text-xs md:text-sm lg:text-base font-black border border-[#a1bdc2]/30 hover:bg-[#a1bdc2]/20 transition-colors">
                    {u?.name?.split(' ')[0]}
                  </button>
                ))}
              </div>
           )}
 
-          {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-[10px] font-bold uppercase flex items-center gap-2"><AlertCircle size={14} className="shrink-0"/><span>{authError}</span></div>}
+          {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-xs md:text-sm lg:text-base font-bold uppercase flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/><span>{authError}</span></div>}
           
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
               <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[#eadcba]" placeholder="EJ: JUAN PEREZ" />
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
+            <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
             <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[#eadcba] transition-all">
               <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
-              <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-[10px] sm:text-xs flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
+              <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-xs md:text-sm lg:text-base sm:text-xs md:text-sm lg:text-base flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between items-center px-1">
-              <label className="text-[10px] font-black theme-text-muted uppercase">Clave / PIN</label>
-              <span className="text-[8px] font-bold text-[#eadcba] uppercase flex items-center gap-1"><Info size={10}/> Mín. 4 dígitos</span>
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave / PIN</label>
+              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-[#eadcba] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 4 dígitos</span>
             </div>
             <input name="password" type="password" inputMode="numeric" pattern="\d*" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[#eadcba]" placeholder="••••" />
           </div>
 
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
-              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs focus:ring-2 focus:ring-[#eadcba]">
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
+              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs md:text-sm lg:text-base focus:ring-2 focus:ring-[#eadcba]">
                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
@@ -1380,7 +1380,7 @@ export default function App() {
           <button type="submit" className="w-full bg-[#eadcba] text-[#1e293b] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 border-[#bdae91] transition-all">
             {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
           </button>
-          <p className="text-center text-[10px] font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[#eadcba] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
+          <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[#eadcba] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
             {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
           </p>
         </form>
@@ -1393,8 +1393,8 @@ export default function App() {
       
       {mostUrgentOrder && (
         <div className="bg-red-600 text-white py-2 sticky top-0 z-[60] shadow-md border-b border-red-800 whitespace-nowrap overflow-hidden">
-          <div className="flex animate-marquee items-center text-[10px] md:text-xs font-black uppercase tracking-widest w-max pr-[100vw]">
-            <span className="flex items-center gap-2"><AlertTriangle size={14} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(mostUrgentOrder.fechaEntregaPrometida)} DÍAS</span>
+          <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
+            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(mostUrgentOrder.fechaEntregaPrometida)} DÍAS</span>
           </div>
         </div>
       )}
@@ -1406,8 +1406,8 @@ export default function App() {
               <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[#a1bdc2] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "Impact, 'Oswald', sans-serif" }}>CDI</span>
               <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
               <div className="flex flex-col justify-center">
-                <span className="text-[7px] md:text-[8px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
-                <span className="text-[9px] md:text-[11px] font-black leading-none tracking-[0.05em] text-[#a1bdc2]">EXHIBICIÓN</span>
+                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] md:text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
+                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] font-black leading-none tracking-[0.05em] text-[#a1bdc2]">EXHIBICIÓN</span>
               </div>
             </div>
           </div>
@@ -1417,17 +1417,17 @@ export default function App() {
             <button type="button" onClick={handleLogout} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><LogOut size={18} /></button>
             <div className="w-px h-6 bg-current opacity-20 mx-1"></div>
             
-            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
-              <BarChart2 size={16} /><span className="hidden md:inline">Indicadores</span>
+            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+              <BarChart2 size={"1.2em"} /><span className="hidden md:inline">Indicadores</span>
             </button>
-            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
-              <Megaphone size={16} /><span className="hidden md:inline">Coord</span>
+            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
+              <Megaphone size={"1.2em"} /><span className="hidden md:inline">Coord</span>
             </button>
-            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
-              <Plus size={16} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[#a1bdc2] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">
+              <Plus size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
             </button>
-            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
-              <FlaskConical size={16} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
+            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[#eadcba] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[#1e293b] border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px]">
+              <FlaskConical size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
             </button>
           </div>
         </div>
@@ -1438,51 +1438,51 @@ export default function App() {
           
           <div className="flex flex-col text-left border-r-2 theme-border pr-4 mr-1 shrink-0">
             <span className="text-[11px] font-black text-[#eadcba] uppercase leading-none">{supervisorProfile.name}</span>
-            <span className="text-[8px] font-bold theme-text-muted uppercase mt-1">{supervisorProfile.area}</span>
+            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase mt-1">{supervisorProfile.area}</span>
           </div>
 
           <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[#a1bdc2] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#a1bdc2]'}`}>
+             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[#a1bdc2] text-[#1e293b] shadow-sm' : 'theme-text-muted hover:text-[#a1bdc2]'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
+             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
                Atrasos ({atrasadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
                Despachados ({despachadosCount})
              </button>
-             <button type="button" className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all theme-text-muted opacity-50 cursor-not-allowed`}>
+             <button type="button" className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all theme-text-muted opacity-50 cursor-not-allowed`}>
                Nuevos Ped. (0)
              </button>
           </div>
           
           <div className="w-px h-6 bg-current opacity-20 mx-1 shrink-0"></div>
 
-          <button type="button" onClick={() => setShowCoordViewModal(true)} className="flex items-center gap-2 text-[10px] font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
-            <Bell size={14} className={coordinationAlerts.length > 0 ? 'animate-bounce text-[#eadcba]' : ''} /><span>Alertas ({coordinationAlerts.length})</span>
+          <button type="button" onClick={() => setShowCoordViewModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
+            <Bell size={"1.2em"} className={coordinationAlerts.length > 0 ? 'animate-bounce text-[#eadcba]' : ''} /><span>Alertas ({coordinationAlerts.length})</span>
           </button>
 
-          <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-[10px] font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
-            <FileText size={14} /><span>Reporte</span>
+          <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[#a1bdc2] transition-colors py-4 px-2">
+            <FileText size={"1.2em"} /><span>Reporte</span>
           </button>
 
         </div>
 
         <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
             <div className="relative flex-1 group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={14} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-[10px] md:text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-[9px] uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
                 <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0">
                     <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
-                        <LayoutList size={16} />
+                        <LayoutList size={"1.2em"} />
                     </button>
                     <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[#a1bdc2] text-[#1e293b]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -1529,26 +1529,26 @@ export default function App() {
                 
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <div className="flex flex-col gap-1 w-full">
-                    <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-[8px] px-1.5 py-1 ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#a1bdc2]/10 text-[#a1bdc2] border border-[#a1bdc2]/20'}`}>
+                    <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[#a1bdc2]/10 text-[#a1bdc2] border border-[#a1bdc2]/20'}`}>
                       {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D` : (viewFilter === 'DESPACHADOS' ? '✅ DESPACHADO' : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES` : 'S/F'))}
                     </div>
                     {hasAlert && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(faltantes); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-[8px] px-1.5 py-1 bg-orange-500/10 text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(faltantes); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 bg-orange-500/10 text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between">
                         <span>⚠️ Insumos Insuficientes</span>
-                        <ChevronDown size={10} />
+                        <ChevronDown size={"1.2em"} />
                       </button>
                     )}
                   </div>
-                  <FolderOpen size={14} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
+                  <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
                 </div>
                 
                 <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[#a1bdc2]'}`}>
                   PED: {group.pedidoNum}
                 </h3>
-                <p title={group.cliente} className={`font-black theme-text-muted uppercase mt-0.5 truncate text-[10px]`}>{group.cliente}</p>
+                <p title={group.cliente} className={`font-black theme-text-muted uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base`}>{group.cliente}</p>
                 
                 <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2">
-                  <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[#a1bdc2] text-[9px]`}>{group.products?.length || 0} PROD.</span>
+                  <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[#a1bdc2] text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm`}>{group.products?.length || 0} PROD.</span>
                 </div>
               </div>
             );
@@ -1568,18 +1568,18 @@ export default function App() {
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
                  <h2 className="text-xl font-black text-[#a1bdc2] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
-                 <p className="text-[10px] font-bold theme-text-muted uppercase truncate">{activeGroupObj.cliente}</p>
+                 <p className="text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase truncate">{activeGroupObj.cliente}</p>
               </div>
               <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[#a1bdc2] shrink-0">✕</button>
             </div>
 
             <div className="p-4 border-b theme-border bg-black/5 shrink-0">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={14} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
                     <input 
                         type="text" 
                         placeholder="🔍 Filtrar artículo o producto (Ej: 1234)..." 
-                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] text-current"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[#a1bdc2] text-current"
                         value={itemSearchTerm} 
                         onChange={(e) => setItemSearchTerm(e.target.value)} 
                     />
@@ -1594,12 +1594,12 @@ export default function App() {
               }).map(p => (
                 <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[#a1bdc2] shadow-sm transition-all active:scale-95 bg-[#1e293b]">
                   <div className="flex justify-between items-center mb-2">
-                     <span className="text-[9px] bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-1 rounded border border-[#a1bdc2]/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-1 rounded border border-[#a1bdc2]/30 font-black truncate">CÓD: {p.codArticulo}</span>
                   </div>
-                  <h4 className="font-black text-xs uppercase leading-tight text-[#a1bdc2]">{p.nombre}</h4>
+                  <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[#a1bdc2]">{p.nombre}</h4>
                   <div className="mt-4 p-2 bg-[#2b3746] rounded-xl border border-[#4a5c70]">
-                    <p className="text-[9px] font-black text-[#eadcba] uppercase flex items-center gap-1 truncate"><MapPin size={10}/> {p.areaActual}</p>
-                    <p className="text-[9px] font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={10}/> {p.estadoInterno}</p>
+                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
+                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
                   </div>
                 </div>
               ))}
@@ -1643,22 +1643,22 @@ export default function App() {
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
                 <div className="bg-[#1e293b] p-5 rounded-[1.5rem] border border-[#4a5c70] shadow-inner mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="p-1.5 bg-[#a1bdc2]/20 rounded-lg"><Search size={14} className="text-[#a1bdc2]"/></div>
-                        <p className="text-[10px] font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Autocompletar)</p>
+                        <div className="p-1.5 bg-[#a1bdc2]/20 rounded-lg"><Search size={"1.2em"} className="text-[#a1bdc2]"/></div>
+                        <p className="text-xs md:text-sm lg:text-base font-black uppercase text-[#a1bdc2] tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
-                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
-                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[#eadcba] text-[#1e293b] px-6 py-3.5 rounded-xl font-black text-xs uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
+                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] uppercase placeholder:text-black/30" />
+                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[#eadcba] text-[#1e293b] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border-b-[3px] border-[#bdae91] active:border-b-0 active:translate-y-[3px] disabled:opacity-50 shrink-0">
                             {excelSearchLoading ? '...' : 'BUSCAR'}
                         </button>
                     </div>
-                    {excelSearchError && <p className="text-red-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><AlertCircle size={12}/>{excelSearchError}</p>}
-                    {excelSearchSuccess && <p className="text-green-400 text-[9px] font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={12}/>{excelSearchSuccess}</p>}
+                    {excelSearchError && <p className="text-red-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><AlertCircle size={"1.2em"}/>{excelSearchError}</p>}
+                    {excelSearchSuccess && <p className="text-green-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={"1.2em"}/>{excelSearchSuccess}</p>}
 
                     {showSearchSelector && searchResults.length > 0 && (
                       <div className="mt-4 p-3 bg-[#2b3746] rounded-xl border border-[#4a5c70] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
-                        <p className="text-[9px] font-black text-[#eadcba] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
+                        <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
                         {searchResults.map((res, idx) => (
                           <div 
                             key={idx} 
@@ -1669,50 +1669,50 @@ export default function App() {
                             }}
                             className="p-2.5 bg-[#1e293b] hover:bg-[#374657] rounded-lg border border-[#4a5c70] cursor-pointer transition-colors flex flex-col"
                           >
-                            <div className="flex justify-between text-[10px] font-black uppercase text-[#a1bdc2]">
+                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase text-[#a1bdc2]">
                               <span>PEDIDO: {res.pedido}</span>
                               <span>ART: {res.articulo}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-white uppercase truncate mt-1">{res.nombre}</span>
-                            <span className="text-[8px] text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
+                            <span className="text-xs md:text-sm lg:text-base font-bold text-white uppercase truncate mt-1">{res.nombre}</span>
+                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
                           </div>
                         ))}
                       </div>
                     )}
                 </div>
 
-                {duplicateError && <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-[10px] font-black uppercase mb-4 flex items-center gap-2"><AlertCircle size={16} className="shrink-0"/> {duplicateError}</div>}
+                {duplicateError && <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-xs md:text-sm lg:text-base font-black uppercase mb-4 flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/> {duplicateError}</div>}
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
-                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
+                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
+                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
                     
-                    <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
-                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="EJ: 12345" /></div>
+                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
+                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="EJ: 12345" /></div>
 
-                    <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
-                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CÓDIGO..." /></div>
+                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
+                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CÓDIGO..." /></div>
                     
-                    <div className="md:col-span-2 space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Marca / Cliente</label>
-                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
+                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Marca / Cliente</label>
+                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1 mt-2">
-                        <label className="text-[10px] font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
-                        <select name="areaRecibe" className="w-full p-4 bg-[#a1bdc2] text-[#1e293b] rounded-xl font-black uppercase text-xs border border-[#7d969b] outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-white">
+                        <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
+                        <select name="areaRecibe" className="w-full p-4 bg-[#a1bdc2] text-[#1e293b] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[#7d969b] outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-white">
                             {AREAS_RECEPCION.map(a => <option key={a}>{a}</option>)}
                         </select>
                     </div>
 
-                    <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Firma Entrega</label>
-                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN ENTREGA..." /></div>
+                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Entrega</label>
+                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN ENTREGA..." /></div>
                     
-                    <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Firma Recibe</label>
-                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN RECIBE..." /></div>
+                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Recibe</label>
+                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="QUIEN RECIBE..." /></div>
                     
-                    <div className="md:col-span-2 space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase ml-1">Cantidad a Producir</label>
-                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CANTIDAD..." /></div>
+                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Cantidad a Producir</label>
+                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="CANTIDAD..." /></div>
                     
-                    <button type="submit" className="md:col-span-2 mt-4 bg-[#a1bdc2] text-[#1e293b] py-5 rounded-[1.5rem] font-black uppercase text-xs shadow-sm border-b-[4px] border-[#7d969b] active:border-b-0 active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
+                    <button type="submit" className="md:col-span-2 mt-4 bg-[#a1bdc2] text-[#1e293b] py-5 rounded-[1.5rem] font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[4px] border-[#7d969b] active:border-b-0 active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
                 </form>
             </div>
           </div>
@@ -1725,7 +1725,7 @@ export default function App() {
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
                 <h2 className="text-base font-black uppercase truncate text-[#a1bdc2]">PED: {selectedOrder.pedidoNum}</h2>
-                <p className="text-[10px] font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
+                <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
               </div>
               <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-all text-[#a1bdc2] shrink-0">✕</button>
             </div>
@@ -1737,45 +1737,45 @@ export default function App() {
                  <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
-                        <span className="font-black text-xs uppercase tracking-wide">Avance en Planta</span>
+                        <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
                     </div>
-                    {openSection === 'planta' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                    {openSection === 'planta' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'planta' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
-                        <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE OPERARIO..." />
-                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none text-[#a1bdc2]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
+                        <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE OPERARIO..." />
+                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[#a1bdc2]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
-                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
+                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
-                                <Camera size={16}/> Cámara
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                                <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <ImageIcon size={16}/> Galería
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
                         </div>
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[#eadcba] text-[#1e293b] font-black uppercase text-[10px] py-3.5 rounded-xl border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
+                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[#eadcba] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Guardar Avance</button>
                         </div>
                         
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                            <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
                                 <span>Ver Histórico Producción ({selectedOrder.bitacoraTurnos?.length || 0})</span>
-                                {showHistoryPlanta ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                                {showHistoryPlanta ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
                             {showHistoryPlanta && (selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
-                                    <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-[10px] font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
-                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.nota}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.nota}"</p>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[#a1bdc2]">OP: {n.operario}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -1788,49 +1788,49 @@ export default function App() {
                  <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
-                        <span className="font-black text-xs uppercase tracking-wide">Inspección Calidad</span>
+                        <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Inspección Calidad</span>
                     </div>
-                    {openSection === 'calidad' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                    {openSection === 'calidad' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'calidad' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
                         <div className="flex gap-2">
-                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>APROBADO</button>
-                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RETRABAJO</button>
-                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RECHAZADO</button>
+                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RETRABAJO</button>
+                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border-b-[3px] active:border-b-0 active:translate-y-[3px] ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[#a1bdc2] border-transparent'}`}>RECHAZADO</button>
                         </div>
-                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE INSPECTOR..." />
+                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="NOMBRE INSPECTOR..." />
                         <div className="relative">
-                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
+                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
-                                <Camera size={16}/> Cámara
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                                <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <ImageIcon size={16}/> Galería
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
                         </div>
                         {calidadPhoto && <img src={calidadPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-[10px] py-3.5 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
+                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Guardar Inspección</button>
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                            <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
                                 <span>Ver Histórico Calidad ({selectedOrder.bitacoraCalidad?.length || 0})</span>
-                                {showHistoryCalidad ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                                {showHistoryCalidad ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
                             {showHistoryCalidad && (selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
                                 <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : n.estado==='RETRABAJO' ? 'border-yellow-500/30' : 'border-red-500/30'}`}>
-                                    <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-[10px] font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
-                                    <p className="text-[10px] italic theme-text-muted my-1">"{n.observacion}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-[9px] font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.observacion}"</p>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[#a1bdc2]">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -1843,29 +1843,29 @@ export default function App() {
                  <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[#1e293b] text-[#a1bdc2] hover:brightness-110 transition-all">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
-                        <span className="font-black text-xs uppercase tracking-wide">Entregas Sección</span>
+                        <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
                     </div>
-                    {openSection === 'entrega' ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                    {openSection === 'entrega' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'entrega' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[#2b3746]">
-                        <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
-                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
+                        <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
                         <div className="grid grid-cols-2 gap-2">
-                            <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-[10px] uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA ENTREGA" />
-                            <input id="recibidoPor" className="p-3.5 theme-bg-input rounded-xl font-bold text-[10px] uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA RECIBE" />
+                            <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA ENTREGA" />
+                            <input id="recibidoPor" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="FIRMA RECIBE" />
                         </div>
                         <div className="relative">
-                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={14}/> : <MicOff size={14}/>}</button>
+                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[#a1bdc2]/20 text-[#a1bdc2]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-black/40 transition-all">
-                                <Camera size={16}/> Cámara
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                                <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase hover:bg-[#a1bdc2]/20 transition-all">
-                                <ImageIcon size={16}/> Galería
+                            <label className="flex-1 cursor-pointer bg-[#a1bdc2]/10 border border-[#a1bdc2]/30 text-[#a1bdc2] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[#a1bdc2]/20 transition-all">
+                                <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
                         </div>
@@ -1875,21 +1875,21 @@ export default function App() {
                             const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
                             const re = document.getElementById('recibidoPor').value.trim().toUpperCase();
                             if(en && re && tempTransferDate) updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, re);
-                        }} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
+                        }} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px]">Confirmar Entrega de Sección</button>
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
-                            <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-[9px] font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
+                            <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
                                 <span>Ver Histórico Entregas ({selectedOrder.historial?.length || 0})</span>
-                                {showHistoryEntrega ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                                {showHistoryEntrega ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
                             {showHistoryEntrega && (selectedOrder.historial || []).slice().reverse().map((h, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
-                                    <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={14} /></button>
-                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-[9px] font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-[8px] font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
-                                    <div className="grid grid-cols-2 gap-2 text-[9px] font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-[7px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-[7px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
-                                    {h.nota && <p className="text-[9px] italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-[9px] font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={10}/> Ver Acta Firmada</button>}
-                                    <div className="flex justify-end items-end mt-2"><span className="text-[8px] font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
+                                    <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
+                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[#a1bdc2]/20 text-[#a1bdc2] px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[#a1bdc2]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[#a1bdc2] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[#a1bdc2] block uppercase">RECIBE</span>{h.recibe}</div></div>
+                                    {h.nota && <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
+                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[#eadcba] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
+                                    <div className="flex justify-end items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -1915,25 +1915,25 @@ export default function App() {
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><Megaphone size={20} className="text-[#eadcba]" /><h2 className="text-lg font-black uppercase text-[#a1bdc2]">Coordinación Logística</h2></div><button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
               <div className="theme-bg-main p-5 rounded-2xl border theme-border">
-                <h3 className="text-[10px] font-black text-[#a1bdc2] uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
+                <h3 className="text-xs md:text-sm lg:text-base font-black text-[#a1bdc2] uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
-                  <input value={inputManualCliente} onChange={e=>setInputManualCliente(e.target.value)} placeholder="CLIENTE / MARCA" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
-                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
-                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" /></div>
-                  <button type="button" onClick={addItemToCoordList} className="bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-[10px] rounded-xl py-3 border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Añadir a Lista</button>
+                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
+                  <input value={inputManualCliente} onChange={e=>setInputManualCliente(e.target.value)} placeholder="CLIENTE / MARCA" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" />
+                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] text-[#a1bdc2]" />
+                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[#eadcba] uppercase text-[#a1bdc2] placeholder:text-[#a1bdc2]/40" /></div>
+                  <button type="button" onClick={addItemToCoordList} className="bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px]">Añadir a Lista</button>
                 </div>
               </div>
               {coordList.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-black text-[#eadcba] uppercase tracking-widest">Lista Pendiente por Guardar</h3>
+                  <h3 className="text-xs md:text-sm lg:text-base font-black text-[#eadcba] uppercase tracking-widest">Lista Pendiente por Guardar</h3>
                   {coordList.map(item => (
                     <div key={item.id} className="flex justify-between items-center theme-bg-main p-3.5 rounded-xl border theme-border">
-                      <div><span className="font-black uppercase text-xs block text-[#a1bdc2]">{item.pedidoNum} - {item.cliente}</span><span className="text-[9px] theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
-                      <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16}/></button>
+                      <div><span className="font-black uppercase text-xs md:text-sm lg:text-base block text-[#a1bdc2]">{item.pedidoNum} - {item.cliente}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
+                      <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={"1.2em"}/></button>
                     </div>
                   ))}
-                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-xs shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px] mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
+                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[#eadcba] text-[#1e293b] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-[#c8ba98] active:border-b-0 active:translate-y-[3px] mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
                 </div>
               )}
             </div>
@@ -1950,25 +1950,25 @@ export default function App() {
                 {coordinationAlerts.map(alertItem => (
                   <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative flex flex-col">
                      {supervisorProfile?.area === "Administrador / Todos" && (
-                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={16}/></button>
+                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={"1.2em"}/></button>
                      )}
                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
                      <h4 className="text-sm font-black text-[#a1bdc2] uppercase mt-1 truncate">{alertItem.cliente}</h4>
                      
                      {supervisorProfile?.area === "Administrador / Todos" ? (
                          <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
-                            <span className="text-[8px] font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
+                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
                             <input 
                                 type="date" 
                                 value={alertItem.fechaEntrega} 
                                 onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[#eadcba] text-[#eadcba]" 
+                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs md:text-sm lg:text-base border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[#eadcba] text-[#eadcba]" 
                             />
                          </div>
                      ) : (
                          <div className="mt-4 p-3 bg-[#1e293b] rounded-xl border border-[#4a5c70] flex-1 flex flex-col justify-end">
-                            <span className="text-[8px] font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
-                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[#eadcba]"><Calendar size={16} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
+                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
+                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[#eadcba]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
                          </div>
                      )}
                   </div>
@@ -1985,9 +1985,9 @@ export default function App() {
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[#a1bdc2]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[#a1bdc2]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-              <div className="space-y-1"><label className="text-[9px] font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]" /></div>
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs py-4 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[#a1bdc2] text-[#a1bdc2]" /></div>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[#a1bdc2] text-[#1e293b] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border-b-[3px] border-[#7d969b] active:border-b-0 active:translate-y-[3px] mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>
@@ -1999,23 +1999,23 @@ export default function App() {
             <div className="flex justify-between items-center mb-6 print:hidden">
               <h2 className="text-lg md:text-xl font-black uppercase text-slate-800">Vista Previa Impresión</h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-[10px] shadow-sm border-b-[3px] border-blue-800 active:border-b-0 active:translate-y-[3px] flex items-center gap-2"><Printer size={14}/> Imprimir</button>
-                <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-[10px] border-b-[3px] border-slate-300 active:border-b-0 active:translate-y-[3px]">Cerrar</button>
+                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[3px] border-blue-800 active:border-b-0 active:translate-y-[3px] flex items-center gap-2"><Printer size={"1.2em"}/> Imprimir</button>
+                <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border-b-[3px] border-slate-300 active:border-b-0 active:translate-y-[3px]">Cerrar</button>
               </div>
             </div>
-            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs w-full overflow-hidden block">
+            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs md:text-sm lg:text-base w-full overflow-hidden block">
               <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6">
                 <div><h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Reporte de Turno</h1><h2 className="text-sm font-bold uppercase text-slate-500 mt-1">CDI EXHIBICIONES</h2></div>
-                <div className="text-right text-slate-900"><p className="text-[10px] font-black uppercase">Sup: {repSupervisor}</p><p className="text-[10px] font-black uppercase">Fecha: {repDate}</p></div>
+                <div className="text-right text-slate-900"><p className="text-xs md:text-sm lg:text-base font-black uppercase">Sup: {repSupervisor}</p><p className="text-xs md:text-sm lg:text-base font-black uppercase">Fecha: {repDate}</p></div>
               </div>
               <div className="overflow-x-auto print:overflow-visible">
-                <table className="w-full text-left border-collapse min-w-[700px] text-slate-900 text-[10px]">
+                <table className="w-full text-left border-collapse min-w-[700px] text-slate-900 text-xs md:text-sm lg:text-base">
                   <thead><tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black">
                     <th className="p-2 font-black uppercase border border-slate-700 w-16">Tipo</th><th className="p-2 font-black uppercase border border-slate-700 w-12">Hora</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Pedido</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Artículo</th><th className="p-2 font-black uppercase border border-slate-700">Producto / Detalle</th><th className="p-2 font-black uppercase border border-slate-700 w-24">Involucrado</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Estado</th>
                   </tr></thead>
                   <tbody>{generatedReportData.map((item, idx) => (
                     <tr key={idx} className="border-b border-slate-300 break-inside-avoid">
-                      <td className="p-2 font-black border-x border-slate-300">{item.type}</td><td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 border-x border-slate-300"><span className="font-bold block truncate max-w-[150px]">{item.orderName}</span><span className="italic text-slate-600">{item.detail}</span></td><td className="p-2 font-bold border-x border-slate-300 text-[9px]">{item.person}</td><td className="p-2 font-black border-x border-slate-300">{item.status}</td>
+                      <td className="p-2 font-black border-x border-slate-300">{item.type}</td><td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 border-x border-slate-300"><span className="font-bold block truncate max-w-[150px]">{item.orderName}</span><span className="italic text-slate-600">{item.detail}</span></td><td className="p-2 font-bold border-x border-slate-300 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">{item.person}</td><td className="p-2 font-black border-x border-slate-300">{item.status}</td>
                     </tr>
                   ))}
                   {generatedReportData.length === 0 && <tr><td colSpan="7" className="p-6 text-center font-black uppercase text-slate-400 border border-slate-200">Sin actividades registradas</td></tr>}
@@ -2035,26 +2035,26 @@ export default function App() {
               <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className="p-2.5 bg-orange-500/10 rounded-xl hover:bg-orange-500/20 transition-colors text-orange-600 shrink-0">✕</button>
             </div>
             <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                <p className="text-xs font-bold text-slate-500 uppercase mb-4">Los siguientes materiales no cuentan con stock suficiente para este pedido.</p>
+                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">Los siguientes materiales no cuentan con stock suficiente para este pedido.</p>
                 <div className="space-y-3">
                     {activeAlertMaterials.map((mat, i) => (
                         <div key={i} className="p-4 rounded-xl border border-orange-200 bg-orange-50 flex flex-col gap-2">
                             <div className="flex justify-between items-start">
-                                <span className="text-[10px] font-black uppercase px-2 py-1 bg-white border border-orange-200 text-orange-700 rounded-md">Ref: {mat.id_referencia}</span>
-                                {mat.sinOC && <span className="text-[9px] font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={10}/> Sin Orden Compra</span>}
+                                <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border border-orange-200 text-orange-700 rounded-md">Ref: {mat.id_referencia}</span>
+                                {mat.sinOC && <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
                             </div>
-                            <p className="font-bold text-xs uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                            <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                             <div className="flex gap-4 mt-1 border-t border-orange-200 pt-2">
-                                <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">Requerido</span><span className="text-xs font-black text-slate-700">{mat.cantidad_requerida}</span></div>
-                                <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400 uppercase">En Stock + OC</span><span className="text-xs font-black text-slate-700">{mat.stockTotal}</span></div>
-                                <div className="flex flex-col"><span className="text-[9px] font-black text-orange-600 uppercase">Faltante</span><span className="text-xs font-black text-red-600">{mat.faltante}</span></div>
+                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-slate-400 uppercase">Requerido</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.cantidad_requerida}</span></div>
+                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-slate-400 uppercase">En Stock + OC</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.stockTotal}</span></div>
+                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-orange-600 uppercase">Faltante</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
             <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className="bg-orange-500 text-white font-black uppercase text-[10px] px-6 py-3 rounded-xl border-b-[3px] border-orange-700 active:border-b-0 active:translate-y-[3px] transition-all">Entendido</button>
+                <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className="bg-orange-500 text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl border-b-[3px] border-orange-700 active:border-b-0 active:translate-y-[3px] transition-all">Entendido</button>
             </div>
           </div>
         </div>
