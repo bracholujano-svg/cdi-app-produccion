@@ -11,7 +11,7 @@ import {
   MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, 
   AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, 
   BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon,
-  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X
+  Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical
 } from 'lucide-react';
 
 const SUPERVISORES = [
@@ -591,7 +591,844 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     </div>
                                     
                                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                        <button type="button" onClick={() => setShowQualityObs(!showQualityObs)} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                            <h4 className="text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase">Últimas Observaciones (Planta Real)</h4>
+                                            {showQualityObs ? <ChevronUp size={"1.2em"} className="text-gray-400"/> : <ChevronDown size={"1.2em"} className="text-gray-400"/>}
+                                        </button>
                                         
+                                        {showQualityObs && (
+                                            <div className="p-6 pt-0 border-t border-gray-50 max-h-80 overflow-y-auto custom-scrollbar">
+                                                <ul className="space-y-4 mt-4">
+                                                    {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
+                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-xs md:text-sm lg:text-base ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase text-slate-800">PED: {q.pedidoNum}</span>
+                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
+                                                            </div>
+                                                            <div className="flex gap-2 text-slate-500 mb-3 font-bold uppercase text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">
+                                                                <span>ART: {q.codArticulo}</span>
+                                                                <span>•</span>
+                                                                <span className="truncate">{q.cliente}</span>
+                                                            </div>
+                                                            <p className="font-medium text-slate-700 mb-3 text-xs md:text-sm lg:text-base italic">"{q.observacion}"</p>
+                                                            <div className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 flex justify-between items-end uppercase font-black">
+                                                                <span>INSP: {q.inspector}</span>
+                                                                <span>{new Date(q.fecha).toLocaleDateString()}</span>
+                                                            </div>
+                                                        </li>
+                                                    )) : (
+                                                        <li className="text-xs md:text-sm lg:text-base text-gray-400 italic text-center py-4">No hay registros de calidad en el sistema.</li>
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                </div>
+                            </div>
+                            
+                            {/* NUEVO BLOQUE: Análisis de Mejora Continua */}
+                            {sortedSecciones.length > 0 && (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Frecuencia de Reprocesos</h2>
+                                        <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
+                                        <div className="relative w-full h-[250px] flex-1">
+                                            <canvas id="chartBarrasReproceso"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+                                        <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Análisis de Causas Raíz</h2>
+                                        <p className="text-xs md:text-sm lg:text-base text-gray-400 font-bold uppercase mb-6">Top errores en secciones críticas</p>
+                                        <div className="overflow-y-auto max-h-[250px] custom-scrollbar pr-2 space-y-3">
+                                            {sortedSecciones.map((sec, idx) => {
+                                                const ratio = maxTasa > 0 ? sec.tasa / maxTasa : 0;
+                                                const hue = (1 - ratio) * 120;
+                                                const borderColor = `hsl(${hue}, 84%, 45%)`;
+                                                const bgColor = `hsl(${hue}, 84%, 97%)`;
+                                                return (
+                                                    <div key={idx} className="p-4 rounded-2xl border-l-4 shadow-sm" style={{ borderColor: borderColor, backgroundColor: bgColor }}>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <h4 className="font-bold text-xs md:text-sm lg:text-base text-gray-800 uppercase">{sec.nombre}</h4>
+                                                            <span className="font-black text-xs md:text-sm lg:text-base" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
+                                                        </div>
+                                                        <p className="text-xs md:text-sm lg:text-base text-gray-600 mt-2 font-medium">
+                                                            {sec.causas.length > 0 ? `🔹 Top fallos: ${sec.causas.join(', ')}` : "🔹 Sin descripciones registradas."}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </section>
+                    )}
+
+                </main>
+            </div>
+        </div>
+    );
+};
+
+export default function App() {
+  const [supabaseData, setSupabaseData] = useState({ inventario: [], pedidosInsumos: [] });
+  const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
+  const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
+
+  useEffect(() => {
+    const fetchSupabaseData = async () => {
+      try {
+        const { data: inv } = await supabase.from('inventario').select('*');
+        const { data: req } = await supabase.from('requerimientos_pedido').select('*');
+        
+        const invMap = inv ? inv.map(item => ({
+          id_referencia: item['Id Referencia'],
+          descripcion: item['Referencia'],
+          cantidad_disponible: Number(item['Saldo'] || 0)
+        })) : [];
+
+        const reqRaw = req ? req.map(item => ({
+          pedido_num: item['pedidosin'],
+          id_referencia: item['Id Referencia'],
+          cantidad_requerida: Number(item['Cantidad'] || 0),
+          cantidad_oc: Number(item['Cant.OC'] || 0),
+          descripcion: item['Descripcion']
+        })) : [];
+
+        // Agrupar requerimientos por pedido y por referencia
+        const groupedReqs = {};
+        reqRaw.forEach(item => {
+          const key = `${item.pedido_num}_${item.id_referencia}`;
+          if (!groupedReqs[key]) {
+            groupedReqs[key] = { ...item };
+          } else {
+            groupedReqs[key].cantidad_requerida += item.cantidad_requerida;
+            groupedReqs[key].cantidad_oc += item.cantidad_oc;
+          }
+        });
+        const reqMap = Object.values(groupedReqs);
+
+        if (inv && req) {
+          setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
+        }
+      } catch(e) { console.error("Error fetching Supabase", e); }
+    };
+    fetchSupabaseData();
+    
+    // Optional: Realtime subscription for Supabase
+    try {
+        const channels = supabase.channel('custom-all-channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, fetchSupabaseData)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, fetchSupabaseData)
+          .subscribe();
+        return () => { supabase.removeChannel(channels); };
+    } catch(e) {}
+  }, []);
+
+  const [supervisorProfile, setSupervisorProfile] = useState(() => {
+    const saved = safeSessionStorage.get('cdi_supervisor_session');
+    try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
+  });
+  
+  const [orders, setOrders] = useState([]);
+  
+  const syncOrderToSupabase = async (orderObject, isDelete = false) => {
+    if (!orderObject || !orderObject.id) return;
+    try {
+      let dbError = null;
+      if (isDelete) {
+        const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
+        dbError = error;
+      } else {
+        const { error } = await supabase.from('produccion_pedidos').upsert({
+          id: orderObject.id,
+          pedido_num: orderObject.pedidoNum || '',
+          cliente: orderObject.cliente || '',
+          data_completa: orderObject
+        });
+        dbError = error;
+      }
+      if (dbError) {
+        console.error("DB Error al sincronizar orden:", dbError);
+        alert(`❌ Error al guardar en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
+      }
+    } catch (e) { console.error("Error al sincronizar orden", e); }
+  };
+  
+  const [coordinationAlerts, setCoordinationAlerts] = useState([]);
+
+  const syncAlertToSupabase = async (alertObject, isDelete = false) => {
+    if (!alertObject || !alertObject.id) return;
+    try {
+      let dbError = null;
+      if (isDelete) {
+        const { error } = await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
+        dbError = error;
+      } else {
+        const { error } = await supabase.from('coordinacion_alertas').upsert({
+          id: alertObject.id,
+          data_completa: alertObject
+        });
+        dbError = error;
+      }
+      if (dbError) {
+        console.error("DB Error al sincronizar alerta:", dbError);
+        alert(`❌ Error al guardar alerta en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
+      }
+    } catch (e) { console.error("Error al sincronizar alerta", e); }
+  };
+
+  useEffect(() => {
+    const fetchProduccion = async () => {
+      try {
+        const { data: pedidosData } = await supabase.from('produccion_pedidos').select('data_completa');
+        if (pedidosData) {
+          setOrders(pedidosData
+            .map(row => row.data_completa)
+            .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum)
+          );
+        }
+        
+        const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
+        if (alertasData) {
+          setCoordinationAlerts(alertasData
+            .map(row => row.data_completa)
+            .filter(a => a && typeof a === 'object' && a.id && a.pedidoNum)
+          );
+        }
+      } catch (err) {}
+    };
+    fetchProduccion();
+
+    const subPedidos = supabase.channel('pedidos-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, fetchProduccion).subscribe();
+      
+    const subAlertas = supabase.channel('alertas-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, fetchProduccion).subscribe();
+
+    return () => {
+      supabase.removeChannel(subPedidos);
+      supabase.removeChannel(subAlertas);
+    };
+  }, []);
+
+  const [selectedGroupPedido, setSelectedGroupPedido] = useState(null); 
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [areaFilter, setAreaFilter] = useState('Todas');
+  const [viewFilter, setViewFilter] = useState('TODOS'); 
+  const [gridColumns, setGridColumns] = useState(3);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showRecetarioModal, setShowRecetarioModal] = useState(false);
+  const [recetarioMaximized, setRecetarioMaximized] = useState(false);
+  const [showCoordinationModal, setShowCoordinationModal] = useState(false);
+  const [showCoordViewModal, setShowCoordViewModal] = useState(false);
+  const [showDashboardModal, setShowDashboardModal] = useState(false);
+  const [showReportConfigModal, setShowReportConfigModal] = useState(false);
+  const [showReportPreviewModal, setShowReportPreviewModal] = useState(false);
+  
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [appTheme, setAppTheme] = useState('dark');
+  const [savedLogins, setSavedLogins] = useState(() => {
+    const saved = safeStorage.get('cdi_recent_logins');
+    try { 
+      const parsed = saved ? JSON.parse(saved) : []; 
+      return Array.isArray(parsed) ? parsed.filter(u => u && typeof u === 'object') : [];
+    } catch(e) { return []; }
+  });
+
+  const [openSection, setOpenSection] = useState(null);
+  const [showHistoryPlanta, setShowHistoryPlanta] = useState(false);
+  const [showHistoryCalidad, setShowHistoryCalidad] = useState(false);
+  const [showHistoryEntrega, setShowHistoryEntrega] = useState(false);
+  
+  const [tempTransferArea, setTempTransferArea] = useState("");
+  const [tempTransferDate, setTempTransferDate] = useState("");
+  const [tempShiftActivity, setTempShiftActivity] = useState("");
+  const [tempOperario, setTempOperario] = useState("");
+  const [shiftNoteText, setShiftNoteText] = useState("");
+  const [tempPhoto, setTempPhoto] = useState(null);
+  
+  const [calidadState, setCalidadState] = useState("APROBADO");
+  const [calidadInspector, setCalidadInspector] = useState("");
+  const [calidadNota, setCalidadNota] = useState("");
+  const [calidadPhoto, setCalidadPhoto] = useState(null);
+  
+  const [transferNota, setTransferNota] = useState("");
+  const [transferPhoto, setTransferPhoto] = useState(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const activeDictationTarget = useRef(null);
+
+  const [coordList, setCoordList] = useState([]);
+  const [inputManualPedido, setInputManualPedido] = useState("");
+  const [inputManualCliente, setInputManualCliente] = useState("");
+  const [inputManualFecha, setInputManualFecha] = useState("");
+  const [inputManualDetalle, setInputManualDetalle] = useState("");
+
+  const [excelSearchPedido, setExcelSearchPedido] = useState("");
+  const [excelSearchArticulo, setExcelSearchArticulo] = useState("");
+  const [excelSearchLoading, setExcelSearchLoading] = useState(false);
+  const [excelSearchError, setExcelSearchError] = useState("");
+  const [excelSearchSuccess, setExcelSearchSuccess] = useState("");
+
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchSelector, setShowSearchSelector] = useState(false);
+
+  const [itemSearchTerm, setItemSearchTerm] = useState("");
+  const [duplicateError, setDuplicateError] = useState("");
+
+  const [repDate, setRepDate] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+  const [repSupervisor, setRepSupervisor] = useState("");
+  const [generatedReportData, setGeneratedReportData] = useState([]);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'es-CO';
+      recognitionRef.current.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+        }
+        if (finalTranscript) {
+          if (activeDictationTarget.current === 'planta') setShiftNoteText(prev => (prev + " " + finalTranscript).trim());
+          if (activeDictationTarget.current === 'calidad') setCalidadNota(prev => (prev + " " + finalTranscript).trim());
+          if (activeDictationTarget.current === 'transfer') setTransferNota(prev => (prev + " " + finalTranscript).trim());
+        }
+      };
+      recognitionRef.current.onend = () => setIsListening(false);
+      recognitionRef.current.onerror = () => setIsListening(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      setOpenSection(null);
+      setShowHistoryPlanta(false); 
+      setShowHistoryCalidad(false); 
+      setShowHistoryEntrega(false);
+      setTempTransferArea(selectedOrder.areaActual || "");
+      setTempTransferDate(selectedOrder.fechaEntregaPrometida || "");
+      setTempShiftActivity(CONFIG_PROCESOS[selectedOrder.areaActual]?.[0] || "");
+      setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
+      setCalidadState("APROBADO"); setCalidadInspector(""); setCalidadNota(""); setCalidadPhoto(null);
+      setTransferNota(""); setTransferPhoto(null);
+    }
+  }, [selectedOrder]);
+
+  const fillFormWithResult = (result) => {
+    const form = document.getElementById('nuevoRegistroForm');
+    if (form) {
+        form.pedidoNum.value = result.pedido || "";
+        form.codArticulo.value = result.articulo || "";
+        form.cliente.value = result.cliente || "";
+        form.nombre.value = result.nombre || "";
+        form.cantidad.value = result.cantidad || 1;
+    }
+  };
+
+  const doExcelSearch = async () => {
+      setExcelSearchLoading(true); setExcelSearchError(""); setExcelSearchSuccess("");
+      setSearchResults([]); setShowSearchSelector(false);
+      try {
+          const results = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
+          if (results && results.length === 1) {
+              fillFormWithResult(results[0]);
+              setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre}`);
+          } else if (results && results.length > 1) {
+              setSearchResults(results);
+              setShowSearchSelector(true);
+              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
+          }
+      } catch (err) { 
+          setExcelSearchError(err instanceof Error ? err.message : String(err)); 
+      } finally { 
+          setExcelSearchLoading(false); 
+      }
+  };
+
+  const handleVirtualLogin = async (e) => {
+    e.preventDefault(); 
+    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE..."); 
+    const userStr = e.target.username.value.trim().toLowerCase();
+    const passStr = e.target.password.value.trim();
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+
+    const res = await loginEnGoogle(emailFull, passStr);
+    
+    if (res.success) {
+      setAuthError("");
+      const newProfile = { 
+        name: res.result.nombre, 
+        email: emailFull, 
+        area: res.result.rol
+      };
+      setSupervisorProfile(newProfile);
+      safeSessionStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+      
+      const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
+      setSavedLogins(newRecent); 
+      safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+      
+      if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
+        setAreaFilter(newProfile.area);
+      }
+    } else {
+      setAuthError(res.error);
+    }
+  };
+
+  const handleVirtualRegister = async (e) => {
+    e.preventDefault(); 
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
+    const name = e.target.name.value.trim().toUpperCase();
+    const userStr = e.target.username.value.trim().toLowerCase();
+    const pass = e.target.password.value.trim();
+    const area = e.target.area ? e.target.area.value : 'Pendiente';
+    
+    if (!/^\d+$/.test(pass) || pass.length < 4) {
+      setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
+      return;
+    }
+
+    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+
+    const res = await registrarEnGoogle(emailFull, pass, name, area);
+    
+    if (res.success) {
+      setAuthError("");
+      alert("🎉 ¡REGISTRO CORRECTO!\n\nTu perfil se creó con éxito. Quedaste en estado 'Pendiente de Aprobación'. Infórmale al administrador para que te asigne tu rol desde el Excel.");
+      setIsRegistering(false);
+    } else {
+      setAuthError(res.error);
+    }
+  };
+
+  const handleLogout = () => { setSupervisorProfile(null); safeSessionStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
+
+  const handleImageUpload = (e, setter) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; const MAX_HEIGHT = 800;
+        let width = img.width; let height = img.height;
+        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        setter(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleMic = (target) => {
+    if (!recognitionRef.current) return;
+    if (isListening) { recognitionRef.current.stop(); setIsListening(false); } 
+    else { activeDictationTarget.current = target; recognitionRef.current.start(); setIsListening(true); }
+  };
+
+  const deleteAlert = (alertId) => {
+      const newAlerts = coordinationAlerts.filter(a => a?.id !== alertId);
+      setCoordinationAlerts(newAlerts);
+      syncAlertToSupabase({ id: alertId }, true);
+  };
+
+  const updateAlertDate = (alertId, newDate) => {
+      if (!newDate) return;
+      let alertToUpdate = null;
+      const updatedAlerts = coordinationAlerts.map(a => {
+          if (a.id === alertId) { alertToUpdate = { ...a, fechaEntrega: newDate }; return alertToUpdate; }
+          return a;
+      });
+      setCoordinationAlerts(updatedAlerts);
+      if (alertToUpdate) syncAlertToSupabase(alertToUpdate);
+
+      const alertObj = coordinationAlerts.find(a => a.id === alertId);
+      if (alertObj) {
+          const updatedOrders = orders.map(o => 
+              (o.pedidoNum || "").toUpperCase() === (alertObj.pedidoNum || "").toUpperCase() 
+              ? { ...o, fechaEntregaPrometida: newDate } 
+              : o
+          );
+          setOrders(updatedOrders);
+          updatedOrders.forEach(o => {
+              if ((o.pedidoNum || "").toUpperCase() === (alertObj.pedidoNum || "").toUpperCase()) {
+                  syncOrderToSupabase(o);
+              }
+          });
+      }
+  };
+
+  const createOrder = (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const pedNum = (form.pedidoNum.value || "").trim().toUpperCase();
+    const codArt = (form.codArticulo.value || "").trim().toUpperCase();
+    const areaIni = form.areaRecibe.value;
+    
+    setDuplicateError("");
+    const isDuplicate = orders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt && o.estadoInterno !== 'DESPACHADO');
+    if (isDuplicate) {
+        setDuplicateError(`El artículo ${codArt} del pedido ${pedNum} ya se encuentra activo en producción.`);
+        return;
+    }
+
+    const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
+    
+    const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+
+    const newOrder = {
+      id: generateUUID(),
+      pedidoNum: pedNum,
+      codArticulo: codArt,
+      nombre: (form.nombre.value || "").trim().toUpperCase(),
+      cantidad: Number(form.cantidad.value) || 1,
+      cliente: (form.cliente.value || "").trim().toUpperCase(),
+      areaActual: areaIni,
+      estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
+      prioridad: existingAlert ? 'ALTA' : 'NORMAL',
+      fechaIngresoArea: new Date().toISOString(), 
+      fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : null,
+      bitacoraTurnos: [],
+      bitacoraCalidad: [],
+      historial: [{
+          fecha: new Date().toISOString(),
+          accion: `Ingreso Inicial en ${areaIni}`,
+          entrega: (form.entregaPersona.value || "S/N").toUpperCase(),
+          recibe: (form.recibePersona.value || "S/N").toUpperCase()
+      }]
+    };
+    
+    const newOrdersList = [...orders, newOrder];
+    setOrders(newOrdersList); 
+    syncOrderToSupabase(newOrder);
+    setShowAddModal(false);
+  };
+
+  const addShiftNote = () => {
+    if (!selectedOrder) return;
+    const newNote = { 
+      id: Date.now(), supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
+      actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
+    };
+    const updatedOrder = { ...selectedOrder, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
+    const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
+    setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
+    setShiftNoteText(""); setTempPhoto(null);
+  };
+
+  const addQualityNote = () => {
+    if (!selectedOrder) return;
+    const newNote = {
+      id: Date.now(), supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
+      estado: calidadState, observacion: calidadNota || "Sin observaciones", foto: calidadPhoto, fecha: new Date().toISOString()
+    };
+    const updatedOrder = { ...selectedOrder, bitacoraCalidad: [...(selectedOrder.bitacoraCalidad || []), newNote] };
+    const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
+    setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
+    setCalidadNota(""); setCalidadPhoto(null);
+  };
+
+  const updateTransfer = (id, area, date, en, re) => {
+    const order = orders.find(o => o?.id === id);
+    if (!order) return;
+    const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
+    const updatedOrder = { ...order, areaActual: area, estadoInterno: CONFIG_PROCESOS[area]?.[0] || "En Espera", fechaEntregaPrometida: date, historial: [...(order.historial || []), newHistoryEntry] };
+    let newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
+    
+    if (updatedOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
+        const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
+        const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+        if (allDispatched) {
+            const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
+            if (alertObj) {
+                const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                setCoordinationAlerts(newAlerts);
+                syncAlertToSupabase(alertObj, true);
+            }
+        }
+    }
+
+    setOrders(newOrdersList); setSelectedOrder(null); syncOrderToSupabase(updatedOrder);
+  };
+
+  const addItemToCoordList = () => {
+    if (!inputManualPedido || !inputManualFecha || !inputManualCliente) return;
+    const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+    const newItem = { id: generateUUID(), pedidoNum: inputManualPedido.trim().toUpperCase(), cliente: inputManualCliente.trim().toUpperCase(), fechaEntrega: inputManualFecha, detalle: inputManualDetalle ? inputManualDetalle.trim() : '', creadoEn: new Date().toISOString() };
+    setCoordList([...coordList, newItem]);
+    setInputManualPedido(""); setInputManualCliente(""); setInputManualDetalle("");
+  };
+
+  const saveBatchCoordination = () => {
+    const newAlerts = [...coordinationAlerts, ...coordList];
+    setCoordinationAlerts(newAlerts); coordList.forEach(a => syncAlertToSupabase(a));
+    
+    let updatedOrders = [...orders];
+    coordList.forEach(item => {
+        updatedOrders = updatedOrders.map(o => (o?.pedidoNum || "").toUpperCase() === item.pedidoNum ? { ...o, prioridad: 'ALTA', fechaEntregaPrometida: item.fechaEntrega } : o);
+    });
+    setOrders(updatedOrders); updatedOrders.filter(o => coordList.some(c => c.pedidoNum === o.pedidoNum)).forEach(o => syncOrderToSupabase(o));
+    
+    setCoordList([]); setShowCoordinationModal(false);
+  };
+
+  const shareToWhatsApp = (type, savedLog = null) => {
+    if (!selectedOrder) return;
+    
+    let text = `🏢 *CDI EXHIBICIONES | REPORTE OFICIAL* 🏢\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📦 *PEDIDO:* ${selectedOrder.pedidoNum || 'S/N'}\n`;
+    text += `🏷️ *CÓDIGO:* ${selectedOrder.codArticulo || 'S/N'}\n`;
+    text += `🛋️ *PRODUCTO:* ${selectedOrder.nombre || 'S/N'}\n`;
+    text += `🏢 *CLIENTE:* ${selectedOrder.cliente || 'S/N'}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    if (type === 'tech') {
+        const log = savedLog || { supervisor: supervisorProfile?.name, operario: tempOperario, actividad: tempShiftActivity, nota: shiftNoteText };
+        text += `🏭 *AVANCE DE PRODUCCIÓN*\n`;
+        text += `🔹 *Fase / Actividad:* ${log.actividad}\n`;
+        text += `👷 *Operario Asignado:* ${log.operario}\n`;
+        text += `📝 *Novedades / Faltantes:* _${log.nota || 'Sin novedades'}_\n`;
+        text += `👨‍💼 *Supervisa:* ${log.supervisor}\n`;
+    } else if (type === 'trazabilidad') {
+        text += `🔄 *ACTA DE ENTREGA DE SECCIÓN*\n`;
+        text += `🔹 *Movimiento:* ${savedLog.accion}\n`;
+        text += `📤 *Entrega:* ${savedLog.entrega}\n`;
+        text += `📥 *Recibe:* ${savedLog.recibe}\n`;
+        text += `👨‍💼 *Supervisa:* ${savedLog.supervisor || supervisorProfile?.name || 'S/N'}\n`;
+        text += `📝 *Observaciones:* _${savedLog.nota || 'Sin observaciones'}_\n`;
+    } else if (type === 'calidad') {
+        const log = savedLog || { estado: calidadState, inspector: calidadInspector, observacion: calidadNota, supervisor: supervisorProfile?.name };
+        const iconoEstado = log.estado === 'APROBADO' ? '✅' : log.estado === 'RETRABAJO' ? '⚠️' : '❌';
+        text += `🔍 *INSPECCIÓN DE CALIDAD*\n`;
+        text += `${iconoEstado} *DICTAMEN:* *${log.estado}*\n`;
+        text += `🕵️ *Inspector:* ${log.inspector}\n`;
+        text += `👨‍💼 *Supervisa:* ${log.supervisor}\n`;
+        text += `📝 *Observaciones:* _${log.observacion || 'Ninguna'}_\n`;
+    }
+
+    text += `\n⏱️ _Reporte generado: ${new Date().toLocaleString('es-CO')}_\n`;
+    text += `📱 *Sistema CDI Planta*`;
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, 'whatsapp_cdi_tab');
+  };
+
+  const generateShiftReport = () => {
+    if (!repSupervisor || !repDate) return;
+    let entries = [];
+    
+    // Función para normalizar nombres y permitir búsquedas parciales (ignora mayúsculas y tildes)
+    const normalizeName = (name) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    
+    const checkMatch = (savedName) => {
+        if (repSupervisor === "TODOS") return true;
+        const selParts = normalizeName(repSupervisor).split(" ").filter(p => p.trim() !== "");
+        const savNorm = normalizeName(savedName);
+        // Retorna verdadero si TODAS las palabras seleccionadas (ej. "Deyvis", "Bracho") están dentro del nombre completo guardado
+        return selParts.every(part => savNorm.includes(part));
+    };
+
+    orders.forEach(order => {
+      // Producción
+      const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
+      tech.forEach(n => entries.push({ ...n, type: 'PRODUCCIÓN', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.actividad}: ${n.nota}`, person: `OP: ${n.operario}`, status: 'AVANCE' }));
+      
+      // Calidad
+      const cal = (order?.bitacoraCalidad || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
+      cal.forEach(n => entries.push({ ...n, type: 'CALIDAD', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `Obs: ${n.observacion}`, person: `INSP: ${n.inspector}`, status: n.estado }));
+      
+      // Entregas (Trazabilidad)
+      const mov = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.accion?.includes('Entrega a') && checkMatch(n?.supervisor));
+      mov.forEach(n => entries.push({ ...n, type: 'TRASLADO', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.accion} | Obs: ${n.nota || 'N/A'}`, person: `DE: ${n.entrega} A: ${n.recibe}`, status: 'ENTREGADO' }));
+    });
+    
+    if(entries.length === 0) {
+        alert("⚠️ No hay registros de actividades para este supervisor en la fecha seleccionada.");
+        return;
+    }
+    
+    setGeneratedReportData(entries.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)));
+    setShowReportConfigModal(false); setShowReportPreviewModal(true);
+  };
+
+  const filteredOrders = orders.filter(o => {
+    if (!o) return false;
+    
+    const st = searchTerm.toLowerCase().trim();
+    const searchTerms = st ? st.split(/\s+/) : [];
+    
+    const matchSearch = searchTerms.length === 0 || searchTerms.every(term => 
+        (String(o.pedidoNum || "")).toLowerCase().includes(term) || 
+        (String(o.nombre || "")).toLowerCase().includes(term) || 
+        (String(o.codArticulo || "")).toLowerCase().includes(term) ||
+        (String(o.cliente || "")).toLowerCase().includes(term)
+    );
+
+    const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter;
+    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
+    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
+    if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && o.estadoInterno === 'DESPACHADO';
+    return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO';
+  });
+
+  const groupedOrders = filteredOrders.reduce((acc, order) => {
+    if (!order) return acc;
+    const pNum = order.pedidoNum || "S/N";
+    if (!acc[pNum]) acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: order.fechaEntregaPrometida, products: [] };
+    acc[pNum].products.push(order);
+    return acc;
+  }, {});
+  const groupedArray = Object.values(groupedOrders);
+  const activeGroupObj = groupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
+
+  const totalOrders = orders.length;
+  const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
+  const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
+  const cumplidosCount = totalOrders - atrasadosCount - despachadosCount; 
+
+  const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
+  const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
+
+  let gridColsClass = 'grid-cols-1 md:grid-cols-3';
+  if (gridColumns === 2) gridColsClass = 'grid-cols-2 lg:grid-cols-3';
+  if (gridColumns === 3) gridColsClass = 'grid-cols-3 lg:grid-cols-3';
+  if (gridColumns === 4) gridColsClass = 'grid-cols-3 lg:grid-cols-4';
+  if (gridColumns === 5) gridColsClass = 'grid-cols-3 lg:grid-cols-5';
+
+  if (!supervisorProfile) return (
+    <div className="min-h-screen theme-bg-main flex flex-col items-center justify-center p-4 transition-colors duration-300" data-theme={appTheme}>
+      <div className="w-full max-w-md theme-bg-card rounded-[3rem] border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-500">
+        <div className="p-8 text-center border-b theme-border theme-bg-header relative">
+          <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+          <div className="flex items-center justify-center gap-2 mb-4 select-none">
+             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[var(--primary)] transform scale-y-[1.1]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>CDI</span>
+             <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
+             <div className="flex flex-col text-left justify-center">
+               <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
+               <span className="text-[12px] font-black leading-none tracking-[0.05em] text-[var(--primary)]">EXHIBICIÓN</span>
+             </div>
+          </div>
+          <h2 className="text-[var(--accent)] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
+        </div>
+        
+        <form onSubmit={isRegistering ? handleVirtualRegister : handleVirtualLogin} className="p-8 space-y-5">
+          {savedLogins.length > 0 && !isRegistering && (
+             <div className="flex flex-wrap gap-2 justify-center mb-4">
+               {savedLogins.map((u, i) => (
+                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1.5 rounded-xl text-xs md:text-sm lg:text-base font-black border border-[var(--primary)]/30 hover:bg-[var(--primary)]/20 transition-colors">
+                   {u?.name?.split(' ')[0]}
+                 </button>
+               ))}
+             </div>
+          )}
+
+          {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-xs md:text-sm lg:text-base font-bold uppercase flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/><span>{authError}</span></div>}
+          
+          {isRegistering && (
+            <div className="space-y-1">
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
+              <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--accent)]" placeholder="EJ: JUAN PEREZ" />
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
+            <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all">
+              <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
+              <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-xs md:text-sm lg:text-base sm:text-xs md:text-sm lg:text-base flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave / PIN</label>
+              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-[var(--accent)] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 4 dígitos</span>
+            </div>
+            <input name="password" type="password" inputMode="numeric" pattern="\d*" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--accent)]" placeholder="••••" />
+          </div>
+
+          {isRegistering && (
+            <div className="space-y-1">
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
+              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs md:text-sm lg:text-base focus:ring-2 focus:ring-[var(--accent)]">
+                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+          )}
+
+          <button type="submit" className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-all">
+            {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
+          </button>
+          <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
+            {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen font-sans pb-20 transition-colors duration-300 theme-bg-main" data-theme={appTheme}>
+      
+      {mostUrgentOrder && (
+        <div className="bg-red-600 text-white py-2 sticky top-0 z-[60] shadow-md border-b border-red-800 whitespace-nowrap overflow-hidden">
+          <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
+            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(mostUrgentOrder.fechaEntregaPrometida)} DÍAS</span>
+          </div>
+        </div>
+      )}
+
+      <header className={`theme-bg-header p-3 md:p-4 sticky ${mostUrgentOrder ? 'top-[36px]' : 'top-0'} z-50 shadow-md border-b theme-border transition-all`}>
+        <div className="w-full px-4 md:px-8 flex justify-between items-center gap-2">
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[var(--primary)] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>CDI</span>
+              <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
+              <div className="flex flex-col justify-center">
+                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] md:text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
+                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] font-black leading-none tracking-[0.05em] text-[var(--primary)]">EXHIBICIÓN</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all"><Sun size={18} /></button>
+            <button type="button" onClick={handleLogout} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><LogOut size={18} /></button>
+            <div className="w-px h-6 bg-current opacity-20 mx-1"></div>
+            
+            <button type="button" onClick={() => setShowDashboardModal(true)} className="bg-[var(--primary)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
+              <BarChart2 size={"1.2em"} /><span className="hidden md:inline">Indicadores</span>
+            </button>
+            <button type="button" onClick={() => setShowCoordinationModal(true)} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
+              <Megaphone size={"1.2em"} /><span className="hidden md:inline">Coord</span>
+            </button>
+            <button type="button" onClick={() => { setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--primary)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
+              <Plus size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">Nuevo</span>
+            </button>
+            <button type="button" onClick={() => setShowRecetarioModal(true)} className="bg-[var(--accent)] p-2 md:px-3 md:py-2.5 rounded-xl flex items-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase shadow-sm text-[var(--card-bg)] border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">
+              <FlaskConical size={"1.2em"} strokeWidth={3} /><span className="hidden md:inline">SC Entonación</span>
+            </button>
           </div>
         </div>
       </header>
