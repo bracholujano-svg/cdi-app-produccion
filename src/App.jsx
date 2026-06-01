@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import SCEntonacion from './components/SCEntonacion';
 
@@ -708,6 +708,65 @@ export default function App() {
   const [supabaseData, setSupabaseData] = useState({ inventario: [], pedidosInsumos: [] });
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
   const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
+
+  const inventoryReservations = useMemo(() => {
+    const virtualStock = {};
+    if (supabaseData?.inventario) {
+      supabaseData.inventario.forEach(inv => {
+        virtualStock[inv.id_referencia] = inv.cantidad_disponible || 0;
+      });
+    }
+
+    const activeOrders = orders.filter(o => o.estadoInterno !== 'DESPACHADO');
+    
+    activeOrders.sort((a, b) => {
+        if (a.prioridad === 'ALTA' && b.prioridad !== 'ALTA') return -1;
+        if (b.prioridad === 'ALTA' && a.prioridad !== 'ALTA') return 1;
+        const dateA = a.fechaEntregaPrometida ? new Date(a.fechaEntregaPrometida).getTime() : Infinity;
+        const dateB = b.fechaEntregaPrometida ? new Date(b.fechaEntregaPrometida).getTime() : Infinity;
+        if (dateA !== dateB) return dateA - dateB;
+        return (a.pedidoNum || "").localeCompare(b.pedidoNum || "");
+    });
+
+    const orderMaterialStatus = {};
+    
+    activeOrders.forEach(o => {
+      const pNum = o.pedidoNum;
+      orderMaterialStatus[pNum] = [];
+      const reqs = supabaseData.pedidosInsumos.filter(r => r.pedido_num === pNum);
+      
+      reqs.forEach(req => {
+          const id_ref = req.id_referencia;
+          const cantidadRequerida = req.cantidad_requerida - (req.cantidad_oc || 0);
+          if (cantidadRequerida <= 0) return;
+          
+          let available = virtualStock[id_ref] || 0;
+          let asignado = 0;
+          let faltante = 0;
+          
+          if (available >= cantidadRequerida) {
+              asignado = cantidadRequerida;
+              virtualStock[id_ref] -= cantidadRequerida;
+          } else {
+              asignado = available;
+              faltante = cantidadRequerida - available;
+              virtualStock[id_ref] = 0;
+          }
+          
+          orderMaterialStatus[pNum].push({
+              ...req,
+              id_referencia: id_ref,
+              descripcion: supabaseData.inventario.find(i => i.id_referencia === id_ref)?.descripcion || req.descripcion || id_ref,
+              requerida: cantidadRequerida,
+              asignada: asignado,
+              faltante: faltante,
+              stockRestanteGlobal: virtualStock[id_ref],
+              sinOC: (req.cantidad_oc || 0) === 0
+          });
+      });
+    });
+    return orderMaterialStatus;
+  }, [orders, supabaseData]);
 
   useEffect(() => {
     const fetchSupabaseData = async () => {
@@ -1565,14 +1624,8 @@ export default function App() {
              const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && viewFilter !== 'DESPACHADOS';
              const isCumplido = (daysLeft !== null && daysLeft > 3) || viewFilter === 'DESPACHADOS';
 
-             // LOGICA DE ALERTAS SUPABASE
-             const requerimientos = supabaseData.pedidosInsumos.filter(r => r.pedido_num === group.pedidoNum);
-             const faltantes = requerimientos.map(req => {
-                 const invItem = supabaseData.inventario.find(i => i.id_referencia === req.id_referencia);
-                 const stockTotal = (invItem?.cantidad_disponible || 0) + (req.cantidad_oc || 0);
-                 const faltante = req.cantidad_requerida - stockTotal;
-                 return { ...req, descripcion: invItem?.descripcion || req.descripcion || req.id_referencia, stockTotal, faltante, sinOC: (req.cantidad_oc || 0) === 0 };
-             }).filter(f => f.faltante > 0);
+             // LOGICA DE ALERTAS SUPABASE (DYNAMIC RESERVATION)
+             const faltantes = (inventoryReservations[group.pedidoNum] || []).filter(f => f.faltante > 0);
              
              const hasAlert = faltantes.length > 0 && viewFilter !== 'DESPACHADOS';
 
@@ -2096,10 +2149,11 @@ export default function App() {
                                 {mat.sinOC && <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
                             </div>
                             <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                            <div className="flex gap-4 mt-1 border-t border-orange-200 pt-2">
-                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-slate-400 uppercase">Requerido</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.cantidad_requerida}</span></div>
-                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-slate-400 uppercase">En Stock + OC</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.stockTotal}</span></div>
-                                <div className="flex flex-col"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-orange-600 uppercase">Faltante</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>
+                            <div className="flex gap-4 mt-1 border-t border-orange-200 pt-2 flex-wrap">
+                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
+                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
+                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>
+                                <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
                             </div>
                         </div>
                     ))}
