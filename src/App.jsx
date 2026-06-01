@@ -712,8 +712,29 @@ export default function App() {
   useEffect(() => {
     const fetchSupabaseData = async () => {
       try {
-        const { data: inv } = await supabase.from('inventario').select('*');
-        const { data: req } = await supabase.from('requerimientos_pedido').select('*');
+        const fetchAll = async (table) => {
+            let allData = [];
+            let from = 0;
+            const step = 1000;
+            let hasMore = true;
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from(table)
+                    .select('*')
+                    .range(from, from + step - 1);
+                if (error || !data || data.length === 0) {
+                    hasMore = false;
+                } else {
+                    allData = allData.concat(data);
+                    from += step;
+                    if (data.length < step) hasMore = false;
+                }
+            }
+            return allData;
+        };
+
+        const inv = await fetchAll('inventario');
+        const req = await fetchAll('requerimientos_pedido');
         
         const parseNumber = (val) => {
             if (val === null || val === undefined || val === '') return 0;
