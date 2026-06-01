@@ -1625,12 +1625,14 @@ export default function App() {
              const isCumplido = (daysLeft !== null && daysLeft > 3) || viewFilter === 'DESPACHADOS';
 
              // LOGICA DE ALERTAS SUPABASE (DYNAMIC RESERVATION)
-             const faltantes = (inventoryReservations[group.pedidoNum] || []).filter(f => f.faltante > 0);
+             const todosRequerimientos = inventoryReservations[group.pedidoNum] || [];
+             const faltantes = todosRequerimientos.filter(f => f.faltante > 0);
              
              const hasAlert = faltantes.length > 0 && viewFilter !== 'DESPACHADOS';
+             const isSufficient = todosRequerimientos.length > 0 && faltantes.length === 0 && viewFilter !== 'DESPACHADOS';
 
              return (
-              <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${hasAlert ? 'border-orange-500/80 animate-pulse' : (isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50 animate-pulse-red' : 'theme-border')} flex flex-col min-w-0`}>
+              <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${hasAlert ? 'border-orange-500/80 animate-pulse' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50 animate-pulse-red' : 'theme-border')} flex flex-col min-w-0`}>
                 
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <div className="flex flex-col gap-1 w-full">
@@ -1638,9 +1640,15 @@ export default function App() {
                       {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D` : (viewFilter === 'DESPACHADOS' ? '✅ DESPACHADO' : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES` : 'S/F'))}
                     </div>
                     {hasAlert && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(faltantes); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 bg-orange-500/10 text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 bg-orange-500/10 text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between">
                         <span>⚠️ Insumos Insuficientes</span>
                         <ChevronDown size={"1.2em"} />
+                      </button>
+                    )}
+                    {isSufficient && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base px-1.5 py-1 bg-green-500/10 text-[var(--accent)] border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between">
+                        <span>✅ Material Completo</span>
+                        <FolderOpen size={"1.2em"} />
                       </button>
                     )}
                   </div>
@@ -2133,37 +2141,50 @@ export default function App() {
       )}
 
       {showMaterialsAlertModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-          <div className="w-full max-w-lg theme-bg-card rounded-3xl border border-orange-500/30 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-5 bg-orange-500/10 border-b border-orange-500/20 flex justify-between items-center shrink-0">
-              <h2 className="text-lg font-black uppercase flex items-center gap-2 text-orange-600"><AlertTriangle size={20} /> Alerta de Insumos</h2>
-              <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className="p-2.5 bg-orange-500/10 rounded-xl hover:bg-orange-500/20 transition-colors text-orange-600 shrink-0">✕</button>
-            </div>
-            <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">Los siguientes materiales no cuentan con stock suficiente para este pedido.</p>
-                <div className="space-y-3">
-                    {activeAlertMaterials.map((mat, i) => (
-                        <div key={i} className="p-4 rounded-xl border border-orange-200 bg-orange-50 flex flex-col gap-2">
-                            <div className="flex justify-between items-start">
-                                <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border border-orange-200 text-orange-700 rounded-md">Ref: {mat.id_referencia}</span>
-                                {mat.sinOC && <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
-                            </div>
-                            <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                            <div className="flex gap-4 mt-1 border-t border-orange-200 pt-2 flex-wrap">
-                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
-                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
-                                <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>
-                                <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
-                            </div>
-                        </div>
-                    ))}
+        (() => {
+          const isModalAlert = activeAlertMaterials.some(m => m.faltante > 0);
+          return (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+              <div className={`w-full max-w-lg theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
+                <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
+                    {isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
+                    {isModalAlert ? 'Alerta de Insumos' : 'Inventario Suficiente'}
+                  </h2>
+                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--accent)]'}`}>✕</button>
                 </div>
+                <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">
+                      {isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
+                    </p>
+                    <div className="space-y-3">
+                        {activeAlertMaterials.map((mat, i) => {
+                            const isDeficit = mat.faltante > 0;
+                            return (
+                            <div key={i} className={`p-4 rounded-xl border flex flex-col gap-2 ${isDeficit ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
+                                <div className="flex justify-between items-start">
+                                    <span className={`text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md ${isDeficit ? 'border-orange-200 text-orange-700' : 'border-green-200 text-green-700'}`}>Ref: {mat.id_referencia}</span>
+                                    {mat.sinOC && isDeficit && <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
+                                </div>
+                                <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                                <div className={`flex gap-4 mt-1 border-t pt-2 flex-wrap ${isDeficit ? 'border-orange-200' : 'border-green-200'}`}>
+                                    <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
+                                    <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
+                                    {isDeficit && <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>}
+                                    <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
+                                </div>
+                            </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
+                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
+                </div>
+              </div>
             </div>
-            <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className="bg-orange-500 text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl border border-[var(--border-color)] transition-all duration-200 border-orange-700  hover:brightness-125 active:scale-95 transition-all">Entendido</button>
-            </div>
-          </div>
-        </div>
+          );
+        })()
       )}
 
       <style>{`
