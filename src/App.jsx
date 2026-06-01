@@ -690,13 +690,26 @@ export default function App() {
           cantidad_disponible: Number(item['Saldo'] || 0)
         })) : [];
 
-        const reqMap = req ? req.map(item => ({
+        const reqRaw = req ? req.map(item => ({
           pedido_num: item['pedidosin'],
           id_referencia: item['Id Referencia'],
           cantidad_requerida: Number(item['Cantidad'] || 0),
           cantidad_oc: Number(item['Cant.OC'] || 0),
           descripcion: item['Descripcion']
         })) : [];
+
+        // Agrupar requerimientos por pedido y por referencia
+        const groupedReqs = {};
+        reqRaw.forEach(item => {
+          const key = `${item.pedido_num}_${item.id_referencia}`;
+          if (!groupedReqs[key]) {
+            groupedReqs[key] = { ...item };
+          } else {
+            groupedReqs[key].cantidad_requerida += item.cantidad_requerida;
+            groupedReqs[key].cantidad_oc += item.cantidad_oc;
+          }
+        });
+        const reqMap = Object.values(groupedReqs);
 
         if (inv && req) {
           setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
