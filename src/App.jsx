@@ -157,7 +157,10 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
 
     // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
-        const matchSearch = (o.pedidoNum || "").toLowerCase().includes(dashSearch.toLowerCase()) || (o.cliente || "").toLowerCase().includes(dashSearch.toLowerCase());
+        const matchSearch = (o.pedidoNum || "").toLowerCase().includes(dashSearch.toLowerCase()) || 
+        (o.cliente || "").toLowerCase().includes(dashSearch.toLowerCase()) ||
+        (o.codArticulo || "").toLowerCase().includes(dashSearch.toLowerCase()) ||
+        (o.nombre || "").toLowerCase().includes(dashSearch.toLowerCase());
         const matchArea = dashArea === 'TODAS' || o.areaActual === dashArea;
         return matchSearch && matchArea;
     });
@@ -515,6 +518,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                     <thead>
                                         <tr className="bg-gray-50 border-b border-gray-100">
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Pedido</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase tracking-widest">Artículo / Producto</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Cliente</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Área Actual</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black text-gray-400 uppercase tracking-widest">Estado Interno</th>
@@ -524,6 +528,10 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                                 <td className="p-5 font-black text-xs md:text-sm lg:text-base text-slate-800">#{o.pedidoNum}</td>
+                                                <td className="p-5">
+                                                    <div className="font-black text-[var(--primary)] text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
+                                                    <div className="font-bold text-gray-500 text-xs truncate max-w-[200px]">{o.nombre || "S/N"}</div>
+                                                </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500">{o.cliente}</td>
                                                 <td className="p-5"><span className="bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--primary)]/30">{o.areaActual}</span></td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base text-gray-500 uppercase tracking-tight">{o.estadoInterno}</td>
