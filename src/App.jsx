@@ -809,7 +809,25 @@ export default function App() {
         }
       } catch(e) { console.error("Error fetching Supabase", e); }
     };
-    fetchSupabaseData();
+    
+    // Iniciar Sesión Híbrida en el Backend antes de descargar datos
+    const initBackendSecureSession = async () => {
+      const masterEmail = import.meta.env.VITE_MASTER_EMAIL || "sistema@cdi.com";
+      const masterPass = import.meta.env.VITE_MASTER_PASS || "Cdi_Vault_2026**";
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: masterEmail,
+        password: masterPass,
+      });
+
+      if (error) {
+         console.warn("Info de Seguridad: Operando con llave anónima. Una vez actives RLS, los datos requerirán la cuenta maestra.");
+      }
+      // Llamar a fetch incluso si falla, para compatibilidad mientras creas el usuario
+      fetchSupabaseData();
+    };
+
+    initBackendSecureSession();
     
     // Optional: Realtime subscription for Supabase
     try {
