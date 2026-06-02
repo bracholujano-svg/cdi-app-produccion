@@ -812,7 +812,7 @@ export default function App() {
     
     // Iniciar Sesión Híbrida en el Backend antes de descargar datos
     const initBackendSecureSession = async () => {
-      const masterEmail = import.meta.env.VITE_MASTER_EMAIL || "sistema@cdi.com";
+      const masterEmail = import.meta.env.VITE_MASTER_EMAIL || "rafael.bracho@cdiexhibiciones.co";
       const masterPass = import.meta.env.VITE_MASTER_PASS || "Cdi_Vault_2026**";
       
       const { data, error } = await supabase.auth.signInWithPassword({
