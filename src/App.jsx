@@ -1,10 +1,27 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import DOMPurify from 'dompurify';
+import CryptoJS from 'crypto-js';
 import SCEntonacion from './components/SCEntonacion';
 
-const SUPABASE_URL = 'https://klapeabwtphxqdspiggv.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WJgO75r7N5OQ82XBmrvjsA_r3YCPENt';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://klapeabwtphxqdspiggv.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_WJgO75r7N5OQ82XBmrvjsA_r3YCPENt';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const SESSION_SECRET = "cdi_industrial_vault_2026";
+
+const sanitizeInput = (text) => DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+
+const deepSanitize = (obj) => {
+    if (typeof obj === 'string') return sanitizeInput(obj);
+    if (Array.isArray(obj)) return obj.map(deepSanitize);
+    if (obj !== null && typeof obj === 'object') {
+        const newObj = {};
+        for (let key in obj) newObj[key] = deepSanitize(obj[key]);
+        return newObj;
+    }
+    return obj;
+};
 
 import { 
   Plus, MessageSquare, Clock, ArrowRightLeft, Search, UserCheck, 
@@ -806,7 +823,17 @@ export default function App() {
 
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
     const saved = safeSessionStorage.get('cdi_supervisor_session');
-    try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
+    try { 
+        if (!saved) return null;
+        const parsed = JSON.parse(saved);
+        if (parsed.profile && parsed.signature) {
+            const expectedSig = CryptoJS.SHA256(JSON.stringify(parsed.profile) + SESSION_SECRET).toString();
+            if (expectedSig === parsed.signature) {
+                return parsed.profile;
+            }
+        }
+        return null; 
+    } catch(e) { return null; }
   });
   
   const [orders, setOrders] = useState([]);
@@ -892,11 +919,12 @@ export default function App() {
         const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
         dbError = error;
       } else {
+        const sanitizedOrder = deepSanitize(orderObject);
         const { error } = await supabase.from('produccion_pedidos').upsert({
-          id: orderObject.id,
-          pedido_num: orderObject.pedidoNum || '',
-          cliente: orderObject.cliente || '',
-          data_completa: orderObject
+          id: sanitizedOrder.id,
+          pedido_num: sanitizedOrder.pedidoNum || '',
+          cliente: sanitizedOrder.cliente || '',
+          data_completa: sanitizedOrder
         });
         dbError = error;
       }
@@ -917,9 +945,10 @@ export default function App() {
         const { error } = await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
         dbError = error;
       } else {
+        const sanitizedAlert = deepSanitize(alertObject);
         const { error } = await supabase.from('coordinacion_alertas').upsert({
-          id: alertObject.id,
-          data_completa: alertObject
+          id: sanitizedAlert.id,
+          data_completa: sanitizedAlert
         });
         dbError = error;
       }
@@ -1120,13 +1149,11 @@ export default function App() {
     
     if (res.success) {
       setAuthError("");
-      const newProfile = { 
-        name: res.result.nombre, 
-        email: emailFull, 
-        area: res.result.rol
-      };
+      const newProfile = { name: res.result.nombre, email: emailFull, area: res.result.rol };
+      const signature = CryptoJS.SHA256(JSON.stringify(newProfile) + process.env.REACT_APP_SESSION_SECRET).toString();
+      
       setSupervisorProfile(newProfile);
-      safeSessionStorage.set('cdi_supervisor_session', JSON.stringify(newProfile));
+      safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: newProfile, signature }));
       
       const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
       setSavedLogins(newRecent); 
