@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { formatLocalDate } from '../../utils/helpers';
+import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
 import { X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCircle, Package, BarChart2, Activity, Truck } from 'lucide-react';
 
 const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => {
