@@ -1,10 +1,10 @@
 import React from 'react';
-import { Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Printer, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const ReportPreviewModal = ({ downloadReport }) => {
-  const { showReportPreviewModal, setShowReportPreviewModal, reportPreviewData } = useAppContext();
+  const { showReportPreviewModal, repSupervisor, repDate, generatedReportData, setShowReportPreviewModal, reportPreviewData } = useAppContext();
   
   return (
       

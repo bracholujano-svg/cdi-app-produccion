@@ -1,10 +1,10 @@
 import React from 'react';
-import { Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Plus, Search, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
-const AddOrderModal = ({ createOrder }) => {
-  const { showAddModal, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, fillFormWithResult, supervisorProfile } = useAppContext();
+const AddOrderModal = ({ createOrder, doExcelSearch }) => {
+  const { showAddModal, excelSearchPedido, setExcelSearchPedido, excelSearchArticulo, setExcelSearchArticulo, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, fillFormWithResult, supervisorProfile } = useAppContext();
   
   return (
       

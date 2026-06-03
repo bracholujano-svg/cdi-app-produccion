@@ -1,10 +1,11 @@
 import React from 'react';
 import { Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import SCEntonacion from '../SCEntonacion';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const RecetarioModal = ({ createRecipe }) => {
-  const { showRecetarioModal, setShowRecetarioModal, activeOrderForRecipe, setActiveOrderForRecipe } = useAppContext();
+  const { showRecetarioModal, recetarioMaximized, setRecetarioMaximized, supabase, supabaseData, supervisorProfile, setShowRecetarioModal, activeOrderForRecipe, setActiveOrderForRecipe } = useAppContext();
   
   return (
       

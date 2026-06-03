@@ -1,10 +1,10 @@
 import React from 'react';
-import { Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ handleImageUpload, addShiftNote, toggleMic }) => {
-  const { activeGroupObj, setActiveGroupObj, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+  const { activeGroupObj, setSelectedGroupPedido, itemSearchTerm, setItemSearchTerm, setSelectedOrder, setActiveGroupObj, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
   
   return (
       

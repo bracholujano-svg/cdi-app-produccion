@@ -1,10 +1,10 @@
 import React from 'react';
-import { Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Save, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, Megaphone, Trash2 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
-  const { showCoordinationModal, setShowCoordinationModal, coordList, coordItemOrder, setCoordItemOrder, coordItemText, setCoordItemText, pedidos, setCoordList } = useAppContext();
+  const { showCoordinationModal, setShowCoordinationModal, coordList, coordItemOrder, setCoordItemOrder, coordItemText, setCoordItemText, pedidos, setCoordList, inputManualPedido, setInputManualPedido, inputManualCliente, setInputManualCliente, inputManualFecha, setInputManualFecha, inputManualDetalle, setInputManualDetalle } = useAppContext();
   
   return (
       

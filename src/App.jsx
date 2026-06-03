@@ -506,9 +506,9 @@ const {
 
       <GroupDetailsModal handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
-      <RecetarioModal createRecipe={createRecipe} />
+      <RecetarioModal />
 
-      <AddOrderModal createOrder={createOrder} />
+      <AddOrderModal createOrder={createOrder} doExcelSearch={doExcelSearch} />
 
       <OrderDetailsModal 
         handleImageUpload={handleImageUpload}
@@ -528,6 +528,8 @@ const {
       )}
 
       <CoordinationModal addItemToCoordList={addItemToCoordList} saveBatchCoordination={saveBatchCoordination} />
+
+      <ReportPreviewModal />
 
       {showCoordViewModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
@@ -581,7 +583,7 @@ const {
         </div>
       )}
 
-      <ReportPreviewModal downloadReport={downloadReport} />
+      
 
       {showMaterialsAlertModal && (
         (() => {
