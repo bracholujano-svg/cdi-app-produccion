@@ -6,6 +6,8 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 const ReportPreviewModal = ({ downloadReport }) => {
   const { showReportPreviewModal, repSupervisor, repDate, generatedReportData, setShowReportPreviewModal, reportPreviewData } = useAppContext();
   
+  if (!showReportPreviewModal) return null;
+
   return (
       
         <div className="fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black">

@@ -7,6 +7,8 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 const RecetarioModal = ({ createRecipe }) => {
   const { showRecetarioModal, recetarioMaximized, setRecetarioMaximized, supabase, supabaseData, supervisorProfile, setShowRecetarioModal, activeOrderForRecipe, setActiveOrderForRecipe } = useAppContext();
   
+  if (!showRecetarioModal) return null;
+
   return (
       
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4 animate-fade-in">

@@ -6,6 +6,8 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 const AddOrderModal = ({ createOrder, doExcelSearch }) => {
   const { showAddModal, excelSearchPedido, setExcelSearchPedido, excelSearchArticulo, setExcelSearchArticulo, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, fillFormWithResult, supervisorProfile } = useAppContext();
   
+  if (!showAddModal) return null;
+
   return (
       
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">

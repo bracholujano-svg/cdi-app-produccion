@@ -6,6 +6,8 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 const GroupDetailsModal = ({ handleImageUpload, addShiftNote, toggleMic }) => {
   const { activeGroupObj, setSelectedGroupPedido, itemSearchTerm, setItemSearchTerm, setSelectedOrder, setActiveGroupObj, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
   
+  if (!activeGroupObj) return null;
+
   return (
       
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
