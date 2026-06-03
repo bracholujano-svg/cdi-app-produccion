@@ -10,6 +10,12 @@ import { searchInRibisoft, loginEnGoogle, registrarEnGoogle } from './services/a
 import { Plus, MessageSquare, Clock, ArrowRightLeft, Search, UserCheck, MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon, Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X } from 'lucide-react';
 
 import { AppContextProvider, useAppContext } from './context/AppContext';
+
+import GroupDetailsModal from './components/orders/GroupDetailsModal';
+import AddOrderModal from './components/orders/AddOrderModal';
+import RecetarioModal from './components/orders/RecetarioModal';
+import CoordinationModal from './components/orders/CoordinationModal';
+import ReportPreviewModal from './components/orders/ReportPreviewModal';
 import OrderDetailsModal from './components/orders/OrderDetailsModal';
 import OrderCard from './components/orders/OrderCard';
 import Header from './components/layout/Header';
@@ -498,162 +504,11 @@ const {
         </div>
       </main>
 
-      {activeGroupObj && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
-          <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-              <div className="flex-1 min-w-0 pr-4">
-                 <h2 className="text-xl font-black text-[var(--primary)] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
-                 <p className="text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase truncate">{activeGroupObj.cliente}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
-            </div>
+      <GroupDetailsModal handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
-            <div className="p-4 border-b theme-border bg-black/5 shrink-0">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                    <input 
-                        type="text" 
-                        placeholder="🔍 Filtrar artículo o producto (Ej: 1234)..." 
-                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-current"
-                        value={itemSearchTerm} 
-                        onChange={(e) => setItemSearchTerm(e.target.value)} 
-                    />
-                </div>
-            </div>
+      <RecetarioModal createRecipe={createRecipe} />
 
-            <div className="p-4 sm:p-6 overflow-y-auto flex-1 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 custom-scrollbar">
-              {(activeGroupObj.products || []).filter(p => {
-                  const st = itemSearchTerm.toLowerCase().trim();
-                  if (!st) return true;
-                  return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
-              }).map(p => (
-                <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-all active:scale-95 bg-[var(--card-bg)]">
-                  <div className="flex justify-between items-center mb-2">
-                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[var(--primary)]/20 text-[var(--primary)] px-2 py-1 rounded border border-[var(--primary)]/30 font-black truncate">CÓD: {p.codArticulo}</span>
-                  </div>
-                  <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
-                  <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)]">
-                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
-                    <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showRecetarioModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4 animate-fade-in">
-          <div className={`theme-bg-card overflow-hidden flex flex-col shadow-2xl border theme-border relative transition-all duration-300 ${recetarioMaximized ? 'w-full h-full rounded-none' : 'w-full h-full md:max-w-6xl md:h-[85vh] md:rounded-[2rem]'}`}>
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-              <SCEntonacion supabase={supabase} inventario={supabaseData.inventario} onClose={() => setShowRecetarioModal(false)} supervisorProfile={supervisorProfile} />
-            </div>
-            <div className="p-4 md:p-6 border-t theme-border flex justify-end gap-3 bg-slate-50 dark:bg-slate-900 shrink-0">
-              <button 
-                onClick={() => setRecetarioMaximized(!recetarioMaximized)} 
-                className="px-6 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black uppercase tracking-widest rounded-xl transition-colors shadow-sm"
-              >
-                {recetarioMaximized ? 'RESTAURAR' : 'MAXIMIZAR'}
-              </button>
-              <button 
-                onClick={() => setShowRecetarioModal(false)} 
-                className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest rounded-xl transition-colors shadow-lg shadow-red-500/20"
-              >
-                CERRAR
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
-          <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
-              <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[var(--primary)]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[var(--primary)]">✕</button>
-            </div>
-            
-            <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
-                <div className="bg-[var(--card-bg)] p-5 rounded-[1.5rem] border border-[var(--border-color)] shadow-inner mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="p-1.5 bg-[var(--primary)]/20 rounded-lg"><Search size={"1.2em"} className="text-[var(--primary)]"/></div>
-                        <p className="text-xs md:text-sm lg:text-base font-black uppercase text-[var(--primary)] tracking-widest">Puente Ribisoft (Autocompletar)</p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] uppercase placeholder:text-black/30" />
-                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] uppercase placeholder:text-black/30" />
-                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[var(--accent)] text-[var(--card-bg)] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95 disabled:opacity-50 shrink-0">
-                            {excelSearchLoading ? '...' : 'BUSCAR'}
-                        </button>
-                    </div>
-                    {excelSearchError && <p className="text-red-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><AlertCircle size={"1.2em"}/>{excelSearchError}</p>}
-                    {excelSearchSuccess && <p className="text-green-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={"1.2em"}/>{excelSearchSuccess}</p>}
-
-                    {showSearchSelector && searchResults.length > 0 && (
-                      <div className="mt-4 p-3 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
-                        <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
-                        {searchResults.map((res, idx) => (
-                          <div 
-                            key={idx} 
-                            onClick={() => {
-                              fillFormWithResult(res);
-                              setShowSearchSelector(false);
-                              setExcelSearchSuccess(`✅ Seleccionado: ${res.nombre} (Pedido ${res.pedido})`);
-                            }}
-                            className="p-2.5 bg-[var(--card-bg)] hover:bg-[var(--card-bg)] rounded-lg border border-[var(--border-color)] cursor-pointer transition-colors flex flex-col"
-                          >
-                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase text-[var(--primary)]">
-                              <span>PEDIDO: {res.pedido}</span>
-                              <span>ART: {res.articulo}</span>
-                            </div>
-                            <span className="text-xs md:text-sm lg:text-base font-bold text-white uppercase truncate mt-1">{res.nombre}</span>
-                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                </div>
-
-                {duplicateError && <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-xs md:text-sm lg:text-base font-black uppercase mb-4 flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/> {duplicateError}</div>}
-
-                <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
-                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
-                    
-                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
-                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="EJ: 12345" /></div>
-
-                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
-                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="CÓDIGO..." /></div>
-                    
-                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Marca / Cliente</label>
-                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
-                    
-                    <div className="md:col-span-2 space-y-1 mt-2">
-                        <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
-                        <select name="areaRecibe" className="w-full p-4 bg-[var(--primary)] text-[var(--card-bg)] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border  outline-none shadow-sm cursor-pointer focus:ring-2 focus:ring-white">
-                            {AREAS_RECEPCION.map(a => <option key={a}>{a}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Entrega</label>
-                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="QUIEN ENTREGA..." /></div>
-                    
-                    <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Recibe</label>
-                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="QUIEN RECIBE..." /></div>
-                    
-                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Cantidad a Producir</label>
-                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="CANTIDAD..." /></div>
-                    
-                    <button type="submit" className="md:col-span-2 mt-4 bg-[var(--primary)] text-[var(--card-bg)] py-5 rounded-[1.5rem] font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[4px]   active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
-                </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddOrderModal createOrder={createOrder} />
 
       <OrderDetailsModal 
         handleImageUpload={handleImageUpload}
@@ -672,37 +527,7 @@ const {
         />
       )}
 
-      {showCoordinationModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><Megaphone size={20} className="text-[var(--accent)]" /><h2 className="text-lg font-black uppercase text-[var(--primary)]">Coordinación Logística</h2></div><button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--primary)]">✕</button></div>
-            <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
-              <div className="theme-bg-main p-5 rounded-2xl border theme-border">
-                <h3 className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)] placeholder:text-[var(--primary)]/40" />
-                  <input value={inputManualCliente} onChange={e=>setInputManualCliente(e.target.value)} placeholder="CLIENTE / MARCA" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)] placeholder:text-[var(--primary)]/40" />
-                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
-                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)] placeholder:text-[var(--primary)]/40" /></div>
-                  <button type="button" onClick={addItemToCoordList} className="bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Añadir a Lista</button>
-                </div>
-              </div>
-              {coordList.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase tracking-widest">Lista Pendiente por Guardar</h3>
-                  {coordList.map(item => (
-                    <div key={item.id} className="flex justify-between items-center theme-bg-main p-3.5 rounded-xl border theme-border">
-                      <div><span className="font-black uppercase text-xs md:text-sm lg:text-base block text-[var(--primary)]">{item.pedidoNum} - {item.cliente}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
-                      <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={"1.2em"}/></button>
-                    </div>
-                  ))}
-                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95 mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <CoordinationModal addItemToCoordList={addItemToCoordList} saveBatchCoordination={saveBatchCoordination} />
 
       {showCoordViewModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
@@ -756,39 +581,7 @@ const {
         </div>
       )}
 
-      {showReportPreviewModal && (
-        <div className="fixed inset-0 bg-white z-[130] flex flex-col overflow-y-auto text-black">
-          <div className="max-w-5xl mx-auto w-full p-4 md:p-8">
-            <div className="flex justify-between items-center mb-6 print:hidden">
-              <h2 className="text-lg md:text-xl font-black uppercase text-slate-800">Vista Previa Impresión</h2>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200 border-blue-800  hover:brightness-125 active:scale-95 flex items-center gap-2"><Printer size={"1.2em"}/> Imprimir</button>
-                <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[var(--border-color)] transition-all duration-200 border-slate-300  hover:brightness-125 active:scale-95">Cerrar</button>
-              </div>
-            </div>
-            <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs md:text-sm lg:text-base w-full overflow-hidden block">
-              <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-6">
-                <div><h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">Reporte de Turno</h1><h2 className="text-sm font-bold uppercase text-slate-500 mt-1">CDI EXHIBICIONES</h2></div>
-                <div className="text-right text-slate-900"><p className="text-xs md:text-sm lg:text-base font-black uppercase">Sup: {repSupervisor}</p><p className="text-xs md:text-sm lg:text-base font-black uppercase">Fecha: {repDate}</p></div>
-              </div>
-              <div className="overflow-x-auto print:overflow-visible">
-                <table className="w-full text-left border-collapse min-w-[700px] text-slate-900 text-xs md:text-sm lg:text-base">
-                  <thead><tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black">
-                    <th className="p-2 font-black uppercase border border-slate-700 w-16">Tipo</th><th className="p-2 font-black uppercase border border-slate-700 w-12">Hora</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Pedido</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Artículo</th><th className="p-2 font-black uppercase border border-slate-700">Producto / Detalle</th><th className="p-2 font-black uppercase border border-slate-700 w-24">Involucrado</th><th className="p-2 font-black uppercase border border-slate-700 w-16">Estado</th>
-                  </tr></thead>
-                  <tbody>{generatedReportData.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-300 break-inside-avoid">
-                      <td className="p-2 font-black border-x border-slate-300">{item.type}</td><td className="p-2 font-bold border-x border-slate-300">{item.time.substring(0,5)}</td><td className="p-2 font-black text-red-700 border-x border-slate-300">{item.orderOC}</td><td className="p-2 font-black text-blue-700 border-x border-slate-300">{item.codArticulo}</td><td className="p-2 border-x border-slate-300"><span className="font-bold block truncate max-w-[150px]">{item.orderName}</span><span className="italic text-slate-600">{item.detail}</span></td><td className="p-2 font-bold border-x border-slate-300 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">{item.person}</td><td className="p-2 font-black border-x border-slate-300">{item.status}</td>
-                    </tr>
-                  ))}
-                  {generatedReportData.length === 0 && <tr><td colSpan="7" className="p-6 text-center font-black uppercase text-slate-400 border border-slate-200">Sin actividades registradas</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReportPreviewModal downloadReport={downloadReport} />
 
       {showMaterialsAlertModal && (
         (() => {
