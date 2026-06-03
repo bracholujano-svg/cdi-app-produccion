@@ -10,6 +10,8 @@ import { searchInRibisoft, loginEnGoogle, registrarEnGoogle } from './services/a
 import { Plus, MessageSquare, Clock, ArrowRightLeft, Search, UserCheck, MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon, Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X } from 'lucide-react';
 
 import { AppContextProvider, useAppContext } from './context/AppContext';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 function MainApp() {
@@ -146,7 +148,7 @@ const {
       }
   };
 
-  const handleLogout = () => { setSupervisorProfile(null); safeSessionStorage.remove('cdi_supervisor_session'); setAreaFilter('Todas'); };
+
 
   const handleImageUpload = (e, setter) => {
     const file = e.target.files[0];
@@ -432,13 +434,7 @@ const {
   const groupedArray = Object.values(groupedOrders);
   const activeGroupObj = groupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
-  const totalOrders = orders.length;
-  const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
-  const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
-  const cumplidosCount = totalOrders - atrasadosCount - despachadosCount; 
 
-  const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
-  const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
 
   let gridColsClass = 'grid-cols-1 md:grid-cols-3';
   if (gridColumns === 2) gridColsClass = 'grid-cols-2 lg:grid-cols-3';
@@ -451,103 +447,7 @@ const {
   return (
     <div className="min-h-screen font-sans pb-20 transition-colors duration-300 theme-bg-main" data-theme={appTheme}>
       
-      {mostUrgentOrder && (
-        <div className="bg-red-600 text-white py-2 sticky top-0 z-[60] shadow-md border-b border-red-800 whitespace-nowrap overflow-hidden">
-          <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
-            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(mostUrgentOrder.fechaEntregaPrometida)} DÍAS</span>
-          </div>
-        </div>
-      )}
-
-      {/* SIDEBAR TRIGGER FLOTANTE */}
-      <button 
-        onClick={() => setIsSidebarOpen(true)}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60] bg-[var(--card-bg)] text-white p-3 md:p-4 rounded-r-2xl border-y border-r border-[var(--border-color)] shadow-xl hover:bg-[var(--primary)] hover:border-[var(--primary)] transition-all duration-300 group"
-      >
-        <Menu size={"1.5em"} className="group-hover:scale-110 transition-transform duration-200" />
-      </button>
-
-      {/* BACKDROP DEL SIDEBAR */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]" onClick={() => setIsSidebarOpen(false)}></div>
-      )}
-
-      {/* CAJÓN OCULTO (SIDEBAR) */}
-      <div className={`fixed top-0 left-0 h-full w-[110px] md:w-[130px] bg-[var(--bg-main)] z-[80] border-r border-[var(--border-color)] shadow-[10px_0_30px_rgba(0,0,0,0.8)] transform transition-transform duration-300 ease-in-out flex flex-col items-center py-6 gap-6 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <button onClick={() => setIsSidebarOpen(false)} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white transition-colors">
-          <X size={"1.5em"} />
-        </button>
-        <div className="mt-12 flex flex-col gap-4 w-full px-4">
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
-              <BarChart2 size={"2em"} /><span className="text-center leading-tight">Indicadores</span>
-            </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
-              <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>
-            </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
-              <Plus size={"2em"} strokeWidth={3} /><span className="text-center leading-tight">Nuevo</span>
-            </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
-              <FlaskConical size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">SC Color</span>
-            </button>
-        </div>
-      </div>
-
-      <header className={`theme-bg-header p-3 md:p-4 sticky ${mostUrgentOrder ? 'top-[36px]' : 'top-0'} z-50 shadow-md border-b theme-border transition-all`}>
-        <div className="w-full px-4 md:px-8 flex justify-between items-center gap-2">
-          <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <span className="text-[34px] md:text-[42px] font-normal tracking-[-0.04em] leading-none text-[var(--primary)] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>CDI</span>
-              <div className="w-[2px] h-[28px] md:h-[34px] bg-current opacity-30 rounded-full mx-1"></div>
-              <div className="flex flex-col justify-center">
-                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] md:text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
-                <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] font-black leading-none tracking-[0.05em] text-[var(--primary)]">EXHIBICIÓN</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all"><Sun size={18} /></button>
-            <button type="button" onClick={handleLogout} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"><LogOut size={18} /></button>
-          </div>
-        </div>
-      </header>
-
-      <div className={`theme-bg-card border-b theme-border shadow-sm sticky ${mostUrgentOrder ? 'top-[104px]' : 'top-[68px]'} z-40`}>
-        <div className="w-full px-4 md:px-8 p-2 md:p-3 flex gap-3 overflow-x-auto whitespace-nowrap items-center px-4 custom-scrollbar">
-          
-          <div className="flex flex-col text-left border-r-2 theme-border pr-4 mr-1 shrink-0">
-            <span className="text-[11px] font-black text-[var(--accent)] uppercase leading-none">{supervisorProfile.name}</span>
-            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted uppercase mt-1">{supervisorProfile.area}</span>
-          </div>
-
-          <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[var(--primary)] text-[var(--card-bg)] shadow-sm' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
-               Producción ({totalOrders - despachadosCount})
-             </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
-               Atrasos ({atrasadosCount})
-             </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
-               Despachados ({despachadosCount})
-             </button>
-             <button type="button" className={`px-4 py-2 rounded-lg text-xs md:text-sm lg:text-base font-black uppercase transition-all theme-text-muted opacity-50 cursor-not-allowed`}>
-               Nuevos Ped. (0)
-             </button>
-          </div>
-          
-          <div className="w-px h-6 bg-current opacity-20 mx-1 shrink-0"></div>
-
-          <button type="button" onClick={() => setShowCoordViewModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[var(--primary)] transition-colors py-4 px-2">
-            <Bell size={"1.2em"} className={coordinationAlerts.length > 0 ? 'animate-bounce text-[var(--accent)]' : ''} /><span>Alertas ({coordinationAlerts.length})</span>
-          </button>
-
-          <button type="button" onClick={() => setShowReportConfigModal(true)} className="flex items-center gap-2 text-xs md:text-sm lg:text-base font-black uppercase theme-text-muted hover:text-[var(--primary)] transition-colors py-4 px-2">
-            <FileText size={"1.2em"} /><span>Reporte</span>
-          </button>
-
-        </div>
-
+      <Header />
         <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
@@ -583,7 +483,6 @@ const {
                 </div>
             </div>
         </div>
-      </div>
 
       <main className="w-full px-4 md:px-8 p-4 md:p-6 min-h-screen">
         <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5`}>
