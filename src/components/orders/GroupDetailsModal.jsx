@@ -3,8 +3,8 @@ import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, Chevron
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
-const GroupDetailsModal = ({ handleImageUpload, addShiftNote, toggleMic }) => {
-  const { activeGroupObj, setSelectedGroupPedido, itemSearchTerm, setItemSearchTerm, setSelectedOrder, setActiveGroupObj, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic }) => {
+  const { setSelectedGroupPedido, itemSearchTerm, setItemSearchTerm, setSelectedOrder, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
   
   if (!activeGroupObj) return null;
 

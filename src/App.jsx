@@ -456,6 +456,7 @@ const {
     <div className="min-h-screen font-sans pb-20 transition-colors duration-300 theme-bg-main" data-theme={appTheme}>
       
       <Header />
+      <Sidebar />
         <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
@@ -504,7 +505,7 @@ const {
         </div>
       </main>
 
-      <GroupDetailsModal handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
+      <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
       <RecetarioModal />
 
