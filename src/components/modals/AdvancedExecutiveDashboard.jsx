@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
-import { X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCircle, Package, BarChart2, Activity, Truck } from 'lucide-react';
+import { X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCircle, Package, BarChart2, Activity, Truck, ChevronUp, ChevronDown } from 'lucide-react';
+import { AREAS } from '../../utils/constants';
+import InformeInteligenteIA from './InformeInteligenteIA';
 
 const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => {
     const [activeTab, setActiveTab] = useState('resumen');
@@ -251,7 +253,7 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center">
-                                {['resumen', 'operaciones', 'logistica', 'calidad'].map(tab => (
+                                {['resumen', 'operaciones', 'logistica', 'calidad', 'analitica-ia'].map(tab => (
                                     <button 
                                         key={tab} 
                                         onClick={() => setActiveTab(tab)} 
@@ -561,11 +563,15 @@ const AdvancedExecutiveDashboard = ({ orders, coordinationAlerts, onClose }) => 
                         </section>
                     )}
 
+                    {/* TAB: ANALITICA IA */}
+                    {activeTab === 'analitica-ia' && (
+                        <InformeInteligenteIA orders={orders} />
+                    )}
+
                 </main>
             </div>
         </div>
     );
 };
-
 
 export default AdvancedExecutiveDashboard;
