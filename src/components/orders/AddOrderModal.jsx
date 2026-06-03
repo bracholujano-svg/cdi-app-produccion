@@ -4,9 +4,20 @@ import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const AddOrderModal = ({ createOrder, doExcelSearch }) => {
-  const { showAddModal, excelSearchPedido, setExcelSearchPedido, excelSearchArticulo, setExcelSearchArticulo, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, fillFormWithResult, supervisorProfile } = useAppContext();
+  const { showAddModal, excelSearchPedido, setExcelSearchPedido, excelSearchArticulo, setExcelSearchArticulo, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, supervisorProfile } = useAppContext();
   
   if (!showAddModal) return null;
+
+  const fillFormWithResult = (result) => {
+    const form = document.getElementById('nuevoRegistroForm');
+    if (form) {
+        form.pedidoNum.value = result.pedido || "";
+        form.codArticulo.value = result.articulo || "";
+        form.cliente.value = result.cliente || "";
+        form.nombre.value = result.nombre || "";
+        form.cantidad.value = result.cantidad || 1;
+    }
+  };
 
   return (
       
@@ -61,8 +72,8 @@ const AddOrderModal = ({ createOrder, doExcelSearch }) => {
                 {duplicateError && <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-xl text-xs md:text-sm lg:text-base font-black uppercase mb-4 flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/> {duplicateError}</div>}
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto / Proyecto</label>
-                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE AUTOMÁTICO..." /></div>
+                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto</label>
+                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE DEL PRODUCTO..." /></div>
                     
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
                     <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="EJ: 12345" /></div>
@@ -70,8 +81,8 @@ const AddOrderModal = ({ createOrder, doExcelSearch }) => {
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
                     <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="CÓDIGO..." /></div>
                     
-                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Marca / Cliente</label>
-                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="CLIENTE AUTOMÁTICO..." /></div>
+                    <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Proyecto / Cliente</label>
+                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE DEL PROYECTO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1 mt-2">
                         <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
