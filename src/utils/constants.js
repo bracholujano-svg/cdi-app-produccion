@@ -21,5 +21,5 @@ export const CONFIG_PROCESOS = {
     "Despachos": ["En Espera para Despacho", "DESPACHADO"]
 };
 
-export const AREAS_RECEPCION = Object.keys(CONFIG_PROCESOS).filter(a => a !== "Administrador / Todos" && a !== "Comercial / Ventas");
+export const AREAS_RECEPCION = Object.keys(CONFIG_PROCESOS).filter(a => a !== "Administrador / Todos");
 export const AREAS = Object.keys(CONFIG_PROCESOS);

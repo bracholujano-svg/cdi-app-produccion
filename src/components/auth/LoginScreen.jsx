@@ -54,7 +54,7 @@ const LoginScreen = () => {
     const pass = e.target.password.value.trim();
     const area = e.target.area ? e.target.area.value : 'Pendiente';
     
-    if (!/^\\d+$/.test(pass) || pass.length < 4) {
+    if (!/^\d+$/.test(pass) || pass.length < 4) {
       setAuthError("El PIN debe ser numérico y mínimo de 4 dígitos."); 
       return;
     }

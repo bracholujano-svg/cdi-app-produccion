@@ -19,7 +19,7 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
                     pedido: item['PedidoSIN'],
                     articulo: item['Código Ítem'],
                     descripcion: item['Descripción'],
-                    cliente: item['Nombre Proyecto'] || item['Cliente'],
+                    cliente: item['Cliente'] || item['Nombre Proyecto'] || 'CLIENTE NO REGISTRADO',
                     nombre: item['Descripción'],
                     proyecto: item['Nombre Proyecto'],
                     cantidad: item['Cantidad']

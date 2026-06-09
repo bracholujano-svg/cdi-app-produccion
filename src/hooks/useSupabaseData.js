@@ -1,13 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { parseNumber } from '../utils/helpers';
+import localforage from 'localforage';
 
 export const useSupabaseData = () => {
     const [supabaseData, setSupabaseData] = useState(null);
+    const workerRef = useRef(null);
 
     useEffect(() => {
-        const fetchSupabaseData = async () => {
+        // Inicializar Worker
+        workerRef.current = new Worker(new URL('../workers/mrpWorker.js', import.meta.url), { type: 'module' });
+        
+        workerRef.current.onmessage = (e) => {
+            if (e.data.status === 'success') {
+                setSupabaseData(e.data.data);
+                // Guardar el resultado final procesado en el caché para carga instantánea futura
+                localforage.setItem('cdi_mrp_processed_cache', e.data.data);
+            } else {
+                console.error("Worker error:", e.data.error);
+            }
+        };
+
+        const loadFromCacheAndFetch = async () => {
             try {
+                // 1. Mostrar caché primero para que la interfaz cargue rápido
+                const cachedData = await localforage.getItem('cdi_mrp_processed_cache');
+                if (cachedData) {
+                    setSupabaseData(cachedData);
+                }
+
+                // 2. Fetch de BD en segundo plano
                 const fetchAll = async (table) => {
                     let allData = [];
                     let from = 0;
@@ -17,6 +38,7 @@ export const useSupabaseData = () => {
                         const { data, error } = await supabase
                             .from(table)
                             .select('*')
+                            // Ordenado por ID si existe, o limitará paginación
                             .range(from, from + step - 1);
                         if (error || !data || data.length === 0) {
                             hasMore = false;
@@ -32,35 +54,12 @@ export const useSupabaseData = () => {
                 const inv = await fetchAll('inventario');
                 const req = await fetchAll('requerimientos_pedido');
 
-                const invMap = inv ? inv.map(item => ({
-                    id_referencia: item['Id Referencia'],
-                    descripcion: item['Referencia'],
-                    cantidad_disponible: parseNumber(item['Saldo'])
-                })) : [];
-
-                const reqRaw = req ? req.map(item => ({
-                    pedido_num: item['pedidosin'],
-                    id_referencia: item['Id Referencia'],
-                    cantidad_requerida: parseNumber(item['Cantidad']),
-                    cantidad_oc: parseNumber(item['Cant.OC']),
-                    descripcion: item['Descripcion']
-                })) : [];
-
-                // Agrupar requerimientos por pedido y por referencia
-                const groupedReqs = {};
-                reqRaw.forEach(item => {
-                    const key = `${item.pedido_num}_${item.id_referencia}`;
-                    if (!groupedReqs[key]) {
-                        groupedReqs[key] = { ...item };
-                    } else {
-                        groupedReqs[key].cantidad_requerida += item.cantidad_requerida;
-                        groupedReqs[key].cantidad_oc += item.cantidad_oc;
-                    }
-                });
-                const reqMap = Object.values(groupedReqs);
-
+                // Enviar data cruda al Worker para procesarla en segundo plano
                 if (inv && req) {
-                    setSupabaseData({ inventario: invMap, pedidosInsumos: reqMap });
+                    workerRef.current.postMessage({
+                        action: 'PROCESS_DATA',
+                        payload: { inv, req }
+                    });
                 }
             } catch(e) { console.error("Error fetching Supabase", e); }
         };
@@ -78,18 +77,37 @@ export const useSupabaseData = () => {
             if (error) {
                 console.warn("Info de Seguridad: Operando con llave anónima. Una vez actives RLS, los datos requerirán la cuenta maestra.");
             }
-            fetchSupabaseData();
+            loadFromCacheAndFetch();
         };
 
         initBackendSecureSession();
         
-        // Optional: Realtime subscription for Supabase
+        // Manejar Realtime de manera incremental (no refetch total)
+        const handleRealtimeInventario = async (payload) => {
+            // Un refetch total en realtime puede bloquear, idealmente sería incremental.
+            // Por ahora, para mantener la lógica exacta, programamos una recarga asincrónica (debounce-like)
+            // Esto se optimizará en la siguiente versión para inyectar directamente el payload.
+            loadFromCacheAndFetch(); 
+        };
+
+        let debounceTimeout;
+        const handleRealtimeRequerimientos = async (payload) => {
+             clearTimeout(debounceTimeout);
+             debounceTimeout = setTimeout(() => {
+                 loadFromCacheAndFetch();
+             }, 2000);
+        };
+
         try {
             const channels = supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, fetchSupabaseData)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, fetchSupabaseData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, handleRealtimeInventario)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, handleRealtimeRequerimientos)
                 .subscribe();
-            return () => { supabase.removeChannel(channels); };
+            
+            return () => { 
+                supabase.removeChannel(channels); 
+                if (workerRef.current) workerRef.current.terminate();
+            };
         } catch(e) {}
     }, []);
 

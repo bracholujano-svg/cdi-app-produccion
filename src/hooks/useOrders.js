@@ -74,11 +74,57 @@ export const useOrders = () => {
         };
         fetchProduccion();
 
+        const handleProduccionPayload = (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const newData = payload.new?.data_completa;
+                if (!newData || !newData.id) return;
+                
+                setOrders(prev => {
+                    const idx = prev.findIndex(o => o.id === newData.id);
+                    if (idx >= 0) {
+                        const newArr = [...prev];
+                        newArr[idx] = newData;
+                        return newArr;
+                    } else {
+                        return [...prev, newData];
+                    }
+                });
+            } else if (payload.eventType === 'DELETE') {
+                const oldId = payload.old?.id;
+                if (oldId) {
+                    setOrders(prev => prev.filter(o => o.id !== oldId));
+                }
+            }
+        };
+
+        const handleAlertasPayload = (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const newData = payload.new?.data_completa;
+                if (!newData || !newData.id) return;
+                
+                setCoordinationAlerts(prev => {
+                    const idx = prev.findIndex(a => a.id === newData.id);
+                    if (idx >= 0) {
+                        const newArr = [...prev];
+                        newArr[idx] = newData;
+                        return newArr;
+                    } else {
+                        return [...prev, newData];
+                    }
+                });
+            } else if (payload.eventType === 'DELETE') {
+                const oldId = payload.old?.id;
+                if (oldId) {
+                    setCoordinationAlerts(prev => prev.filter(a => a.id !== oldId));
+                }
+            }
+        };
+
         const subPedidos = supabase.channel('pedidos-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, fetchProduccion).subscribe();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, handleProduccionPayload).subscribe();
             
         const subAlertas = supabase.channel('alertas-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, fetchProduccion).subscribe();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, handleAlertasPayload).subscribe();
 
         return () => {
             supabase.removeChannel(subPedidos);

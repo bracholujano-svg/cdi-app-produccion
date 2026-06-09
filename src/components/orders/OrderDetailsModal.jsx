@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS } from '../../utils/constants';
@@ -33,7 +33,8 @@ const OrderDetailsModal = ({
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
     showHistoryEntrega, setShowHistoryEntrega,
-    supervisorProfile
+    supervisorProfile,
+    areaFilter
   } = useAppContext();
 
   if (!selectedOrder) return null;
@@ -52,6 +53,24 @@ const OrderDetailsModal = ({
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
               
+              
+              {/* BANNER DE SOLO LECTURA */}
+              {(() => {
+                const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
+                if (!canEdit) {
+                  return (
+                    <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl mb-4 flex gap-3 items-start animate-in zoom-in">
+                      <AlertCircle className="text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-black text-red-500 uppercase text-xs md:text-sm lg:text-base">Módulo de Solo Lectura</h4>
+                        <p className="text-xs md:text-sm lg:text-base font-bold text-red-400/80 mt-1">Este producto se encuentra físicamente en <span className="text-red-500 underline">{selectedOrder.areaActual}</span>. Solo puedes auditar su histórico; no puedes registrar avances ni transferencias desde tu sección.</p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
                  <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-all">
@@ -63,7 +82,12 @@ const OrderDetailsModal = ({
                  </button>
                  {openSection === 'planta' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
-                        <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE OPERARIO..." />
+                        {(() => {
+                          const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
+                          if (!canEdit) return null;
+                          return (
+                            <>
+                              <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE OPERARIO..." />
                         <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--primary)]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
                             <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
@@ -83,6 +107,9 @@ const OrderDetailsModal = ({
                         <div className="grid grid-cols-4 gap-2 mt-2">
                             <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Guardar Avance</button>
                         </div>
+                            </>
+                          );
+                        })()}
                         
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
@@ -114,7 +141,12 @@ const OrderDetailsModal = ({
                  </button>
                  {openSection === 'calidad' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
-                        <div className="flex gap-2">
+                        {(() => {
+                          const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
+                          if (!canEdit) return null;
+                          return (
+                            <>
+                              <div className="flex gap-2">
                             <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>APROBADO</button>
                             <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RETRABAJO</button>
                             <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RECHAZADO</button>
@@ -138,6 +170,9 @@ const OrderDetailsModal = ({
                         <div className="grid grid-cols-4 gap-2 mt-2">
                             <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Guardar Inspección</button>
                         </div>
+                            </>
+                          );
+                        })()}
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
@@ -169,11 +204,15 @@ const OrderDetailsModal = ({
                  </button>
                  {openSection === 'entrega' && (
                     <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
-                        <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                        {(() => {
+                          const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
+                          if (!canEdit) return null;
+                          return (
+                            <>
+                              <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2">
                             <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA ENTREGA" />
-                            <input id="recibidoPor" className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA RECIBE" />
                         </div>
                         <div className="relative">
                             <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
@@ -192,10 +231,16 @@ const OrderDetailsModal = ({
                         {transferPhoto && <img src={transferPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         
                         <button type="button" onClick={()=>{
-                            const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
-                            const re = document.getElementById('recibidoPor').value.trim().toUpperCase();
-                            if(en && re && tempTransferDate) updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, re);
-                        }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                              const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
+                              if(en && tempTransferDate) {
+                                updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en);
+                              } else {
+                                alert("Debe firmar la entrega e indicar la fecha.");
+                              }
+                          }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                            </>
+                          );
+                        })()}
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">

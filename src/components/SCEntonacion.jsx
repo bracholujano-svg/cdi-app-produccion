@@ -294,6 +294,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                     }}
                     placeholder="Escribe (ej. Amarillo 900) o busca en inventario..."
                     className="text-base font-bold shadow-sm"
+                    menuPortalTarget={document.body}
                     styles={{ 
                       control: (base) => ({ 
                         ...base, 
@@ -301,7 +302,22 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                         borderColor: '#cbd5e1', 
                         padding: '6px',
                         backgroundColor: '#ffffff'
-                      }) 
+                      }),
+                      menuPortal: base => ({ ...base, zIndex: 9999 }),
+                      option: (base, state) => ({
+                        ...base,
+                        color: '#0f172a',
+                        backgroundColor: state.isFocused ? '#e2e8f0' : '#ffffff',
+                        cursor: 'pointer',
+                        padding: '12px 16px',
+                        fontSize: '16px'
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        borderRadius: '0.75rem',
+                        overflow: 'hidden',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                      })
                     }}
                     formatCreateLabel={(inputValue) => `Crear "${inputValue}" manualmente`}
                   />
@@ -471,6 +487,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 <option value="RAL">RAL</option>
                 <option value="SHERWIN WILLIAMS">SHERWIN WILLIAMS</option>
                 <option value="PINTUCO">PINTUCO</option>
+                <option value="OTROS">OTROS</option>
               </select>
               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -488,13 +505,21 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               onKeyDown={e => e.key === 'Enter' && handleBuscar()}
             />
           </div>
-          <div className="col-span-12 md:col-span-2">
+          <div className="col-span-12 md:col-span-2 flex gap-2">
             <button 
               onClick={handleBuscar}
               disabled={isSearching || !codigoObjetivo}
-              className="w-full bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center justify-center gap-2 h-[60px]"
+              className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center justify-center gap-2 h-[60px]"
+              title="Buscar Receta"
             >
               {isSearching ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"/> : <Search size={24} strokeWidth={3} />}
+            </button>
+            <button 
+              onClick={() => { setShowFormulacion(true); setColorEncontrado(null); }}
+              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 h-[60px]"
+              title="Registrar Nuevo Color"
+            >
+              <Plus size={24} strokeWidth={3} />
             </button>
           </div>
         </div>

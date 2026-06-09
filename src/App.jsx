@@ -23,12 +23,14 @@ import Sidebar from './components/layout/Sidebar';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 function MainApp() {
+  const [currentPage, setCurrentPage] = useState(1);
 const {
     supabaseData,
     orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase,
     inventoryReservations,
     showMaterialsAlertModal, setShowMaterialsAlertModal,
     activeAlertMaterials, setActiveAlertMaterials,
+    materialsSearchTerm, setMaterialsSearchTerm,
     supervisorProfile, setSupervisorProfile,
     selectedGroupPedido, setSelectedGroupPedido,
     selectedOrder, setSelectedOrder,
@@ -264,6 +266,63 @@ const {
     setShowAddModal(false);
   };
 
+  const createBulkOrders = (productsToLoad, areaIni, entregaPersona, recibePersona) => {
+    setDuplicateError("");
+    const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+    
+    const newOrders = [];
+    let skippedCount = 0;
+
+    for (const res of productsToLoad) {
+      const pedNum = (res.pedido || "").trim().toUpperCase();
+      const codArt = (res.articulo || "").trim().toUpperCase();
+      
+      const isDuplicate = orders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt && o.estadoInterno !== 'DESPACHADO') || newOrders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt);
+      
+      if (isDuplicate) {
+        skippedCount++;
+        continue;
+      }
+
+      const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
+
+      const newOrder = {
+        id: generateUUID(),
+        pedidoNum: pedNum,
+        codArticulo: codArt,
+        nombre: (res.nombre || "").trim().toUpperCase(),
+        cantidad: Number(res.cantidad) || 1,
+        cliente: (res.cliente || "").trim().toUpperCase(),
+        areaActual: areaIni,
+        estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
+        prioridad: existingAlert ? 'ALTA' : 'NORMAL',
+        fechaIngresoArea: new Date().toISOString(), 
+        fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : null,
+        bitacoraTurnos: [],
+        bitacoraCalidad: [],
+        historial: [{
+            fecha: new Date().toISOString(),
+            accion: `Ingreso Masivo en ${areaIni}`,
+            entrega: (entregaPersona || "S/N").toUpperCase(),
+            recibe: (recibePersona || "S/N").toUpperCase()
+        }]
+      };
+      newOrders.push(newOrder);
+    }
+
+    if (newOrders.length === 0 && skippedCount > 0) {
+      setDuplicateError(`Todos los productos seleccionados ya se encontraban activos en producción.`);
+      return;
+    }
+
+    const newOrdersList = [...orders, ...newOrders];
+    setOrders(newOrdersList);
+    newOrders.forEach(o => syncOrderToSupabase(o));
+    setShowAddModal(false);
+    setExcelSearchSuccess(`✅ ${newOrders.length} productos cargados exitosamente. ${skippedCount > 0 ? `(${skippedCount} omitidos por estar duplicados)` : ''}`);
+    setTimeout(() => setExcelSearchSuccess(""), 5000);
+  };
+
   const addShiftNote = () => {
     if (!selectedOrder) return;
     const newNote = { 
@@ -435,14 +494,26 @@ const {
   const groupedOrders = filteredOrders.reduce((acc, order) => {
     if (!order) return acc;
     const pNum = order.pedidoNum || "S/N";
-    if (!acc[pNum]) acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: order.fechaEntregaPrometida, products: [] };
+    
+    // Si la alerta tiene una fecha de entrega, usarla como prioridad
+    const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pNum.toUpperCase());
+    const displayDate = alertMatch?.fechaEntrega || order.fechaEntregaPrometida;
+
+    if (!acc[pNum]) acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: displayDate, products: [] };
     acc[pNum].products.push(order);
     return acc;
   }, {});
   const groupedArray = Object.values(groupedOrders);
   const activeGroupObj = groupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
+  // Pagination logic
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, areaFilter, viewFilter]);
 
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(groupedArray.length / itemsPerPage) || 1;
+  const paginatedGroups = groupedArray.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   let gridColsClass = 'grid-cols-1 md:grid-cols-3';
   if (gridColumns === 2) gridColsClass = 'grid-cols-2 lg:grid-cols-3';
@@ -493,9 +564,9 @@ const {
             </div>
         </div>
 
-      <main className="w-full px-4 md:px-8 p-4 md:p-6 min-h-screen">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5`}>
-          {groupedArray.map(group => <OrderCard key={group.pedidoNum} group={group} />)}
+      <main className="w-full px-4 md:px-8 p-4 md:p-6 min-h-screen flex flex-col">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5 flex-1 content-start`}>
+          {paginatedGroups.map(group => <OrderCard key={group.pedidoNum} group={group} />)}
           {groupedArray.length === 0 && (
             <div className="col-span-full text-center py-20 theme-text-muted">
               <Package size={48} className="mx-auto mb-4 opacity-20" />
@@ -503,13 +574,33 @@ const {
             </div>
           )}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8 pb-10">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors"
+            >
+              Anterior
+            </button>
+            <span className="font-bold text-xs md:text-sm lg:text-base text-[var(--primary)] px-2">Página {currentPage} de {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </main>
 
       <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
       <RecetarioModal />
 
-      <AddOrderModal createOrder={createOrder} doExcelSearch={doExcelSearch} />
+      <AddOrderModal createOrder={createOrder} createBulkOrders={createBulkOrders} doExcelSearch={doExcelSearch} />
 
       <OrderDetailsModal 
         handleImageUpload={handleImageUpload}
@@ -599,30 +690,87 @@ const {
                   </h2>
                   <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--accent)]'}`}>✕</button>
                 </div>
+                
+                <div className="p-4 border-b theme-border theme-bg-main">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--primary)]/50" size={20} />
+                        <input 
+                            type="text" 
+                            placeholder="BUSCAR INSUMO O CÓDIGO..." 
+                            value={materialsSearchTerm || ''} 
+                            onChange={(e) => setMaterialsSearchTerm(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] font-bold uppercase text-xs md:text-sm lg:text-base text-[var(--primary)]"
+                        />
+                    </div>
+                </div>
+
                 <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
                     <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">
                       {isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
                     </p>
-                    <div className="space-y-3">
-                        {activeAlertMaterials.map((mat, i) => {
-                            const isDeficit = mat.faltante > 0;
-                            return (
-                            <div key={i} className={`p-4 rounded-xl border flex flex-col gap-2 ${isDeficit ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50'}`}>
-                                <div className="flex justify-between items-start">
-                                    <span className={`text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md ${isDeficit ? 'border-orange-200 text-orange-700' : 'border-green-200 text-green-700'}`}>Ref: {mat.id_referencia}</span>
-                                    {mat.sinOC && isDeficit && <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
-                                </div>
-                                <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                                <div className={`flex gap-4 mt-1 border-t pt-2 flex-wrap ${isDeficit ? 'border-orange-200' : 'border-green-200'}`}>
-                                    <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
-                                    <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
-                                    {isDeficit && <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{mat.faltante}</span></div>}
-                                    <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
-                                </div>
-                            </div>
-                            );
-                        })}
-                    </div>
+                    
+                    {(() => {
+                        const filtered = activeAlertMaterials.filter(m => 
+                            !materialsSearchTerm || 
+                            m.descripcion?.toLowerCase().includes(materialsSearchTerm.toLowerCase()) || 
+                            m.id_referencia?.toLowerCase().includes(materialsSearchTerm.toLowerCase())
+                        );
+                        
+                        const faltantes = filtered.filter(m => m.faltante > 0);
+                        const disponibles = filtered.filter(m => m.faltante <= 0);
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-3">
+                                  <h3 className="text-sm font-black text-orange-600 uppercase border-b border-orange-200 pb-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10">Materiales Faltantes (No Disponibles)</h3>
+                                  {faltantes.length > 0 ? (
+                                      faltantes.map((mat, i) => (
+                                          <div key={'f'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-orange-200 bg-orange-50">
+                                              <div className="flex justify-between items-start">
+                                                  <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
+                                                  {mat.sinOC && <span className="text-xs font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
+                                              </div>
+                                              <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                                              <div className="flex gap-4 mt-1 border-t pt-2 flex-wrap border-orange-200">
+                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '') : mat.faltante}</span></div>
+                                                  <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
+                                              </div>
+                                          </div>
+                                      ))
+                                  ) : (
+                                      <div className="p-4 rounded-xl border border-dashed border-orange-200 bg-orange-50/50 text-center">
+                                          <span className="text-xs md:text-sm font-bold text-orange-400 uppercase">Ningún material faltante.</span>
+                                      </div>
+                                  )}
+                              </div>
+
+                              <div className="space-y-3">
+                                  <h3 className="text-sm font-black text-green-600 uppercase border-b border-green-200 pb-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10">Materiales Disponibles (En Stock)</h3>
+                                  {disponibles.length > 0 ? (
+                                      disponibles.map((mat, i) => (
+                                          <div key={'d'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-green-200 bg-green-50">
+                                              <div className="flex justify-between items-start">
+                                                  <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
+                                              </div>
+                                              <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                                              <div className="flex gap-4 mt-1 border-t pt-2 flex-wrap border-green-200">
+                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.requerida}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{mat.asignada}</span></div>
+                                                  <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{mat.stockRestanteGlobal}</span></div>
+                                              </div>
+                                          </div>
+                                      ))
+                                  ) : (
+                                      <div className="p-4 rounded-xl border border-dashed border-green-200 bg-green-50/50 text-center">
+                                          <span className="text-xs md:text-sm font-bold text-green-400 uppercase">Ningún material disponible.</span>
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+                        );
+                    })()}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
                     <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
@@ -633,79 +781,6 @@ const {
         })()
       )}
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Space+Grotesk:wght@600;700;800&display=swap');
-        
-        :root, [data-theme="light"], [data-theme="dark"] {
-            /* Forced Dark Mode - Digital Banking Pro Max */
-            --bg-main: #0B0F19; 
-            --card-bg: #1E293B; 
-            --bg-header: rgba(11, 15, 25, 0.85); 
-            --bg-input: #0F172A; 
-            --text-main: #FFFFFF; 
-            --text-muted: #94A3B8; 
-            --border-color: rgba(148, 163, 184, 0.15); 
-            
-            /* Vibrant Accents */
-            --primary: #3B82F6; /* Electric Blue */
-            --accent: #10B981; /* Neon Green */
-            --danger: #EF4444; 
-        }
-
-        .theme-bg-main { background-color: var(--bg-main); color: var(--text-main); }
-        .theme-bg-card { 
-           background-color: var(--card-bg); 
-           color: var(--text-main);
-           border: 1px solid var(--border-color);
-           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-           border-radius: 16px; /* rounded-2xl */
-        }
-        .theme-bg-header { 
-           background-color: var(--bg-header); 
-           color: var(--text-main); 
-           backdrop-filter: blur(12px); 
-           -webkit-backdrop-filter: blur(12px);
-           border-bottom: 1px solid var(--border-color);
-        }
-        .theme-bg-input { 
-           background-color: var(--bg-input); 
-           color: var(--text-main); 
-           border: 1px solid var(--border-color);
-           transition: all 0.2s ease;
-        }
-        .theme-bg-input:focus-within {
-           border-color: var(--primary);
-           box-shadow: 0 0 0 1px var(--primary);
-        }
-        .theme-border { border-color: var(--border-color); }
-        .theme-text-muted { color: var(--text-muted); }
-
-        /* Typography - Strict hierarchy */
-        body, input, button, select, textarea { font-family: 'Outfit', sans-serif !important; }
-        h1, h2, h3, h4, .font-oswald { font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; letter-spacing: -0.02em; color: #FFFFFF; }
-        
-        body { background-color: var(--bg-main); color: var(--text-main); }
-        
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { display: inline-block; animation: marquee 20s linear infinite; }
-        
-        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.4); } }
-        .animate-pulse-red { animation: pulse-red 2s infinite; }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-        
-        @media print {
-            body * { visibility: hidden; }
-            .fixed.inset-0.bg-white.z-\[130\] { position: absolute; left: 0; top: 0; right: 0; visibility: visible; height: auto !important; overflow: visible !important; }
-            .fixed.inset-0.bg-white.z-\[130\] * { visibility: visible; }
-            .print\:hidden { display: none !important; }
-            .print\:border-0 { border: none !important; }
-            .print\:p-0 { padding: 0 !important; }
-            .print\:bg-slate-200 { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
-            .print\:text-black { color: #000 !important; }
-        }
-`}</style>
     </div>
   );
 }

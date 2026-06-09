@@ -28,12 +28,12 @@ export const formatLocalDate = (dateString) => {
 };
 
 export const getDaysLeft = (targetDate) => {
-    if (!targetDate) return null;
+    if (!targetDate || String(targetDate).trim() === '') return null;
     try {
         const today = new Date(); today.setHours(0,0,0,0); 
         let target = String(targetDate).includes('T') ? new Date(targetDate) : new Date(targetDate + 'T12:00:00');
         target.setHours(0,0,0,0);
-        if (isNaN(target.getTime())) return null;
+        if (isNaN(target.getTime()) || target.getFullYear() < 2000) return null;
         return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     } catch(e) { return null; }
 };

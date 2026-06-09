@@ -3,7 +3,7 @@ import { Plus, Search, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, Chevr
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
-const AddOrderModal = ({ createOrder, doExcelSearch }) => {
+const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   const { showAddModal, excelSearchPedido, setExcelSearchPedido, excelSearchArticulo, setExcelSearchArticulo, setShowAddModal, isPriority, setIsPriority, duplicateError, excelSearchLoading, excelSearchError, excelSearchSuccess, setExcelSearchSuccess, showSearchSelector, setShowSearchSelector, searchResults, setSearchResults, searchTermExcel, setSearchTermExcel, searchInExcel, supervisorProfile } = useAppContext();
   
   if (!showAddModal) return null;
@@ -45,8 +45,26 @@ const AddOrderModal = ({ createOrder, doExcelSearch }) => {
                     {excelSearchSuccess && <p className="text-green-400 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase mt-3 flex items-center gap-1"><CheckCircle size={"1.2em"}/>{excelSearchSuccess}</p>}
 
                     {showSearchSelector && searchResults.length > 0 && (
-                      <div className="mt-4 p-3 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left animate-in slide-in-from-top-2">
-                        <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase tracking-wider mb-2">Se encontraron varios pedidos. Toca el correcto:</p>
+                      <div className="mt-4 animate-in slide-in-from-top-2">
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const form = document.getElementById('nuevoRegistroForm');
+                            if (form) {
+                              const areaIni = form.areaRecibe.value;
+                              const entrega = form.entregaPersona.value;
+                              const recibe = form.recibePersona.value;
+                              createBulkOrders(searchResults, areaIni, entrega, recibe);
+                            }
+                          }}
+                          className="w-full mb-3 p-3 bg-[var(--primary)] text-[var(--card-bg)] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base hover:brightness-110 active:scale-95 transition-all flex justify-center items-center gap-2"
+                        >
+                          <Package size={18} />
+                          CARGAR EL PEDIDO COMPLETO ({searchResults.length} PRODUCTOS)
+                        </button>
+                        
+                        <div className="p-3 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left">
+                          <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase tracking-wider mb-2">O carga un solo producto de forma individual:</p>
                         {searchResults.map((res, idx) => (
                           <div 
                             key={idx} 
@@ -65,6 +83,7 @@ const AddOrderModal = ({ createOrder, doExcelSearch }) => {
                             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-slate-400 uppercase mt-0.5">CLIENTE: {res.cliente}</span>
                           </div>
                         ))}
+                        </div>
                       </div>
                     )}
                 </div>

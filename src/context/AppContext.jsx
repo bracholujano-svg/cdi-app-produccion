@@ -15,6 +15,7 @@ export const AppContextProvider = ({ children }) => {
 
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
   const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
+  const [materialsSearchTerm, setMaterialsSearchTerm] = useState('');
 
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
     const saved = safeSessionStorage.get('cdi_supervisor_session');
@@ -36,6 +37,7 @@ export const AppContextProvider = ({ children }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [areaFilter, setAreaFilter] = useState('Todas');
   const [viewFilter, setViewFilter] = useState('TODOS'); 
+  const [currentPage, setCurrentPage] = useState(1);
   const [gridColumns, setGridColumns] = useState(3);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -45,12 +47,24 @@ export const AppContextProvider = ({ children }) => {
   const [showCoordinationModal, setShowCoordinationModal] = useState(false);
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
+  const [showReceptionModal, setShowReceptionModal] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
   const [showReportPreviewModal, setShowReportPreviewModal] = useState(false);
   
   const [isRegistering, setIsRegistering] = useState(false);
   const [authError, setAuthError] = useState("");
   const [appTheme, setAppTheme] = useState('dark');
+  
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', appTheme);
+    if (appTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [appTheme]);
+
   const [savedLogins, setSavedLogins] = useState(() => {
     const saved = safeStorage.get('cdi_recent_logins');
     try { 
@@ -114,12 +128,14 @@ export const AppContextProvider = ({ children }) => {
     inventoryReservations,
     showMaterialsAlertModal, setShowMaterialsAlertModal,
     activeAlertMaterials, setActiveAlertMaterials,
+    materialsSearchTerm, setMaterialsSearchTerm,
     supervisorProfile, setSupervisorProfile,
     selectedGroupPedido, setSelectedGroupPedido,
     selectedOrder, setSelectedOrder,
     searchTerm, setSearchTerm,
     areaFilter, setAreaFilter,
     viewFilter, setViewFilter,
+    currentPage, setCurrentPage,
     gridColumns, setGridColumns,
     isSidebarOpen, setIsSidebarOpen,
     showAddModal, setShowAddModal,
@@ -128,6 +144,8 @@ export const AppContextProvider = ({ children }) => {
     showCoordinationModal, setShowCoordinationModal,
     showCoordViewModal, setShowCoordViewModal,
     showDashboardModal, setShowDashboardModal,
+    showReceptionModal, setShowReceptionModal,
+    dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
     isRegistering, setIsRegistering,
