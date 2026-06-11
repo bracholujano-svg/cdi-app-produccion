@@ -54,8 +54,8 @@ const LoginScreen = () => {
     const pass = e.target.password.value.trim();
     const area = e.target.area ? e.target.area.value : 'Pendiente';
     
-    if (!/^\d+$/.test(pass) || pass.length < 6) {
-      setAuthError("El PIN debe ser numérico y mínimo de 6 dígitos."); 
+    if (pass.length < 6) {
+      setAuthError("La clave debe tener un mínimo de 6 caracteres."); 
       return;
     }
     
@@ -116,10 +116,10 @@ const LoginScreen = () => {
 
           <div className="space-y-1">
             <div className="flex justify-between items-center px-1">
-              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave / PIN</label>
-              <span className="text-xs md:text-sm lg:text-base font-bold text-[var(--accent)] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 dígitos</span>
+              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave Segura</label>
+              <span className="text-xs md:text-sm lg:text-base font-bold text-[var(--accent)] uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 caracteres</span>
             </div>
-            <input name="password" type="password" inputMode="numeric" pattern="[0-9]{6,}" title="Debe contener al menos 6 números" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--accent)]" placeholder="••••••" />
+            <input name="password" type="password" minLength={6} title="Mínimo 6 caracteres (letras y números)" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--accent)]" placeholder="••••••" />
           </div>
 
           {isRegistering && (
