@@ -219,11 +219,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
     setIsSearching(true);
     setSearchFeedback("Validando credenciales...");
     try {
-        const { data, error } = await supabase.from('usuarios')
-            .select('id')
-            .eq('usuario', supervisorProfile.email)
-            .eq('clave', pwd)
-            .single();
+        const { data, error } = await supabase.auth.signInWithPassword({ email: supervisorProfile.email, password: pwd });
             
         if (error || !data) {
             alert("❌ Clave incorrecta. No tienes permiso para editar esta receta.");
@@ -649,3 +645,4 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
     </div>
   );
 }
+

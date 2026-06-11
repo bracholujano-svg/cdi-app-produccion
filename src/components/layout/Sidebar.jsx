@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
+import { supabase } from '../../supabaseClient';
 
 const Sidebar = () => {
   const {
@@ -18,7 +19,8 @@ const Sidebar = () => {
     setAreaFilter
   } = useAppContext();
 
-  const handleLogout = () => { 
+  const handleLogout = async () => { 
+    await supabase.auth.signOut();
     setSupervisorProfile(null); 
     safeSessionStorage.remove('cdi_supervisor_session'); 
     setAreaFilter('Todas'); 

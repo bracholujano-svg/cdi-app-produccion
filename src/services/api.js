@@ -33,12 +33,22 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
 
 export const loginEnGoogle = async (usuario, clave) => {
     try {
-        const { data, error } = await supabase.from('usuarios').select('*').eq('usuario', usuario).eq('clave', clave).single();
-        if (error || !data) return { success: false, error: "⚠️ CREDENCIALES INCORRECTAS O USUARIO NO ENCONTRADO." };
-        if (data.estado === 'Pendiente') return { success: false, error: "⚠️ TU PERFIL ESTÁ PENDIENTE DE APROBACIÓN POR EL ADMINISTRADOR." };
-        return { success: true, result: data };
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: usuario,
+            password: clave,
+        });
+        if (error || !data.user) return { success: false, error: "⚠️ CREDENCIALES INCORRECTAS O USUARIO NO ENCONTRADO." };
+        
+        // El perfil del usuario viaja en data.user.user_metadata
+        const profile = {
+            nombre: data.user.user_metadata.nombre || 'Usuario',
+            rol: data.user.user_metadata.rol || 'GENERAL',
+            estado: 'Activo' // Auth maneja la activación
+        };
+
+        return { success: true, result: profile };
     } catch (error) {
-        return { success: false, error: "❌ ERROR DE CONEXIÓN A SUPABASE." };
+        return { success: false, error: "❌ ERROR DE CONEXIÓN A SUPABASE AUTH." };
     }
 };
 
@@ -46,11 +56,23 @@ export const registrarEnGoogle = async (usuario, clave, nombre, area) => {
     if (!usuario.endsWith('@cdiexhibiciones.co')) {
         return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS (@cdiexhibiciones.co)" };
     }
+    if (clave.length < 6) {
+        return { success: false, error: "❌ EL PIN DEBE TENER AL MENOS 6 DÍGITOS." };
+    }
     try {
-        const { error } = await supabase.from('usuarios').insert([{ usuario, clave, nombre, rol: area, estado: 'Pendiente' }]);
-        if (error) return { success: false, error: "⚠️ EL USUARIO YA EXISTE O HUBO UN ERROR EN LA BASE DE DATOS." };
+        const { data, error } = await supabase.auth.signUp({
+            email: usuario,
+            password: clave,
+            options: {
+                data: {
+                    nombre: nombre,
+                    rol: area
+                }
+            }
+        });
+        if (error) return { success: false, error: "⚠️ EL USUARIO YA EXISTE O HUBO UN ERROR EN EL REGISTRO: " + error.message };
         return { success: true };
     } catch (error) {
-        return { success: false, error: "❌ ERROR DE CONEXIÓN A SUPABASE." };
+        return { success: false, error: "❌ ERROR DE CONEXIÓN A SUPABASE AUTH." };
     }
 };
