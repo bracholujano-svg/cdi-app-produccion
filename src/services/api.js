@@ -8,7 +8,7 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
         if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
 
         try {
-            let query = supabase.from('ribisoft_pedidos').select('*');
+            await supabase.auth.getSession(); let query = supabase.from('ribisoft_pedidos').select('*');
             if (pTerm) query = query.ilike('PedidoSIN', `%${pTerm}%`);
             if (aTerm) query = query.ilike('Código Ítem', `%${aTerm}%`);
             

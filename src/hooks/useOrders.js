@@ -55,7 +55,11 @@ export const useOrders = () => {
     useEffect(() => {
         const fetchProduccion = async () => {
             try {
-                const { data: pedidosData } = await supabase.from('produccion_pedidos').select('data_completa');
+                // Ensure the session is loaded from local storage before querying to prevent RLS from blocking the request
+                await supabase.auth.getSession();
+                
+                const { data: pedidosData, error: e1 } = await supabase.from('produccion_pedidos').select('data_completa');
+                if(e1) console.error('RLS Error Pedidos:', e1);
                 if (pedidosData) {
                     setOrders(pedidosData
                         .map(row => row.data_completa)
@@ -70,7 +74,7 @@ export const useOrders = () => {
                         .filter(a => a && typeof a === 'object' && a.id && a.pedidoNum)
                     );
                 }
-            } catch (err) {}
+            } catch (err) { console.error('Error fetching produccion:', err); alert('Error de permisos (RLS): ' + (err?.message || err)); }
         };
         fetchProduccion();
 
