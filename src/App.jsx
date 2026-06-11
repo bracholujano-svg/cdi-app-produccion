@@ -15,6 +15,7 @@ import { useAppStore } from './store/useAppStore';
 import GroupDetailsModal from './components/orders/GroupDetailsModal';
 import AddOrderModal from './components/orders/AddOrderModal';
 import RecetarioModal from './components/orders/RecetarioModal';
+import ReceptionModal from './components/orders/ReceptionModal';
 import CoordinationModal from './components/orders/CoordinationModal';
 import ReportPreviewModal from './components/orders/ReportPreviewModal';
 import OrderDetailsModal from './components/orders/OrderDetailsModal';
