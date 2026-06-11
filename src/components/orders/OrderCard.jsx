@@ -30,15 +30,22 @@ const OrderCard = ({ group }) => {
   const hasAlert = faltantes.length > 0 && viewFilter !== 'DESPACHADOS';
   const isRechazado = group.products && group.products.some(p => p && p.estadoInterno && p.estadoInterno.startsWith('RECHAZADO'));
   const isSufficient = todosRequerimientos.length > 0 && faltantes.length === 0 && viewFilter !== 'DESPACHADOS';
+  const isNoMaterials = todosRequerimientos.length === 0 && viewFilter !== 'DESPACHADOS';
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
           <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20'}`}>
             {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D` : (viewFilter === 'DESPACHADOS' ? '✅ DESPACHADO' : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES` : 'S/F'))}
           </div>
+          {isNoMaterials && (
+            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
+              <span className="truncate">⚠️ Sin Insumos Req.</span>
+              <FolderOpen size={"1.2em"} className="shrink-0" />
+            </button>
+          )}
           {hasAlert && (
             <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 animate-bg-pulse-orange text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between gap-1">
               <span className="truncate">⚠️ Insumos Insuficientes</span>

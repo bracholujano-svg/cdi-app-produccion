@@ -844,8 +844,7 @@ const {
                                   )}
                               </div>
                           </div>
-                        );
-                    })()}
+                    )}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
                     <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
