@@ -356,7 +356,32 @@ const {
     const order = orders.find(o => o?.id === id);
     if (!order) return;
     const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
-    const updatedOrder = { ...order, areaActual: area, estadoInterno: CONFIG_PROCESOS[area]?.[0] || "En Espera", fechaEntregaPrometida: date, historial: [...(order.historial || []), newHistoryEntry] };
+    
+    // Si el destino es Despachos, pasarlo directo (no requiere recepción)
+    const isDespacho = area === 'Despachos';
+
+    const updatedOrder = isDespacho 
+      ? { 
+          ...order, 
+          areaActual: area, 
+          estadoInterno: 'En Espera', // o despachado según config
+          fechaEntregaPrometida: date,
+          historial: [...(order.historial || []), newHistoryEntry] 
+        }
+      : { 
+          ...order, 
+          estadoInterno: `EN TRÁNSITO A ${area}`,
+          fechaEntregaPrometida: date,
+          transferenciaPendiente: {
+              haciaArea: area,
+              entregadoPor: en || supervisorProfile?.name || "S/N",
+              nota: transferNota,
+              fotoEntrega: transferPhoto,
+              fechaEnvio: new Date().toISOString()
+          },
+          historial: [...(order.historial || []), newHistoryEntry] 
+        };
+
     let newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
     
     if (updatedOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
@@ -373,6 +398,43 @@ const {
     }
 
     setOrders(newOrdersList); setSelectedOrder(null); syncOrderToSupabase(updatedOrder);
+  };
+
+  const processReception = (id, accepted, receptionName, notes, photo) => {
+      const order = orders.find(o => o?.id === id);
+      if (!order || !order.transferenciaPendiente) return;
+      
+      const isReject = !accepted;
+      const targetArea = order.transferenciaPendiente.haciaArea;
+      
+      const newHistoryEntry = {
+          fecha: new Date().toISOString(),
+          supervisor: supervisorProfile?.name || "S/N",
+          accion: isReject ? `Rechazo de ${targetArea}` : `Recepción en ${targetArea}`,
+          entrega: order.transferenciaPendiente.entregadoPor,
+          recibe: receptionName,
+          nota: notes,
+          foto: photo
+      };
+
+      const updatedOrder = isReject
+          ? {
+              ...order,
+              estadoInterno: `RECHAZADO POR ${targetArea}`,
+              transferenciaPendiente: null,
+              historial: [...(order.historial || []), newHistoryEntry]
+          }
+          : {
+              ...order,
+              areaActual: targetArea,
+              estadoInterno: CONFIG_PROCESOS[targetArea]?.[0] || "En Espera",
+              transferenciaPendiente: null,
+              historial: [...(order.historial || []), newHistoryEntry]
+          };
+
+      const newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
+      setOrders(newOrdersList);
+      syncOrderToSupabase(updatedOrder);
   };
 
   const addItemToCoordList = () => {
@@ -604,6 +666,7 @@ const {
       <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
       <RecetarioModal />
+      <ReceptionModal processReception={processReception} />
 
       <AddOrderModal createOrder={createOrder} createBulkOrders={createBulkOrders} doExcelSearch={doExcelSearch} />
 
@@ -684,16 +747,27 @@ const {
 
       {showMaterialsAlertModal && (
         (() => {
+          const isNoMaterials = activeAlertMaterials.length === 0;
           const isModalAlert = activeAlertMaterials.some(m => m.faltante > 0);
+          
+          const filtered = activeAlertMaterials.filter(m => 
+              !materialsSearchTerm || 
+              m.descripcion?.toLowerCase().includes(materialsSearchTerm.toLowerCase()) || 
+              m.id_referencia?.toLowerCase().includes(materialsSearchTerm.toLowerCase())
+          );
+          
+          const faltantes = filtered.filter(m => m.faltante > 0);
+          const disponibles = filtered.filter(m => m.faltante <= 0);
+
           return (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-              <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
-                <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
-                    {isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
-                    {isModalAlert ? 'Alerta de Insumos' : 'Inventario Suficiente'}
+              <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isNoMaterials ? 'border-yellow-500/30' : isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
+                <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 border-yellow-500/20' : isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isNoMaterials ? 'text-yellow-600' : isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
+                    {isNoMaterials ? <AlertTriangle size={20} /> : isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
+                    {isNoMaterials ? 'Pedidos Sin Insumos Requeridos' : isModalAlert ? 'Alerta de Insumos' : 'Inventario Suficiente'}
                   </h2>
-                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--accent)]'}`}>✕</button>
+                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600' : isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--accent)]'}`}>✕</button>
                 </div>
                 
                 <div className="p-4 border-b theme-border theme-bg-main">
@@ -711,21 +785,17 @@ const {
 
                 <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
                     <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">
-                      {isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
+                      {isNoMaterials ? 'No se encontraron insumos registrados en base de datos para este pedido.' : isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
                     </p>
                     
-                    {(() => {
-                        const filtered = activeAlertMaterials.filter(m => 
-                            !materialsSearchTerm || 
-                            m.descripcion?.toLowerCase().includes(materialsSearchTerm.toLowerCase()) || 
-                            m.id_referencia?.toLowerCase().includes(materialsSearchTerm.toLowerCase())
-                        );
-                        
-                        const faltantes = filtered.filter(m => m.faltante > 0);
-                        const disponibles = filtered.filter(m => m.faltante <= 0);
-
-                        return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {isNoMaterials ? (
+                        <div className="p-10 rounded-xl border border-dashed border-yellow-200 bg-yellow-50 text-center">
+                           <AlertTriangle size={48} className="mx-auto mb-4 text-yellow-400 opacity-50" />
+                           <span className="text-sm md:text-base font-black text-yellow-600 uppercase">Sin información de insumos</span>
+                           <p className="text-xs md:text-sm font-bold text-yellow-500/80 mt-2">El sistema no detectó ningún requerimiento de material en Supabase asociado a este pedido y/o artículo.</p>
+                        </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-3">
                                   <h3 className="text-sm font-black text-orange-600 uppercase border-b border-orange-200 pb-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10">Materiales Faltantes (No Disponibles)</h3>
                                   {faltantes.length > 0 ? (
@@ -778,7 +848,7 @@ const {
                     })()}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
+                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
                 </div>
               </div>
             </div>

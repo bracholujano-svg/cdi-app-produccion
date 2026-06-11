@@ -22,6 +22,9 @@ export const useSupabaseData = () => {
 
         const loadFromCacheAndFetch = async () => {
             try {
+                // Ensure the user session is loaded to pass RLS
+                await supabase.auth.getSession();
+                
                 // 1. Mostrar caché primero para que la interfaz cargue rápido
                 const cachedData = await localforage.getItem('cdi_mrp_processed_cache');
                 if (cachedData) {
@@ -64,23 +67,7 @@ export const useSupabaseData = () => {
             } catch(e) { console.error("Error fetching Supabase", e); }
         };
 
-        // Iniciar Sesión Híbrida en el Backend antes de descargar datos
-        const initBackendSecureSession = async () => {
-            const masterEmail = import.meta.env.VITE_MASTER_EMAIL || "rafael.bracho@cdiexhibiciones.co";
-            const masterPass = import.meta.env.VITE_MASTER_PASS || "Cdi_Vault_2026**";
-            
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: masterEmail,
-                password: masterPass,
-            });
-
-            if (error) {
-                console.warn("Info de Seguridad: Operando con llave anónima. Una vez actives RLS, los datos requerirán la cuenta maestra.");
-            }
-            loadFromCacheAndFetch();
-        };
-
-        initBackendSecureSession();
+        loadFromCacheAndFetch();
         
         // Manejar Realtime de manera incremental (no refetch total)
         const handleRealtimeInventario = async (payload) => {
