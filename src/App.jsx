@@ -687,7 +687,7 @@ const {
           const isModalAlert = activeAlertMaterials.some(m => m.faltante > 0);
           return (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-              <div className={`w-full max-w-lg theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
+              <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
                 <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                   <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
                     {isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
@@ -736,11 +736,11 @@ const {
                                                   {mat.sinOC && <span className="text-xs font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
                                               </div>
                                               <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                                              <div className="flex gap-4 mt-1 border-t pt-2 flex-wrap border-orange-200">
-                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-orange-600 uppercase">Faltante x Comprar</span><span className="text-xs md:text-sm lg:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
-                                                  <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-2 border-t pt-3 border-orange-200">
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase">Faltante</span><span className="text-xs md:text-sm font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-xs md:text-sm font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))
@@ -760,10 +760,10 @@ const {
                                                   <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
                                               </div>
                                               <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                                              <div className="flex gap-4 mt-1 border-t pt-2 flex-wrap border-green-200">
-                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col ml-auto"><span className="text-[10px] md:text-xs font-black text-slate-400 uppercase">Stock Remanente</span><span className="text-xs md:text-sm lg:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                              <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mt-2 border-t pt-3 border-green-200">
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-xs md:text-sm font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))
