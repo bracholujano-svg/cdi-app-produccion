@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, itemSearchTerm, setItemSearchTerm, setSelectedOrder, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+  const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
     setCurrentPage(1);

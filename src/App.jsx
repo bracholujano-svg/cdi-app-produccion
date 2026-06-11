@@ -10,6 +10,7 @@ import { searchInRibisoft, loginEnGoogle, registrarEnGoogle } from './services/a
 import { Plus, MessageSquare, Clock, ArrowRightLeft, Search, UserCheck, MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon, Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X } from 'lucide-react';
 
 import { AppContextProvider, useAppContext } from './context/AppContext';
+import { useAppStore } from './store/useAppStore';
 
 import GroupDetailsModal from './components/orders/GroupDetailsModal';
 import AddOrderModal from './components/orders/AddOrderModal';
@@ -30,11 +31,9 @@ const {
     inventoryReservations,
     showMaterialsAlertModal, setShowMaterialsAlertModal,
     activeAlertMaterials, setActiveAlertMaterials,
-    materialsSearchTerm, setMaterialsSearchTerm,
     supervisorProfile, setSupervisorProfile,
     selectedGroupPedido, setSelectedGroupPedido,
     selectedOrder, setSelectedOrder,
-    searchTerm, setSearchTerm,
     areaFilter, setAreaFilter,
     viewFilter, setViewFilter,
     gridColumns, setGridColumns,
@@ -82,12 +81,18 @@ const {
     excelSearchSuccess, setExcelSearchSuccess,
     searchResults, setSearchResults,
     showSearchSelector, setShowSearchSelector,
-    itemSearchTerm, setItemSearchTerm,
     duplicateError, setDuplicateError,
     repDate, setRepDate,
     repSupervisor, setRepSupervisor,
     generatedReportData, setGeneratedReportData
   } = useAppContext();
+
+  const searchTerm = useAppStore(state => state.searchTerm);
+  const setSearchTerm = useAppStore(state => state.setSearchTerm);
+  const materialsSearchTerm = useAppStore(state => state.materialsSearchTerm);
+  const setMaterialsSearchTerm = useAppStore(state => state.setMaterialsSearchTerm);
+  const itemSearchTerm = useAppStore(state => state.itemSearchTerm);
+  const setItemSearchTerm = useAppStore(state => state.setItemSearchTerm);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

@@ -15,7 +15,6 @@ export const AppContextProvider = ({ children }) => {
 
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
   const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
-  const [materialsSearchTerm, setMaterialsSearchTerm] = useState('');
 
   const [supervisorProfile, setSupervisorProfile] = useState(() => {
     const saved = safeSessionStorage.get('cdi_supervisor_session');
@@ -34,7 +33,6 @@ export const AppContextProvider = ({ children }) => {
 
   const [selectedGroupPedido, setSelectedGroupPedido] = useState(null); 
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [areaFilter, setAreaFilter] = useState('Todas');
   const [viewFilter, setViewFilter] = useState('TODOS'); 
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,7 +110,6 @@ export const AppContextProvider = ({ children }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchSelector, setShowSearchSelector] = useState(false);
 
-  const [itemSearchTerm, setItemSearchTerm] = useState("");
   const [duplicateError, setDuplicateError] = useState("");
 
   const [repDate, setRepDate] = useState(() => {
@@ -128,11 +125,9 @@ export const AppContextProvider = ({ children }) => {
     inventoryReservations,
     showMaterialsAlertModal, setShowMaterialsAlertModal,
     activeAlertMaterials, setActiveAlertMaterials,
-    materialsSearchTerm, setMaterialsSearchTerm,
     supervisorProfile, setSupervisorProfile,
     selectedGroupPedido, setSelectedGroupPedido,
     selectedOrder, setSelectedOrder,
-    searchTerm, setSearchTerm,
     areaFilter, setAreaFilter,
     viewFilter, setViewFilter,
     currentPage, setCurrentPage,
@@ -183,7 +178,6 @@ export const AppContextProvider = ({ children }) => {
     excelSearchSuccess, setExcelSearchSuccess,
     searchResults, setSearchResults,
     showSearchSelector, setShowSearchSelector,
-    itemSearchTerm, setItemSearchTerm,
     duplicateError, setDuplicateError,
     repDate, setRepDate,
     repSupervisor, setRepSupervisor,

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ChevronDown, FolderOpen, Activity } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAppStore } from '../../store/useAppStore';
 import { getDaysLeft } from '../../utils/helpers';
 import { AREAS } from '../../utils/constants';
 
@@ -9,12 +10,13 @@ const OrderCard = ({ group }) => {
     viewFilter,
     inventoryReservations,
     setSelectedGroupPedido,
-    setItemSearchTerm,
     setActiveAlertMaterials,
     setShowMaterialsAlertModal,
     orders,
     areaFilter
   } = useAppContext();
+  
+  const setItemSearchTerm = useAppStore(state => state.setItemSearchTerm);
 
   const daysLeft = getDaysLeft(group?.fechaEntregaPrometida);
   const isAtrasado = daysLeft !== null && daysLeft < 0 && viewFilter !== 'DESPACHADOS';

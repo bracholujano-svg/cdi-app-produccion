@@ -4,9 +4,11 @@ import { Sun, Moon, X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCirc
 import { AREAS, AREAS_RECEPCION } from '../../utils/constants';
 import InformeInteligenteIA from './InformeInteligenteIA';
 import { useAppContext } from '../../context/AppContext';
+import { useAppStore } from '../../store/useAppStore';
 
 const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onClose }) => {
-    const { setSearchTerm, setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal, dashboardTab, setDashboardTab, appTheme, setAppTheme } = useAppContext();
+    const { setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal, dashboardTab, setDashboardTab, appTheme, setAppTheme } = useAppContext();
+    const setSearchTerm = useAppStore(state => state.setSearchTerm);
     // const [dashboardTab, setDashboardTab] = useState('resumen'); // Now using dashboardTab from context
     const [dashSearch, setDashSearch] = useState('');
     const [dashArea, setDashArea] = useState('TODAS');
