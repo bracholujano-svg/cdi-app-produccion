@@ -78,6 +78,9 @@ export const AppContextProvider = ({ children }) => {
   
   const [tempTransferArea, setTempTransferArea] = useState("");
   const [tempTransferDate, setTempTransferDate] = useState("");
+  const [transferNota, setTransferNota] = useState("");
+  const [transferPhoto, setTransferPhoto] = useState(null);
+  const [tempIsPartial, setTempIsPartial] = useState(false);
   const [tempShiftActivity, setTempShiftActivity] = useState("");
   const [tempOperario, setTempOperario] = useState("");
   const [shiftNoteText, setShiftNoteText] = useState("");
@@ -88,9 +91,6 @@ export const AppContextProvider = ({ children }) => {
   const [calidadNota, setCalidadNota] = useState("");
   const [calidadPhoto, setCalidadPhoto] = useState(null);
   
-  const [transferNota, setTransferNota] = useState("");
-  const [transferPhoto, setTransferPhoto] = useState(null);
-
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const activeDictationTarget = useRef(null);
@@ -153,6 +153,9 @@ export const AppContextProvider = ({ children }) => {
     showHistoryEntrega, setShowHistoryEntrega,
     tempTransferArea, setTempTransferArea,
     tempTransferDate, setTempTransferDate,
+    transferNota, setTransferNota,
+    transferPhoto, setTransferPhoto,
+    tempIsPartial, setTempIsPartial,
     tempShiftActivity, setTempShiftActivity,
     tempOperario, setTempOperario,
     shiftNoteText, setShiftNoteText,

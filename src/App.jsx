@@ -353,10 +353,10 @@ const {
     setCalidadNota(""); setCalidadPhoto(null);
   };
 
-  const updateTransfer = (id, area, date, en, re) => {
+  const updateTransfer = (id, area, date, en, re, isPartial = false) => {
     const order = orders.find(o => o?.id === id);
     if (!order) return;
-    const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
+    const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: isPartial ? `Entrega Parcial a ${area}` : `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
     
     // Si el destino es Despachos, pasarlo directo (no requiere recepción)
     const isDespacho = area === 'Despachos';
@@ -371,14 +371,15 @@ const {
         }
       : { 
           ...order, 
-          estadoInterno: `EN TRÁNSITO A ${area}`,
+          estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
           fechaEntregaPrometida: date,
           transferenciaPendiente: {
               haciaArea: area,
               entregadoPor: en || supervisorProfile?.name || "S/N",
               nota: transferNota,
               fotoEntrega: transferPhoto,
-              fechaEnvio: new Date().toISOString()
+              fechaEnvio: new Date().toISOString(),
+              isPartial: isPartial
           },
           historial: [...(order.historial || []), newHistoryEntry] 
         };
@@ -407,11 +408,12 @@ const {
       
       const isReject = !accepted;
       const targetArea = order.transferenciaPendiente.haciaArea;
+      const isPartial = order.transferenciaPendiente.isPartial;
       
       const newHistoryEntry = {
           fecha: new Date().toISOString(),
           supervisor: supervisorProfile?.name || "S/N",
-          accion: isReject ? `Rechazo de ${targetArea}` : `Recepción en ${targetArea}`,
+          accion: isReject ? `Rechazo de ${targetArea}` : (isPartial ? `Recepción Parcial en ${targetArea}` : `Recepción en ${targetArea}`),
           entrega: order.transferenciaPendiente.entregadoPor,
           recibe: receptionName,
           nota: notes,
@@ -421,14 +423,17 @@ const {
       const updatedOrder = isReject
           ? {
               ...order,
-              estadoInterno: `RECHAZADO POR ${targetArea}`,
+              estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
               transferenciaPendiente: null,
               historial: [...(order.historial || []), newHistoryEntry]
           }
           : {
               ...order,
-              areaActual: targetArea,
-              estadoInterno: CONFIG_PROCESOS[targetArea]?.[0] || "En Espera",
+              areaActual: isPartial ? order.areaActual : targetArea,
+              areas_compartidas: isPartial 
+                 ? [...new Set([...(order.areas_compartidas || []), targetArea])] 
+                 : [],
+              estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
               transferenciaPendiente: null,
               historial: [...(order.historial || []), newHistoryEntry]
           };
@@ -552,7 +557,7 @@ const {
         (String(o.cliente || "")).toLowerCase().includes(term)
     );
 
-    const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter;
+    const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
     if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
     if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
     if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && o.estadoInterno === 'DESPACHADO';

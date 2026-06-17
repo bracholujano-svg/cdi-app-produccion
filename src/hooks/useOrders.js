@@ -19,6 +19,7 @@ export const useOrders = () => {
                     id: sanitizedOrder.id,
                     pedido_num: sanitizedOrder.pedidoNum || '',
                     cliente: sanitizedOrder.cliente || '',
+                    areas_compartidas: sanitizedOrder.areas_compartidas || [],
                     data_completa: sanitizedOrder
                 });
                 dbError = error;

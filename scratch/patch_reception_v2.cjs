@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState } from 'react';
 import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS } from '../../utils/constants';
@@ -119,10 +121,10 @@ const ReceptionModal = ({ processReception }) => {
                         <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 text-[var(--primary)] shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--border-color)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--bg-main)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={\`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 \${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--bg-main)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}\`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
-                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
+                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={\`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 \${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}\`}>
                             <AlertTriangle size={16} /> Mis Devoluciones ({rejectedItems.length})
                         </button>
                     </div>
@@ -145,16 +147,11 @@ const ReceptionModal = ({ processReception }) => {
                                             <div 
                                                 key={idx} 
                                                 onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all ${selectedItem?.id === item.id ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
+                                                className={\`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all \${selectedItem?.id === item.id ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}\`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-[var(--primary)]">{item.codArticulo} - {item.nombre}</p>
-                                                    <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
-                                                        <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
-                                                        {item.transferenciaPendiente?.isPartial && (
-                                                            <span className="text-[9px] bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded font-black uppercase border border-blue-500/30">Parcial</span>
-                                                        )}
-                                                    </div>
+                                                    <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase ml-2 shrink-0">De: {item.areaActual}</span>
                                                 </div>
                                                 <p className="text-[10px] text-gray-500 mt-1 uppercase font-black">Hacia: {item.transferenciaPendiente?.haciaArea}</p>
                                             </div>
@@ -177,7 +174,7 @@ const ReceptionModal = ({ processReception }) => {
                                             <div 
                                                 key={idx} 
                                                 onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all ${selectedItem?.id === item.id ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
+                                                className={\`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all \${selectedItem?.id === item.id ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}\`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
@@ -290,4 +287,6 @@ const ReceptionModal = ({ processReception }) => {
     );
 };
 
-export default ReceptionModal;
+export default ReceptionModal;`;
+
+fs.writeFileSync('src/components/orders/ReceptionModal.jsx', code, 'utf8');

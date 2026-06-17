@@ -67,8 +67,11 @@ const OrderCard = ({ group }) => {
       </h3>
       <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'opacity-50 text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
       
-      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2">
+      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
         <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--primary)] text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
+        {group.products?.some(p => Array.isArray(p.areas_compartidas) && p.areas_compartidas.length > 0) && (
+            <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
+        )}
       </div>
 
       {/* PROGRESS INDICATOR */}

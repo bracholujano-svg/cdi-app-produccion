@@ -32,6 +32,7 @@ const OrderDetailsModal = ({
     tempTransferDate, setTempTransferDate,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
+    tempIsPartial, setTempIsPartial,
     showHistoryEntrega, setShowHistoryEntrega,
     supervisorProfile,
     areaFilter
@@ -230,10 +231,16 @@ const OrderDetailsModal = ({
                         </div>
                         {transferPhoto && <img src={transferPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         
+                        <label className="flex items-center gap-2 mb-2 p-3 bg-black/5 rounded-xl border border-black/10 cursor-pointer hover:bg-black/10 transition-colors">
+                              <input type="checkbox" checked={tempIsPartial} onChange={(e) => setTempIsPartial(e.target.checked)} className="w-5 h-5 accent-[var(--primary)] rounded cursor-pointer" />
+                              <span className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)]">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
+                        </label>
+
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
                               if(en && tempTransferDate) {
-                                updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en);
+                                updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, null, tempIsPartial);
+                                setTempIsPartial(false);
                               } else {
                                 alert("Debe firmar la entrega e indicar la fecha.");
                               }
