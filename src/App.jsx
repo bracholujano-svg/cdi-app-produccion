@@ -567,7 +567,8 @@ const {
     );
 
     const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
-    const matchClient = clientFilter === 'Todos' || String(o.cliente || "").trim().toUpperCase() === clientFilter;
+    const filterUpper = clientFilter.toUpperCase();
+    const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
 
     if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
     if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
@@ -639,10 +640,20 @@ const {
             </div>
             
             <div className="flex gap-2 flex-1 md:flex-none">
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden" value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
-                    <option value="Todos">Todos los Clientes</option>
-                    {uniqueClients.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="flex-1 lg:w-48">
+                    <input 
+                        list="client-options" 
+                        type="text"
+                        placeholder="BUSCAR CLIENTE..."
+                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs" 
+                        value={clientFilter === 'Todos' ? '' : clientFilter} 
+                        onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
+                        onFocus={(e) => e.target.select()}
+                    />
+                    <datalist id="client-options">
+                        {uniqueClients.map(c => <option key={c} value={c} />)}
+                    </datalist>
+                </div>
                 <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
