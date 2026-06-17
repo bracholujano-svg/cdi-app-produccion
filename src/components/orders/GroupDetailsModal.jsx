@@ -56,6 +56,11 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-all active:scale-95 bg-[var(--card-bg)]">
                     <div className="flex justify-between items-center mb-2">
                        <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[var(--primary)]/20 text-[var(--primary)] px-2 py-1 rounded border border-[var(--primary)]/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                       {p.cantidad && (
+                         <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                           <Package size={"1.1em"} /> CANT: {p.cantidad}
+                         </span>
+                       )}
                     </div>
                     <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
                     <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)]">

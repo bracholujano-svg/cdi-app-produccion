@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS } from '../../utils/constants';
@@ -46,7 +46,14 @@ const OrderDetailsModal = ({
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
-                <h2 className="text-base font-black uppercase truncate text-[var(--primary)]">PED: {selectedOrder.pedidoNum}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-black uppercase truncate text-[var(--primary)]">PED: {selectedOrder.pedidoNum}</h2>
+                  {selectedOrder.cantidad && (
+                    <span className="text-[10px] bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                      <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
               </div>
               <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-all text-[var(--primary)] shrink-0">✕</button>
