@@ -37,6 +37,12 @@ export const useAppStore = create((set) => ({
   areaFilter: 'Todas',
   setAreaFilter: (filter) => set({ areaFilter: filter }),
 
+  clientFilter: 'Todos',
+  setClientFilter: (filter) => set({ clientFilter: filter }),
+
+  sortBy: 'ninguno',
+  setSortBy: (sort) => set({ sortBy: sort }),
+
   viewFilter: 'TODOS',
   setViewFilter: (filter) => set({ viewFilter: filter }),
 

@@ -94,6 +94,10 @@ const {
   const setMaterialsSearchTerm = useAppStore(state => state.setMaterialsSearchTerm);
   const itemSearchTerm = useAppStore(state => state.itemSearchTerm);
   const setItemSearchTerm = useAppStore(state => state.setItemSearchTerm);
+  const clientFilter = useAppStore(state => state.clientFilter);
+  const setClientFilter = useAppStore(state => state.setClientFilter);
+  const sortBy = useAppStore(state => state.sortBy);
+  const setSortBy = useAppStore(state => state.setSortBy);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -544,6 +548,11 @@ const {
     setShowReportConfigModal(false); setShowReportPreviewModal(true);
   };
 
+  const uniqueClients = React.useMemo(() => {
+    const clients = orders.map(o => o?.cliente).filter(c => c && c.trim() !== "");
+    return [...new Set(clients)].sort();
+  }, [orders]);
+
   const filteredOrders = orders.filter(o => {
     if (!o) return false;
     
@@ -558,10 +567,12 @@ const {
     );
 
     const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
-    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
-    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
-    if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && o.estadoInterno === 'DESPACHADO';
-    return matchSearch && matchArea && o.estadoInterno !== 'DESPACHADO';
+    const matchClient = clientFilter === 'Todos' || String(o.cliente || "").trim().toUpperCase() === clientFilter;
+
+    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
+    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
+    if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && matchClient && o.estadoInterno === 'DESPACHADO';
+    return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO';
   });
 
   const groupedOrders = filteredOrders.reduce((acc, order) => {
@@ -577,16 +588,36 @@ const {
     return acc;
   }, {});
   const groupedArray = Object.values(groupedOrders);
-  const activeGroupObj = groupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
+  let finalGroupedArray = [...groupedArray];
+
+  if (sortBy === 'pedido_asc') {
+    finalGroupedArray.sort((a, b) => String(a.pedidoNum).localeCompare(String(b.pedidoNum), undefined, {numeric: true}));
+  } else if (sortBy === 'pedido_desc') {
+    finalGroupedArray.sort((a, b) => String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, {numeric: true}));
+  } else if (sortBy === 'fecha_asc') {
+    finalGroupedArray.sort((a, b) => {
+      if (!a.fechaEntregaPrometida) return 1;
+      if (!b.fechaEntregaPrometida) return -1;
+      return new Date(a.fechaEntregaPrometida) - new Date(b.fechaEntregaPrometida);
+    });
+  } else if (sortBy === 'fecha_desc') {
+    finalGroupedArray.sort((a, b) => {
+      if (!a.fechaEntregaPrometida) return 1;
+      if (!b.fechaEntregaPrometida) return -1;
+      return new Date(b.fechaEntregaPrometida) - new Date(a.fechaEntregaPrometida);
+    });
+  }
+
+  const activeGroupObj = finalGroupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
   // Pagination logic
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, areaFilter, viewFilter]);
+  }, [searchTerm, areaFilter, viewFilter, clientFilter, sortBy]);
 
   const itemsPerPage = 15;
-  const totalPages = Math.ceil(groupedArray.length / itemsPerPage) || 1;
-  const paginatedGroups = groupedArray.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(finalGroupedArray.length / itemsPerPage) || 1;
+  const paginatedGroups = finalGroupedArray.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   let gridColsClass = 'grid-cols-1 md:grid-cols-3';
   if (gridColumns === 2) gridColsClass = 'grid-cols-2 lg:grid-cols-3';
@@ -601,10 +632,24 @@ const {
       
       <Header />
       <Sidebar />
-        <div className="theme-bg-input border-t theme-border p-2 flex flex-col md:flex-row gap-2">
+        <div className="theme-bg-input border-t theme-border p-2 flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
                 <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            
+            <div className="flex gap-2 flex-1 md:flex-none">
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden" value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}>
+                    <option value="Todos">Todos los Clientes</option>
+                    {uniqueClients.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="ninguno">Orden Original</option>
+                    <option value="pedido_asc">Pedido (Asc)</option>
+                    <option value="pedido_desc">Pedido (Desc)</option>
+                    <option value="fecha_asc">F. Entrega (Asc)</option>
+                    <option value="fecha_desc">F. Entrega (Desc)</option>
+                </select>
             </div>
             
             <div className="flex gap-2 justify-between">
