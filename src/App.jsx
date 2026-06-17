@@ -845,10 +845,13 @@ const {
                     </div>
                 </div>
 
-                <div className="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                    <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">
+                <div className="px-5 pt-2 pb-3 theme-bg-card z-20 border-b theme-border shadow-sm">
+                    <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase">
                       {isNoMaterials ? 'No se encontraron insumos registrados en base de datos para este pedido.' : isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
                     </p>
+                </div>
+
+                <div className="p-2 md:p-5 max-h-[55vh] overflow-y-auto custom-scrollbar">
                     
                     {isNoMaterials ? (
                         <div className="p-10 rounded-xl border border-dashed border-yellow-200 bg-yellow-50 text-center">
@@ -857,9 +860,9 @@ const {
                            <p className="text-xs md:text-sm font-bold text-yellow-500/80 mt-2">El sistema no detectó ningún requerimiento de material en Supabase asociado a este pedido y/o artículo.</p>
                         </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-3">
-                                  <h3 className="text-sm font-black text-orange-600 uppercase border-b border-orange-200 pb-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10">Materiales Faltantes (No Disponibles)</h3>
+                      <div className="grid grid-cols-2 gap-2 md:gap-6">
+                              <div className="space-y-3 relative">
+                                  <h3 className="text-[10px] md:text-sm font-black text-orange-600 uppercase border-b border-orange-200 pb-2 pt-2 -mt-2 sticky top-0 theme-bg-card z-10 shadow-sm">Materiales Faltantes</h3>
                                   {faltantes.length > 0 ? (
                                       faltantes.map((mat, i) => (
                                           <div key={'f'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-orange-200 bg-orange-50">
@@ -883,8 +886,8 @@ const {
                                   )}
                               </div>
 
-                              <div className="space-y-3">
-                                  <h3 className="text-sm font-black text-green-600 uppercase border-b border-green-200 pb-2 sticky top-0 bg-white/90 backdrop-blur-sm z-10">Materiales Disponibles (En Stock)</h3>
+                              <div className="space-y-3 relative">
+                                  <h3 className="text-[10px] md:text-sm font-black text-green-600 uppercase border-b border-green-200 pb-2 pt-2 -mt-2 sticky top-0 theme-bg-card z-10 shadow-sm">Materiales Disponibles</h3>
                                   {disponibles.length > 0 ? (
                                       disponibles.map((mat, i) => (
                                           <div key={'d'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-green-200 bg-green-50">
