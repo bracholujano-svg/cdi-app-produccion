@@ -32,10 +32,24 @@ export default defineConfig({
         name: 'CDI - Sistema de Gestión',
         short_name: 'CDI App',
         description: 'Aplicación de Control de Inventario y MRP',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
         display: 'standalone',
-        icons: [] // Configurable later
+        start_url: '/',
+        icons: [
+          {
+            src: '/favicon.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: '/favicon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
       }
     })
   ],
