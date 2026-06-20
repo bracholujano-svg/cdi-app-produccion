@@ -44,11 +44,11 @@ const OrderCard = ({ group }) => {
   }, [group?.fechaEntregaPrometida]);
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md bg-[#ABAA88] relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
-          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-slate-900/10 text-slate-900 border border-slate-900/20'}`}>
+          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20'}`}>
             {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (viewFilter === 'DESPACHADOS' ? `✅ DESPACHADO${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
           </div>
           {isNoMaterials && (
@@ -70,16 +70,16 @@ const OrderCard = ({ group }) => {
             </button>
           )}
         </div>
-        <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'text-slate-800'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
+        <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
       </div>
       
-      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-slate-900'}`}>
+      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[var(--primary)]'}`}>
         PED: {group.pedidoNum}
       </h3>
-      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'opacity-50 text-orange-800' : 'text-slate-800'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'opacity-50 text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
       
-      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 flex gap-2 flex-wrap">
-        <span className={`px-2 py-1 bg-slate-900/10 rounded-md font-black text-slate-900 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
+      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
+        <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--primary)] text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
         {group.products?.some(p => Array.isArray(p.areas_compartidas) && p.areas_compartidas.length > 0) && (
             <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
         )}
@@ -112,7 +112,7 @@ const OrderCard = ({ group }) => {
 
           return (
             <div className="mt-2 flex flex-col gap-1 w-full overflow-hidden">
-              <div className="flex justify-between items-center text-[9px] md:text-[10px] font-black uppercase text-slate-900 opacity-70 gap-1 w-full">
+              <div className="flex justify-between items-center text-[9px] md:text-[10px] font-black uppercase text-[var(--primary)] opacity-70 gap-1 w-full">
                 <span className="flex items-center gap-1 truncate"><Activity size={10} className="shrink-0" /> Avance</span>
                 <span className="shrink-0 whitespace-nowrap">{processedUnits} / {totalUnits} ({progressPercent}%)</span>
               </div>
