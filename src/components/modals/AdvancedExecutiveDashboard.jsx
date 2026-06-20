@@ -364,29 +364,29 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                         Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
                                     </p>
                                 </div>
-                                <div className="bg-green-50 px-6 py-4 rounded-2xl border border-green-100 text-center shrink-0">
-                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-green-600" title="Índice de Salud de Planta (Evalúa tiempo restante vs. avance físico)">Índice de Salud (PHI)</p>
-                                    <p className="text-4xl font-black text-green-700">{eficiencia}%</p>
-                                </div>
+                                <div className="bg-green-50 dark:bg-green-900/20 px-6 py-4 rounded-2xl border border-green-100 dark:border-green-800/50 text-center shrink-0">
+                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-green-800 dark:text-green-500" title="Índice de Salud de Planta (Evalúa tiempo restante vs. avance físico)">Índice de Salud (PHI)</p>
+                                      <p className="text-4xl font-black text-green-800 dark:text-green-500">{eficiencia}%</p>
+                                  </div>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-[var(--primary)] p-6 rounded-3xl text-[var(--text-main)] shadow-sm border-b-4 ">
-                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Pedidos Activos</p>
-                                    <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
-                                </div>
-                                <div className="bg-[var(--accent)] p-6 rounded-3xl text-[var(--text-main)] shadow-sm border-b-4 ">
-                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-70">Próximos a Entrega</p>
-                                    <h3 className="text-4xl font-black mt-1">{urgentesCount}</h3>
-                                </div>
+                                <div className="bg-[var(--primary)] p-6 rounded-3xl text-white dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
+                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Pedidos Activos</p>
+                                      <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
+                                  </div>
+                                  <div className="bg-[var(--accent)] p-6 rounded-3xl text-[#cdcbc8] dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
+                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Próximos a Entrega</p>
+                                      <h3 className="text-4xl font-black mt-1">{urgentesCount}</h3>
+                                  </div>
                                 <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted">Despachados</p>
                                     <h3 className="text-4xl font-black mt-1 text-[var(--primary)]">{despachadosCount}</h3>
                                 </div>
-                                <div className="theme-bg-card p-6 rounded-3xl border border-red-200 shadow-sm">
-                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-400">Atrasos Críticos</p>
-                                    <h3 className="text-4xl font-black mt-1 text-red-500">{atrasadosCount}</h3>
-                                </div>
+                                <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm">
+                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-800 dark:text-red-500">Atrasos Críticos</p>
+                                      <h3 className="text-4xl font-black mt-1 text-red-800 dark:text-red-500">{atrasadosCount}</h3>
+                                  </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
