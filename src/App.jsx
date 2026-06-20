@@ -446,6 +446,20 @@ const {
           };
 
       const newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
+
+      if (!isReject && targetArea === 'Despachos') {
+          const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
+          const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+          if (allDispatched) {
+              const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
+              if (alertObj) {
+                  const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                  setCoordinationAlerts(newAlerts);
+                  syncAlertToSupabase(alertObj, true);
+              }
+          }
+      }
+
       setOrders(newOrdersList);
       syncOrderToSupabase(updatedOrder);
   };
