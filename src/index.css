@@ -4,9 +4,9 @@
 @tailwind utilities;
 
 :root, [data-theme="light"] {
-    --bg-main: #F4F7FB; 
-    --card-bg: #FFFFFF; 
-    --bg-header: rgba(255, 255, 255, 0.95); 
+    --bg-main: #D9D9D6; 
+    --card-bg: #EAEAE8; 
+    --bg-header: rgba(217, 217, 214, 0.95); 
     --bg-input: #FFFFFF; 
     --text-main: #0F172A; 
     --text-muted: #475569; 
