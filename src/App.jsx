@@ -26,6 +26,9 @@ import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 function MainApp() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [coordSearchPedido, setCoordSearchPedido] = useState('');
+  const [coordSearchFecha, setCoordSearchFecha] = useState('');
+  const [coordSortOrder, setCoordSortOrder] = useState('asc');
 const {
     supabaseData,
     orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase,
@@ -753,44 +756,93 @@ const {
 
       <ReportPreviewModal />
 
-      {showCoordViewModal && (
-        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
-          <div className="theme-bg-card w-full h-full md:max-w-4xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-            <div className="p-5 bg-[var(--accent)] text-[var(--card-bg)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {coordinationAlerts.map(alertItem => (
-                  <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative flex flex-col">
-                     {supervisorProfile?.area === "Administrador / Todos" && (
-                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
-                     )}
-                     <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
-                     <h4 className="text-sm font-black text-[var(--primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
-                     
-                     {supervisorProfile?.area === "Administrador / Todos" ? (
-                         <div className="mt-4 p-3 bg-[var(--card-bg)] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
-                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
-                            <input 
-                                type="date" 
-                                value={alertItem.fechaEntrega} 
-                                onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs md:text-sm lg:text-base border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)]" 
-                            />
-                         </div>
-                     ) : (
-                         <div className="mt-4 p-3 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] flex-1 flex flex-col justify-end">
-                            <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
-                            <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--accent)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
-                         </div>
-                     )}
-                  </div>
-                ))}
-                {coordinationAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--primary)]/50">No hay alertas logísticas activas</p>}
+      {showCoordViewModal && (() => {
+        let filteredSortedAlerts = [...coordinationAlerts];
+        if (coordSearchPedido) {
+          filteredSortedAlerts = filteredSortedAlerts.filter(a => a.pedidoNum.toLowerCase().includes(coordSearchPedido.toLowerCase()));
+        }
+        if (coordSearchFecha) {
+          filteredSortedAlerts = filteredSortedAlerts.filter(a => a.fechaEntrega === coordSearchFecha);
+        }
+        filteredSortedAlerts.sort((a, b) => {
+          const dateA = new Date(a.fechaEntrega).getTime();
+          const dateB = new Date(b.fechaEntrega).getTime();
+          return coordSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+
+        return (
+          <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
+            <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
+              <div className="p-5 bg-[var(--accent)] text-[var(--card-bg)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
+              
+              <div className="p-4 bg-[var(--card-bg)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">
+                <input 
+                  type="text" 
+                  placeholder="🔎 Buscar Nº Pedido..." 
+                  value={coordSearchPedido} 
+                  onChange={(e) => setCoordSearchPedido(e.target.value)} 
+                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] uppercase"
+                />
+                <div className="flex gap-4 flex-1">
+                  <input 
+                    type="date" 
+                    value={coordSearchFecha} 
+                    onChange={(e) => setCoordSearchFecha(e.target.value)} 
+                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setCoordSearchFecha('')} 
+                    className="px-4 rounded-xl border border-[var(--border-color)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                    title="Limpiar Fecha"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setCoordSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} 
+                  className="px-5 py-3 rounded-xl border border-[var(--border-color)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                >
+                  {coordSortOrder === 'asc' ? '⬇️ ASCENDENTE' : '⬆️ DESCENDENTE'}
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredSortedAlerts.map(alertItem => (
+                    <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative flex flex-col">
+                      {supervisorProfile?.area === "Administrador / Todos" && (
+                          <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
+                      )}
+                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
+                      <h4 className="text-sm font-black text-[var(--primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
+                      
+                      {supervisorProfile?.area === "Administrador / Todos" ? (
+                          <div className="mt-4 p-3 bg-[var(--card-bg)] rounded-xl border border-yellow-500/30 flex-1 flex flex-col justify-end">
+                              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black text-yellow-500 uppercase block tracking-widest mb-1">Modificar Compromiso</span>
+                              <input 
+                                  type="date" 
+                                  value={alertItem.fechaEntrega} 
+                                  onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
+                                  className="w-full p-2 bg-black/20 rounded-lg font-bold text-xs md:text-sm lg:text-base border border-yellow-500/50 outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--accent)]" 
+                              />
+                          </div>
+                      ) : (
+                          <div className="mt-4 p-3 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] flex-1 flex flex-col justify-end">
+                              <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase block tracking-widest">Compromiso</span>
+                              <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--accent)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
+                          </div>
+                      )}
+                    </div>
+                  ))}
+                  {filteredSortedAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--primary)]/50">No hay resultados</p>}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {showReportConfigModal && (
         <div className="fixed inset-0 bg-black/80  z-[120] flex items-center justify-center p-4">
