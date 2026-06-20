@@ -51,14 +51,9 @@ const Header = () => {
           {/* LADO IZQUIERDO: LOGO Y PERFIL */}
           <div className="flex items-center gap-4">
              {/* LOGO */}
-             <div className="flex items-center gap-2 select-none cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-              <span className="text-[28px] md:text-[34px] font-normal tracking-[-0.04em] leading-none text-[var(--primary)] transform scale-y-[1.1] scale-x-[0.95]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>CDI</span>
-              <div className="w-[2px] h-[24px] md:h-[28px] bg-current opacity-30 rounded-full mx-1"></div>
-              <div className="flex flex-col justify-center">
-                <span className="text-[9px] md:text-[10px] font-bold leading-none tracking-[0.2em] theme-text-muted mb-[1px]">DISEÑO EN</span>
-                <span className="text-[9px] md:text-[10px] font-black leading-none tracking-[0.05em] text-[var(--primary)]">EXHIBICIÓN</span>
-              </div>
-            </div>
+             <div className="flex items-center select-none cursor-pointer py-1" onClick={() => window.scrollTo(0,0)}>
+                 <img src="/logo.png" alt="CDI Diseño en Exhibición" className="h-10 md:h-12 w-auto object-contain dark:invert dark:hue-rotate-180 dark:brightness-150 transition-all duration-300" />
+             </div>
 
             {/* PERFIL */}
             <div className="hidden md:flex flex-col text-left pl-4 ml-2 border-l-2 theme-border shrink-0">

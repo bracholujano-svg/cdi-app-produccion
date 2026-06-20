@@ -75,14 +75,9 @@ const LoginScreen = () => {
       <div className="w-full max-w-md theme-bg-card rounded-[3rem] border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-500">
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
-          <div className="flex items-center justify-center gap-2 mb-4 select-none">
-             <span className="text-5xl font-normal tracking-[-0.04em] leading-none text-[var(--primary)] transform scale-y-[1.1]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>CDI</span>
-             <div className="w-[3px] h-[40px] bg-current opacity-30 rounded-full mx-2"></div>
-             <div className="flex flex-col text-left justify-center">
-               <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-bold leading-none tracking-[0.2em] theme-text-muted mb-[2px]">DISEÑO EN</span>
-               <span className="text-[12px] font-black leading-none tracking-[0.05em] text-[var(--primary)]">EXHIBICIÓN</span>
-             </div>
-          </div>
+            <div className="flex justify-center mb-6 select-none py-2">
+               <img src="/logo.png" alt="CDI Diseño en Exhibición" className="h-16 md:h-20 w-auto object-contain dark:invert dark:hue-rotate-180 dark:brightness-150 transition-all duration-300" />
+            </div>
           <h2 className="text-[var(--accent)] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
         </div>
         
