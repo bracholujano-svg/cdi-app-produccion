@@ -76,7 +76,9 @@ const LoginScreen = () => {
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
             <div className="flex justify-center mb-6 select-none py-2">
-               <img src="/logo.png" alt="CDI Diseño en Exhibición" className="h-16 md:h-20 w-auto object-contain dark:invert dark:hue-rotate-180 dark:brightness-150 transition-all duration-300" />
+               <div className="bg-white rounded-2xl px-6 py-2 shadow-lg">
+                 <img src="/logo.png" alt="CDI Exhibiciones" className="h-16 md:h-20 w-auto object-contain" />
+               </div>
             </div>
           <h2 className="text-[var(--accent)] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
         </div>

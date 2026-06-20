@@ -51,8 +51,8 @@ const Header = () => {
           {/* LADO IZQUIERDO: LOGO Y PERFIL */}
           <div className="flex items-center gap-4">
              {/* LOGO */}
-             <div className="flex items-center select-none cursor-pointer py-1" onClick={() => window.scrollTo(0,0)}>
-                 <img src="/logo.png" alt="CDI Diseño en Exhibición" className="h-10 md:h-12 w-auto object-contain dark:invert dark:hue-rotate-180 dark:brightness-150 transition-all duration-300" />
+             <div className="flex items-center select-none cursor-pointer py-1 bg-white rounded-lg px-3 shadow-md" onClick={() => window.scrollTo(0,0)}>
+                 <img src="/logo.png" alt="CDI Exhibiciones" className="h-8 md:h-10 w-auto object-contain" />
              </div>
 
             {/* PERFIL */}
