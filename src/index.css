@@ -42,8 +42,6 @@
 .theme-bg-header { 
     background-color: var(--bg-header); 
     color: var(--text-main); 
-     
-    -webkit-
     border-bottom: 1px solid var(--border-color);
 }
 .theme-bg-input { 
