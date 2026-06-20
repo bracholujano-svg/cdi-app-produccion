@@ -2,6 +2,7 @@ import React from 'react';
 import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
+import CDILogo from '../ui/CDILogo';
 
 const Header = () => {
   const {
@@ -51,8 +52,8 @@ const Header = () => {
           {/* LADO IZQUIERDO: LOGO Y PERFIL */}
           <div className="flex items-center gap-4">
              {/* LOGO */}
-             <div className="flex items-center select-none cursor-pointer py-1 bg-white rounded-lg px-3 shadow-md" onClick={() => window.scrollTo(0,0)}>
-                 <img src="/logo.png" alt="CDI Exhibiciones" className="h-8 md:h-10 w-auto object-contain" />
+             <div className="flex items-center select-none cursor-pointer py-1" onClick={() => window.scrollTo(0,0)}>
+                 <CDILogo className="scale-[0.6] md:scale-75 origin-left" />
              </div>
 
             {/* PERFIL */}

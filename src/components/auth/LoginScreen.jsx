@@ -6,6 +6,7 @@ import { safeStorage, safeSessionStorage } from '../../utils/helpers';
 import { AREAS } from '../../utils/constants';
 import { SESSION_SECRET } from '../../utils/security';
 import { loginEnGoogle, registrarEnGoogle } from '../../services/api';
+import CDILogo from '../ui/CDILogo';
 
 const LoginScreen = () => {
   const {
@@ -76,8 +77,8 @@ const LoginScreen = () => {
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
           <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-colors">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
             <div className="flex justify-center mb-6 select-none py-2">
-               <div className="bg-white rounded-2xl px-6 py-2 shadow-lg">
-                 <img src="/logo.png" alt="CDI Exhibiciones" className="h-16 md:h-20 w-auto object-contain" />
+               <div className="flex justify-center">
+                 <CDILogo className="scale-100 md:scale-110 origin-center" />
                </div>
             </div>
           <h2 className="text-[var(--accent)] font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
