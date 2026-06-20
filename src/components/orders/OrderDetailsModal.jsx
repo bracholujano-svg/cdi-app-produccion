@@ -49,7 +49,7 @@ const OrderDetailsModal = ({
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-black uppercase truncate text-[var(--primary)]">PED: {selectedOrder.pedidoNum}</h2>
                   {selectedOrder.cantidad && (
-                    <span className="text-[10px] bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                    <span className="text-[10px] bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                       <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
                     </span>
                   )}
@@ -68,10 +68,10 @@ const OrderDetailsModal = ({
                 if (!canEdit) {
                   return (
                     <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl mb-4 flex gap-3 items-start animate-in zoom-in">
-                      <AlertCircle className="text-red-500 shrink-0 mt-0.5" />
+                      <AlertCircle className="text-red-800 dark:text-red-500 shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="font-black text-red-500 uppercase text-xs md:text-sm lg:text-base">Módulo de Solo Lectura</h4>
-                        <p className="text-xs md:text-sm lg:text-base font-bold text-red-400/80 mt-1">Este producto se encuentra físicamente en <span className="text-red-500 underline">{selectedOrder.areaActual}</span>. Solo puedes auditar su histórico; no puedes registrar avances ni transferencias desde tu sección.</p>
+                        <h4 className="font-black text-red-800 dark:text-red-500 uppercase text-xs md:text-sm lg:text-base">Módulo de Solo Lectura</h4>
+                        <p className="text-xs md:text-sm lg:text-base font-bold text-red-700/90 dark:text-red-400/90 mt-1">Este producto se encuentra físicamente en <span className="text-red-800 dark:text-red-500 underline">{selectedOrder.areaActual}</span>. Solo puedes auditar su histórico; no puedes registrar avances ni transferencias desde tu sección.</p>
                       </div>
                     </div>
                   );
@@ -190,7 +190,7 @@ const OrderDetailsModal = ({
                             {showHistoryCalidad && (selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
                                 <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : n.estado==='RETRABAJO' ? 'border-yellow-500/30' : 'border-red-500/30'}`}>
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-500' : 'text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-800 dark:text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-800 dark:text-yellow-500' : 'text-red-800 dark:text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.observacion}"</p>
                                     {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
                                     <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[var(--primary)]">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>

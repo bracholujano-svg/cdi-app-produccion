@@ -48,35 +48,35 @@ const OrderCard = ({ group }) => {
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
-          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20'}`}>
+          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-xs md:text-sm lg:text-base px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/20' : 'bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20'}`}>
             {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (viewFilter === 'DESPACHADOS' ? `✅ DESPACHADO${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
           </div>
           {isNoMaterials && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 bg-yellow-500/10 text-yellow-600 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
               <span className="truncate">⚠️ Sin Insumos Req.</span>
               <FolderOpen size={"1.2em"} className="shrink-0" />
             </button>
           )}
           {hasAlert && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 animate-bg-pulse-orange text-orange-600 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between gap-1">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 animate-bg-pulse-orange text-orange-800 dark:text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between gap-1">
               <span className="truncate">⚠️ Insumos Insuficientes</span>
               <ChevronDown size={"1.2em"} className="shrink-0" />
             </button>
           )}
           {isSufficient && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 bg-green-500/10 text-[var(--accent)] border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between gap-1">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs md:text-sm lg:text-base px-1.5 py-1 bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between gap-1">
               <span className="truncate">✅ Material Completo</span>
               <FolderOpen size={"1.2em"} className="shrink-0" />
             </button>
           )}
         </div>
-        <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
+        <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
       </div>
       
-      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[var(--primary)]'}`}>
+      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-800 dark:text-red-500' : 'text-[var(--primary)]'}`}>
         PED: {group.pedidoNum}
       </h3>
-      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'opacity-50 text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
       
       <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
         <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--primary)] text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>

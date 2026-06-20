@@ -31,7 +31,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
                  <h2 className="text-xl font-black text-[var(--primary)] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
-                 <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate ${!activeGroupObj.cliente?.trim() ? 'opacity-50 text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+                 <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
               </div>
               <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--primary)]/10 rounded-xl hover:bg-[var(--primary)]/20 transition-colors text-[var(--primary)] text-xs font-bold mr-2">⬅ Panel IA</button>
               <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
@@ -57,7 +57,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     <div className="flex justify-between items-center mb-2">
                        <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[var(--primary)]/20 text-[var(--primary)] px-2 py-1 rounded border border-[var(--primary)]/30 font-black truncate">CÓD: {p.codArticulo}</span>
                        {p.cantidad && (
-                         <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                         <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                            <Package size={"1.1em"} /> CANT: {p.cantidad}
                          </span>
                        )}
