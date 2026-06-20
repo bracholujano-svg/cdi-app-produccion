@@ -2,19 +2,19 @@ import React from 'react';
 
 const CDILogo = ({ className = "" }) => {
   return (
-    <div className={`flex items-center select-none ${className}`}>
+    <div className={`inline-flex flex-col items-center select-none ${className}`}>
       {/* CDI Letters */}
       <span className="text-4xl md:text-5xl font-black tracking-tighter text-[var(--text-main)] leading-none" style={{ fontFamily: '"Outfit", sans-serif' }}>
         CDI
       </span>
       
       {/* Divider */}
-      <div className="w-[3px] h-10 md:h-12 bg-[var(--primary)] mx-2 md:mx-3 rounded-full opacity-80"></div>
+      <div className="h-[2px] md:h-[3px] w-full bg-[var(--primary)] rounded-full opacity-80 mt-1 mb-1"></div>
       
-      {/* Vertical Text */}
-      <div className="flex flex-col justify-center items-start" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-        <span className="text-[9px] md:text-[10px] font-medium tracking-[0.2em] text-[var(--text-main)] opacity-90 leading-tight">DISEÑO en</span>
-        <span className="text-[11px] md:text-[12px] font-black tracking-[0.2em] text-[var(--text-main)] leading-tight">EXHIBICIÓN</span>
+      {/* Horizontal Text */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-0 md:gap-1 text-center w-full">
+        <span className="text-[7px] md:text-[8px] font-medium tracking-[0.2em] text-[var(--text-main)] opacity-90 leading-tight">DISEÑO EN</span>
+        <span className="text-[8px] md:text-[9px] font-black tracking-[0.2em] text-[var(--text-main)] leading-tight">EXHIBICIÓN</span>
       </div>
     </div>
   );
