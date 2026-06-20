@@ -18,13 +18,13 @@
 }
 
 [data-theme="dark"] {
-    --bg-main: #0B0F19; 
-    --card-bg: #1E293B; 
-    --bg-header: rgba(11, 15, 25, 0.85); 
-    --bg-input: #0F172A; 
+    --bg-main: #435150; 
+    --card-bg: #4A5857; 
+    --bg-header: rgba(67, 81, 80, 0.85); 
+    --bg-input: #384544; 
     --text-main: #FFFFFF; 
-    --text-muted: #94A3B8; 
-    --border-color: rgba(148, 163, 184, 0.15); 
+    --text-muted: #D1D5DB; 
+    --border-color: rgba(255, 255, 255, 0.15); 
     
     --primary: #3B82F6; 
     --accent: #10B981; 
