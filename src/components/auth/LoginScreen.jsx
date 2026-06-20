@@ -74,7 +74,7 @@ const LoginScreen = () => {
     <div className="min-h-screen theme-bg-main flex flex-col items-center justify-center p-4 transition-colors duration-300" data-theme={appTheme}>
       <div className="w-full max-w-md theme-bg-card rounded-[3rem] border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-500">
         <div className="p-8 text-center border-b theme-border theme-bg-header relative">
-          <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-all">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+          <button type="button" onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} className="absolute top-4 right-4 p-2 rounded-xl theme-text-muted hover:bg-black/5 transition-colors">{appTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
             <div className="flex justify-center mb-6 select-none py-2">
                <div className="bg-white rounded-2xl px-6 py-2 shadow-lg">
                  <img src="/logo.png" alt="CDI Exhibiciones" className="h-16 md:h-20 w-auto object-contain" />
@@ -105,7 +105,7 @@ const LoginScreen = () => {
 
           <div className="space-y-1">
             <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
-            <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--accent)] transition-all">
+            <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--accent)] transition-colors">
               <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
               <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-xs md:text-sm lg:text-base sm:text-xs md:text-sm lg:text-base flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
@@ -128,7 +128,7 @@ const LoginScreen = () => {
             </div>
           )}
 
-          <button type="submit" className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-all">
+          <button type="submit" className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-colors">
             {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
           </button>
           <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>

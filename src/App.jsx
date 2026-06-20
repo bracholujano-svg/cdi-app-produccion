@@ -754,15 +754,15 @@ const {
       <ReportPreviewModal />
 
       {showCoordViewModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
+        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-4xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-            <div className="p-5 bg-[var(--accent)] text-[var(--card-bg)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-all">✕</button></div>
+            <div className="p-5 bg-[var(--accent)] text-[var(--card-bg)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
             <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {coordinationAlerts.map(alertItem => (
                   <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[3px] border-red-500/30 relative flex flex-col">
                      {supervisorProfile?.area === "Administrador / Todos" && (
-                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"><Trash2 size={"1.2em"}/></button>
+                         <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
                      )}
                      <span className="text-lg font-black text-red-500 uppercase block leading-none pr-8">Ped: {alertItem.pedidoNum}</span>
                      <h4 className="text-sm font-black text-[var(--primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
@@ -793,13 +793,13 @@ const {
       )}
 
       {showReportConfigModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80  z-[120] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--primary)]">✕</button></div>
             <div className="p-6 space-y-4">
               <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>
@@ -822,7 +822,7 @@ const {
           const disponibles = filtered.filter(m => m.faltante <= 0);
 
           return (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/80  z-[150] flex items-center justify-center p-4">
               <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isNoMaterials ? 'border-yellow-500/30' : isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
                 <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 border-yellow-500/20' : isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                   <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isNoMaterials ? 'text-yellow-600' : isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
@@ -917,7 +917,7 @@ const {
                     )}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-all duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
+                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
                 </div>
               </div>
             </div>

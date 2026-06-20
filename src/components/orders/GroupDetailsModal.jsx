@@ -26,7 +26,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 bg-black/80  z-[90] flex items-center justify-center p-2 sm:p-4">
           <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
@@ -53,7 +53,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col custom-scrollbar">
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {paginatedProducts.map(p => (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-all active:scale-95 bg-[var(--card-bg)]">
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-colors active:scale-95 bg-[var(--card-bg)]">
                     <div className="flex justify-between items-center mb-2">
                        <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-[var(--primary)]/20 text-[var(--primary)] px-2 py-1 rounded border border-[var(--primary)]/30 font-black truncate">CÓD: {p.codArticulo}</span>
                        {p.cantidad && (

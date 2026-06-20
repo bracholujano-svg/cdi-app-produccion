@@ -45,7 +45,7 @@ const Header = () => {
       )}
 
       {/* HEADER UNIFICADO (ÚNICA BARRA FIJA SUPERIOR) */}
-      <header className={`theme-bg-header p-2 md:p-3 border-b theme-border transition-all`}>
+      <header className={`theme-bg-header p-2 md:p-3 border-b theme-border transition-colors`}>
         <div className="w-full px-2 md:px-4 flex flex-wrap items-center justify-between gap-3">
           
           {/* LADO IZQUIERDO: LOGO Y PERFIL */}
@@ -64,19 +64,19 @@ const Header = () => {
           
           {/* CENTRO: BOTONES DE FILTRO */}
           <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar max-w-[50vw]">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all ${viewFilter === 'TODOS' ? 'bg-[var(--primary)] text-[var(--card-bg)] shadow-sm' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
+             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--primary)] text-[var(--card-bg)] shadow-sm' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
+             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
                Atrasos ({atrasadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
                Despachados ({despachadosCount})
              </button>
-             <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-[10px] md:text-xs font-black uppercase transition-all ${coordinationAlerts.length > 0 ? 'text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
+             <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-[10px] md:text-xs font-black uppercase transition-colors ${coordinationAlerts.length > 0 ? 'text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
                <AlertTriangle size={"1.2em"} /> Coord ({coordinationAlerts.length})
              </button>
-             <button type="button" onClick={() => setShowReceptionModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-[10px] md:text-xs font-black uppercase transition-all relative ${totalNotifications > 0 ? 'text-red-500 hover:bg-red-500 hover:text-white' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
+             <button type="button" onClick={() => setShowReceptionModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-[10px] md:text-xs font-black uppercase transition-colors relative ${totalNotifications > 0 ? 'text-red-500 hover:bg-red-500 hover:text-white' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
                <Bell size={"1.2em"} className={totalNotifications > 0 ? 'animate-pulse' : ''} /> Recepciones
                {totalNotifications > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-bounce">{totalNotifications}</span>}
              </button>

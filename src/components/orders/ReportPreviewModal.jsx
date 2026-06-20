@@ -15,8 +15,8 @@ const ReportPreviewModal = ({ downloadReport }) => {
             <div className="flex justify-between items-center mb-6 print:hidden">
               <h2 className="text-lg md:text-xl font-black uppercase text-slate-800">Vista Previa Impresión</h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200 border-blue-800  hover:brightness-125 active:scale-95 flex items-center gap-2"><Printer size={"1.2em"}/> Imprimir</button>
-                <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[var(--border-color)] transition-all duration-200 border-slate-300  hover:brightness-125 active:scale-95">Cerrar</button>
+                <button type="button" onClick={() => { try { window.print(); } catch(e) { } }} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200 border-blue-800  hover:brightness-125 active:scale-95 flex items-center gap-2"><Printer size={"1.2em"}/> Imprimir</button>
+                <button type="button" onClick={() => setShowReportPreviewModal(false)} className="px-4 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border border-[var(--border-color)] transition-colors duration-200 border-slate-300  hover:brightness-125 active:scale-95">Cerrar</button>
               </div>
             </div>
             <div className="border-2 border-slate-900 p-6 md:p-10 bg-white print:border-0 print:p-0 text-xs md:text-sm lg:text-base w-full overflow-hidden block">

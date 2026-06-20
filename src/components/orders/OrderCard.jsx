@@ -44,7 +44,7 @@ const OrderCard = ({ group }) => {
   }, [group?.fechaEntregaPrometida]);
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--accent)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
@@ -118,7 +118,7 @@ const OrderCard = ({ group }) => {
               </div>
               <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all duration-1000 ${progressPercent === 100 ? 'bg-green-500' : 'bg-[var(--accent)]'}`} 
+                  className={`h-full rounded-full transition-colors duration-1000 ${progressPercent === 100 ? 'bg-green-500' : 'bg-[var(--accent)]'}`} 
                   style={{ width: `${progressPercent}%` }}
                 ></div>
               </div>

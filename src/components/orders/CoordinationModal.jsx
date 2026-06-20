@@ -25,7 +25,7 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
   const filteredClients = uniqueClients.filter(c => c.toLowerCase().includes((inputManualCliente || '').toLowerCase()));
 
   return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-3"><Megaphone size={20} className="text-[var(--accent)]" /><h2 className="text-lg font-black uppercase text-[var(--primary)]">Coordinación Logística</h2></div>
@@ -70,7 +70,7 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
 
                   <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
                   <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)] placeholder:text-[var(--primary)]/40" /></div>
-                  <button type="button" onClick={addItemToCoordList} className="bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border border-[var(--border-color)] transition-all duration-200 hover:brightness-125 active:scale-95">Añadir a Lista</button>
+                  <button type="button" onClick={addItemToCoordList} className="bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl py-3 border border-[var(--border-color)] transition-colors duration-200 hover:brightness-125 active:scale-95">Añadir a Lista</button>
                 </div>
               </div>
               {coordList.length > 0 && (
@@ -82,7 +82,7 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
                       <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={"1.2em"}/></button>
                     </div>
                   ))}
-                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200 hover:brightness-125 active:scale-95 mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
+                  <button type="button" onClick={saveBatchCoordination} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-4 disabled:opacity-50">Confirmar y Guardar Alertas</button>
                 </div>
               )}
             </div>

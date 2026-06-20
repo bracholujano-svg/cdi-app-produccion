@@ -21,11 +21,11 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
 
   return (
       
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-0 md:p-4">
+        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
               <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[var(--primary)]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-all text-[var(--primary)]">✕</button>
+              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-colors text-[var(--primary)]">✕</button>
             </div>
             
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
@@ -37,7 +37,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                     <div className="flex flex-col sm:flex-row gap-2">
                         <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] uppercase placeholder:text-black/30" />
                         <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] uppercase placeholder:text-black/30" />
-                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[var(--accent)] text-[var(--card-bg)] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95 disabled:opacity-50 shrink-0">
+                        <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[var(--accent)] text-[var(--card-bg)] px-6 py-3.5 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase shadow-sm border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95 disabled:opacity-50 shrink-0">
                             {excelSearchLoading ? '...' : 'BUSCAR'}
                         </button>
                     </div>
@@ -57,7 +57,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                               createBulkOrders(searchResults, areaIni, entrega, recibe);
                             }
                           }}
-                          className="w-full mb-3 p-3 bg-[var(--primary)] text-[var(--card-bg)] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base hover:brightness-110 active:scale-95 transition-all flex justify-center items-center gap-2"
+                          className="w-full mb-3 p-3 bg-[var(--primary)] text-[var(--card-bg)] rounded-xl font-black uppercase text-xs md:text-sm lg:text-base hover:brightness-110 active:scale-95 transition-colors flex justify-center items-center gap-2"
                         >
                           <Package size={18} />
                           CARGAR EL PEDIDO COMPLETO ({searchResults.length} PRODUCTOS)

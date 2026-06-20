@@ -38,14 +38,14 @@ const Sidebar = () => {
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         onMouseEnter={() => setIsSidebarOpen(true)}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60] bg-[var(--card-bg)] text-[var(--primary)] p-3 md:p-4 rounded-r-2xl border-y border-r border-[var(--border-color)] shadow-xl hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-all duration-300 group"
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60] bg-[var(--card-bg)] text-[var(--primary)] p-3 md:p-4 rounded-r-2xl border-y border-r border-[var(--border-color)] shadow-xl hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-colors duration-300 group"
       >
         <Menu size={"1.5em"} className="group-hover:scale-110 transition-transform duration-200" />
       </button>
 
       {/* BACKDROP DEL SIDEBAR */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]" onClick={() => setIsSidebarOpen(false)}></div>
+        <div className="fixed inset-0 bg-black/60  z-[70]" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
       {/* CAJÓN OCULTO (SIDEBAR) */}
@@ -55,22 +55,22 @@ const Sidebar = () => {
           <X size={"1.5em"} />
         </button>
         <div className="mt-12 flex flex-col gap-4 w-full px-4 mb-10">
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <BarChart2 size={"2em"} /><span className="text-center leading-tight">Indicadores</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <Plus size={"2em"} strokeWidth={3} /><span className="text-center leading-tight">Nuevo</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <FlaskConical size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">SC Color</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowReportConfigModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-all duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowReportConfigModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <FileText size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Reportes</span>
             </button>
-            <button type="button" onClick={handleLogout} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-red-500/70 border border-red-500/30 transition-all duration-200 hover:text-white hover:bg-red-500 hover:border-red-500 hover:-translate-y-1 mt-4">
+            <button type="button" onClick={handleLogout} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-red-500/70 border border-red-500/30 transition-colors duration-200 hover:text-white hover:bg-red-500 hover:border-red-500 hover:-translate-y-1 mt-4">
               <LogOut size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Salir</span>
             </button>
         </div>

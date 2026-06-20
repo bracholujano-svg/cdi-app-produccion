@@ -258,7 +258,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               <span className="text-blue-600 ml-2">{codigoObjetivo}</span>
             </p>
           </div>
-          <button onClick={() => setShowFormulacion(false)} className="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider rounded-xl text-sm transition-all">
+          <button onClick={() => setShowFormulacion(false)} className="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider rounded-xl text-sm transition-colors">
             CANCELAR
           </button>
         </div>
@@ -320,7 +320,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 </div>
                 <button 
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-4 rounded-xl transition-all flex items-center justify-center shrink-0 shadow-sm"
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-4 rounded-xl transition-colors flex items-center justify-center shrink-0 shadow-sm"
                   title="Escanear Código"
                 >
                   <Camera size={24} />
@@ -334,7 +334,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 value={gramosInput}
                 onChange={e => setGramosInput(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-sm"
                 onKeyDown={e => e.key === 'Enter' && agregarGramos()}
               />
             </div>
@@ -342,7 +342,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               <button 
                 onClick={agregarGramos}
                 disabled={!selectedPPG || !gramosInput}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 h-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 h-full"
               >
                 <Plus size={20} strokeWidth={3} /> AÑADIR
               </button>
@@ -350,7 +350,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
           </div>
           
           {isScannerOpen && (
-            <div className="mt-6 p-6 border-4 border-dashed border-blue-300 rounded-[2rem] bg-blue-50/50 relative backdrop-blur-sm">
+            <div className="mt-6 p-6 border-4 border-dashed border-blue-300 rounded-[2rem] bg-blue-50/50 relative ">
               <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm"><X size={24}/></button>
               <div id="reader" className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-blue-200 bg-black"></div>
               <p className="text-center text-sm font-black text-blue-800 uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
@@ -428,7 +428,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                         >
                           <Plus size={16} strokeWidth={3}/>
                         </button>
-                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all" title="Eliminar fila">
+                        <button onClick={() => eliminarFila(f.id_referencia)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Eliminar fila">
                           <X size={16} strokeWidth={3}/>
                         </button>
                       </td>
@@ -442,7 +442,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             <button 
               onClick={guardarReceta}
               disabled={isSearching || filasReceta.length === 0}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:shadow-none text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-3 text-lg uppercase tracking-widest"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:shadow-none text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-500/30 transition-colors flex items-center justify-center gap-3 text-lg uppercase tracking-widest"
             >
               <Save size={24} />
               {isSearching ? 'GUARDANDO RECETA...' : 'GUARDAR RECETA DEFINITIVA EN BASE DE DATOS'}
@@ -477,7 +477,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               <select 
                 value={sistemaColor}
                 onChange={e => setSistemaColor(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all cursor-pointer shadow-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-colors cursor-pointer shadow-sm"
               >
                 <option value="PANTONE">PANTONE</option>
                 <option value="RAL">RAL</option>
@@ -497,7 +497,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               value={codigoObjetivo}
               onChange={e => setCodigoObjetivo(e.target.value.toUpperCase())}
               placeholder="Ej. 7005 C"
-              className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all uppercase shadow-sm placeholder:font-normal placeholder:text-slate-400"
+              className="w-full bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-2 border-slate-200 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-colors uppercase shadow-sm placeholder:font-normal placeholder:text-slate-400"
               onKeyDown={e => e.key === 'Enter' && handleBuscar()}
             />
           </div>
@@ -505,14 +505,14 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             <button 
               onClick={handleBuscar}
               disabled={isSearching || !codigoObjetivo}
-              className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-all flex items-center justify-center gap-2 h-[60px]"
+              className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-colors flex items-center justify-center gap-2 h-[60px]"
               title="Buscar Receta"
             >
               {isSearching ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"/> : <Search size={24} strokeWidth={3} />}
             </button>
             <button 
               onClick={() => { setShowFormulacion(true); setColorEncontrado(null); }}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 h-[60px]"
+              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-colors flex items-center justify-center gap-2 h-[60px]"
               title="Registrar Nuevo Color"
             >
               <Plus size={24} strokeWidth={3} />
@@ -542,7 +542,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             </div>
             <button 
               onClick={() => { setShowFormulacion(true); setColorEncontrado(null); }}
-              className="mt-8 px-10 py-5 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-500/40 transition-all hover:-translate-y-1"
+              className="mt-8 px-10 py-5 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-widest text-sm rounded-2xl shadow-xl shadow-orange-500/40 transition-colors hover:-translate-y-1"
             >
               REGISTRAR Y FORMULAR NUEVO COLOR
             </button>

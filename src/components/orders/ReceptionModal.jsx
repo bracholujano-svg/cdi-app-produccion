@@ -106,7 +106,7 @@ const ReceptionModal = ({ processReception }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-2 md:p-4">
+        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-2 md:p-4">
             <div className="w-full max-w-4xl bg-[var(--bg-main)] h-[90vh] md:h-[85vh] rounded-[2rem] flex flex-col border border-[var(--border-color)] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
                 
                 {/* HEADER CON PESTAÑAS */}
@@ -119,10 +119,10 @@ const ReceptionModal = ({ processReception }) => {
                         <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 text-[var(--primary)] shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--border-color)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--bg-main)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--bg-main)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
-                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-all flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
+                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
                             <AlertTriangle size={16} /> Mis Devoluciones ({rejectedItems.length})
                         </button>
                     </div>
@@ -145,7 +145,7 @@ const ReceptionModal = ({ processReception }) => {
                                             <div 
                                                 key={idx} 
                                                 onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all ${selectedItem?.id === item.id ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
+                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-[var(--primary)]">{item.codArticulo} - {item.nombre}</p>
@@ -177,7 +177,7 @@ const ReceptionModal = ({ processReception }) => {
                                             <div 
                                                 key={idx} 
                                                 onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-all ${selectedItem?.id === item.id ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
+                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
@@ -240,11 +240,11 @@ const ReceptionModal = ({ processReception }) => {
                                             {errorMsg && <p className="text-xs text-red-500 font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/30 text-center uppercase">{errorMsg}</p>}
 
                                             <div className="grid grid-cols-2 gap-2 pt-2">
-                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>
-                                                <button onClick={handleConfirm} className="bg-[var(--accent)] text-[var(--bg-main)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-all hover:brightness-110 flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleConfirm} className="bg-[var(--accent)] text-[var(--bg-main)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
                                                     <CheckCircle size={18} />
                                                     Aceptar
                                                 </button>
@@ -270,7 +270,7 @@ const ReceptionModal = ({ processReception }) => {
                                             </div>
                                         </div>
 
-                                        <button onClick={handleAcknowledgeReject} className="w-full mt-4 bg-gray-800 text-white py-4 rounded-xl font-black uppercase text-xs shadow-xl transition-all hover:bg-black active:scale-95 flex items-center justify-center gap-2">
+                                        <button onClick={handleAcknowledgeReject} className="w-full mt-4 bg-gray-800 text-white py-4 rounded-xl font-black uppercase text-xs shadow-xl transition-colors hover:bg-black active:scale-95 flex items-center justify-center gap-2">
                                             <CheckCircle size={16} /> Entendido (Quitar Alerta)
                                         </button>
                                     </div>

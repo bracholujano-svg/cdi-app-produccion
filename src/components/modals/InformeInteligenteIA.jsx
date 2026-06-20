@@ -245,7 +245,7 @@ const InformeInteligenteIA = ({ orders, onClose, setSearchTerm, setSelectedGroup
                         
                         <div className="space-y-4">
                             {delayedOrders.length > 0 ? delayedOrders.slice(0, 5).map((o, idx) => (
-                                <div key={idx} onClick={() => handleDeepLink(o.pedidoNum)} className="bg-red-50 p-5 rounded-2xl border border-red-100 flex gap-4 items-start shadow-sm hover:shadow-md hover:bg-red-100 transition-all cursor-pointer relative group">
+                                <div key={idx} onClick={() => handleDeepLink(o.pedidoNum)} className="bg-red-50 p-5 rounded-2xl border border-red-100 flex gap-4 items-start shadow-sm hover:shadow-md hover:bg-red-100 transition-colors cursor-pointer relative group">
                                     <div className="hide-on-pdf absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-200 p-2 rounded-xl text-red-800">
                                         <Search size={20} />
                                     </div>
@@ -286,7 +286,7 @@ const InformeInteligenteIA = ({ orders, onClose, setSearchTerm, setSelectedGroup
                             <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-yellow-400 pb-2 inline-flex mb-6"><AlertTriangle size={24} className="text-yellow-500"/> Calidad Crítica Agrupada</h3>
                             <div className="space-y-3">
                                 {topQualityIssues.length > 0 ? topQualityIssues.map((grupo, idx) => (
-                                    <div key={idx} className="bg-white p-4 rounded-2xl border-l-4 border-yellow-400 shadow-sm text-sm hover:shadow-md cursor-pointer hover:bg-yellow-50 transition-all relative group">
+                                    <div key={idx} className="bg-white p-4 rounded-2xl border-l-4 border-yellow-400 shadow-sm text-sm hover:shadow-md cursor-pointer hover:bg-yellow-50 transition-colors relative group">
                                         <div className="hide-on-pdf absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-yellow-100 p-1.5 rounded-lg text-yellow-800">
                                             <Search size={16} />
                                         </div>

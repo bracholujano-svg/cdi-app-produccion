@@ -42,7 +42,7 @@ const OrderDetailsModal = ({
 
   return (
       
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-end p-0 sm:p-2">
+        <div className="fixed inset-0 bg-black/80  z-[100] flex items-center justify-end p-0 sm:p-2">
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
@@ -56,7 +56,7 @@ const OrderDetailsModal = ({
                 </div>
                 <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
               </div>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-all text-[var(--primary)] shrink-0">✕</button>
+              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
@@ -81,7 +81,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -102,18 +102,18 @@ const OrderDetailsModal = ({
                             <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
                         </div>
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Guardar Avance</button>
+                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Avance</button>
                         </div>
                             </>
                           );
@@ -140,7 +140,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Inspección Calidad</span>
@@ -155,9 +155,9 @@ const OrderDetailsModal = ({
                           return (
                             <>
                               <div className="flex gap-2">
-                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>APROBADO</button>
-                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RETRABAJO</button>
-                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-all border border-[var(--border-color)] transition-all duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RECHAZADO</button>
+                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RETRABAJO</button>
+                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RECHAZADO</button>
                         </div>
                         <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE INSPECTOR..." />
                         <div className="relative">
@@ -165,18 +165,18 @@ const OrderDetailsModal = ({
                             <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
                         </div>
                         {calidadPhoto && <img src={calidadPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Guardar Inspección</button>
+                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Inspección</button>
                         </div>
                             </>
                           );
@@ -203,7 +203,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-all">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -227,11 +227,11 @@ const OrderDetailsModal = ({
                             <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-all">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-all">
+                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
@@ -251,7 +251,7 @@ const OrderDetailsModal = ({
                               } else {
                                 alert("Debe firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-all duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                          }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
                             </>
                           );
                         })()}

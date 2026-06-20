@@ -304,7 +304,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
     }, [dashboardTab, orders]);
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80  z-[110] overflow-y-auto">
             <div className="min-h-screen theme-bg-main text-[var(--text-main)] font-sans pb-10">
                 {/* NAV */}
                 <nav className="sticky top-0 z-50 theme-bg-card shadow-sm border-b theme-border">
@@ -443,7 +443,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                         <span className={item.status === 'critical' ? 'text-red-600' : 'text-slate-400'}>{icon}{item.text}</span>
                                                     </div>
                                                     <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                                        <div className={`h-2.5 rounded-full transition-all duration-1000 ${bgClass}`} style={{ width: `${item.time > 0 ? Math.max((item.time / maxTime) * 100, 5) : 0}%` }}></div>
+                                                        <div className={`h-2.5 rounded-full transition-colors duration-1000 ${bgClass}`} style={{ width: `${item.time > 0 ? Math.max((item.time / maxTime) * 100, 5) : 0}%` }}></div>
                                                     </div>
                                                 </div>
                                             )});
