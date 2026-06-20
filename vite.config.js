@@ -29,8 +29,8 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: 'CDI - Sistema de Gestión',
-        short_name: 'CDI App',
+        name: 'CDI EXHIBICIONES',
+        short_name: 'CDI EXHIBICIONES',
         description: 'Aplicación de Control de Inventario y MRP',
         theme_color: '#0f172a',
         background_color: '#0f172a',
