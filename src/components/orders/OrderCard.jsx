@@ -73,10 +73,14 @@ const OrderCard = ({ group }) => {
         <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
       </div>
       
-      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-500' : 'text-[var(--primary)]'}`}>
-        PED: {group.pedidoNum}
-      </h3>
-      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-xs md:text-sm lg:text-base ${!group.cliente?.trim() ? 'opacity-50 text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+      <div className="flex flex-col gap-1 items-start">
+        <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate px-3 py-1.5 rounded-lg shadow-sm ${isAtrasado || isUrgent ? 'bg-red-500 text-white' : 'bg-[#ABAA88] text-slate-900'}`}>
+          PED: {group.pedidoNum}
+        </h3>
+        <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase truncate px-3 py-1.5 rounded-lg text-xs md:text-sm lg:text-base shadow-sm ${!group.cliente?.trim() ? 'bg-orange-500/20 text-orange-600' : 'bg-[#ABAA88]/80 text-slate-900'}`}>
+          {group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}
+        </p>
+      </div>
       
       <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
         <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--primary)] text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
