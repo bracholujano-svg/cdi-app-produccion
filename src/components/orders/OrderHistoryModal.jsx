@@ -16,17 +16,18 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
     familyOrders.forEach(o => {
         // 1. Transferencias
         (o.historial || []).forEach(h => {
+            const isAssignment = h.accion && h.accion.includes("Asignado a");
             events.push({
                 id: `hist_${h.fecha}_${Math.random()}`,
                 type: 'TRANSFERENCIA',
                 fecha: new Date(h.fecha),
-                title: `TRANSFERENCIA: ${h.entrega} ➔ ${h.recibe}`,
+                title: h.accion ? h.accion.toUpperCase() : `TRANSFERENCIA: ${h.entrega} ➔ ${h.recibe}`,
                 desc: h.nota || 'Sin observaciones',
                 supervisor: h.supervisor || 'S/N',
                 foto: h.foto,
-                icon: ArrowRightLeft,
-                color: 'bg-blue-500',
-                textColor: 'text-blue-500'
+                icon: isAssignment ? User : ArrowRightLeft,
+                color: isAssignment ? 'bg-indigo-500' : 'bg-blue-500',
+                textColor: isAssignment ? 'text-indigo-500' : 'text-blue-500'
             });
         });
 

@@ -65,6 +65,11 @@ const OrderDetailsModal = ({
                   )}
                 </div>
                 <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
+                {selectedOrder.asignado_a && selectedOrder.asignado_a.length > 0 && (
+                  <span className="text-[10px] md:text-xs bg-indigo-500/20 text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-md border border-indigo-500/30 font-black truncate flex items-center gap-1 mt-2 w-fit">
+                    <UserCheck size={"1.2em"} /> ASIGNADO A: {Array.isArray(selectedOrder.asignado_a) ? selectedOrder.asignado_a.join(', ') : selectedOrder.asignado_a}
+                  </span>
+                )}
               </div>
               <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
             </div>
