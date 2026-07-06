@@ -231,11 +231,11 @@ const OrderDetailsModal = ({
                           
                           let allowedAreas = [];
                           if (isGerente) {
-                            allowedAreas = AREAS;
+                            allowedAreas = AREAS || [];
                           } else if (isDiseno) {
-                            allowedAreas = ["Programación CNC", ...AREAS_PLANTA];
+                            allowedAreas = ["Programación CNC", ...(AREAS_PLANTA || [])];
                           } else {
-                            allowedAreas = ROUTING_MAP[supervisorProfile?.area] || [];
+                            allowedAreas = (ROUTING_MAP && ROUTING_MAP[supervisorProfile?.area]) || [];
                           }
 
                           const toggleAssignedPersonnel = (area, person) => {
@@ -250,7 +250,12 @@ const OrderDetailsModal = ({
                           };
                         
                           const getWorkload = (person) => {
-                            return orders.filter(o => o.asignado_a && o.asignado_a.includes(person) && o.estadoInterno !== 'DESPACHADO' && o.estado !== 'ENTREGADO').length;
+                            return (orders || []).filter(o => {
+                                if (!o || !o.asignado_a) return false;
+                                if (Array.isArray(o.asignado_a)) return o.asignado_a.includes(person);
+                                if (typeof o.asignado_a === 'string') return o.asignado_a.includes(person);
+                                return false;
+                            }).filter(o => o.estadoInterno !== 'DESPACHADO' && o.estado !== 'ENTREGADO').length;
                           };
 
                           return (
@@ -260,9 +265,9 @@ const OrderDetailsModal = ({
                                     
                                     <div className="text-[10px] md:text-xs font-bold text-blue-500 uppercase mt-2 border-b border-blue-500/30 pb-1">Administrativo</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {AREAS_ADMIN.map(a => {
-                                            const isSelected = tempTransferAreas.includes(a);
-                                            const isDisabled = !allowedAreas.includes(a);
+                                        {(AREAS_ADMIN || []).map(a => {
+                                            const isSelected = (tempTransferAreas || []).includes(a);
+                                            const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
@@ -275,9 +280,9 @@ const OrderDetailsModal = ({
 
                                     <div className="text-[10px] md:text-xs font-bold text-yellow-600 dark:text-yellow-500 uppercase mt-3 border-b border-yellow-600/30 pb-1">Áreas Primarias</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {AREAS_PRIMARIAS.map(a => {
-                                            const isSelected = tempTransferAreas.includes(a);
-                                            const isDisabled = !allowedAreas.includes(a);
+                                        {(AREAS_PRIMARIAS || []).map(a => {
+                                            const isSelected = (tempTransferAreas || []).includes(a);
+                                            const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
@@ -290,9 +295,9 @@ const OrderDetailsModal = ({
 
                                     <div className="text-[10px] md:text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase mt-3 border-b border-emerald-600/30 pb-1">Áreas de Transformación</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {AREAS_SECUNDARIAS.map(a => {
-                                            const isSelected = tempTransferAreas.includes(a);
-                                            const isDisabled = !allowedAreas.includes(a);
+                                        {(AREAS_SECUNDARIAS || []).map(a => {
+                                            const isSelected = (tempTransferAreas || []).includes(a);
+                                            const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
@@ -305,9 +310,9 @@ const OrderDetailsModal = ({
 
                                     <div className="text-[10px] md:text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mt-3 border-b border-purple-600/30 pb-1">Fases Finales</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {AREAS_FINALES.map(a => {
-                                            const isSelected = tempTransferAreas.includes(a);
-                                            const isDisabled = !allowedAreas.includes(a);
+                                        {(AREAS_FINALES || []).map(a => {
+                                            const isSelected = (tempTransferAreas || []).includes(a);
+                                            const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
@@ -318,12 +323,12 @@ const OrderDetailsModal = ({
                                         })}
                                     </div>
 
-                                    {tempTransferAreas.includes("Diseño") && isGerente && (
+                                    {(tempTransferAreas || []).includes("Diseño") && isGerente && (
                                         <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
                                             <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {PERSONAL_DISENO.map(person => {
-                                                    const isAssigned = (tempAssignedPersonnel["Diseño"] || []).includes(person);
+                                                {(PERSONAL_DISENO || []).map(person => {
+                                                    const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
                                                     const load = getWorkload(person);
                                                     return (
                                                         <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
@@ -336,12 +341,12 @@ const OrderDetailsModal = ({
                                         </div>
                                     )}
 
-                                    {tempTransferAreas.includes("Programación CNC") && isDiseno && (
+                                    {(tempTransferAreas || []).includes("Programación CNC") && isDiseno && (
                                         <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
                                             <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                {PERSONAL_CNC.map(person => {
-                                                    const isAssigned = (tempAssignedPersonnel["Programación CNC"] || []).includes(person);
+                                                {(PERSONAL_CNC || []).map(person => {
+                                                    const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
                                                     const load = getWorkload(person);
                                                     return (
                                                         <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
