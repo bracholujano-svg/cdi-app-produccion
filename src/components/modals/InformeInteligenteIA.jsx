@@ -224,9 +224,9 @@ const InformeInteligenteIA = ({ orders, onClose, setSearchTerm, setSelectedGroup
                 {/* Resumen Ejecutivo Estilizado */}
                 <div className="bg-slate-800 text-white p-6 md:p-8 rounded-3xl shadow-xl relative overflow-hidden">
                     <div className="absolute -right-10 -top-10 opacity-10"><BrainCircuit size={200} /></div>
-                    <h3 className="text-xl font-black uppercase text-[var(--accent)] mb-4 flex items-center gap-2"><Activity size={24}/> Resumen Ejecutivo IA</h3>
+                    <h3 className="text-xl font-black uppercase text-slate-100 mb-4 flex items-center gap-2"><Activity size={24}/> Resumen Ejecutivo IA</h3>
                     <div className="text-base md:text-lg text-slate-200 leading-relaxed font-medium relative z-10 space-y-4">
-                        <p>Actualmente hay <strong className="text-[var(--primary)] text-xl font-black">{activosCount}</strong> artículos activos en el piso de producción. 
+                        <p>Actualmente hay <strong className="text-yellow-400 text-xl font-black">{activosCount}</strong> artículos activos en el piso de producción. 
                         Se ha detectado que el principal cuello de botella se encuentra en el área de <strong className="text-yellow-400 text-xl font-black uppercase">{bottleneckArea}</strong>, 
                         concentrando la mayor cantidad de la carga de trabajo ({areasCount[bottleneckArea] || 0} artículos).</p>
                         {delayedOrders.length > 0 ? 

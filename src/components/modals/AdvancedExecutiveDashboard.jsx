@@ -576,12 +576,12 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <div className="flex-1 space-y-4">
                                     <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl text-white flex justify-between items-center">
                                         <div>
-                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--primary)] uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
-                                            <p className="text-2xl font-black text-[var(--accent)]">{porcentajeInspeccionado}%</p>
+                                            <h4 className="text-xs md:text-sm lg:text-base font-black text-slate-100 uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
+                                            <p className="text-2xl font-black text-white">{porcentajeInspeccionado}%</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
-                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base theme-text-muted font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
+                                            <p className="text-xs md:text-sm lg:text-base text-slate-300 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
+                                            <p className="text-[10px] md:text-[11px] lg:text-xs text-slate-400 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
                                         </div>
                                     </div>
 
