@@ -15,7 +15,6 @@ const OrderDetailsModal = ({
   toggleMic
 }) => {
   const {
-    orders,
     selectedOrder, setSelectedOrder,
     openSection, setOpenSection,
     tempOperario, setTempOperario,
