@@ -230,7 +230,15 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             datasets: [{
                                 label: 'Órdenes Activas',
                                 data: areaData.length > 0 ? areaData : [0],
-                                backgroundColor: 'var(--primary)',
+                                backgroundColor: [
+                                    '#6b7a54', // verde militar
+                                    '#4a4f55', // gris oscuro
+                                    '#d1ccc0', // beige
+                                    '#8c7a6b', // topo cálido
+                                    '#5a6b73', // azul pizarroso
+                                    '#3e4c3a', // verde bosque oscuro
+                                    '#b4a996'  // arena
+                                ],
                                 borderRadius: 8
                             }]
                         },
