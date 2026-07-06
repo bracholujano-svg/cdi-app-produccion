@@ -60,6 +60,7 @@ const {
     showHistoryCalidad, setShowHistoryCalidad,
     showHistoryEntrega, setShowHistoryEntrega,
     tempTransferAreas, setTempTransferAreas,
+    tempAssignedPersonnel, setTempAssignedPersonnel,
     tempTransferDate, setTempTransferDate,
     tempShiftActivity, setTempShiftActivity,
     tempOperario, setTempOperario,
