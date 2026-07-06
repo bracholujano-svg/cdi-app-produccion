@@ -24,6 +24,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
   const [currentPage, setCurrentPage] = useState(1);
   const [coordSearchPedido, setCoordSearchPedido] = useState('');
@@ -1066,8 +1067,10 @@ const {
 
 export default function App() {
   return (
-    <AppContextProvider>
-      <MainApp />
-    </AppContextProvider>
+    <ErrorBoundary>
+      <AppContextProvider>
+        <MainApp />
+      </AppContextProvider>
+    </ErrorBoundary>
   );
 }
