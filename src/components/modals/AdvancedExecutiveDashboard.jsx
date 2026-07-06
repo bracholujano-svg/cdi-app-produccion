@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
-import { Sun, Moon, X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCircle, Package, BarChart2, Activity, Truck, ChevronUp, ChevronDown } from 'lucide-react';
+import { Sun, Moon, X, Search, Filter, AlertTriangle, Clock, Calendar, CheckCircle, Package, BarChart2, Activity, Truck, ChevronUp, ChevronDown, History } from 'lucide-react';
 import { AREAS, AREAS_RECEPCION } from '../../utils/constants';
 import InformeInteligenteIA from './InformeInteligenteIA';
+import OrderHistoryModal from '../orders/OrderHistoryModal';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -13,6 +14,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
     const [dashSearch, setDashSearch] = useState('');
     const [dashArea, setDashArea] = useState('TODAS');
     const [showQualityObs, setShowQualityObs] = useState(false);
+    const [historyOrder, setHistoryOrder] = useState(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const chartsRef = useRef({});
@@ -485,6 +487,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Cliente</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest text-center">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -498,9 +501,14 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
                                                 <td className="p-5"><span className="bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--primary)]/30">{o.areaActual}</span></td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted uppercase tracking-tight">{o.estadoInterno}</td>
+                                                <td className="p-5 text-center">
+                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--primary)] text-[var(--bg-main)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
+                                                        <History size="1.2em" /> Historial
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
-                                        {tableOrders.length === 0 && <tr><td colSpan="4" className="p-10 text-center theme-text-muted font-black uppercase text-xs md:text-sm lg:text-base">No hay resultados</td></tr>}
+                                        {tableOrders.length === 0 && <tr><td colSpan="6" className="p-10 text-center theme-text-muted font-black uppercase text-xs md:text-sm lg:text-base">No hay resultados</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
@@ -668,6 +676,10 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                 </main>
             </div>
+
+            {historyOrder && (
+                <OrderHistoryModal order={historyOrder} allOrders={rawOrders} onClose={() => setHistoryOrder(null)} />
+            )}
         </div>
     );
 };
