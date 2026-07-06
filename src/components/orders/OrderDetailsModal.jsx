@@ -268,9 +268,14 @@ const OrderDetailsModal = ({
                               <div className="w-full flex flex-col gap-2 mb-2">
                                     <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
-                                    <div className="text-[10px] md:text-xs font-bold text-blue-500 uppercase mt-2 border-b border-blue-500/30 pb-1">Administrativo</div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {(AREAS_ADMIN || []).map(a => {
+                                    <div className="group border border-blue-500/30 rounded-xl overflow-hidden mb-3">
+                                        <div className="p-3 bg-blue-500/10 text-[10px] md:text-xs font-bold text-blue-500 uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/20 transition-colors">
+                                            <span>Administrativo</span>
+                                            <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                        </div>
+                                        <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+                                                {(AREAS_ADMIN || []).map(a => {
                                             const isSelected = (tempTransferAreas || []).includes(a);
                                             const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
@@ -314,13 +319,20 @@ const OrderDetailsModal = ({
                                                         </div>
                                                     </div>
                                                 )}
-                                              </React.Fragment>
+                                                </React.Fragment>
                                             )
                                         })}
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="text-[10px] md:text-xs font-bold text-yellow-600 dark:text-yellow-500 uppercase mt-3 border-b border-yellow-600/30 pb-1">Áreas Primarias</div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div className="group border border-yellow-600/30 rounded-xl overflow-hidden mb-3">
+                                <div className="p-3 bg-yellow-600/10 text-[10px] md:text-xs font-bold text-yellow-600 dark:text-yellow-500 uppercase flex justify-between items-center cursor-pointer hover:bg-yellow-600/20 transition-colors">
+                                    <span>Áreas Primarias</span>
+                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                </div>
+                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
                                         {(AREAS_PRIMARIAS || []).map(a => {
                                             const isSelected = (tempTransferAreas || []).includes(a);
                                             const isDisabled = !(allowedAreas || []).includes(a);
@@ -333,9 +345,16 @@ const OrderDetailsModal = ({
                                             )
                                         })}
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="text-[10px] md:text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase mt-3 border-b border-emerald-600/30 pb-1">Áreas de Transformación</div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div className="group border border-emerald-600/30 rounded-xl overflow-hidden mb-3">
+                                <div className="p-3 bg-emerald-600/10 text-[10px] md:text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase flex justify-between items-center cursor-pointer hover:bg-emerald-600/20 transition-colors">
+                                    <span>Áreas de Transformación</span>
+                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                </div>
+                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
                                         {(AREAS_SECUNDARIAS || []).map(a => {
                                             const isSelected = (tempTransferAreas || []).includes(a);
                                             const isDisabled = !(allowedAreas || []).includes(a);
@@ -348,9 +367,16 @@ const OrderDetailsModal = ({
                                             )
                                         })}
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="text-[10px] md:text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mt-3 border-b border-purple-600/30 pb-1">Fases Finales</div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div className="group border border-purple-600/30 rounded-xl overflow-hidden mb-3">
+                                <div className="p-3 bg-purple-600/10 text-[10px] md:text-xs font-bold text-purple-600 dark:text-purple-400 uppercase flex justify-between items-center cursor-pointer hover:bg-purple-600/20 transition-colors">
+                                    <span>Fases Finales</span>
+                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                </div>
+                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
                                         {(AREAS_FINALES || []).map(a => {
                                             const isSelected = (tempTransferAreas || []).includes(a);
                                             const isDisabled = !(allowedAreas || []).includes(a);
@@ -364,6 +390,8 @@ const OrderDetailsModal = ({
                                         })}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
                         <div className="grid grid-cols-1 gap-2">
                             <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA ENTREGA" />
