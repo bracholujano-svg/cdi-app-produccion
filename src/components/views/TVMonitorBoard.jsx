@@ -247,7 +247,7 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                 <div>Cod / Cant</div>
                 <div>Producto</div>
                 <div>Ingreso Área</div>
-                <div>Tiempo Acá</div>
+                <div>Tiempo en Sección</div>
                 <div className="text-right">Despacho En</div>
             </div>
 
@@ -310,27 +310,27 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                                     
                                     {/* Codigo y Cantidad */}
                                     <div className="flex flex-col">
-                                        <span className={`text-xs md:text-sm font-black ${accentClass}`}>{o.codArticulo}</span>
-                                        <span className={`text-sm md:text-base font-black ${textClass}`}>Ctd: {o.cantidadUnidades}</span>
+                                        <span className={`text-base md:text-lg lg:text-xl font-black ${accentClass}`}>{o.codArticulo}</span>
+                                        <span className={`text-sm md:text-base lg:text-lg font-black ${textClass}`}>Ctd: {o.cantidad}</span>
                                     </div>
                                     
                                     {/* Producto */}
                                     <div className={`font-black text-sm md:text-base lg:text-lg uppercase truncate ${textClass}`}>
-                                        {o.nombreArticulo}
+                                        {o.nombre}
                                     </div>
 
                                     {/* Ingreso a la sección */}
                                     <div className="flex flex-col">
-                                        <span className={`text-xs md:text-sm font-black ${textClass}`}>
+                                        <span className={`text-base md:text-lg font-black ${textClass}`}>
                                             {o.fechaIngreso.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                                         </span>
-                                        <span className={`text-[10px] md:text-xs font-bold uppercase ${accentClass}`}>
+                                        <span className={`text-sm md:text-base font-bold uppercase ${accentClass}`}>
                                             {o.fechaIngreso.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
 
                                     {/* Tiempo en el área */}
-                                    <div className={`font-black text-lg md:text-xl tabular-nums ${textClass}`}>
+                                    <div className={`font-black text-2xl md:text-3xl lg:text-4xl tabular-nums ${textClass}`}>
                                         {formatTimeInArea(o.timeInAreaMs)}
                                     </div>
 
