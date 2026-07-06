@@ -464,15 +464,15 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                     {dashboardTab === 'operaciones' && (
                         <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                             <div className="bg-slate-800 text-white p-8 rounded-[2.5rem] shadow-xl">
-                                <h2 className="text-2xl font-black uppercase tracking-tighter text-[var(--accent)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Explorador de Flujo Operativo</h2>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-100" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Explorador de Flujo Operativo</h2>
                                 <p className="text-sm text-slate-300 mt-2">Seguimiento detallado por jerarquía de procesos y estados de producción.</p>
                             </div>
 
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
                                 <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm theme-bg-card" />
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm theme-bg-card text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400" />
                                 </div>
-                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer">
+                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-slate-900 dark:text-slate-100">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
