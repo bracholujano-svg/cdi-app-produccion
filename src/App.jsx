@@ -721,12 +721,12 @@ const {
   return (
     <div className="min-h-screen font-sans pb-20 transition-colors duration-300 theme-bg-main" data-theme={appTheme}>
       
-      <Header />
-      <Sidebar />
-        <div className="theme-bg-input border-t theme-border p-2 flex flex-col lg:flex-row gap-2">
+      <div className="sticky top-0 z-40 bg-[var(--bg-main)] shadow-sm border-b theme-border">
+        <Header />
+        <div className="theme-bg-input p-2 flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="flex gap-2 flex-1 md:flex-none">
@@ -735,7 +735,7 @@ const {
                         list="client-options" 
                         type="text"
                         placeholder="BUSCAR CLIENTE..."
-                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs" 
+                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
                         value={clientFilter === 'Todos' ? '' : clientFilter} 
                         onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
                         onFocus={(e) => e.target.select()}
@@ -744,7 +744,7 @@ const {
                         {uniqueClients.map(c => <option key={c} value={c} />)}
                     </datalist>
                 </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden text-slate-900 dark:text-white" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
                     <option value="pedido_desc">Pedido (Desc)</option>
@@ -754,12 +754,12 @@ const {
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-slate-900 dark:text-white" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
-                <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0">
+                <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0 text-slate-900 dark:text-white">
                     <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
                         <LayoutList size={"1.2em"} />
                     </button>
@@ -782,6 +782,8 @@ const {
                 </div>
             </div>
         </div>
+      </div>
+      <Sidebar />
 
       <main className="w-full px-4 md:px-8 p-4 md:p-6 min-h-screen flex flex-col">
         <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5 flex-1 content-start`}>
