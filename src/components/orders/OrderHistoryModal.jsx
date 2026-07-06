@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowRightLeft, Clock, CheckCircle, AlertTriangle, ImageIcon, Calendar, User, Package, MapPin, Activity, History } from 'lucide-react';
+import { X, ArrowRightLeft, Clock, CheckCircle, AlertTriangle, ImageIcon, Calendar, User, Package, MapPin, Activity, History, ChevronDown } from 'lucide-react';
 import { getDaysLeft } from '../../utils/helpers';
 
 const OrderHistoryModal = ({ order, allOrders, onClose }) => {
@@ -10,7 +10,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
     const familyOrders = (allOrders || []).filter(o => o && (o.id === rootId || o.master_id === rootId));
     if (familyOrders.length === 0) familyOrders.push(order);
 
-    // Recopilar todos los eventos
+    // Recopilar todos los eventos brutos
     let events = [];
 
     familyOrders.forEach(o => {
@@ -82,8 +82,94 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
         });
     }
 
-    // Ordenar ascendente (más antiguo primero)
+    // Ordenar ascendente cronológicamente
     events.sort((a, b) => a.fecha - b.fecha);
+
+    // AGRUPACIÓN POR FASES (ÁREAS)
+    let phases = [];
+    let currentPhase = null;
+
+    const getArea = (title) => {
+        if (!title) return null;
+        // Buscar el área de destino: "EN X", "A X", "HACIA X", "DE X"
+        const match = title.match(/(?:EN|A|HACIA|DE)\s+([^(]+)/);
+        return match ? match[1].trim() : null;
+    };
+
+    const getAsignado = (title) => {
+        if (!title) return null;
+        const match = title.match(/\(ASIGNADO A:\s+([^)]+)\)/);
+        return match ? match[1].trim() : null;
+    };
+
+    events.forEach(ev => {
+        if (ev.type === 'CREACION') {
+            currentPhase = {
+                id: `phase_${ev.id}`,
+                area: 'COMERCIAL / VENTAS',
+                asignado: null,
+                fechaIngreso: ev.fecha,
+                fechaSalida: null,
+                events: [ev]
+            };
+            return;
+        }
+
+        if (ev.type === 'TRANSFERENCIA') {
+            const area = getArea(ev.title);
+            const asignado = getAsignado(ev.title);
+
+            const isEntry = ev.title.includes('INGRESO') || ev.title.includes('ENTREGA') || ev.title.includes('BIFURCACIÓN');
+            const isReception = ev.title.includes('RECEPCIÓN');
+            const isRejection = ev.title.includes('RECHAZO');
+
+            if (isEntry) {
+                // Cerramos la fase anterior marcando su fecha de salida
+                if (currentPhase) {
+                    currentPhase.fechaSalida = ev.fecha;
+                    phases.push(currentPhase);
+                }
+
+                // Iniciamos una nueva fase en la nueva área
+                currentPhase = {
+                    id: `phase_${ev.id}`,
+                    area: area || 'DESCONOCIDA',
+                    asignado: asignado,
+                    fechaIngreso: ev.fecha,
+                    fechaSalida: null,
+                    events: [ev]
+                };
+            } else if (isReception || isRejection) {
+                // Agregamos el evento a la fase actual
+                if (currentPhase && currentPhase.area === area) {
+                    currentPhase.events.push(ev);
+                    if (!currentPhase.asignado && asignado) currentPhase.asignado = asignado;
+                } else if (!currentPhase) {
+                    currentPhase = {
+                        id: `phase_${ev.id}`,
+                        area: area || 'DESCONOCIDA',
+                        asignado: asignado,
+                        fechaIngreso: ev.fecha,
+                        fechaSalida: null,
+                        events: [ev]
+                    };
+                } else {
+                    currentPhase.events.push(ev);
+                }
+            } else {
+                if (currentPhase) currentPhase.events.push(ev);
+            }
+        } else {
+            // Novedades de Planta o Inspecciones de Calidad
+            if (currentPhase) {
+                currentPhase.events.push(ev);
+            }
+        }
+    });
+
+    if (currentPhase) {
+        phases.push(currentPhase);
+    }
 
     const daysLeft = getDaysLeft(order.fechaEntregaPrometida);
     const isOverdue = daysLeft !== null && daysLeft < 0;
@@ -95,7 +181,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 <div className="p-6 border-b border-[var(--border-color)] bg-[var(--card-bg)] flex justify-between items-start relative shrink-0">
                     <div>
                         <h2 className="text-2xl md:text-3xl font-black text-[var(--primary)] uppercase tracking-tight flex items-center gap-2">
-                            <History size="1em" /> Trazabilidad Completa
+                            <History size="1em" /> Trazabilidad por Secciones
                         </h2>
                         <p className="text-sm font-bold theme-text-muted mt-1 flex items-center gap-2">
                             PEDIDO #{order.pedidoNum} | ART: {order.codArticulo}
@@ -128,79 +214,108 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                     </div>
                 </div>
 
-                {/* Línea de Tiempo */}
+                {/* Línea de Tiempo por Fases (Áreas) */}
                 <div className="p-6 overflow-y-auto flex-1 bg-[var(--bg-main)]">
-                    {events.length === 0 ? (
+                    {phases.length === 0 ? (
                         <div className="text-center p-10 font-bold theme-text-muted uppercase">
                             No hay registros en el historial para este pedido.
                         </div>
                     ) : (
                         <div className="relative border-l-4 border-[var(--border-color)] ml-4 md:ml-8 space-y-8 pb-10">
-                            {events.map((ev, index) => {
-                                const Icon = ev.icon;
-                                // Calcular tiempo transcurrido hacia el siguiente evento
-                                let timeDiffStr = null;
-                                if (index < events.length - 1) {
-                                    const nextEvent = events[index + 1];
-                                    const diffMs = nextEvent.fecha - ev.fecha;
-                                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                                    const diffDays = Math.floor(diffHours / 24);
-                                    if (diffDays > 0) {
-                                        timeDiffStr = `+${diffDays} días`;
-                                    } else if (diffHours > 0) {
-                                        timeDiffStr = `+${diffHours} horas`;
-                                    } else {
-                                        const diffMins = Math.floor(diffMs / (1000 * 60));
-                                        timeDiffStr = `+${diffMins} min`;
-                                    }
-                                }
+                            {phases.map((phase) => {
+                                // Cálculo del tiempo invertido en esta área
+                                const durationMs = phase.fechaSalida ? phase.fechaSalida - phase.fechaIngreso : Date.now() - phase.fechaIngreso;
+                                const diffHours = Math.floor(durationMs / (1000 * 60 * 60));
+                                const diffDays = Math.floor(diffHours / 24);
+                                let timeStr = "";
+                                if (diffDays > 0) timeStr = `${diffDays} d ${diffHours % 24} h`;
+                                else if (diffHours > 0) timeStr = `${diffHours} h ${Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))} m`;
+                                else timeStr = `${Math.floor(durationMs / (1000 * 60))} min`;
 
                                 return (
-                                    <div key={ev.id} className="relative pl-8 md:pl-12">
+                                    <div key={phase.id} className="relative pl-8 md:pl-12">
                                         {/* Nodo del Timeline */}
-                                        <div className={`absolute -left-[22px] top-1 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--bg-main)] ${ev.color}`}>
-                                            <Icon size="1.2em" />
+                                        <div className="absolute -left-[22px] top-6 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--bg-main)] bg-[var(--primary)]">
+                                            <MapPin size="1.2em" />
                                         </div>
 
-                                        {/* Etiqueta de tiempo entre eventos */}
-                                        {timeDiffStr && (
-                                            <div className="absolute -left-[5.5rem] md:-left-[7rem] top-12 text-[10px] font-black text-slate-400 bg-[var(--bg-main)] px-1">
-                                                {timeDiffStr}
+                                        {/* Tarjeta Resumen de Fase */}
+                                        <div className="bg-[var(--card-bg)] p-5 rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow relative">
+                                            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
+                                                <div>
+                                                    <h3 className="font-black text-sm md:text-base uppercase tracking-tight text-[var(--primary)] flex items-center gap-2">
+                                                        {phase.area}
+                                                    </h3>
+                                                    {phase.asignado && (
+                                                        <div className="mt-2 flex items-center gap-1 text-[11px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                                                            <User size="1.2em" /> ASIGNADO A: {phase.asignado}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="text-left md:text-right flex flex-col md:items-end">
+                                                    <span className="text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg w-fit md:w-auto">
+                                                        TIEMPO EN ÁREA
+                                                    </span>
+                                                    <span className="text-sm md:text-base font-black text-[var(--accent)] mt-1">
+                                                        {timeStr}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        )}
 
-                                        {/* Tarjeta de Evento */}
-                                        <div className="bg-[var(--card-bg)] p-4 md:p-5 rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-2">
-                                                <h3 className={`font-black text-xs md:text-sm uppercase tracking-tight ${ev.textColor}`}>
-                                                    {ev.title}
-                                                </h3>
-                                                <span className="text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg self-start">
-                                                    {ev.fecha.toLocaleString()}
-                                                </span>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 p-3 rounded-xl border border-[var(--border-color)]">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size="1.5em" className="text-blue-500 shrink-0"/> 
+                                                    <div>
+                                                        <span className="block opacity-70">FECHA DE INGRESO:</span>
+                                                        <span className="text-[var(--text-main)] text-xs font-black">{phase.fechaIngreso.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <ArrowRightLeft size="1.5em" className={`shrink-0 ${phase.fechaSalida ? "text-orange-500" : "text-emerald-500"}`}/> 
+                                                    <div>
+                                                        <span className="block opacity-70">FECHA DE SALIDA:</span>
+                                                        <span className={`text-xs font-black ${phase.fechaSalida ? "text-[var(--text-main)]" : "text-emerald-600 dark:text-emerald-400 uppercase"}`}>
+                                                            {phase.fechaSalida ? phase.fechaSalida.toLocaleString() : 'ACTUALMENTE AQUÍ'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
-                                            <p className="text-xs md:text-sm font-bold text-[var(--text-main)] italic bg-black/5 p-3 rounded-xl border-l-4 border-[var(--primary)]/30 mb-3">
-                                                "{ev.desc}"
-                                            </p>
-
-                                            <div className="flex flex-wrap gap-4 text-[10px] md:text-xs font-black uppercase theme-text-muted">
-                                                <div className="flex items-center gap-1">
-                                                    <User size="1.2em" />
-                                                    <span>Autor: {ev.supervisor}</span>
-                                                </div>
-                                                {ev.operario && (
-                                                    <div className="flex items-center gap-1">
-                                                        <User size="1.2em" />
-                                                        <span>Operario: {ev.operario}</span>
+                                            {/* Detalles y Actividades Ocultos (Colapsable) */}
+                                            {phase.events.length > 0 && (
+                                                <details className="mt-4 group cursor-pointer">
+                                                    <summary className="text-[10px] md:text-xs font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 w-fit outline-none select-none">
+                                                        <ChevronDown size="1.2em" className="group-open:rotate-180 transition-transform"/>
+                                                        VER {phase.events.length} EVENTO(S) DE ACTIVIDAD
+                                                    </summary>
+                                                    <div className="mt-3 space-y-2 pl-4 border-l-2 border-blue-500/30 py-2">
+                                                        {phase.events.map(ev => {
+                                                            const SmallIcon = ev.icon;
+                                                            return (
+                                                                <div key={ev.id} className="text-[10px] md:text-xs text-[var(--text-main)] bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-color)] flex flex-col gap-1">
+                                                                    <div className="flex justify-between items-start gap-4">
+                                                                        <span className={`font-black uppercase flex items-center gap-1 ${ev.textColor}`}>
+                                                                            <SmallIcon size="1.2em"/> {ev.title}
+                                                                        </span>
+                                                                        <span className="font-bold opacity-70 text-right shrink-0">{ev.fecha.toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p className="italic font-bold theme-text-muted mt-1">"{ev.desc}"</p>
+                                                                    <div className="flex flex-wrap items-center gap-3 font-black opacity-70 text-[9px] uppercase mt-2">
+                                                                        <span>AUTOR: {ev.supervisor}</span>
+                                                                        {ev.operario && <span>OPERARIO: {ev.operario}</span>}
+                                                                        {ev.foto && (
+                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="text-[var(--accent)] hover:underline flex items-center gap-1">
+                                                                                <ImageIcon size="1.2em" /> FOTO / ACTA
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                )}
-                                                {ev.foto && (
-                                                    <button type="button" onClick={() => window.open(ev.foto)} className="flex items-center gap-1 text-[var(--accent)] hover:underline">
-                                                        <ImageIcon size="1.2em" /> Ver Evidencia
-                                                    </button>
-                                                )}
-                                            </div>
+                                                </details>
+                                            )}
                                         </div>
                                     </div>
                                 );
