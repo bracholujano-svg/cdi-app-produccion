@@ -41,6 +41,7 @@ export const AppContextProvider = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRecetarioModal, setShowRecetarioModal] = useState(false);
+  const [showTVMonitor, setShowTVMonitor] = useState(false);
   const [recetarioMaximized, setRecetarioMaximized] = useState(false);
   const [showCoordinationModal, setShowCoordinationModal] = useState(false);
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
@@ -136,6 +137,7 @@ export const AppContextProvider = ({ children }) => {
     isSidebarOpen, setIsSidebarOpen,
     showAddModal, setShowAddModal,
     showRecetarioModal, setShowRecetarioModal,
+    showTVMonitor, setShowTVMonitor,
     recetarioMaximized, setRecetarioMaximized,
     showCoordinationModal, setShowCoordinationModal,
     showCoordViewModal, setShowCoordViewModal,

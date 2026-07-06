@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut } from 'lucide-react';
+import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -8,6 +8,7 @@ const Sidebar = () => {
   const {
     isSidebarOpen, setIsSidebarOpen,
     setShowDashboardModal,
+    setShowTVMonitor,
     setShowCoordinationModal,
     setShowAddModal,
     setSearchResults,
@@ -58,7 +59,10 @@ const Sidebar = () => {
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
               <BarChart2 size={"2em"} /><span className="text-center leading-tight">Indicadores</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowTVMonitor(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 hover:-translate-y-1">
+              <Monitor size={"2em"} /><span className="text-center leading-tight">Monitor TV</span>
+            </button>
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-orange-600 hover:border-orange-600 hover:-translate-y-1">
               <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>
             </button>
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:-translate-y-1">

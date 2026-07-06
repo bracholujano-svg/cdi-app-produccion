@@ -24,6 +24,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
+import TVMonitorBoard from './components/views/TVMonitorBoard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,6 +50,7 @@ const {
     showCoordinationModal, setShowCoordinationModal,
     showCoordViewModal, setShowCoordViewModal,
     showDashboardModal, setShowDashboardModal,
+    showTVMonitor, setShowTVMonitor,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
     isRegistering, setIsRegistering,
@@ -834,6 +836,13 @@ const {
             orders={orders} 
             coordinationAlerts={coordinationAlerts} 
             onClose={() => setShowDashboardModal(false)} 
+        />
+      )}
+
+      {showTVMonitor && (
+        <TVMonitorBoard 
+            allOrders={orders} 
+            onClose={() => setShowTVMonitor(false)} 
         />
       )}
 
