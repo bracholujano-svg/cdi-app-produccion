@@ -15,7 +15,7 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [currentPage, setCurrentPage] = useState(0);
     const ITEMS_PER_PAGE = 7; // Ajustable según altura de la pantalla de TV
-    const ROTATION_INTERVAL = 8000; // 8 segundos
+    const ROTATION_INTERVAL = 5000; // 5 segundos
 
     // Reloj
     useEffect(() => {
@@ -240,8 +240,9 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
             </div>
 
             {/* Cabecera de Tabla */}
-            <div className="grid grid-cols-[auto_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-4 bg-[#1A233A] text-white/50 font-black text-xs md:text-sm uppercase tracking-widest border-b border-white/5">
-                <div className="w-12 text-center">EST</div>
+            <div className="grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-4 bg-[#1A233A] text-white/50 font-black text-xs md:text-sm uppercase tracking-widest border-b border-white/5">
+                <div className="text-center">EST</div>
+                <div className="text-center">#</div>
                 <div>Pedido</div>
                 <div>Cliente</div>
                 <div>Cod / Cant</div>
@@ -285,10 +286,12 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                                 accentClass = 'text-emerald-300';
                             }
 
+                            const globalIndex = currentPage * ITEMS_PER_PAGE + idx + 1;
+
                             return (
-                                <div key={o.id} className={`grid grid-cols-[auto_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-5 md:py-6 border-b border-white/5 items-center transition-all ${rowBgClass}`}>
+                                <div key={o.id} className={`grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-5 md:py-6 border-b border-white/5 items-center transition-all ${rowBgClass}`}>
                                     {/* Semáforo Visual */}
-                                    <div className="w-12 flex justify-center">
+                                    <div className="flex justify-center items-center">
                                         <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center justify-center
                                             ${isRed ? 'bg-red-500 shadow-red-500/50 animate-pulse' : 
                                               isYellow ? 'bg-yellow-500 shadow-yellow-500/30' : 
@@ -296,6 +299,13 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                                         `}>
                                             <div className="w-2 h-2 bg-white/50 rounded-full absolute top-1 md:top-2 left-1 md:left-2"></div>
                                         </div>
+                                    </div>
+
+                                    {/* Numeración */}
+                                    <div className="flex justify-center items-center">
+                                        <span className="text-xl md:text-2xl font-black text-white/40 tabular-nums">
+                                            {globalIndex}
+                                        </span>
                                     </div>
                                     
                                     {/* Pedido */}
