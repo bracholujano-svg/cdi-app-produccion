@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ArrowRightLeft, Clock, CheckCircle, AlertTriangle, ImageIcon, Calendar, User, Package, MapPin, Activity } from 'lucide-react';
+import { X, ArrowRightLeft, Clock, CheckCircle, AlertTriangle, ImageIcon, Calendar, User, Package, MapPin, Activity, History } from 'lucide-react';
 import { getDaysLeft } from '../../utils/helpers';
 
 const OrderHistoryModal = ({ order, allOrders, onClose }) => {
