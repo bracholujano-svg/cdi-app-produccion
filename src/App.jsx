@@ -135,7 +135,7 @@ const {
         setShowHistoryPlanta(false); 
         setShowHistoryCalidad(false); 
         setShowHistoryEntrega(false);
-        setTempTransferAreas(selectedOrder.areaActual ? [selectedOrder.areaActual] : []);
+        setTempTransferAreas([]);
         setTempTransferDate(selectedOrder.fechaEntregaPrometida || "");
         setTempShiftActivity(CONFIG_PROCESOS[selectedOrder.areaActual]?.[0] || "");
         setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
