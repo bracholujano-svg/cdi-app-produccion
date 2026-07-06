@@ -41,13 +41,13 @@ const OrderDetailsModal = ({
 
   if (!selectedOrder) return null;
 
-  const rootId = selectedOrder.master_id || selectedOrder.id;
-  const familyOrders = (orders || []).filter(o => o.id === rootId || o.master_id === rootId);
+  const rootId = selectedOrder?.master_id || selectedOrder?.id;
+  const familyOrders = (orders || []).filter(o => o && (o.id === rootId || o.master_id === rootId));
   if (familyOrders.length === 0) familyOrders.push(selectedOrder);
 
-  const unifiedHistorial = familyOrders.flatMap(o => o.historial || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o.bitacoraTurnos || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o.bitacoraCalidad || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
 
   return (
       
