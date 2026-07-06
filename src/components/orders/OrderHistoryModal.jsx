@@ -82,8 +82,8 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
         });
     }
 
-    // Ordenar descendente (más reciente primero)
-    events.sort((a, b) => b.fecha - a.fecha);
+    // Ordenar ascendente (más antiguo primero)
+    events.sort((a, b) => a.fecha - b.fecha);
 
     const daysLeft = getDaysLeft(order.fechaEntregaPrometida);
     const isOverdue = daysLeft !== null && daysLeft < 0;
@@ -138,11 +138,11 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                         <div className="relative border-l-4 border-[var(--border-color)] ml-4 md:ml-8 space-y-8 pb-10">
                             {events.map((ev, index) => {
                                 const Icon = ev.icon;
-                                // Calcular tiempo transcurrido desde el evento anterior (más viejo, que está en el índice siguiente)
+                                // Calcular tiempo transcurrido hacia el siguiente evento
                                 let timeDiffStr = null;
                                 if (index < events.length - 1) {
-                                    const prevEvent = events[index + 1];
-                                    const diffMs = ev.fecha - prevEvent.fecha;
+                                    const nextEvent = events[index + 1];
+                                    const diffMs = nextEvent.fecha - ev.fecha;
                                     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
                                     const diffDays = Math.floor(diffHours / 24);
                                     if (diffDays > 0) {
