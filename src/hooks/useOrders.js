@@ -20,6 +20,7 @@ export const useOrders = () => {
                     pedido_num: sanitizedOrder.pedidoNum || '',
                     cliente: sanitizedOrder.cliente || '',
                     areas_compartidas: sanitizedOrder.areas_compartidas || [],
+                    asignado_a: Array.isArray(sanitizedOrder.asignado_a) ? sanitizedOrder.asignado_a : (sanitizedOrder.asignado_a ? [sanitizedOrder.asignado_a] : []),
                     data_completa: sanitizedOrder
                 });
                 dbError = error;
