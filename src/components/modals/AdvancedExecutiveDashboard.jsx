@@ -382,7 +382,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                   </div>
                                   <div className="bg-[var(--accent)] p-6 rounded-3xl text-[#cdcbc8] dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
                                       <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Próximos a Entrega</p>
-                                      <h3 className="text-4xl font-black mt-1">{urgentesCount}</h3>
+                                      <h3 className="text-4xl font-black mt-1 text-white dark:text-[#17181b]">{urgentesCount}</h3>
                                   </div>
                                 <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted">Despachados</p>
@@ -445,7 +445,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 <div key={idx} className="">
                                                     <div className="flex justify-between text-xs font-bold mb-1">
                                                         <span className="text-slate-600 truncate mr-2">{item.label}</span>
-                                                        <span className={item.status === 'critical' ? 'text-red-600' : 'text-slate-400'}>{icon}{item.text}</span>
+                                                        <span className={item.status === 'critical' ? 'text-red-600' : 'text-slate-600'}>{icon}{item.text}</span>
                                                     </div>
                                                     <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                                                         <div className={`h-2.5 rounded-full transition-colors duration-1000 ${bgClass}`} style={{ width: `${item.time > 0 ? Math.max((item.time / maxTime) * 100, 5) : 0}%` }}></div>
