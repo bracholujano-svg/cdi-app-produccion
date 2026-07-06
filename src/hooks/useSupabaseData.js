@@ -69,6 +69,12 @@ export const useSupabaseData = () => {
 
         loadFromCacheAndFetch();
         
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                loadFromCacheAndFetch();
+            }
+        });
+        
         // Manejar Realtime de manera incremental (no refetch total)
         const handleRealtimeInventario = async (payload) => {
             // Un refetch total en realtime puede bloquear, idealmente sería incremental.
@@ -94,8 +100,14 @@ export const useSupabaseData = () => {
             return () => { 
                 supabase.removeChannel(channels); 
                 if (workerRef.current) workerRef.current.terminate();
+                authListener?.subscription?.unsubscribe();
             };
-        } catch(e) {}
+        } catch(e) {
+            return () => {
+                if (workerRef.current) workerRef.current.terminate();
+                authListener?.subscription?.unsubscribe();
+            };
+        }
     }, []);
 
     return { supabaseData, setSupabaseData };

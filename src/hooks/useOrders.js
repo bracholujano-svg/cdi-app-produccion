@@ -78,6 +78,12 @@ export const useOrders = () => {
             } catch (err) { console.error('Error fetching produccion:', err); alert('Error de permisos (RLS): ' + (err?.message || err)); }
         };
         fetchProduccion();
+        
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                fetchProduccion();
+            }
+        });
 
         const handleProduccionPayload = (payload) => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -134,6 +140,7 @@ export const useOrders = () => {
         return () => {
             supabase.removeChannel(subPedidos);
             supabase.removeChannel(subAlertas);
+            authListener?.subscription?.unsubscribe();
         };
     }, []);
 
