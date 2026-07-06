@@ -4,7 +4,7 @@ import {
   ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { CONFIG_PROCESOS, AREAS } from '../../utils/constants';
+import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PLANTA } from '../../utils/constants';
 
 const OrderDetailsModal = ({
   handleImageUpload,
@@ -227,20 +227,36 @@ const OrderDetailsModal = ({
                           return (
                             <>
                               <div className="w-full flex flex-col gap-2 mb-2">
-                                  <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
-                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                      {AREAS.map(a => {
-                                          const isSelected = tempTransferAreas.includes(a);
-                                          return (
-                                              <button key={a} type="button" 
-                                                  onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                  className={`p-2 rounded-xl text-[10px] md:text-xs lg:text-sm font-black border uppercase transition-colors text-center shadow-sm ${isSelected ? 'bg-[var(--accent)] text-[var(--card-bg)] border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--primary)] border-[var(--border-color)] hover:brightness-95'}`}>
-                                                  {a}
-                                              </button>
-                                          )
-                                      })}
-                                  </div>
-                              </div>
+                                    <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
+                                    
+                                    <div className="text-[10px] md:text-xs font-bold theme-text-muted uppercase mt-2 border-b theme-border pb-1">Administrativo</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {AREAS_ADMIN.map(a => {
+                                            const isSelected = tempTransferAreas.includes(a);
+                                            return (
+                                                <button key={a} type="button" 
+                                                    onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
+                                                    {a}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div className="text-[10px] md:text-xs font-bold theme-text-muted uppercase mt-3 border-b theme-border pb-1">Planta de Producción</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {AREAS_PLANTA.map(a => {
+                                            const isSelected = tempTransferAreas.includes(a);
+                                            return (
+                                                <button key={a} type="button" 
+                                                    onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-[var(--accent)] text-[var(--card-bg)] border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--primary)] border-[var(--border-color)] hover:brightness-95'}`}>
+                                                    {a}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
                         <div className="grid grid-cols-1 gap-2">
                             <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA ENTREGA" />

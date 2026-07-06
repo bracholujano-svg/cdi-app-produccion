@@ -24,3 +24,11 @@ export const CONFIG_PROCESOS = {
 
 export const AREAS_RECEPCION = Object.keys(CONFIG_PROCESOS).filter(a => a !== "Administrador / Todos");
 export const AREAS = Object.keys(CONFIG_PROCESOS);
+
+export const AREAS_ADMIN = [
+    "Comercial / Ventas",
+    "Diseño",
+    "Programación CNC"
+];
+
+export const AREAS_PLANTA = AREAS_RECEPCION.filter(a => !AREAS_ADMIN.includes(a));
