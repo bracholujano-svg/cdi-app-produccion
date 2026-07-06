@@ -58,7 +58,7 @@ const {
     showHistoryPlanta, setShowHistoryPlanta,
     showHistoryCalidad, setShowHistoryCalidad,
     showHistoryEntrega, setShowHistoryEntrega,
-    tempTransferArea, setTempTransferArea,
+    tempTransferAreas, setTempTransferAreas,
     tempTransferDate, setTempTransferDate,
     tempShiftActivity, setTempShiftActivity,
     tempOperario, setTempOperario,
