@@ -177,8 +177,8 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                 
                 {/* Lado Izquierdo: Título y Área */}
                 <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 md:w-24 md:h-24 flex-shrink-0 bg-white rounded-full flex items-center justify-center p-1 shadow-lg shadow-black/50">
-                        <img src="/logo.png" alt="CDI Logo" className="w-full h-full object-contain" />
+                    <div className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center transition-transform hover:scale-105 duration-500">
+                        <img src="/logo.png" alt="CDI Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.15)] filter brightness-110" />
                     </div>
                     <div>
                         <h1 className="text-xl md:text-2xl font-bold text-indigo-400 tracking-widest uppercase flex items-center gap-2">
