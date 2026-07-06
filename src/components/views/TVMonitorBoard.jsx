@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Clock, MapPin, Activity, Calendar, AlertTriangle, Monitor, Package, PlaneTakeoff, PlaneLanding, Percent, TrendingUp } from 'lucide-react';
+import { X, Clock, MapPin, Activity, Calendar, AlertTriangle, Monitor, Package, PlaneTakeoff, PlaneLanding, Percent, TrendingUp, CheckCircle } from 'lucide-react';
 import { getDaysLeft } from '../../utils/helpers';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS } from '../../utils/constants';
