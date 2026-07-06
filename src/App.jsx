@@ -139,6 +139,7 @@ const {
         setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
         setCalidadState("APROBADO"); setCalidadInspector(""); setCalidadNota(""); setCalidadPhoto(null);
         setTransferNota(""); setTransferPhoto(null);
+        setTempAssignedPersonnel({});
       }
     }
   }, [selectedOrder]);
@@ -371,10 +372,12 @@ const {
     
     areas.forEach((area, index) => {
         const isDespacho = area === 'Despachos';
+        const personalAsignado = tempAssignedPersonnel[area] || [];
+        const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
         const newHistoryEntry = { 
             fecha: new Date().toISOString(), 
             supervisor: supervisorProfile?.name || "S/N", 
-            accion: isPartial ? `Entrega Parcial a ${area}` : `Entrega a ${area}`, 
+            accion: isPartial ? `Entrega Parcial a ${area}${asignadoText}` : `Entrega a ${area}${asignadoText}`, 
             entrega: en, recibe: re, nota: transferNota, foto: transferPhoto 
         };
         
@@ -388,12 +391,14 @@ const {
                   areaActual: area, 
                   estadoInterno: 'En Espera', // o despachado según config
                   fechaEntregaPrometida: date,
+                  asignado_a: personalAsignado,
                   historial: [...(order.historial || []), newHistoryEntry] 
                 }
               : { 
                   ...order, 
                   estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
                   fechaEntregaPrometida: date,
+                  asignado_a: personalAsignado,
                   transferenciaPendiente: {
                       haciaArea: area,
                       entregadoPor: en || supervisorProfile?.name || "S/N",
@@ -417,18 +422,20 @@ const {
                   areaActual: area, 
                   estadoInterno: 'En Espera', 
                   fechaEntregaPrometida: date,
+                  asignado_a: personalAsignado,
                   historial: [...(order.historial || []), {
                       ...newHistoryEntry,
-                      accion: `Bifurcación hacia ${area}`
+                      accion: `Bifurcación hacia ${area}${asignadoText}`
                   }] 
                 }
               : { 
                   ...order,
                   id: cloneId,
                   master_id: order.id,
-                  areaActual: order.areaActual, // Se mantiene temporalmente porque va en tránsito? No, el clone ya está viajando a la nueva área
+                  areaActual: order.areaActual,
                   estadoInterno: `EN TRÁNSITO A ${area}`,
                   fechaEntregaPrometida: date,
+                  asignado_a: personalAsignado,
                   transferenciaPendiente: {
                       haciaArea: area,
                       entregadoPor: en || supervisorProfile?.name || "S/N",
@@ -439,7 +446,7 @@ const {
                   },
                   historial: [...(order.historial || []), {
                       ...newHistoryEntry,
-                      accion: `Bifurcación hacia ${area}`
+                      accion: `Bifurcación hacia ${area}${asignadoText}`
                   }] 
                 };
             

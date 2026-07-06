@@ -52,3 +52,20 @@ export const AREAS_FINALES = [
 ];
 
 export const AREAS_PLANTA = AREAS_RECEPCION.filter(a => !AREAS_ADMIN.includes(a));
+
+export const PERSONAL_DISENO = ["Ana Gómez", "Carlos Ruiz", "Sofía Vargas"];
+export const PERSONAL_CNC = ["Luis Martínez", "Pedro Sánchez", "Miguel Torres", "Jorge Díaz", "Raúl Castro"];
+
+export const ROUTING_MAP = {
+    "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Ensamble"],
+    "Ebanistería": ["Pintura Líquida", "Ensamble"],
+    "Corte y Dobles de Lámina y Tubería CNC": ["Área de Soldadura", "Área de Torno", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
+    "Área de Soldadura": ["Pintura en Polvo", "Pintura Líquida", "Ensamble"],
+    "Área de Torno": ["Área de Soldadura", "Pintura en Polvo", "Ensamble"],
+    "Corte y Mecanizado de Vidrio": ["Ensamble", "Empaque"],
+    "Pintura en Polvo": ["Ensamble", "Empaque"],
+    "Pintura Líquida": ["Ensamble", "Empaque"],
+    "Ensamble": ["Empaque"],
+    "Empaque": ["Despachos"],
+    "Despachos": []
+};

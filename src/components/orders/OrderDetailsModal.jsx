@@ -4,7 +4,7 @@ import {
   ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES } from '../../utils/constants';
+import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
 
 const OrderDetailsModal = ({
   handleImageUpload,
@@ -15,6 +15,7 @@ const OrderDetailsModal = ({
   toggleMic
 }) => {
   const {
+    orders,
     selectedOrder, setSelectedOrder,
     openSection, setOpenSection,
     tempOperario, setTempOperario,
@@ -29,6 +30,7 @@ const OrderDetailsModal = ({
     calidadPhoto, setCalidadPhoto,
     showHistoryCalidad, setShowHistoryCalidad,
     tempTransferAreas, setTempTransferAreas,
+    tempAssignedPersonnel, setTempAssignedPersonnel,
     tempTransferDate, setTempTransferDate,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
@@ -224,6 +226,34 @@ const OrderDetailsModal = ({
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
                           if (!canEdit) return null;
+
+                          const isGerente = supervisorProfile?.area === "Administrador / Todos";
+                          const isDiseno = supervisorProfile?.area === "Diseño";
+                          
+                          let allowedAreas = [];
+                          if (isGerente) {
+                            allowedAreas = AREAS;
+                          } else if (isDiseno) {
+                            allowedAreas = ["Programación CNC", ...AREAS_PLANTA];
+                          } else {
+                            allowedAreas = ROUTING_MAP[supervisorProfile?.area] || [];
+                          }
+
+                          const toggleAssignedPersonnel = (area, person) => {
+                            setTempAssignedPersonnel(prev => {
+                              const current = prev[area] || [];
+                              if (current.includes(person)) {
+                                return { ...prev, [area]: current.filter(p => p !== person) };
+                              } else {
+                                return { ...prev, [area]: [...current, person] };
+                              }
+                            });
+                          };
+                        
+                          const getWorkload = (person) => {
+                            return orders.filter(o => o.asignado_a && o.asignado_a.includes(person) && o.estadoInterno !== 'DESPACHADO' && o.estado !== 'ENTREGADO').length;
+                          };
+
                           return (
                             <>
                               <div className="w-full flex flex-col gap-2 mb-2">
@@ -233,10 +263,11 @@ const OrderDetailsModal = ({
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         {AREAS_ADMIN.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
+                                            const isDisabled = !allowedAreas.includes(a);
                                             return (
-                                                <button key={a} type="button" 
+                                                <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
                                                     {a}
                                                 </button>
                                             )
@@ -247,10 +278,11 @@ const OrderDetailsModal = ({
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         {AREAS_PRIMARIAS.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
+                                            const isDisabled = !allowedAreas.includes(a);
                                             return (
-                                                <button key={a} type="button" 
+                                                <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
                                                     {a}
                                                 </button>
                                             )
@@ -261,10 +293,11 @@ const OrderDetailsModal = ({
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         {AREAS_SECUNDARIAS.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
+                                            const isDisabled = !allowedAreas.includes(a);
                                             return (
-                                                <button key={a} type="button" 
+                                                <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
                                                     {a}
                                                 </button>
                                             )
@@ -275,15 +308,52 @@ const OrderDetailsModal = ({
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         {AREAS_FINALES.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
+                                            const isDisabled = !allowedAreas.includes(a);
                                             return (
-                                                <button key={a} type="button" 
+                                                <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
                                                     {a}
                                                 </button>
                                             )
                                         })}
                                     </div>
+
+                                    {tempTransferAreas.includes("Diseño") && isGerente && (
+                                        <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
+                                            <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                {PERSONAL_DISENO.map(person => {
+                                                    const isAssigned = (tempAssignedPersonnel["Diseño"] || []).includes(person);
+                                                    const load = getWorkload(person);
+                                                    return (
+                                                        <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                            <span>{person}</span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {tempTransferAreas.includes("Programación CNC") && isDiseno && (
+                                        <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
+                                            <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                {PERSONAL_CNC.map(person => {
+                                                    const isAssigned = (tempAssignedPersonnel["Programación CNC"] || []).includes(person);
+                                                    const load = getWorkload(person);
+                                                    return (
+                                                        <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                            <span>{person}</span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
                         <div className="grid grid-cols-1 gap-2">
