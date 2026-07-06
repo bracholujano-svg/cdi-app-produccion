@@ -45,9 +45,9 @@ const OrderDetailsModal = ({
   const familyOrders = (orders || []).filter(o => o && (o.id === rootId || o.master_id === rootId));
   if (familyOrders.length === 0) familyOrders.push(selectedOrder);
 
-  const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
+  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
+  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
 
   return (
       
@@ -130,10 +130,10 @@ const OrderDetailsModal = ({
                         
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryPlanta(!showHistoryPlanta)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
-                                <span>Ver Histórico Producción ({selectedOrder.bitacoraTurnos?.length || 0})</span>
+                                <span>Ver Histórico Producción ({unifiedBitacoraTurnos?.length || 0})</span>
                                 {showHistoryPlanta ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
-                            {showHistoryPlanta && (selectedOrder.bitacoraTurnos || []).slice().reverse().map((n, i) => (
+                            {showHistoryPlanta && (unifiedBitacoraTurnos || []).slice().reverse().map((n, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
@@ -193,10 +193,10 @@ const OrderDetailsModal = ({
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryCalidad(!showHistoryCalidad)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
-                                <span>Ver Histórico Calidad ({selectedOrder.bitacoraCalidad?.length || 0})</span>
+                                <span>Ver Histórico Calidad ({unifiedBitacoraCalidad?.length || 0})</span>
                                 {showHistoryCalidad ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
-                            {showHistoryCalidad && (selectedOrder.bitacoraCalidad || []).slice().reverse().map((n, i) => (
+                            {showHistoryCalidad && (unifiedBitacoraCalidad || []).slice().reverse().map((n, i) => (
                                 <div key={i} className={`theme-bg-input p-3 rounded-xl border relative animate-in slide-in-from-top-2 ${n.estado==='APROBADO' ? 'border-green-500/30' : n.estado==='RETRABAJO' ? 'border-yellow-500/30' : 'border-red-500/30'}`}>
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-800 dark:text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-800 dark:text-yellow-500' : 'text-red-800 dark:text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
@@ -280,10 +280,10 @@ const OrderDetailsModal = ({
 
                         <div className="mt-4 pt-4 border-t border-black/20 space-y-2">
                             <button type="button" onClick={() => setShowHistoryEntrega(!showHistoryEntrega)} className="w-full flex items-center justify-between text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest bg-black/10 p-2 rounded-lg hover:bg-black/20 transition-colors">
-                                <span>Ver Histórico Entregas ({selectedOrder.historial?.length || 0})</span>
+                                <span>Ver Histórico Entregas ({unifiedHistorial?.length || 0})</span>
                                 {showHistoryEntrega ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                             </button>
-                            {showHistoryEntrega && (selectedOrder.historial || []).slice().reverse().map((h, i) => (
+                            {showHistoryEntrega && (unifiedHistorial || []).slice().reverse().map((h, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[var(--primary)]/20 text-[var(--primary)] px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--primary)]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
