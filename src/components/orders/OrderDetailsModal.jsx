@@ -4,7 +4,7 @@ import {
   ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PLANTA } from '../../utils/constants';
+import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES } from '../../utils/constants';
 
 const OrderDetailsModal = ({
   handleImageUpload,
@@ -229,7 +229,7 @@ const OrderDetailsModal = ({
                               <div className="w-full flex flex-col gap-2 mb-2">
                                     <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
-                                    <div className="text-[10px] md:text-xs font-bold theme-text-muted uppercase mt-2 border-b theme-border pb-1">Administrativo</div>
+                                    <div className="text-[10px] md:text-xs font-bold text-blue-500 uppercase mt-2 border-b border-blue-500/30 pb-1">Administrativo</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                         {AREAS_ADMIN.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
@@ -243,14 +243,42 @@ const OrderDetailsModal = ({
                                         })}
                                     </div>
 
-                                    <div className="text-[10px] md:text-xs font-bold theme-text-muted uppercase mt-3 border-b theme-border pb-1">Planta de Producción</div>
+                                    <div className="text-[10px] md:text-xs font-bold text-yellow-600 dark:text-yellow-500 uppercase mt-3 border-b border-yellow-600/30 pb-1">Áreas Primarias</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        {AREAS_PLANTA.map(a => {
+                                        {AREAS_PRIMARIAS.map(a => {
                                             const isSelected = tempTransferAreas.includes(a);
                                             return (
                                                 <button key={a} type="button" 
                                                     onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-[var(--accent)] text-[var(--card-bg)] border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--primary)] border-[var(--border-color)] hover:brightness-95'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
+                                                    {a}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div className="text-[10px] md:text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase mt-3 border-b border-emerald-600/30 pb-1">Áreas de Transformación</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {AREAS_SECUNDARIAS.map(a => {
+                                            const isSelected = tempTransferAreas.includes(a);
+                                            return (
+                                                <button key={a} type="button" 
+                                                    onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
+                                                    {a}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div className="text-[10px] md:text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mt-3 border-b border-purple-600/30 pb-1">Fases Finales</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                        {AREAS_FINALES.map(a => {
+                                            const isSelected = tempTransferAreas.includes(a);
+                                            return (
+                                                <button key={a} type="button" 
+                                                    onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
                                                     {a}
                                                 </button>
                                             )

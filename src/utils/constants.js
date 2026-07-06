@@ -31,4 +31,24 @@ export const AREAS_ADMIN = [
     "Programación CNC"
 ];
 
+export const AREAS_PRIMARIAS = [
+    "Corte y Mecanizado CNC de Madera",
+    "Corte y Dobles de Lámina y Tubería CNC",
+    "Corte y Mecanizado de Vidrio"
+];
+
+export const AREAS_SECUNDARIAS = [
+    "Ebanistería",
+    "Área de Soldadura",
+    "Área de Torno Convencional y CNC",
+    "Pintura en Polvo",
+    "Pintura Líquida"
+];
+
+export const AREAS_FINALES = [
+    "Ensamble",
+    "Empaque",
+    "Despachos"
+];
+
 export const AREAS_PLANTA = AREAS_RECEPCION.filter(a => !AREAS_ADMIN.includes(a));
