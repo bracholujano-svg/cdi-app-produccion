@@ -7,7 +7,8 @@ export const SUPERVISORES = [
 export const CONFIG_PROCESOS = {
     "Administrador / Todos": ["Control Total"],
     "Comercial / Ventas": ["Ingreso de Pedido", "Validación Técnica"],
-    "Programación y Diseño": ["En Espera", "Diseño", "Elaboración de Planos", "Programación de Máquinas CNC"],
+    "Diseño": ["En Espera", "Diseño", "Elaboración de Planos"],
+    "Programación CNC": ["En Espera", "Programación de Máquinas CNC"],
     "Corte y Mecanizado CNC de Madera": ["En Espera", "Corte Seccionadora", "Corte Escuadradora", "Mecanizado Venture", "Mecanizado BMG", "Mecanizado 612", "Enchape de Cantos"],
     "Ebanistería": ["En Espera", "Banco de Ebanistería", "Enchape", "Conformado", "Armado de Corian"],
     "Pintura Líquida": ["En Espera", "Pulido en Crudo", "Base 1", "Pulido de Base 1", "Base 2", "Pulido de Base 2", "Sellado", "Acabado"],

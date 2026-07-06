@@ -19,6 +19,9 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
     // 1. Cálculos de Datos Reales
     const orders = rawOrders.filter(o => {
+        if (o.master_id && ['Ensamble', 'Empaque', 'Despachos'].includes(o.areaActual)) {
+            return false;
+        }
         if (!startDate && !endDate) return true;
         if (!o.fechaEntregaPrometida) return false;
         const orderDate = new Date(o.fechaEntregaPrometida);

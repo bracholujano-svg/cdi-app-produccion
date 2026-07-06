@@ -127,16 +127,19 @@ const {
 
   useEffect(() => {
     if (selectedOrder) {
-      setOpenSection(null);
-      setShowHistoryPlanta(false); 
-      setShowHistoryCalidad(false); 
-      setShowHistoryEntrega(false);
-      setTempTransferArea(selectedOrder.areaActual || "");
-      setTempTransferDate(selectedOrder.fechaEntregaPrometida || "");
-      setTempShiftActivity(CONFIG_PROCESOS[selectedOrder.areaActual]?.[0] || "");
-      setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
-      setCalidadState("APROBADO"); setCalidadInspector(""); setCalidadNota(""); setCalidadPhoto(null);
-      setTransferNota(""); setTransferPhoto(null);
+      if(selectedOrder.isReadOnly) {
+        setShowHistoryPlanta(true);
+      } else {
+        setShowHistoryPlanta(false); 
+        setShowHistoryCalidad(false); 
+        setShowHistoryEntrega(false);
+        setTempTransferAreas(selectedOrder.areaActual ? [selectedOrder.areaActual] : []);
+        setTempTransferDate(selectedOrder.fechaEntregaPrometida || "");
+        setTempShiftActivity(CONFIG_PROCESOS[selectedOrder.areaActual]?.[0] || "");
+        setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
+        setCalidadState("APROBADO"); setCalidadInspector(""); setCalidadNota(""); setCalidadPhoto(null);
+        setTransferNota(""); setTransferPhoto(null);
+      }
     }
   }, [selectedOrder]);
 
@@ -360,53 +363,107 @@ const {
     setCalidadNota(""); setCalidadPhoto(null);
   };
 
-  const updateTransfer = (id, area, date, en, re, isPartial = false) => {
+  const updateTransfer = (id, areas, date, en, re, isPartial = false) => {
     const order = orders.find(o => o?.id === id);
-    if (!order) return;
-    const newHistoryEntry = { fecha: new Date().toISOString(), supervisor: supervisorProfile?.name || "S/N", accion: isPartial ? `Entrega Parcial a ${area}` : `Entrega a ${area}`, entrega: en, recibe: re, nota: transferNota, foto: transferPhoto };
+    if (!order || !areas || areas.length === 0) return;
     
-    // Si el destino es Despachos, pasarlo directo (no requiere recepción)
-    const isDespacho = area === 'Despachos';
-
-    const updatedOrder = isDespacho 
-      ? { 
-          ...order, 
-          areaActual: area, 
-          estadoInterno: 'En Espera', // o despachado según config
-          fechaEntregaPrometida: date,
-          historial: [...(order.historial || []), newHistoryEntry] 
-        }
-      : { 
-          ...order, 
-          estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
-          fechaEntregaPrometida: date,
-          transferenciaPendiente: {
-              haciaArea: area,
-              entregadoPor: en || supervisorProfile?.name || "S/N",
-              nota: transferNota,
-              fotoEntrega: transferPhoto,
-              fechaEnvio: new Date().toISOString(),
-              isPartial: isPartial
-          },
-          historial: [...(order.historial || []), newHistoryEntry] 
+    let newOrdersList = [...orders];
+    
+    areas.forEach((area, index) => {
+        const isDespacho = area === 'Despachos';
+        const newHistoryEntry = { 
+            fecha: new Date().toISOString(), 
+            supervisor: supervisorProfile?.name || "S/N", 
+            accion: isPartial ? `Entrega Parcial a ${area}` : `Entrega a ${area}`, 
+            entrega: en, recibe: re, nota: transferNota, foto: transferPhoto 
         };
-
-    let newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
-    
-    if (updatedOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
-        const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
-        const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
-        if (allDispatched) {
-            const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
-            if (alertObj) {
-                const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
-                setCoordinationAlerts(newAlerts);
-                syncAlertToSupabase(alertObj, true);
+        
+        let targetOrder;
+        
+        if (index === 0) {
+            // El primer destino actualiza el master original
+            targetOrder = isDespacho 
+              ? { 
+                  ...order, 
+                  areaActual: area, 
+                  estadoInterno: 'En Espera', // o despachado según config
+                  fechaEntregaPrometida: date,
+                  historial: [...(order.historial || []), newHistoryEntry] 
+                }
+              : { 
+                  ...order, 
+                  estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
+                  fechaEntregaPrometida: date,
+                  transferenciaPendiente: {
+                      haciaArea: area,
+                      entregadoPor: en || supervisorProfile?.name || "S/N",
+                      nota: transferNota,
+                      fotoEntrega: transferPhoto,
+                      fechaEnvio: new Date().toISOString(),
+                      isPartial: isPartial
+                  },
+                  historial: [...(order.historial || []), newHistoryEntry] 
+                };
+                
+            newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
+        } else {
+            // Los destinos adicionales generan Clones (Bifurcación)
+            const cloneId = crypto.randomUUID();
+            targetOrder = isDespacho 
+              ? { 
+                  ...order, 
+                  id: cloneId,
+                  master_id: order.id,
+                  areaActual: area, 
+                  estadoInterno: 'En Espera', 
+                  fechaEntregaPrometida: date,
+                  historial: [...(order.historial || []), {
+                      ...newHistoryEntry,
+                      accion: `Bifurcación hacia ${area}`
+                  }] 
+                }
+              : { 
+                  ...order,
+                  id: cloneId,
+                  master_id: order.id,
+                  areaActual: order.areaActual, // Se mantiene temporalmente porque va en tránsito? No, el clone ya está viajando a la nueva área
+                  estadoInterno: `EN TRÁNSITO A ${area}`,
+                  fechaEntregaPrometida: date,
+                  transferenciaPendiente: {
+                      haciaArea: area,
+                      entregadoPor: en || supervisorProfile?.name || "S/N",
+                      nota: transferNota,
+                      fotoEntrega: transferPhoto,
+                      fechaEnvio: new Date().toISOString(),
+                      isPartial: false // Las bifurcaciones no son parciales en sí
+                  },
+                  historial: [...(order.historial || []), {
+                      ...newHistoryEntry,
+                      accion: `Bifurcación hacia ${area}`
+                  }] 
+                };
+            
+            newOrdersList.push(targetOrder);
+        }
+        
+        if (targetOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
+            const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === targetOrder.pedidoNum);
+            const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+            if (allDispatched) {
+                const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (targetOrder.pedidoNum || "").toUpperCase());
+                if (alertObj) {
+                    const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                    setCoordinationAlerts(newAlerts);
+                    syncAlertToSupabase(alertObj, true);
+                }
             }
         }
-    }
-
-    setOrders(newOrdersList); setSelectedOrder(null); syncOrderToSupabase(updatedOrder);
+        
+        syncOrderToSupabase(targetOrder);
+    });
+    
+    setOrders(newOrdersList); 
+    setSelectedOrder(null); 
   };
 
   const processReception = (id, accepted, receptionName, notes, photo) => {
@@ -572,6 +629,11 @@ const {
 
   const filteredOrders = orders.filter(o => {
     if (!o) return false;
+    
+    // Ocultar clones (bifurcaciones) que ya llegaron a áreas de convergencia
+    if (o.master_id && ['Ensamble', 'Empaque', 'Despachos'].includes(o.areaActual)) {
+        return false;
+    }
     
     const st = searchTerm.toLowerCase().trim();
     const searchTerms = st ? st.split(/\s+/) : [];

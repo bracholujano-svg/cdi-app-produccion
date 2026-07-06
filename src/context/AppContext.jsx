@@ -76,7 +76,7 @@ export const AppContextProvider = ({ children }) => {
   const [showHistoryCalidad, setShowHistoryCalidad] = useState(false);
   const [showHistoryEntrega, setShowHistoryEntrega] = useState(false);
   
-  const [tempTransferArea, setTempTransferArea] = useState("");
+  const [tempTransferAreas, setTempTransferAreas] = useState([]);
   const [tempTransferDate, setTempTransferDate] = useState("");
   const [transferNota, setTransferNota] = useState("");
   const [transferPhoto, setTransferPhoto] = useState(null);
@@ -151,7 +151,7 @@ export const AppContextProvider = ({ children }) => {
     showHistoryPlanta, setShowHistoryPlanta,
     showHistoryCalidad, setShowHistoryCalidad,
     showHistoryEntrega, setShowHistoryEntrega,
-    tempTransferArea, setTempTransferArea,
+    tempTransferAreas, setTempTransferAreas,
     tempTransferDate, setTempTransferDate,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,

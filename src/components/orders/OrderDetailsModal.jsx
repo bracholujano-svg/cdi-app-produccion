@@ -28,17 +28,26 @@ const OrderDetailsModal = ({
     calidadNota, setCalidadNota,
     calidadPhoto, setCalidadPhoto,
     showHistoryCalidad, setShowHistoryCalidad,
-    tempTransferArea, setTempTransferArea,
+    tempTransferAreas, setTempTransferAreas,
     tempTransferDate, setTempTransferDate,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
     tempIsPartial, setTempIsPartial,
     showHistoryEntrega, setShowHistoryEntrega,
     supervisorProfile,
-    areaFilter
+    areaFilter,
+    orders
   } = useAppContext();
 
   if (!selectedOrder) return null;
+
+  const rootId = selectedOrder.master_id || selectedOrder.id;
+  const familyOrders = (orders || []).filter(o => o.id === rootId || o.master_id === rootId);
+  if (familyOrders.length === 0) familyOrders.push(selectedOrder);
+
+  const unifiedHistorial = familyOrders.flatMap(o => o.historial || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o.bitacoraTurnos || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o.bitacoraCalidad || []).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
 
   return (
       
@@ -217,7 +226,21 @@ const OrderDetailsModal = ({
                           if (!canEdit) return null;
                           return (
                             <>
-                              <select value={tempTransferArea} onChange={e=>setTempTransferArea(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] uppercase text-[var(--primary)]">{AREAS.map(a=><option key={a} value={a}>{a}</option>)}</select>
+                              <div className="w-full flex flex-col gap-2 mb-2">
+                                  <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                      {AREAS.map(a => {
+                                          const isSelected = tempTransferAreas.includes(a);
+                                          return (
+                                              <button key={a} type="button" 
+                                                  onClick={() => setTempTransferAreas(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])}
+                                                  className={`p-2 rounded-xl text-[10px] md:text-xs lg:text-sm font-black border uppercase transition-colors text-center shadow-sm ${isSelected ? 'bg-[var(--accent)] text-[var(--card-bg)] border-[var(--accent)]' : 'bg-[var(--card-bg)] text-[var(--primary)] border-[var(--border-color)] hover:brightness-95'}`}>
+                                                  {a}
+                                              </button>
+                                          )
+                                      })}
+                                  </div>
+                              </div>
                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
                         <div className="grid grid-cols-1 gap-2">
                             <input id="entregadoPor" defaultValue={supervisorProfile.name} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA ENTREGA" />
@@ -242,14 +265,13 @@ const OrderDetailsModal = ({
                               <input type="checkbox" checked={tempIsPartial} onChange={(e) => setTempIsPartial(e.target.checked)} className="w-5 h-5 accent-[var(--primary)] rounded cursor-pointer" />
                               <span className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)]">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
                         </label>
-
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
-                              if(en && tempTransferDate) {
-                                updateTransfer(selectedOrder.id, tempTransferArea, tempTransferDate, en, null, tempIsPartial);
+                              if(en && tempTransferDate && tempTransferAreas.length > 0) {
+                                updateTransfer(selectedOrder.id, tempTransferAreas, tempTransferDate, en, null, tempIsPartial);
                                 setTempIsPartial(false);
                               } else {
-                                alert("Debe firmar la entrega e indicar la fecha.");
+                                alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
                           }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
                             </>
