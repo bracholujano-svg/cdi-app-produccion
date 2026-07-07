@@ -263,7 +263,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                         <p className="text-xl mt-2">No hay productos en esta área actualmente.</p>
                     </div>
                 ) : (
-                    <div className="flex-1 flex flex-col relative">
+                    <div className="flex-1 flex flex-col relative overflow-hidden">
                         {currentItems.map((o, idx) => {
                             // Colores de Semáforo
                             const isRed = o.trafficColor === 'red';
@@ -291,7 +291,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                             const globalIndex = currentPage * ITEMS_PER_PAGE + idx + 1;
 
                             return (
-                                <div key={o.id} className={`grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-5 md:py-6 border-b border-white/5 items-center transition-all ${rowBgClass}`}>
+                                <div key={o.id} className={`flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b border-white/5 items-center transition-all ${rowBgClass}`}>
                                     {/* Semáforo Visual */}
                                     <div className="flex justify-center items-center">
                                         <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center justify-center
