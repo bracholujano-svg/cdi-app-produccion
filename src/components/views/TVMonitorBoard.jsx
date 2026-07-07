@@ -17,10 +17,14 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
     const ITEMS_PER_PAGE = 10; // Ajustable según altura de la pantalla de TV
     const ROTATION_INTERVAL = 5000; // 5 segundos
 
-    // Reloj
+    // Reloj y Bloqueo de Scroll Principal
     useEffect(() => {
+        document.body.style.overflow = 'hidden';
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
+        return () => {
+            clearInterval(timer);
+            document.body.style.overflow = '';
+        };
     }, []);
 
     // Cálculo de Eficiencia y Procesamiento de Pedidos
@@ -305,44 +309,44 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
 
                                     {/* Numeración */}
                                     <div className="flex justify-center items-center">
-                                        <span className="text-xl md:text-2xl font-black text-white/40 tabular-nums">
+                                        <span className="text-lg md:text-xl font-black text-white/40 tabular-nums">
                                             {globalIndex}
                                         </span>
                                     </div>
                                     
                                     {/* Pedido */}
-                                    <div className={`font-black text-xl md:text-2xl tabular-nums tracking-tighter ${textClass}`}>
+                                    <div className={`font-black text-lg md:text-xl tabular-nums tracking-tighter ${textClass}`}>
                                         #{o.pedidoNum}
                                     </div>
                                     
                                     {/* Cliente */}
-                                    <div className={`font-bold text-sm md:text-base lg:text-lg uppercase truncate ${textClass}`}>
+                                    <div className={`font-bold text-xs md:text-sm lg:text-base uppercase truncate ${textClass}`}>
                                         {o.cliente}
                                     </div>
                                     
                                     {/* Codigo y Cantidad */}
                                     <div className="flex flex-col">
-                                        <span className={`text-base md:text-lg lg:text-xl font-black ${accentClass}`}>{o.codArticulo}</span>
-                                        <span className={`text-sm md:text-base lg:text-lg font-black ${textClass}`}>Ctd: {o.cantidad}</span>
+                                        <span className={`text-sm md:text-base lg:text-lg font-black ${accentClass}`}>{o.codArticulo}</span>
+                                        <span className={`text-xs md:text-sm lg:text-base font-black ${textClass}`}>Ctd: {o.cantidad}</span>
                                     </div>
                                     
                                     {/* Producto */}
-                                    <div className={`font-black text-sm md:text-base lg:text-lg uppercase truncate ${textClass}`}>
+                                    <div className={`font-black text-xs md:text-sm lg:text-base uppercase truncate ${textClass}`}>
                                         {o.nombre}
                                     </div>
 
                                     {/* Ingreso a la sección */}
                                     <div className="flex flex-col">
-                                        <span className={`text-base md:text-lg font-black ${textClass}`}>
+                                        <span className={`text-sm md:text-base font-black ${textClass}`}>
                                             {o.fechaIngreso.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                                         </span>
-                                        <span className={`text-sm md:text-base font-bold uppercase ${accentClass}`}>
+                                        <span className={`text-xs md:text-sm font-bold uppercase ${accentClass}`}>
                                             {o.fechaIngreso.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
 
                                     {/* Tiempo en el área */}
-                                    <div className={`font-black text-2xl md:text-3xl lg:text-4xl tabular-nums ${textClass}`}>
+                                    <div className={`font-black text-lg md:text-xl lg:text-2xl whitespace-nowrap tabular-nums ${textClass}`}>
                                         {formatTimeInArea(o.timeInAreaMs)}
                                     </div>
 
