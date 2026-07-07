@@ -915,8 +915,8 @@ const {
                       {supervisorProfile?.area === "Administrador / Todos" && (
                           <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 theme-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
                       )}
-                      <span className="text-lg font-black text-[var(--accent)] uppercase block leading-none pr-8">PED: {alertItem.pedidoNum}</span>
-                      <h4 className="text-sm font-bold theme-text-muted uppercase mt-1 truncate">{alertItem.cliente}</h4>
+                      <span className="text-lg font-black text-blue-600 dark:text-blue-400 uppercase block leading-none pr-8">PED: {alertItem.pedidoNum}</span>
+                      <h4 className="text-sm font-bold text-blue-500/80 dark:text-blue-300/80 uppercase mt-1 truncate">{alertItem.cliente}</h4>
                       
                       {supervisorProfile?.area === "Administrador / Todos" ? (
                           <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
