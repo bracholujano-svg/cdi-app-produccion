@@ -138,7 +138,7 @@ const {
         setShowHistoryCalidad(false); 
         setShowHistoryEntrega(false);
         setTempTransferAreas([]);
-        setTempTransferDate(selectedOrder.fechaEntregaPrometida || "");
+        setTempTransferDate(getLocalYYYYMMDD(new Date()));
         setTempShiftActivity(CONFIG_PROCESOS[selectedOrder.areaActual]?.[0] || "");
         setTempOperario(""); setShiftNoteText(""); setTempPhoto(null);
         setCalidadState("APROBADO"); setCalidadInspector(""); setCalidadNota(""); setCalidadPhoto(null);
