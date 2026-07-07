@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
@@ -76,7 +76,15 @@ const OrderDetailsModal = ({
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
               
-              
+              {/* Botón Ver Planos */}
+              <button 
+                  type="button" 
+                  onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${selectedOrder.codArticulo} vinculados a ReviSoft.`)} 
+                  className="w-full bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--primary)]/20"
+              >
+                  <FileText size={"1.3em"} /> Ver Planos del Producto
+              </button>
+
               {/* BANNER DE SOLO LECTURA */}
               {(() => {
                 const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();

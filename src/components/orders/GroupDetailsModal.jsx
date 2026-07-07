@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
@@ -71,6 +71,20 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                           </div>
                       )}
                       <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
+                    </div>
+
+                    {/* Botón Ver Planos */}
+                    <div className="mt-3">
+                        <button 
+                            type="button" 
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${p.codArticulo} vinculados a ReviSoft.`); 
+                            }} 
+                            className="w-full bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 py-2 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors"
+                        >
+                            <FileText size={"1.2em"} /> Ver Planos
+                        </button>
                     </div>
                   </div>
                 ))}
