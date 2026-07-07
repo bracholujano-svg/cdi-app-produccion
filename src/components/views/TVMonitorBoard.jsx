@@ -14,7 +14,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
     // Estado para el reloj y rotación
     const [currentTime, setCurrentTime] = useState(new Date());
     const [currentPage, setCurrentPage] = useState(0);
-    const ITEMS_PER_PAGE = 7; // Ajustable según altura de la pantalla de TV
+    const ITEMS_PER_PAGE = 10; // Ajustable según altura de la pantalla de TV
     const ROTATION_INTERVAL = 5000; // 5 segundos
 
     // Reloj
