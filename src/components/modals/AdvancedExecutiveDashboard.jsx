@@ -39,7 +39,15 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
     const totalOrders = orders.length;
     const basePlanta = totalOrders;
     const despachadosCount = orders.filter(o => o.estadoInterno === 'DESPACHADO').length;
-    const atrasadosCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
+
+    const getEffectiveDate = (o) => {
+        if (!o) return null;
+        const pNum = String(o.pedidoNum || "").toUpperCase();
+        const alertMatch = coordinationAlerts?.find(a => String(a?.pedidoNum || "").toUpperCase() === pNum);
+        return alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+    };
+
+    const atrasadosCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(getEffectiveDate(o)) !== null && getDaysLeft(getEffectiveDate(o)) < 0).length;
     const activosCount = totalOrders - despachadosCount;
     const aTiempoCount = totalOrders - atrasadosCount;
 
@@ -71,7 +79,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
             return;
         }
         
-        const daysLeft = getDaysLeft(o.fechaEntregaPrometida);
+        const daysLeft = getDaysLeft(getEffectiveDate(o));
         const progress = getAreaProgress(o.areaActual);
         
         if (daysLeft === null || daysLeft < 0) {

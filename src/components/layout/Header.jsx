@@ -18,9 +18,17 @@ const Header = () => {
 
   const totalOrders = orders.length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
-  const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0).length;
 
-  const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) <= 3).sort((a, b) => getDaysLeft(a?.fechaEntregaPrometida) - getDaysLeft(b?.fechaEntregaPrometida));
+  const getEffectiveDate = (o) => {
+    if (!o) return null;
+    const pNum = String(o.pedidoNum || "").toUpperCase();
+    const alertMatch = coordinationAlerts?.find(a => String(a?.pedidoNum || "").toUpperCase() === pNum);
+    return alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+  };
+
+  const atrasadosCount = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(getEffectiveDate(o)) !== null && getDaysLeft(getEffectiveDate(o)) < 0).length;
+
+  const urgentOrdersForMarquee = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(getEffectiveDate(o)) !== null && getDaysLeft(getEffectiveDate(o)) <= 3).sort((a, b) => getDaysLeft(getEffectiveDate(a)) - getDaysLeft(getEffectiveDate(b)));
   const mostUrgentOrder = urgentOrdersForMarquee.length > 0 ? urgentOrdersForMarquee[0] : null;
 
   const pendingReceptions = orders.filter(o => 
@@ -40,7 +48,7 @@ const Header = () => {
       {mostUrgentOrder && (
         <div className="bg-red-600 text-white py-2 sticky top-0 z-[60] shadow-md border-b border-red-800 whitespace-nowrap overflow-hidden">
           <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
-            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(mostUrgentOrder.fechaEntregaPrometida)} DÍAS</span>
+            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(getEffectiveDate(mostUrgentOrder))} DÍAS</span>
           </div>
         </div>
       )}

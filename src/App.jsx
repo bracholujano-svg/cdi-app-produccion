@@ -659,9 +659,12 @@ const {
     const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
     const filterUpper = clientFilter.toUpperCase();
     const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
+    
+    const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
+    const effectiveDate = alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
 
-    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) < 0;
-    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(o.fechaEntregaPrometida) === null || getDaysLeft(o.fechaEntregaPrometida) >= 0);
+    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(effectiveDate) !== null && getDaysLeft(effectiveDate) < 0;
+    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(effectiveDate) === null || getDaysLeft(effectiveDate) >= 0);
     if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && matchClient && o.estadoInterno === 'DESPACHADO';
     return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO';
   });
@@ -844,6 +847,7 @@ const {
       {showTVMonitor && (
         <TVMonitorBoard 
             allOrders={orders} 
+            coordinationAlerts={coordinationAlerts}
             onClose={() => setShowTVMonitor(false)} 
         />
       )}

@@ -4,7 +4,7 @@ import { getDaysLeft } from '../../utils/helpers';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS } from '../../utils/constants';
 
-const TVMonitorBoard = ({ allOrders = [], onClose }) => {
+const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) => {
     const { supervisorProfile } = useAppContext();
     
     // Configuración inicial del área
@@ -80,7 +80,9 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
         const activeOrders = allOrders.filter(o => o.areaActual === selectedArea && o.estadoGlobal !== 'Entregado');
 
         const enrichedOrders = activeOrders.map(o => {
-            const daysLeft = getDaysLeft(o.fechaEntregaPrometida);
+            const alertMatch = coordinationAlerts?.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
+            const effectiveDate = alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+            const daysLeft = getDaysLeft(effectiveDate);
             let trafficColor = 'green';
             if (daysLeft !== null) {
                 if (daysLeft <= 2) trafficColor = 'red';
@@ -137,7 +139,7 @@ const TVMonitorBoard = ({ allOrders = [], onClose }) => {
                 total: activeOrders.length
             }
         };
-    }, [allOrders, selectedArea]);
+    }, [allOrders, selectedArea, coordinationAlerts]);
 
     // Rotación automática (Paginación)
     const totalPages = Math.ceil(processedOrders.length / ITEMS_PER_PAGE) || 1;
