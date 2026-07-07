@@ -21,13 +21,13 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
       return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
   });
 
-  const itemsPerPage = 6;
+  const itemsPerPage = 24;
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
         <div className="fixed inset-0 bg-black/80  z-[90] flex items-center justify-center p-2 sm:p-4">
-          <div className="w-full max-w-4xl theme-bg-main h-[85vh] sm:h-[80vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+          <div className="w-full max-w-[95vw] theme-bg-main h-[90vh] sm:h-[95vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
                  <h2 className="text-xl font-black text-[var(--primary)] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
@@ -51,7 +51,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             </div>
 
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col custom-scrollbar">
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {paginatedProducts.map(p => (
                   <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-colors active:scale-95 bg-[var(--card-bg)]">
                     <div className="flex justify-between items-center mb-2">
