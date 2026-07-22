@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
@@ -95,32 +95,50 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {paginatedProducts.map(p => {
                   const isPartial = p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"));
-                  return (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] transition-colors active:scale-95 bg-[var(--card-bg)] relative ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' : (isPartial ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'theme-border shadow-sm')}`}>
-                    
-                    <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>
-                        {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--accent)]" size={"1.4em"} /> : <Square className="text-[var(--primary)]/30" size={"1.4em"} />}
-                    </button>
+                  const partialEvents = isPartial ? p.historial.filter(h => h.accion && h.accion.toUpperCase().includes("PARCIAL")) : [];
+                  const lastPartial = partialEvents.length > 0 ? partialEvents[partialEvents.length - 1] : null;
 
-                    <div className="flex justify-start items-center mb-2 pr-8">
-                       {p.cantidad && (
-                         <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
-                           <Package size={"1.1em"} /> CANT: {p.cantidad}
-                         </span>
-                       )}
+                  return (
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] transition-colors active:scale-95 bg-[var(--card-bg)] relative flex flex-col justify-between ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' : (isPartial ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'theme-border shadow-sm')}`}>
+                    
+                    <div>
+                        <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>
+                            {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--accent)]" size={"1.4em"} /> : <Square className="text-[var(--primary)]/30" size={"1.4em"} />}
+                        </button>
+
+                        <div className="flex justify-start items-center mb-2 pr-8">
+                           {p.cantidad && (
+                             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                               <Package size={"1.1em"} /> CANT: {p.cantidad}
+                             </span>
+                           )}
+                        </div>
+                        <div className="mb-2">
+                           <span title={p.codArticulo} className="inline-block max-w-full text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                        </div>
+                        <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
                     </div>
-                    <div className="mb-2">
-                       <span title={p.codArticulo} className="inline-block max-w-full text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
-                    </div>
-                    <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
-                    <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)]">
-                      <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
+
+                    <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] flex flex-col gap-1.5">
+                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
+                      
+                      {isPartial && lastPartial && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md px-2 py-1.5 flex flex-col gap-0.5 shadow-sm">
+                            <span className="text-[10px] md:text-xs font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
+                                <Package size="1.2em" /> Lote Parcial
+                            </span>
+                            <span className="text-[9px] md:text-[10px] font-bold text-yellow-800/80 dark:text-yellow-500/80 uppercase truncate">
+                                De: {lastPartial.entrega || 'Sección Anterior'}
+                            </span>
+                        </div>
+                      )}
+
                       {p.asignado_a && p.asignado_a.length > 0 && (
-                          <div className="mt-2 flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                          <div className="flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}
-                      <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase flex items-center gap-1 mt-1 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
+                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
                     </div>
 
                     {/* Botón Ver Planos */}
