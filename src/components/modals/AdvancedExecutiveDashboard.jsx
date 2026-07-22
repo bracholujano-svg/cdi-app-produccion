@@ -71,19 +71,22 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
     let healthCount = 0;
 
     orders.forEach(o => {
-        if (!o.fechaEntregaPrometida) return;
-        
         if (o.estadoInterno === 'DESPACHADO') {
             totalHealth += 100;
             healthCount++;
             return;
         }
         
-        const daysLeft = getDaysLeft(getEffectiveDate(o));
+        const effectiveDate = getEffectiveDate(o) || o.fechaEntregaPrometida; 
+        const daysLeft = getDaysLeft(effectiveDate);
+        if (daysLeft === null) return; // Si no hay fecha en absoluto, no se evalúa.
+
         const progress = getAreaProgress(o.areaActual);
         
-        if (daysLeft === null || daysLeft < 0) {
-            totalHealth += 0; // Atrasado o sin fecha
+        if (daysLeft < 0) {
+            // Si está vencida pero no fue asignada por coordinación, no la penalizamos a 0 si no queremos, 
+            // pero para mantener la matemática, sumaremos el progreso actual como puntaje en vez de 0 absoluto.
+            totalHealth += (progress * 100); 
         } else {
             const daysNeeded = (1 - progress) * LEAD_TIME_ESTIMADO;
             if (daysLeft >= daysNeeded) {
@@ -98,7 +101,8 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
     const eficiencia = healthCount > 0 ? Math.round(totalHealth / healthCount) : 100;
     // --------------------------------------------------------
-    const urgentesCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(o.fechaEntregaPrometida) !== null && getDaysLeft(o.fechaEntregaPrometida) >= 0 && getDaysLeft(o.fechaEntregaPrometida) <= 3).length;
+    // Ahora "Próximos a Entrega" suma los productos que están físicamente en las áreas finales.
+    const urgentesCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && ['ensamble', 'empaque', 'despachos', 'despacho'].includes(String(o.areaActual).trim().toLowerCase())).length;
 
     // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
