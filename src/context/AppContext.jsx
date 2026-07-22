@@ -40,6 +40,27 @@ export const AppContextProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [gridColumns, setGridColumns] = useState(3);
 
+  // LIMPIEZA TEMPORAL DE CLONES (BIFURCACIÓN ACCIDENTAL)
+  useEffect(() => {
+    if (orders && orders.length > 0) {
+      const now = new Date();
+      const clones = orders.filter(o => {
+        if (!o.master_id) return false;
+        if (!o.creadoEn) return true;
+        const created = new Date(o.creadoEn);
+        const hours = (now - created) / (1000 * 60 * 60);
+        return hours < 48; // Solo clones de las ultimas 48 horas
+      });
+      if (clones.length > 0) {
+        console.log(`Iniciando limpieza de ${clones.length} clones accidentales...`);
+        clones.forEach(clone => {
+          syncOrderToSupabase(clone, true);
+        });
+      }
+    }
+  }, [orders?.length]);
+
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRecetarioModal, setShowRecetarioModal] = useState(false);
