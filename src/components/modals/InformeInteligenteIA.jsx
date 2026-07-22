@@ -2,9 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getDaysLeft } from '../../utils/helpers';
 import { Download, Share2, BrainCircuit, AlertTriangle, CheckCircle, Package, Clock, Activity, Search } from 'lucide-react';
 
-const InformeInteligenteIA = ({ orders, onClose, setSearchTerm, setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal }) => {
+const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTerm, setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal }) => {
     const chartsRef = useRef({});
     const [isExporting, setIsExporting] = useState(false);
+
+    const getEffectiveDate = (o) => {
+        if (!o) return null;
+        const pNum = String(o.pedidoNum || "").toUpperCase();
+        const alertMatch = coordinationAlerts?.find(a => String(a?.pedidoNum || "").toUpperCase() === pNum);
+        return alertMatch?.fechaEntrega;
+    };
 
     // AI Logic (Data Processing)
     const totalOrders = orders.length;
@@ -13,11 +20,11 @@ const InformeInteligenteIA = ({ orders, onClose, setSearchTerm, setSelectedGroup
 
     // Atrasos Críticos Agrupados
     const delayedOrdersRaw = activos.filter(o => {
-        const days = getDaysLeft(o.fechaEntregaPrometida);
+        const days = getDaysLeft(getEffectiveDate(o));
         return days !== null && days < 0;
     }).map(o => ({
         ...o,
-        daysLate: Math.abs(getDaysLeft(o.fechaEntregaPrometida))
+        daysLate: Math.abs(getDaysLeft(getEffectiveDate(o)))
     }));
 
     const groupedDelaysMap = {};

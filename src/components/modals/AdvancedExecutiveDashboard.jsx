@@ -44,7 +44,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
         if (!o) return null;
         const pNum = String(o.pedidoNum || "").toUpperCase();
         const alertMatch = coordinationAlerts?.find(a => String(a?.pedidoNum || "").toUpperCase() === pNum);
-        return alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+        return alertMatch?.fechaEntrega;
     };
 
     const atrasadosCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && getDaysLeft(getEffectiveDate(o)) !== null && getDaysLeft(getEffectiveDate(o)) < 0).length;
@@ -698,7 +698,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                     {/* TAB: ANALITICA IA */}
                     {dashboardTab === 'analitica-ia' && (
-                        <InformeInteligenteIA orders={orders} onClose={onClose} setSearchTerm={setSearchTerm} setSelectedGroupPedido={setSelectedGroupPedido} setSelectedOrder={setSelectedOrder} setShowDashboardModal={setShowDashboardModal} />
+                        <InformeInteligenteIA orders={orders} coordinationAlerts={coordinationAlerts} onClose={onClose} setSearchTerm={setSearchTerm} setSelectedGroupPedido={setSelectedGroupPedido} setSelectedOrder={setSelectedOrder} setShowDashboardModal={setShowDashboardModal} />
                     )}
 
                 </main>
