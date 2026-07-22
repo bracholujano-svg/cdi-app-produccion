@@ -94,8 +94,8 @@ const {
     repDate, setRepDate,
     repSupervisor, setRepSupervisor,
     generatedReportData, setGeneratedReportData,
-    selectedBulkOrders,
-    showBulkModal,
+    selectedBulkOrders, setSelectedBulkOrders,
+    showBulkModal, setShowBulkModal,
   } = useAppContext();
 
   const searchTerm = useAppStore(state => state.searchTerm);
@@ -499,6 +499,8 @@ const {
       });
       setOrders(newOrdersList);
       setShiftNoteText(""); setTempPhoto(null);
+      setShowBulkModal(false);
+      setSelectedBulkOrders([]);
   };
 
   const handleBulkQualityNote = (ids) => {
@@ -520,6 +522,8 @@ const {
       });
       setOrders(newOrdersList);
       setCalidadNota(""); setCalidadPhoto(null);
+      setShowBulkModal(false);
+      setSelectedBulkOrders([]);
   };
 
   const handleBulkTransfer = (ids, areas, date, en, re, isPartial = false) => {
@@ -620,6 +624,8 @@ const {
       });
       
       setOrders(newOrdersList);
+      setShowBulkModal(false);
+      setSelectedBulkOrders([]);
   };
 
   const processReception = (id, accepted, receptionName, notes, photo) => {

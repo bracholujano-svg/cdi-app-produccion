@@ -81,7 +81,7 @@ export const AppContextProvider = ({ children }) => {
   
   const [tempTransferAreas, setTempTransferAreas] = useState([]);
   const [tempAssignedPersonnel, setTempAssignedPersonnel] = useState({});
-  const [tempTransferDate, setTempTransferDate] = useState("");
+  const [tempTransferDate, setTempTransferDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [transferNota, setTransferNota] = useState("");
   const [transferPhoto, setTransferPhoto] = useState(null);
   const [tempIsPartial, setTempIsPartial] = useState(false);
