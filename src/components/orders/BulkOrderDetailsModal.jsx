@@ -37,8 +37,22 @@ const BulkOrderDetailsModal = ({
     showHistoryEntrega, setShowHistoryEntrega,
     supervisorProfile,
     areaFilter,
-    orders
+    orders,
+    showBulkModal, setShowBulkModal
   } = useAppContext();
+
+  // Limpiar estado cuando se abre el modal (cuando cambian los pedidos seleccionados)
+  React.useEffect(() => {
+    if (selectedBulkOrders && selectedBulkOrders.length > 0) {
+      setTempTransferAreas([]);
+      setTempAssignedPersonnel({});
+      setTransferNota("");
+      setTransferPhoto(null);
+      setTempTransferDate("");
+      setTempIsPartial(false);
+      setOpenSection(null);
+    }
+  }, [selectedBulkOrders]);
 
   if (!selectedBulkOrders || selectedBulkOrders.length === 0) return null;
 
