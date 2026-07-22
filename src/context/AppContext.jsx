@@ -5,6 +5,7 @@ import { SESSION_SECRET } from '../utils/security';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useOrders } from '../hooks/useOrders';
 import { useInventoryMRP } from '../hooks/useInventoryMRP';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext();
 
@@ -53,9 +54,18 @@ export const AppContextProvider = ({ children }) => {
       });
       if (clones.length > 0) {
         console.log(`Iniciando limpieza de ${clones.length} clones accidentales...`);
-        clones.forEach(clone => {
-          syncOrderToSupabase(clone, true);
-        });
+        const cleanup = async () => {
+          for (const clone of clones) {
+            try {
+              // Borrar silenciosamente y en secuencia para no saturar la red (Failed to fetch) ni mostrar alertas
+              await supabase.from('produccion_pedidos').delete().eq('id', clone.id);
+            } catch (err) {
+              console.error("Error al borrar clon:", err);
+            }
+          }
+          console.log("Limpieza de clones terminada.");
+        };
+        cleanup();
       }
     }
   }, [orders?.length]);
