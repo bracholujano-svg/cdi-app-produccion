@@ -13,13 +13,14 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
     setCurrentPage(1);
   }, [activeGroupObj?.pedidoNum, itemSearchTerm]);
 
-  if (!activeGroupObj) return null;
-
-  const filteredProducts = activeGroupObj.products.filter(p => {
+  const filteredProducts = useMemo(() => {
+      if (!activeGroupObj || !activeGroupObj.products) return [];
       const st = itemSearchTerm.toLowerCase().trim();
-      if (!st) return true;
-      return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
-  });
+      if (!st) return activeGroupObj.products;
+      return activeGroupObj.products.filter(p => {
+          return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
+      });
+  }, [activeGroupObj, itemSearchTerm]);
 
   const sortedProducts = useMemo(() => {
       return [...filteredProducts].sort((a, b) => {
@@ -34,6 +35,8 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
           return codeA.localeCompare(codeB, undefined, { numeric: true });
       });
   }, [filteredProducts]);
+
+  if (!activeGroupObj) return null;
 
   const itemsPerPage = 24;
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage) || 1;
