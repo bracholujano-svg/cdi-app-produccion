@@ -19,6 +19,7 @@ import ReceptionModal from './components/orders/ReceptionModal';
 import CoordinationModal from './components/orders/CoordinationModal';
 import ReportPreviewModal from './components/orders/ReportPreviewModal';
 import OrderDetailsModal from './components/orders/OrderDetailsModal';
+import BulkOrderDetailsModal from './components/orders/BulkOrderDetailsModal';
 import OrderCard from './components/orders/OrderCard';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -92,7 +93,9 @@ const {
     duplicateError, setDuplicateError,
     repDate, setRepDate,
     repSupervisor, setRepSupervisor,
-    generatedReportData, setGeneratedReportData
+    generatedReportData, setGeneratedReportData,
+    selectedBulkOrders,
+    showBulkModal,
   } = useAppContext();
 
   const searchTerm = useAppStore(state => state.searchTerm);
@@ -477,6 +480,148 @@ const {
     setSelectedOrder(null); 
   };
 
+  const handleBulkShiftNote = (ids) => {
+      if (!ids || ids.length === 0) return;
+      let newOrdersList = [...orders];
+      const newNoteBase = { 
+        supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
+        actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
+      };
+
+      ids.forEach((id, index) => {
+          const order = newOrdersList.find(o => o?.id === id);
+          if(order) {
+            const newNote = { ...newNoteBase, id: Date.now() + index };
+            const updatedOrder = { ...order, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(order.bitacoraTurnos || []), newNote] };
+            newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
+            syncOrderToSupabase(updatedOrder);
+          }
+      });
+      setOrders(newOrdersList);
+      setShiftNoteText(""); setTempPhoto(null);
+  };
+
+  const handleBulkQualityNote = (ids) => {
+      if (!ids || ids.length === 0) return;
+      let newOrdersList = [...orders];
+      const newNoteBase = {
+        supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
+        estado: calidadState, observacion: calidadNota || "Sin observaciones", foto: calidadPhoto, fecha: new Date().toISOString()
+      };
+
+      ids.forEach((id, index) => {
+          const order = newOrdersList.find(o => o?.id === id);
+          if(order) {
+            const newNote = { ...newNoteBase, id: Date.now() + index };
+            const updatedOrder = { ...order, bitacoraCalidad: [...(order.bitacoraCalidad || []), newNote] };
+            newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
+            syncOrderToSupabase(updatedOrder);
+          }
+      });
+      setOrders(newOrdersList);
+      setCalidadNota(""); setCalidadPhoto(null);
+  };
+
+  const handleBulkTransfer = (ids, areas, date, en, re, isPartial = false) => {
+      if (!ids || ids.length === 0 || !areas || areas.length === 0) return;
+      let newOrdersList = [...orders];
+      
+      ids.forEach((id) => {
+          const order = newOrdersList.find(o => o?.id === id);
+          if (!order) return;
+          
+          areas.forEach((area, index) => {
+              const isDespacho = area === 'Despachos';
+              const personalAsignado = tempAssignedPersonnel[area] || [];
+              const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
+              const newHistoryEntry = { 
+                  fecha: new Date().toISOString(), 
+                  supervisor: supervisorProfile?.name || "S/N", 
+                  accion: isPartial ? `Entrega Parcial a ${area}${asignadoText}` : `Entrega a ${area}${asignadoText}`, 
+                  entrega: en, recibe: re, nota: transferNota, foto: transferPhoto 
+              };
+              
+              let targetOrder;
+              if (index === 0) {
+                  targetOrder = isDespacho 
+                    ? { 
+                        ...order, 
+                        areaActual: area, 
+                        estadoInterno: 'En Espera', 
+                        fechaEntregaPrometida: date,
+                        asignado_a: personalAsignado,
+                        historial: [...(order.historial || []), newHistoryEntry] 
+                      }
+                    : { 
+                        ...order, 
+                        estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
+                        fechaEntregaPrometida: date,
+                        asignado_a: personalAsignado,
+                        transferenciaPendiente: {
+                            haciaArea: area,
+                            entregadoPor: en || supervisorProfile?.name || "S/N",
+                            nota: transferNota,
+                            fotoEntrega: transferPhoto,
+                            fechaEnvio: new Date().toISOString(),
+                            isPartial: isPartial
+                        },
+                        historial: [...(order.historial || []), newHistoryEntry] 
+                      };
+                      
+                  newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
+              } else {
+                  const cloneId = crypto.randomUUID();
+                  targetOrder = isDespacho 
+                    ? { 
+                        ...order, 
+                        id: cloneId,
+                        master_id: order.id,
+                        areaActual: area, 
+                        estadoInterno: 'En Espera', 
+                        fechaEntregaPrometida: date,
+                        asignado_a: personalAsignado,
+                        historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
+                      }
+                    : { 
+                        ...order,
+                        id: cloneId,
+                        master_id: order.id,
+                        areaActual: order.areaActual,
+                        estadoInterno: `EN TRÁNSITO A ${area}`,
+                        fechaEntregaPrometida: date,
+                        asignado_a: personalAsignado,
+                        transferenciaPendiente: {
+                            haciaArea: area,
+                            entregadoPor: en || supervisorProfile?.name || "S/N",
+                            nota: transferNota,
+                            fotoEntrega: transferPhoto,
+                            fechaEnvio: new Date().toISOString(),
+                            isPartial: false
+                        },
+                        historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
+                      };
+                  newOrdersList.push(targetOrder);
+              }
+              
+              if (targetOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
+                  const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === targetOrder.pedidoNum);
+                  const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+                  if (allDispatched) {
+                      const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (targetOrder.pedidoNum || "").toUpperCase());
+                      if (alertObj) {
+                          const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                          setCoordinationAlerts(newAlerts);
+                          syncAlertToSupabase(alertObj, true);
+                      }
+                  }
+              }
+              syncOrderToSupabase(targetOrder);
+          });
+      });
+      
+      setOrders(newOrdersList);
+  };
+
   const processReception = (id, accepted, receptionName, notes, photo) => {
       const order = orders.find(o => o?.id === id);
       if (!order || !order.transferenciaPendiente) return;
@@ -835,6 +980,16 @@ const {
         shareToWhatsApp={shareToWhatsApp}
         toggleMic={toggleMic}
       />
+      
+      {showBulkModal && (
+        <BulkOrderDetailsModal
+          handleImageUpload={handleImageUpload}
+          addShiftNote={() => handleBulkShiftNote(selectedBulkOrders.map(o => o.id))}
+          addQualityNote={() => handleBulkQualityNote(selectedBulkOrders.map(o => o.id))}
+          updateTransfer={handleBulkTransfer}
+          toggleMic={toggleMic}
+        />
+      )}
 
       {showDashboardModal && (
         <AdvancedExecutiveDashboard 

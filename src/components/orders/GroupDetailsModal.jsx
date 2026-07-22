@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
   const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
@@ -25,20 +25,47 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const toggleSelection = (e, p) => {
+      e.stopPropagation();
+      setSelectedBulkOrders(prev => {
+          const isSelected = prev.some(o => o.id === p.id);
+          if (isSelected) return prev.filter(o => o.id !== p.id);
+          return [...prev, p];
+      });
+  };
+
+  const selectAll = () => {
+      if (selectedBulkOrders.length === filteredProducts.length && filteredProducts.length > 0) {
+          setSelectedBulkOrders([]);
+      } else {
+          setSelectedBulkOrders([...filteredProducts]);
+      }
+  };
+
   return (
         <div className="fixed inset-0 bg-black/80  z-[90] flex items-center justify-center p-2 sm:p-4">
           <div className="w-full max-w-[95vw] theme-bg-main h-[90vh] sm:h-[95vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
-                 <h2 className="text-xl font-black text-[var(--primary)] truncate">ORDEN: {activeGroupObj.pedidoNum}</h2>
-                 <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+                 <h2 className="text-xl font-black text-[var(--primary)] truncate flex items-center gap-2">ORDEN: {activeGroupObj.pedidoNum} <span className="text-sm bg-[var(--primary)]/10 px-2 py-0.5 rounded-lg text-[var(--primary)] font-bold tracking-widest border border-[var(--primary)]/20">({activeGroupObj.products.length} ÍTEMS)</span></h2>
+                 <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate mt-1 ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
               </div>
+              
+              {selectedBulkOrders.length > 0 && (
+                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--accent)] text-[var(--card-bg)] rounded-xl hover:brightness-110 transition-colors text-xs md:text-sm font-black mr-3 shadow-lg shadow-[var(--accent)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
+                      <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
+                  </button>
+              )}
+
               <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--primary)]/10 rounded-xl hover:bg-[var(--primary)]/20 transition-colors text-[var(--primary)] text-xs font-bold mr-2">⬅ Panel IA</button>
               <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
             </div>
 
-            <div className="p-4 border-b theme-border bg-black/5 shrink-0">
-                <div className="relative">
+            <div className="p-4 border-b theme-border bg-black/5 shrink-0 flex items-center gap-3">
+                <button type="button" onClick={selectAll} className="p-3 bg-[var(--primary)]/10 text-[var(--primary)] rounded-xl hover:bg-[var(--primary)]/20 transition-colors shrink-0 border border-[var(--primary)]/20 flex items-center justify-center" title="Seleccionar/Deseleccionar Todos">
+                   {selectedBulkOrders.length === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={"1.2em"} /> : <Square size={"1.2em"} />}
+                </button>
+                <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
                     <input 
                         type="text" 
@@ -53,8 +80,13 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col custom-scrollbar">
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {paginatedProducts.map(p => (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className="theme-bg-card p-4 rounded-2xl border-[2px] theme-border cursor-pointer hover:border-[var(--primary)] shadow-sm transition-colors active:scale-95 bg-[var(--card-bg)]">
-                    <div className="flex justify-between items-center mb-2">
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] shadow-sm transition-colors active:scale-95 bg-[var(--card-bg)] relative ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'theme-border'}`}>
+                    
+                    <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>
+                        {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--accent)]" size={"1.4em"} /> : <Square className="text-[var(--primary)]/30" size={"1.4em"} />}
+                    </button>
+
+                    <div className="flex justify-between items-center mb-2 pr-8">
                        <span className="text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
                        {p.cantidad && (
                          <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">

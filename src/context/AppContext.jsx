@@ -33,6 +33,8 @@ export const AppContextProvider = ({ children }) => {
 
   const [selectedGroupPedido, setSelectedGroupPedido] = useState(null); 
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedBulkOrders, setSelectedBulkOrders] = useState([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [areaFilter, setAreaFilter] = useState('Todas');
   const [viewFilter, setViewFilter] = useState('TODOS'); 
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,6 +132,8 @@ export const AppContextProvider = ({ children }) => {
     supervisorProfile, setSupervisorProfile,
     selectedGroupPedido, setSelectedGroupPedido,
     selectedOrder, setSelectedOrder,
+    selectedBulkOrders, setSelectedBulkOrders,
+    showBulkModal, setShowBulkModal,
     areaFilter, setAreaFilter,
     viewFilter, setViewFilter,
     currentPage, setCurrentPage,
