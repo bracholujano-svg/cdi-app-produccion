@@ -367,6 +367,14 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                 </div>
                             );
                         })}
+                        
+                        {/* Rellenar con filas vacías para mantener la simetría */}
+                        {Array.from({ length: ITEMS_PER_PAGE - currentItems.length }).map((_, idx) => (
+                            <div key={`empty-${idx}`} className="flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b border-white/5 bg-[#121A2F]/20 opacity-50">
+                                {/* Las celdas vacías mantienen la estructura del grid pero sin contenido */}
+                                <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
