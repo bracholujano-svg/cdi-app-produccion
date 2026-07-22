@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ChevronDown, FolderOpen, Activity } from 'lucide-react';
+import { ChevronDown, FolderOpen, Activity, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { getDaysLeft } from '../../utils/helpers';
