@@ -654,7 +654,9 @@ const {
         (String(o.nombre || "")).toLowerCase().includes(term) || 
         (String(o.codArticulo || "")).toLowerCase().includes(term) ||
         (String(o.cliente || "")).toLowerCase().includes(term)
-            const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
+    );
+
+    const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
     const filterUpper = clientFilter.toUpperCase();
     const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
     
