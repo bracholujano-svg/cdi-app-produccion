@@ -85,7 +85,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
 
         const enrichedOrders = activeOrders.map(o => {
             const alertMatch = coordinationAlerts?.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
-            const effectiveDate = alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+            const effectiveDate = alertMatch?.fechaEntrega;
             const daysLeft = getDaysLeft(effectiveDate);
             let trafficColor = 'green';
             if (daysLeft !== null) {

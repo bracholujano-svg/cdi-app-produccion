@@ -654,14 +654,12 @@ const {
         (String(o.nombre || "")).toLowerCase().includes(term) || 
         (String(o.codArticulo || "")).toLowerCase().includes(term) ||
         (String(o.cliente || "")).toLowerCase().includes(term)
-    );
-
-    const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
+            const matchArea = areaFilter === 'Todas' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
     const filterUpper = clientFilter.toUpperCase();
     const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
     
     const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
-    const effectiveDate = alertMatch?.fechaEntrega || o.fechaEntregaPrometida;
+    const effectiveDate = alertMatch?.fechaEntrega;
 
     if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(effectiveDate) !== null && getDaysLeft(effectiveDate) < 0;
     if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(effectiveDate) === null || getDaysLeft(effectiveDate) >= 0);
@@ -675,7 +673,7 @@ const {
     
     // Si la alerta tiene una fecha de entrega, usarla como prioridad
     const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pNum.toUpperCase());
-    const displayDate = alertMatch?.fechaEntrega || order.fechaEntregaPrometida;
+    const displayDate = alertMatch?.fechaEntrega;
 
     if (!acc[pNum]) acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: displayDate, products: [] };
     acc[pNum].products.push(order);
