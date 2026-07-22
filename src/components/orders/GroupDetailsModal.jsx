@@ -86,13 +86,15 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                         {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--accent)]" size={"1.4em"} /> : <Square className="text-[var(--primary)]/30" size={"1.4em"} />}
                     </button>
 
-                    <div className="flex justify-between items-center mb-2 pr-8">
-                       <span className="text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                    <div className="flex justify-end items-center mb-2 pr-8">
                        {p.cantidad && (
                          <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                            <Package size={"1.1em"} /> CANT: {p.cantidad}
                          </span>
                        )}
+                    </div>
+                    <div className="mb-2">
+                       <span title={p.codArticulo} className="inline-block max-w-full text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
                     </div>
                     <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
                     <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)]">

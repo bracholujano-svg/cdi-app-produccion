@@ -17,6 +17,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
         // 1. Transferencias
         (o.historial || []).forEach(h => {
             const isAssignment = h.accion && h.accion.includes("Asignado a");
+            const isPartial = h.accion && h.accion.toUpperCase().includes("PARCIAL");
             events.push({
                 id: `hist_${h.fecha}_${Math.random()}`,
                 type: 'TRANSFERENCIA',
@@ -25,9 +26,10 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 desc: h.nota || 'Sin observaciones',
                 supervisor: h.supervisor || 'S/N',
                 foto: h.foto,
-                icon: isAssignment ? User : ArrowRightLeft,
-                color: isAssignment ? 'bg-indigo-500' : 'bg-blue-500',
-                textColor: isAssignment ? 'text-indigo-500' : 'text-blue-500'
+                isPartial: isPartial,
+                icon: isPartial ? Package : (isAssignment ? User : ArrowRightLeft),
+                color: isPartial ? 'bg-fuchsia-500' : (isAssignment ? 'bg-indigo-500' : 'bg-blue-500'),
+                textColor: isPartial ? 'text-fuchsia-600 dark:text-fuchsia-400' : (isAssignment ? 'text-indigo-500' : 'text-blue-500')
             });
         });
 
@@ -243,9 +245,16 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                         <div className="bg-[var(--card-bg)] p-5 rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow relative">
                                             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
                                                 <div>
-                                                    <h3 className="font-black text-sm md:text-base uppercase tracking-tight text-[var(--primary)] flex items-center gap-2">
-                                                        {phase.area}
-                                                    </h3>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h3 className="font-black text-sm md:text-base uppercase tracking-tight text-[var(--primary)] flex items-center gap-2">
+                                                            {phase.area}
+                                                        </h3>
+                                                        {phase.events.some(e => e.isPartial) && (
+                                                            <span className="bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/30 px-2 py-0.5 rounded text-[10px] md:text-xs font-black uppercase flex items-center gap-1 shadow-sm">
+                                                                <Package size="1.2em" /> Lote Parcial
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     {phase.asignado && (
                                                         <div className="mt-2 flex items-center gap-1 text-[11px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <User size="1.2em" /> ASIGNADO A: {phase.asignado}
