@@ -118,10 +118,12 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
     // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
+        const assigned = Array.isArray(o.asignado_a) ? o.asignado_a.join(" ") : (o.asignado_a || "");
         const matchSearch = (o.pedidoNum || "").toLowerCase().includes(dashSearch.toLowerCase()) || 
         (o.cliente || "").toLowerCase().includes(dashSearch.toLowerCase()) ||
         (o.codArticulo || "").toLowerCase().includes(dashSearch.toLowerCase()) ||
-        (o.nombre || "").toLowerCase().includes(dashSearch.toLowerCase());
+        (o.nombre || "").toLowerCase().includes(dashSearch.toLowerCase()) ||
+        assigned.toLowerCase().includes(dashSearch.toLowerCase());
         const matchArea = dashArea === 'TODAS' || o.areaActual === dashArea;
         return matchSearch && matchArea;
     });
