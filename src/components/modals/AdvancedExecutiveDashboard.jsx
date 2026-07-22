@@ -520,7 +520,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
                                                 <td className="p-5">
-                                                    <span className="bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--primary)]/30">{o.areaActual}</span>
+                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--primary)]/30">{o.areaActual}</span>
                                                     {o.asignado_a && o.asignado_a.length > 0 && (
                                                         <div className="mt-2 flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <UserCheck size="1.2em" /> {Array.isArray(o.asignado_a) ? o.asignado_a.join(', ') : o.asignado_a}
