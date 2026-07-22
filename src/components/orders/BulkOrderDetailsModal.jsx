@@ -42,36 +42,18 @@ const BulkOrderDetailsModal = ({
 
   if (!selectedBulkOrders || selectedBulkOrders.length === 0) return null;
 
-  const rootId = selectedOrder?.master_id || selectedOrder?.id;
-  const familyOrders = (orders || []).filter(o => o && (o.id === rootId || o.master_id === rootId));
-  if (familyOrders.length === 0) familyOrders.push(selectedOrder);
-
-  const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
-  const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
-  const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
-
   return (
       
         <div className="fixed inset-0 bg-black/80  z-[100] flex items-center justify-end p-0 sm:p-2">
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black uppercase truncate text-[var(--primary)]">PED: {selectedOrder.pedidoNum}</h2>
-                  {selectedOrder.cantidad && (
-                    <span className="text-[10px] bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
-                      <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs md:text-sm lg:text-base font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
-                {selectedOrder.asignado_a && selectedOrder.asignado_a.length > 0 && (
-                  <span className="text-[10px] md:text-xs bg-indigo-500/20 text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-md border border-indigo-500/30 font-black truncate flex items-center gap-1 mt-2 w-fit">
-                    <UserCheck size={"1.2em"} /> ASIGNADO A: {Array.isArray(selectedOrder.asignado_a) ? selectedOrder.asignado_a.join(', ') : selectedOrder.asignado_a}
-                  </span>
-                )}
+                 <h2 className="text-xl font-black text-[var(--primary)] truncate">ACCIÓN MASIVA</h2>
+                 <p className="text-xs md:text-sm lg:text-base font-bold uppercase theme-text-muted truncate flex items-center gap-2 mt-1">
+                     <Package size={"1.2em"}/> {selectedBulkOrders.length} PRODUCTOS
+                 </p>
               </div>
-              <button type="button" onClick={() => setSelectedBulkOrders([])} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
+              <button type="button" onClick={() => setShowBulkModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
@@ -79,7 +61,7 @@ const BulkOrderDetailsModal = ({
               {/* Botón Ver Planos */}
               <button 
                   type="button" 
-                  onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${selectedOrder.codArticulo} vinculados a ReviSoft.`)} 
+                  onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${(selectedBulkOrders?.[0] || {}).codArticulo} vinculados a ReviSoft.`)} 
                   className="w-full bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--primary)]/20"
               >
                   <FileText size={"1.3em"} /> Ver Planos del Producto
@@ -94,7 +76,7 @@ const BulkOrderDetailsModal = ({
                       <AlertCircle className="text-red-800 dark:text-red-500 shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-black text-red-800 dark:text-red-500 uppercase text-xs md:text-sm lg:text-base">Módulo de Solo Lectura</h4>
-                        <p className="text-xs md:text-sm lg:text-base font-bold text-red-700/90 dark:text-red-400/90 mt-1">Este producto se encuentra físicamente en <span className="text-red-800 dark:text-red-500 underline">{selectedOrder.areaActual}</span>. Solo puedes auditar su histórico; no puedes registrar avances ni transferencias desde tu sección.</p>
+                        <p className="text-xs md:text-sm lg:text-base font-bold text-red-700/90 dark:text-red-400/90 mt-1">Este producto se encuentra físicamente en <span className="text-red-800 dark:text-red-500 underline">{(selectedBulkOrders?.[0] || {}).areaActual}</span>. Solo puedes auditar su histórico; no puedes registrar avances ni transferencias desde tu sección.</p>
                       </div>
                     </div>
                   );
@@ -119,7 +101,7 @@ const BulkOrderDetailsModal = ({
                           return (
                             <>
                               <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE OPERARIO..." />
-                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--primary)]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
+                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--primary)]">{CONFIG_PROCESOS[(selectedBulkOrders?.[0] || {}).areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
                             <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
                             <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
