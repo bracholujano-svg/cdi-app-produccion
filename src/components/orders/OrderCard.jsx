@@ -32,6 +32,11 @@ const OrderCard = ({ group }) => {
   const isSufficient = todosRequerimientos.length > 0 && faltantes.length === 0 && viewFilter !== 'DESPACHADOS';
   const isNoMaterials = todosRequerimientos.length === 0 && viewFilter !== 'DESPACHADOS';
 
+  const partialProductsCount = useMemo(() => {
+      if (!group.products) return 0;
+      return group.products.filter(p => p && p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"))).length;
+  }, [group.products]);
+
   const formattedDate = useMemo(() => {
       if (!group?.fechaEntregaPrometida) return '';
       try {
@@ -80,6 +85,11 @@ const OrderCard = ({ group }) => {
       
       <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
         <span className={`px-2 py-1 theme-bg-input rounded-md font-black text-[var(--primary)] text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
+        {partialProductsCount > 0 && (
+            <span className="px-2 py-1 bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 rounded-md border border-yellow-500/30 font-black text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate flex items-center gap-1 shadow-sm">
+                <Package size="1.2em" /> {partialProductsCount} LOTE PARCIAL
+            </span>
+        )}
         {group.products?.some(p => Array.isArray(p.areas_compartidas) && p.areas_compartidas.length > 0) && (
             <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
         )}

@@ -21,9 +21,23 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
       return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
   });
 
+  const sortedProducts = useMemo(() => {
+      return [...filteredProducts].sort((a, b) => {
+          const aPartial = a.historial && a.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"));
+          const bPartial = b.historial && b.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"));
+          
+          if (aPartial && !bPartial) return -1;
+          if (!aPartial && bPartial) return 1;
+          
+          const codeA = String(a.codArticulo || "");
+          const codeB = String(b.codArticulo || "");
+          return codeA.localeCompare(codeB, undefined, { numeric: true });
+      });
+  }, [filteredProducts]);
+
   const itemsPerPage = 24;
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage) || 1;
+  const paginatedProducts = sortedProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleSelection = (e, p) => {
       e.stopPropagation();
@@ -79,14 +93,16 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
 
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col custom-scrollbar">
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                {paginatedProducts.map(p => (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] shadow-sm transition-colors active:scale-95 bg-[var(--card-bg)] relative ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'theme-border'}`}>
+                {paginatedProducts.map(p => {
+                  const isPartial = p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"));
+                  return (
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] transition-colors active:scale-95 bg-[var(--card-bg)] relative ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' : (isPartial ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'theme-border shadow-sm')}`}>
                     
                     <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>
                         {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--accent)]" size={"1.4em"} /> : <Square className="text-[var(--primary)]/30" size={"1.4em"} />}
                     </button>
 
-                    <div className="flex justify-end items-center mb-2 pr-8">
+                    <div className="flex justify-start items-center mb-2 pr-8">
                        {p.cantidad && (
                          <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                            <Package size={"1.1em"} /> CANT: {p.cantidad}
@@ -121,7 +137,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                         </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
               
               {totalPages > 1 && (
