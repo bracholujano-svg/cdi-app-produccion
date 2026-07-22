@@ -970,7 +970,7 @@ const {
               m.id_referencia?.toLowerCase().includes(materialsSearchTerm.toLowerCase())
           );
           
-          const faltantes = filtered.filter(m => m.faltante > 0);
+          const faltantes = filtered.filter(m => m.faltante > 0).sort((a, b) => (b.sinOC ? 1 : 0) - (a.sinOC ? 1 : 0));
           const disponibles = filtered.filter(m => m.faltante <= 0);
 
           return (
