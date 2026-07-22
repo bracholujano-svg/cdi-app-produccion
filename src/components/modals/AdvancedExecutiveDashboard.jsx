@@ -77,32 +77,44 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
             return;
         }
         
-        const effectiveDate = getEffectiveDate(o) || o.fechaEntregaPrometida; 
-        const daysLeft = getDaysLeft(effectiveDate);
-        if (daysLeft === null) return; // Si no hay fecha en absoluto, no se evalúa.
-
         const progress = getAreaProgress(o.areaActual);
+        let itemHealth = progress * 100; // Salud base basada en el flujo físico real de la planta.
         
-        if (daysLeft < 0) {
-            // Si está vencida pero no fue asignada por coordinación, no la penalizamos a 0 si no queremos, 
-            // pero para mantener la matemática, sumaremos el progreso actual como puntaje en vez de 0 absoluto.
-            totalHealth += (progress * 100); 
-        } else {
-            const daysNeeded = (1 - progress) * LEAD_TIME_ESTIMADO;
-            if (daysLeft >= daysNeeded) {
-                totalHealth += 100;
-            } else {
-                const score = (daysLeft / daysNeeded) * 100;
-                totalHealth += score;
+        const officialDate = getEffectiveDate(o); 
+        if (officialDate) {
+            const daysLeft = getDaysLeft(officialDate);
+            if (daysLeft !== null && daysLeft < 0) {
+                itemHealth = itemHealth * 0.5; // Penaliza si está vencido según coordinación
+            } else if (daysLeft !== null && daysLeft >= 0) {
+                const daysNeeded = (1 - progress) * LEAD_TIME_ESTIMADO;
+                if (daysLeft >= daysNeeded) {
+                    itemHealth = 100; // Va a buen ritmo para la fecha oficial
+                } else {
+                    itemHealth = (daysLeft / daysNeeded) * 100; // Está rezagado para su fecha oficial
+                }
             }
         }
+        
+        totalHealth += itemHealth;
         healthCount++;
     });
 
     const eficiencia = healthCount > 0 ? Math.round(totalHealth / healthCount) : 100;
     // --------------------------------------------------------
-    // Ahora "Próximos a Entrega" suma los productos que están físicamente en las áreas finales.
-    const urgentesCount = orders.filter(o => o.estadoInterno !== 'DESPACHADO' && ['ensamble', 'empaque', 'despachos', 'despacho'].includes(String(o.areaActual).trim().toLowerCase())).length;
+    // "Próximos a Entrega": Combina los que tienen fecha oficial cercana (<= 3 días) sin importar su área,
+    // y los que están físicamente en las áreas finales de la planta (flujo natural).
+    const urgentesCount = orders.filter(o => {
+        if (o.estadoInterno === 'DESPACHADO') return false;
+        
+        const officialDate = getEffectiveDate(o);
+        if (officialDate) {
+            const dLeft = getDaysLeft(officialDate);
+            if (dLeft !== null && dLeft >= 0 && dLeft <= 3) return true;
+        }
+        
+        const area = String(o.areaActual).trim().toLowerCase();
+        return ['ensamble', 'empaque', 'despachos', 'despacho'].includes(area);
+    }).length;
 
     // Tabla de Operaciones Filtrada
     const tableOrders = orders.filter(o => {
