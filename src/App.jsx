@@ -683,6 +683,69 @@ const {
       syncOrderToSupabase(updatedOrder);
   };
 
+  const processBulkReception = (ids, accepted, receptionName, notes, photo) => {
+      if (!ids || ids.length === 0) return;
+      let newOrdersList = [...orders];
+      const updatedOrdersToSync = [];
+      
+      const isReject = !accepted;
+      
+      ids.forEach((id) => {
+          const order = newOrdersList.find(o => o?.id === id);
+          if (!order || !order.transferenciaPendiente) return;
+          
+          const targetArea = order.transferenciaPendiente.haciaArea;
+          const isPartial = order.transferenciaPendiente.isPartial;
+          
+          const newHistoryEntry = {
+              fecha: new Date().toISOString(),
+              supervisor: supervisorProfile?.name || "S/N",
+              accion: isReject ? `Rechazo de ${targetArea}` : (isPartial ? `Recepción Parcial en ${targetArea}` : `Recepción en ${targetArea}`),
+              entrega: order.transferenciaPendiente.entregadoPor,
+              recibe: receptionName,
+              nota: notes,
+              foto: photo
+          };
+          
+          const updatedOrder = isReject
+              ? {
+                  ...order,
+                  estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
+                  transferenciaPendiente: null,
+                  historial: [...(order.historial || []), newHistoryEntry]
+              }
+              : {
+                  ...order,
+                  areaActual: isPartial ? order.areaActual : targetArea,
+                  areas_compartidas: isPartial 
+                     ? [...new Set([...(order.areas_compartidas || []), targetArea])] 
+                     : [],
+                  estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
+                  transferenciaPendiente: null,
+                  historial: [...(order.historial || []), newHistoryEntry]
+              };
+              
+          newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
+          updatedOrdersToSync.push(updatedOrder);
+          
+          if (!isReject && targetArea === 'Despachos') {
+              const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
+              const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+              if (allDispatched) {
+                  const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
+                  if (alertObj) {
+                      const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
+                      setCoordinationAlerts(newAlerts);
+                      syncAlertToSupabase(alertObj, true);
+                  }
+              }
+          }
+      });
+      
+      setOrders(newOrdersList);
+      updatedOrdersToSync.forEach(o => syncOrderToSupabase(o));
+  };
+
   const addItemToCoordList = () => {
     if (!inputManualPedido || !inputManualFecha || !inputManualCliente) return;
     const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
@@ -974,7 +1037,7 @@ const {
       <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
 
       <RecetarioModal />
-      <ReceptionModal processReception={processReception} />
+      <ReceptionModal processReception={processReception} processBulkReception={processBulkReception} />
 
       <AddOrderModal createOrder={createOrder} createBulkOrders={createBulkOrders} doExcelSearch={doExcelSearch} />
 

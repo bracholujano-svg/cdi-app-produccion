@@ -3,7 +3,7 @@ import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info } fr
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS } from '../../utils/constants';
 
-const ReceptionModal = ({ processReception }) => {
+const ReceptionModal = ({ processReception, processBulkReception }) => {
     const { 
         showReceptionModal, setShowReceptionModal, 
         orders, setOrders, syncOrderToSupabase,
@@ -12,7 +12,7 @@ const ReceptionModal = ({ processReception }) => {
     } = useAppContext();
 
     const [activeTab, setActiveTab] = useState('PENDIENTES'); // PENDIENTES o RECHAZOS
-    const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedItems, setSelectedItems] = useState([]);
     const [receptionName, setReceptionName] = useState(supervisorProfile?.name || "");
     const [receptionNotes, setReceptionNotes] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
@@ -44,10 +44,34 @@ const ReceptionModal = ({ processReception }) => {
     }, {});
 
     const resetState = () => {
-        setSelectedItem(null);
+        setSelectedItems([]);
         setReceptionNotes("");
         setTempPhoto(null);
         setErrorMsg("");
+    };
+
+
+    const toggleItem = (item) => {
+        setErrorMsg("");
+        if (selectedItems.find(i => i.id === item.id)) {
+            setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+        } else {
+            setSelectedItems([...selectedItems, item]);
+        }
+    };
+
+    const toggleGroup = (groupItems) => {
+        setErrorMsg("");
+        const allSelected = groupItems.every(gi => selectedItems.find(si => si.id === gi.id));
+        if (allSelected) {
+            setSelectedItems(selectedItems.filter(si => !groupItems.find(gi => gi.id === si.id)));
+        } else {
+            const newItems = [...selectedItems];
+            groupItems.forEach(gi => {
+                if (!newItems.find(i => i.id === gi.id)) newItems.push(gi);
+            });
+            setSelectedItems(newItems);
+        }
     };
 
     const handleCameraClick = () => {
@@ -71,7 +95,7 @@ const ReceptionModal = ({ processReception }) => {
             setErrorMsg("Debe ingresar su nombre para confirmar.");
             return;
         }
-        processReception(selectedItem.id, true, receptionName, receptionNotes, tempPhoto);
+        processBulkReception(selectedItems.map(i => i.id), true, receptionName, receptionNotes, tempPhoto);
         resetState();
     };
 
@@ -84,14 +108,15 @@ const ReceptionModal = ({ processReception }) => {
             setErrorMsg("Para rechazar una entrega, es OBLIGATORIO ingresar el motivo en observaciones.");
             return;
         }
-        processReception(selectedItem.id, false, receptionName, receptionNotes, tempPhoto);
+        processBulkReception(selectedItems.map(i => i.id), false, receptionName, receptionNotes, tempPhoto);
         resetState();
     };
 
     const handleAcknowledgeReject = () => {
         // "Entendido": Cambiar estado a En Espera para quitar el brillo rojo
-        const updatedOrder = { ...selectedItem, estadoInterno: CONFIG_PROCESOS[selectedItem.areaActual]?.[0] || "En Espera" };
-        const newOrdersList = orders.map(o => o.id === selectedItem.id ? updatedOrder : o);
+        const target = selectedItems[0];
+        const updatedOrder = { ...target, estadoInterno: CONFIG_PROCESOS[target.areaActual]?.[0] || "En Espera" };
+        const newOrdersList = orders.map(o => o.id === target.id ? updatedOrder : o);
         setOrders(newOrdersList);
         syncOrderToSupabase(updatedOrder);
         resetState();
@@ -138,14 +163,15 @@ const ReceptionModal = ({ processReception }) => {
                             ) : (
                                 Object.keys(pendingGroups).map(pedidoNum => (
                                     <div key={pedidoNum} className="space-y-2">
-                                        <div className="bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">
+                                        <div onClick={() => toggleGroup(pendingGroups[pedidoNum])} className="bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20 cursor-pointer hover:bg-[var(--primary)]/20 transition-colors flex justify-between items-center">
                                             <span className="font-black text-sm text-[var(--primary)] uppercase">PEDIDO: {pedidoNum}</span>
+                                            <span className="text-[10px] text-[var(--primary)] font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-[var(--primary)]/20">Seleccionar Grupo</span>
                                         </div>
                                         {pendingGroups[pedidoNum].map((item, idx) => (
                                             <div 
                                                 key={idx} 
-                                                onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
+                                                onClick={() => toggleItem(item)}
+                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-[var(--primary)]">{item.codArticulo} - {item.nombre}</p>
@@ -170,14 +196,15 @@ const ReceptionModal = ({ processReception }) => {
                             ) : (
                                 Object.keys(rejectedGroups).map(pedidoNum => (
                                     <div key={pedidoNum} className="space-y-2">
-                                        <div className="bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
+                                        <div onClick={() => toggleGroup(rejectedGroups[pedidoNum])} className="bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors flex justify-between items-center">
                                             <span className="font-black text-sm text-red-500 uppercase">PEDIDO: {pedidoNum}</span>
+                                            <span className="text-[10px] text-red-500 font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-red-500/20">Seleccionar Grupo</span>
                                         </div>
                                         {rejectedGroups[pedidoNum].map((item, idx) => (
                                             <div 
                                                 key={idx} 
-                                                onClick={() => { setSelectedItem(item); setErrorMsg(""); }}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
+                                                onClick={() => toggleItem(item)}
+                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-xs md:text-sm font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
@@ -193,21 +220,29 @@ const ReceptionModal = ({ processReception }) => {
 
                     {/* DETAIL VIEW (Derecha) */}
                     <div className="w-full md:w-1/2 overflow-y-auto custom-scrollbar bg-black/5 dark:bg-black/20">
-                        {selectedItem ? (
+                        {selectedItems.length > 0 ? (
                             <div className="p-4 md:p-6 flex flex-col gap-4 md:gap-6">
                                 
                                 {activeTab === 'PENDIENTES' && (
                                     <>
                                         <div className="bg-white/50 dark:bg-white/5 p-4 rounded-xl border theme-border shadow-sm">
-                                            <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Datos de Envío</h3>
-                                            <p className="text-sm font-bold uppercase"><span className="text-[var(--primary)]">Enviado por:</span> {selectedItem.transferenciaPendiente?.entregadoPor}</p>
-                                            {selectedItem.transferenciaPendiente?.nota && (
+                                            {selectedItems.length > 1 && (
+                                            <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 p-3 rounded-xl mb-4">
+                                                <h3 className="font-black text-[var(--accent)] uppercase flex items-center gap-2">
+                                                    <CheckCircle size={16} /> Acción Masiva
+                                                </h3>
+                                                <p className="text-xs font-bold text-[var(--primary)] mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
+                                            </div>
+                                        )}
+                                        <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Datos de Envío</h3>
+                                            <p className="text-sm font-bold uppercase"><span className="text-[var(--primary)]">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
+                                            {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.nota && (
                                                 <div className="mt-2 p-3 bg-black/5 rounded-lg">
-                                                    <p className="text-sm italic text-gray-600 dark:text-gray-300">"{selectedItem.transferenciaPendiente.nota}"</p>
+                                                    <p className="text-sm italic text-gray-600 dark:text-gray-300">"{selectedItems[0].transferenciaPendiente?.nota}"</p>
                                                 </div>
                                             )}
-                                            {selectedItem.transferenciaPendiente?.fotoEntrega && (
-                                                <button onClick={() => window.open(selectedItem.transferenciaPendiente.fotoEntrega)} className="mt-3 text-[var(--accent)] text-xs font-bold flex items-center gap-1 hover:underline">
+                                            {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.fotoEntrega && (
+                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 text-[var(--accent)] text-xs font-bold flex items-center gap-1 hover:underline">
                                                     <ImageIcon size={14} /> Ver Foto de Evidencia de Envío
                                                 </button>
                                             )}
@@ -266,7 +301,7 @@ const ReceptionModal = ({ processReception }) => {
                                         <div className="bg-white/50 dark:bg-white/5 p-4 rounded-xl border theme-border shadow-sm mt-4">
                                             <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Motivo de la Devolución</h3>
                                             <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
-                                                <p className="text-sm font-bold text-red-800 dark:text-red-300 uppercase">{getRejectionReason(selectedItem)}</p>
+                                                <p className="text-sm font-bold text-red-800 dark:text-red-300 uppercase">{getRejectionReason(selectedItems[0])}</p>
                                             </div>
                                         </div>
 
