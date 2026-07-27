@@ -897,7 +897,11 @@ const {
         (String(o.cliente || "")).toLowerCase().includes(term)
     );
 
-    const matchArea = areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.areaActual === areaFilter || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter));
+    const matchArea = areaFilter === 'Todas' || 
+                      areaFilter === 'Administrador / Todos' || 
+                      o.areaActual === areaFilter || 
+                      (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter)) ||
+                      o.transferenciaPendiente?.haciaArea === areaFilter;
     const filterUpper = clientFilter.toUpperCase();
     const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
     
