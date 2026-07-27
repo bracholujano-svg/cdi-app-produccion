@@ -1,21 +1,35 @@
 import React, { useState, useMemo } from 'react';
-import { Activity, Clock, Search, TrendingDown, TrendingUp, X, Filter, BarChart3, AlertTriangle } from 'lucide-react';
+import { 
+  Activity, Clock, Search, TrendingDown, TrendingUp, X, Filter, 
+  BarChart3, AlertTriangle, Package, CheckCircle2, Layers, Cpu, 
+  Box, Sparkles, ChevronRight, FileText, ArrowRight, ShieldCheck, 
+  Database, RefreshCw, Scale, ListFilter, Plus
+} from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { AREAS_PLANTA } from '../../utils/constants';
 
 export default function DossierDashboard() {
-  const { orders, setShowDossierModal } = useAppContext();
+  const { orders, setOrders, setShowDossierModal, syncOrderToSupabase, supervisorProfile } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPedido, setSelectedPedido] = useState(null);
+  const [selectedPedidoNum, setSelectedPedidoNum] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState('ALL'); // 'ALL' or specific product id
+  const [activeTab, setActiveTab] = useState('tiempos'); // 'tiempos' | 'comparativa' | 'insumos' | 'historial'
+
+  // Form local para agregar insumos
+  const [nuevoInsumoNombre, setNuevoInsumoNombre] = useState('');
+  const [nuevoInsumoCantidad, setNuevoInsumoCantidad] = useState('');
+  const [nuevoInsumoNota, setNuevoInsumoNota] = useState('');
 
   // Agrupar órdenes por pedido para la vista general
   const groupedOrders = useMemo(() => {
     const grouped = {};
-    orders.forEach(o => {
+    (orders || []).forEach(o => {
+      if (!o) return;
       const pNum = o.pedidoNum || "S/N";
       if (!grouped[pNum]) {
         grouped[pNum] = {
           pedidoNum: pNum,
-          cliente: o.cliente,
+          cliente: o.cliente || 'Sin cliente',
           products: []
         };
       }
@@ -24,234 +38,615 @@ export default function DossierDashboard() {
     return Object.values(grouped).sort((a,b) => String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, {numeric:true}));
   }, [orders]);
 
-  // Filtrar pedidos
+  // Filtrar pedidos según término de búsqueda
   const filteredPedidos = useMemo(() => {
     if (!searchTerm) return groupedOrders;
-    const st = searchTerm.toLowerCase();
+    const st = searchTerm.toLowerCase().trim();
     return groupedOrders.filter(g => 
       g.pedidoNum.toLowerCase().includes(st) || 
-      (g.cliente || "").toLowerCase().includes(st)
+      (g.cliente || "").toLowerCase().includes(st) ||
+      g.products.some(p => (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st))
     );
   }, [groupedOrders, searchTerm]);
 
-  // Función para calcular tiempos de un producto específico
-  const calculateProductTimes = (product) => {
-    if (!product.historial || product.historial.length === 0) return { working: 0, waiting: 0, details: [] };
+  // Pedido seleccionado activo
+  const selectedGroup = useMemo(() => {
+    if (!selectedPedidoNum) return null;
+    return groupedOrders.find(g => g.pedidoNum === selectedPedidoNum) || null;
+  }, [groupedOrders, selectedPedidoNum]);
+
+  // Producto(s) a inspeccionar dentro del pedido
+  const targetProducts = useMemo(() => {
+    if (!selectedGroup) return [];
+    if (selectedProductId === 'ALL') return selectedGroup.products;
+    return selectedGroup.products.filter(p => p.id === selectedProductId);
+  }, [selectedGroup, selectedProductId]);
+
+  // Helper para convertir MS a formato legible (Días/Horas/Mins)
+  const msToTimeStr = (ms) => {
+    if (!ms || ms <= 0) return '0h';
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
     
-    // Sort chronological
+    if (days > 0) {
+      return `${days}d ${remHours}h`;
+    }
+    if (hours > 0) {
+      return `${hours}h`;
+    }
+    const mins = Math.floor(ms / (1000 * 60));
+    return `${mins}m`;
+  };
+
+  // Cálculo de desglose de tiempos por área y esperas para un producto
+  const calculateProductMetrics = (product) => {
+    if (!product || !product.historial || product.historial.length === 0) {
+      return { totalWorkingMs: 0, totalWaitingMs: 0, areaDurations: {}, details: [] };
+    }
+
     const history = [...product.historial].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
     
-    let totalWorking = 0; // ms
-    let totalWaiting = 0; // ms
+    let totalWorkingMs = 0;
+    let totalWaitingMs = 0;
+    const areaDurations = {}; // { 'Ebanistería': ms, ... }
     const details = [];
 
-    let currentAreaStartTime = null;
     let currentArea = null;
-    let transferStartTime = null;
-    
-    history.forEach((h, index) => {
-      const isReception = h.accion && h.accion.toUpperCase().includes('RECEPCIÓN');
-      const isTransfer = h.accion && h.accion.toUpperCase().includes('TRANSFERENCIA');
-      const isInitial = h.accion && h.accion.toUpperCase().includes('ASIGNACIÓN INICIAL');
-      const time = new Date(h.fecha).getTime();
+    let areaStartTime = null;
 
-      if (isInitial || isReception) {
-        // Fin de una espera (si venía de transferencia)
-        if (transferStartTime) {
-          const waitTime = time - transferStartTime;
-          totalWaiting += waitTime;
-          details.push({ type: 'wait', from: currentArea, to: h.area, duration: waitTime });
-          transferStartTime = null;
+    history.forEach((h, index) => {
+      const hDate = new Date(h.fecha).getTime();
+      const accion = (h.accion || '').toUpperCase();
+
+      // Detectar área en el historial
+      let areaFound = null;
+      const allKnownAreas = ['Diseño', 'Programación CNC', ...AREAS_PLANTA];
+      allKnownAreas.forEach(a => {
+        if (accion.includes(a.toUpperCase())) areaFound = a;
+      });
+
+      if (areaFound) {
+        if (currentArea && areaStartTime) {
+          const duration = hDate - areaStartTime;
+          if (duration > 0) {
+            areaDurations[currentArea] = (areaDurations[currentArea] || 0) + duration;
+            totalWorkingMs += duration;
+            details.push({ area: currentArea, duration, type: 'work', fecha: h.fecha });
+          }
         }
-        // Inicia trabajo en esta área
-        currentAreaStartTime = time;
-        currentArea = h.area;
-      } else if (isTransfer) {
-        // Termina trabajo en el área actual
-        if (currentAreaStartTime) {
-          const workTime = time - currentAreaStartTime;
-          totalWorking += workTime;
-          details.push({ type: 'work', area: currentArea, duration: workTime });
-          currentAreaStartTime = null;
+        currentArea = areaFound;
+        areaStartTime = hDate;
+      }
+
+      if (index === history.length - 1 && currentArea && areaStartTime) {
+        // Tiempo hasta el momento actual si aún no ha finalizado
+        const duration = Date.now() - areaStartTime;
+        if (duration > 0 && product.estadoInterno !== 'DESPACHADO') {
+          areaDurations[currentArea] = (areaDurations[currentArea] || 0) + duration;
+          totalWorkingMs += duration;
+          details.push({ area: currentArea, duration, type: 'work', fecha: h.fecha });
         }
-        // Inicia tiempo de espera (hasta ser recibido)
-        transferStartTime = time;
-      } else {
-         // Otros eventos intermedios (como avances, bifurcaciones) pueden contar como trabajo continuo
-         // si no resetean el area, pero solo tomamos el tiempo en base a los extremos.
       }
     });
 
-    // Si sigue trabajando en un área
-    if (currentAreaStartTime) {
-       const workTime = Date.now() - currentAreaStartTime;
-       totalWorking += workTime;
-       details.push({ type: 'work_active', area: currentArea, duration: workTime });
-    }
-
-    // Si sigue en transferencia
-    if (transferStartTime) {
-       const waitTime = Date.now() - transferStartTime;
-       totalWaiting += waitTime;
-       details.push({ type: 'wait_active', from: currentArea, duration: waitTime });
-    }
-
-    return { working: totalWorking, waiting: totalWaiting, details };
+    return { totalWorkingMs, totalWaitingMs, areaDurations, details };
   };
 
-  const msToHours = (ms) => (ms / (1000 * 60 * 60)).toFixed(2);
-  const msToDaysStr = (ms) => {
-      const d = Math.floor(ms / (1000 * 60 * 60 * 24));
-      const h = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      return `${d}d ${h}h`;
+  // Análisis agregado del pedido seleccionado
+  const pedidoMetrics = useMemo(() => {
+    if (!selectedGroup) return null;
+    
+    const aggregatedAreaDurations = {};
+    let globalWorkingMs = 0;
+
+    selectedGroup.products.forEach(p => {
+      const m = calculateProductMetrics(p);
+      globalWorkingMs += m.totalWorkingMs;
+      Object.entries(m.areaDurations).forEach(([area, ms]) => {
+        aggregatedAreaDurations[area] = (aggregatedAreaDurations[area] || 0) + ms;
+      });
+    });
+
+    return { globalWorkingMs, aggregatedAreaDurations };
+  }, [selectedGroup]);
+
+  // BENCHMARKING INTER-PEDIDOS: Buscar otros pedidos con los mismos productos para comparar
+  const comparativeBenchmark = useMemo(() => {
+    if (!selectedGroup || targetProducts.length === 0) return [];
+
+    return targetProducts.map(currentProduct => {
+      const targetCode = (currentProduct.codArticulo || "").trim().toLowerCase();
+      const targetName = (currentProduct.nombre || "").trim().toLowerCase();
+
+      // Buscar instancias de este mismo producto en OTROS pedidos
+      const sameProductInstances = (orders || []).filter(o => {
+        if (!o || o.pedidoNum === currentProduct.pedidoNum) return false;
+        const codeMatch = targetCode && (o.codArticulo || "").trim().toLowerCase() === targetCode;
+        const nameMatch = targetName && (o.nombre || "").trim().toLowerCase() === targetName;
+        return codeMatch || nameMatch;
+      });
+
+      const currentMetrics = calculateProductMetrics(currentProduct);
+      
+      // Calcular promedio histórico por área
+      const historicalAreaAverages = {};
+      const historicalTotalTimes = [];
+
+      sameProductInstances.forEach(otherProd => {
+        const otherMetrics = calculateProductMetrics(otherProd);
+        if (otherMetrics.totalWorkingMs > 0) {
+          historicalTotalTimes.push(otherMetrics.totalWorkingMs);
+        }
+        Object.entries(otherMetrics.areaDurations).forEach(([area, ms]) => {
+          if (!historicalAreaAverages[area]) historicalAreaAverages[area] = [];
+          historicalAreaAverages[area].push(ms);
+        });
+      });
+
+      // Calcular medias
+      const areaAverages = {};
+      Object.entries(historicalAreaAverages).forEach(([area, msArray]) => {
+        const sum = msArray.reduce((acc, val) => acc + val, 0);
+        areaAverages[area] = sum / (msArray.length || 1);
+      });
+
+      const avgTotalWorkingMs = historicalTotalTimes.length > 0
+        ? historicalTotalTimes.reduce((a, b) => a + b, 0) / historicalTotalTimes.length
+        : 0;
+
+      // Calcular desviación % vs promedio
+      let diffPercent = 0;
+      if (avgTotalWorkingMs > 0 && currentMetrics.totalWorkingMs > 0) {
+        diffPercent = ((currentMetrics.totalWorkingMs - avgTotalWorkingMs) / avgTotalWorkingMs) * 100;
+      }
+
+      return {
+        product: currentProduct,
+        currentMetrics,
+        otherInstancesCount: sameProductInstances.length,
+        sameProductInstances,
+        areaAverages,
+        avgTotalWorkingMs,
+        diffPercent
+      };
+    });
+  }, [selectedGroup, targetProducts, orders]);
+
+  // Manejar guardado de nuevo insumo/materia prima
+  const handleAddInsumo = (productId) => {
+    if (!nuevoInsumoNombre.trim()) {
+      alert("Por favor ingrese el nombre del insumo o materia prima.");
+      return;
+    }
+
+    const orderToUpdate = (orders || []).find(o => o.id === productId);
+    if (!orderToUpdate) return;
+
+    const newInsumoEntry = {
+      id: Date.now(),
+      nombre: nuevoInsumoNombre.trim().toUpperCase(),
+      cantidad: nuevoInsumoCantidad.trim() || '1 UNID',
+      nota: nuevoInsumoNota.trim() || 'Registrado en Dossier',
+      fecha: new Date().toISOString(),
+      registradoPor: supervisorProfile?.name || 'S/N'
+    };
+
+    const updatedInsumos = [...(orderToUpdate.insumosMateriasPrimas || []), newInsumoEntry];
+    const updatedOrder = { ...orderToUpdate, insumosMateriasPrimas: updatedInsumos };
+
+    const updatedOrdersList = (orders || []).map(o => o.id === productId ? updatedOrder : o);
+    setOrders(updatedOrdersList);
+    syncOrderToSupabase(updatedOrder);
+
+    setNuevoInsumoNombre('');
+    setNuevoInsumoCantidad('');
+    setNuevoInsumoNota('');
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-0 md:p-4 animate-in fade-in duration-300">
-      <div className="bg-[var(--bg-main)] w-full h-full md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-        {/* Header */}
-        <div className="p-4 md:p-6 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
+    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-2 md:p-6 animate-in fade-in duration-300">
+      <div className="theme-bg-card w-full h-full md:h-[95vh] md:max-w-7xl rounded-2xl md:rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
+        
+        {/* ENCABEZADO SUPERIOR */}
+        <div className="p-4 md:p-6 border-b theme-border flex justify-between items-center bg-[var(--card-bg)]">
           <div className="flex items-center gap-3">
-             <div className="p-3 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-xl">
-               <Activity size={28} />
-             </div>
-             <div>
-               <h2 className="text-xl md:text-2xl font-black text-[var(--primary)] uppercase tracking-tight">DOSSIER DE PRODUCCIÓN</h2>
-               <p className="text-xs md:text-sm font-bold theme-text-muted">Análisis de Tiempos Muertos y Eficiencia</p>
-             </div>
+            <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl border border-purple-500/20">
+              <Activity size={28} />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-black text-[var(--primary)] uppercase tracking-tight flex items-center gap-2">
+                DOSSIER & BENCHMARKING DE PRODUCCIÓN
+              </h2>
+              <p className="text-xs md:text-sm font-bold theme-text-muted">
+                Análisis Comparativo Inter-Pedidos, Histórico de Tiempos y Consumo de Insumos
+              </p>
+            </div>
           </div>
-          <button onClick={() => setShowDossierModal(false)} className="p-3 bg-black/5 dark:bg-white/5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--primary)]">
+          <button 
+            type="button" 
+            onClick={() => setShowDossierModal(false)}
+            className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--primary)]"
+          >
             <X size={24} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* CUERPO PRINCIPAL DOSSIER */}
+        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
           
-          {/* Sidebar / Lista de Pedidos */}
-          <div className={`w-full md:w-[350px] lg:w-[400px] border-r theme-border bg-[var(--card-bg)] flex flex-col shrink-0 transition-transform ${selectedPedido ? 'hidden md:flex' : 'flex'}`}>
+          {/* BARRA LATERAL IZQUIERDA: LISTA DE PEDIDOS */}
+          <div className={`w-full md:w-80 border-r theme-border flex flex-col bg-[var(--card-bg)] ${selectedGroup ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b theme-border">
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar pedido o cliente..." 
-                    className="w-full pl-10 pr-4 py-3 bg-[var(--bg-input)] border theme-border rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-purple-500 text-[var(--primary)]"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-               </div>
+              <div className="relative">
+                <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 theme-text-muted" />
+                <input 
+                  type="text"
+                  placeholder="Buscar pedido, cliente o código..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-purple-500 text-[var(--primary)]"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-               {filteredPedidos.map(g => (
-                 <div 
-                   key={g.pedidoNum}
-                   onClick={() => setSelectedPedido(g)}
-                   className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedPedido?.pedidoNum === g.pedidoNum ? 'bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-400' : 'theme-bg-card theme-border hover:border-purple-500/50 hover:-translate-y-1'}`}
-                 >
-                    <div className="flex justify-between items-start mb-2">
-                       <h3 className="font-black text-lg">#{g.pedidoNum}</h3>
-                       <span className="text-xs font-bold px-2 py-1 bg-black/5 dark:bg-white/5 rounded-md">{g.products.length} PRODS</span>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+              {filteredPedidos.map(g => {
+                const isSelected = selectedGroup?.pedidoNum === g.pedidoNum;
+                return (
+                  <div 
+                    key={g.pedidoNum}
+                    onClick={() => { setSelectedPedidoNum(g.pedidoNum); setSelectedProductId('ALL'); }}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-400 shadow-md' : 'theme-bg-card theme-border hover:border-purple-500/50 hover:-translate-y-0.5'}`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <h3 className="font-black text-base md:text-lg uppercase">#{g.pedidoNum}</h3>
+                      <span className="text-[10px] font-black px-2 py-0.5 bg-black/10 dark:bg-white/10 rounded-full">
+                        {g.products.length} PRODS
+                      </span>
                     </div>
-                    <p className="text-sm font-bold opacity-80 truncate">{g.cliente || 'Sin cliente'}</p>
-                 </div>
-               ))}
-               {filteredPedidos.length === 0 && (
-                 <div className="p-8 text-center text-slate-500 font-bold">
-                   No se encontraron pedidos.
-                 </div>
-               )}
+                    <p className="text-xs font-bold opacity-80 truncate">{g.cliente}</p>
+                  </div>
+                );
+              })}
+
+              {filteredPedidos.length === 0 && (
+                <div className="p-8 text-center text-slate-500 font-bold text-xs">
+                  No se encontraron pedidos.
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Área Principal / Detalles del Pedido */}
-          <div className={`flex-1 flex flex-col bg-[var(--bg-main)] ${!selectedPedido ? 'hidden md:flex items-center justify-center' : ''}`}>
-             {!selectedPedido ? (
-               <div className="text-center opacity-40">
-                 <BarChart3 size={64} className="mx-auto mb-4" />
-                 <h2 className="text-xl font-black uppercase tracking-widest">Seleccione un Pedido</h2>
-               </div>
-             ) : (
-               <div className="flex-1 overflow-y-auto custom-scrollbar h-full">
-                  <div className="p-4 md:p-8 space-y-8">
-                     
-                     {/* Botón Volver (Solo Móvil) */}
-                     <button onClick={() => setSelectedPedido(null)} className="md:hidden flex items-center gap-2 text-purple-500 font-bold mb-4">
-                        <X size={18} /> Volver a la lista
-                     </button>
+          {/* ÁREA CENTRAL PRINCIPAL: DASHBOARD DEL PEDIDO */}
+          <div className={`flex-1 flex flex-col bg-[var(--bg-main)] overflow-hidden ${!selectedGroup ? 'hidden md:flex items-center justify-center p-8' : ''}`}>
+            {!selectedGroup ? (
+              <div className="text-center opacity-40 max-w-sm">
+                <BarChart3 size={64} className="mx-auto mb-4 text-purple-500 animate-pulse" />
+                <h3 className="text-lg font-black uppercase tracking-widest text-[var(--primary)] mb-2">Seleccione un Pedido</h3>
+                <p className="text-xs font-bold theme-text-muted">Elija un pedido de la lista izquierda para desplegar su gráfico comparativo, análisis de tiempos e insumos.</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6">
+                
+                {/* BOTÓN VOLVER (MÓVIL) */}
+                <button onClick={() => setSelectedPedidoNum(null)} className="md:hidden flex items-center gap-2 text-purple-500 font-bold mb-2 text-xs uppercase">
+                  <X size={16} /> Volver a la lista de pedidos
+                </button>
 
-                     {/* Cabecera del Pedido */}
-                     <div className="flex justify-between items-end pb-4 border-b theme-border">
-                        <div>
-                          <p className="text-sm font-black text-purple-500 tracking-widest uppercase mb-1">Análisis Detallado</p>
-                          <h2 className="text-3xl md:text-5xl font-black uppercase text-[var(--primary)]">PEDIDO #{selectedPedido.pedidoNum}</h2>
-                          <p className="text-lg font-bold theme-text-muted mt-2">{selectedPedido.cliente}</p>
-                        </div>
-                     </div>
-
-                     {/* Productos y sus Tiempos */}
-                     <div className="space-y-6">
-                        <h3 className="text-xl font-black uppercase flex items-center gap-2"><Clock /> Tiempos por Producto</h3>
-                        
-                        {selectedPedido.products.map(p => {
-                           const times = calculateProductTimes(p);
-                           const total = times.working + times.waiting;
-                           const workingPercent = total > 0 ? (times.working / total) * 100 : 0;
-                           const waitingPercent = total > 0 ? (times.waiting / total) * 100 : 0;
-                           const hasWaitAlert = waitingPercent > 30; // Alerta si más del 30% del tiempo es muerto
-
-                           return (
-                             <div key={p.id} className="theme-bg-card rounded-2xl border theme-border overflow-hidden">
-                                <div className="p-4 border-b theme-border flex flex-wrap gap-4 justify-between items-center bg-black/5 dark:bg-white/5">
-                                   <div>
-                                     <h4 className="font-black text-lg text-[var(--primary)]">{p.nombre}</h4>
-                                     <p className="text-xs font-bold theme-text-muted">Cód: {p.codArticulo}</p>
-                                   </div>
-                                   <div className="flex gap-4">
-                                      <div className="text-right">
-                                        <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">T. Procesado</p>
-                                        <p className="font-black text-lg">{msToDaysStr(times.working)}</p>
-                                      </div>
-                                      <div className="text-right border-l theme-border pl-4">
-                                        <p className={`text-[10px] font-black uppercase tracking-widest ${hasWaitAlert ? 'text-red-500' : 'text-orange-500'}`}>T. Muerto (Espera)</p>
-                                        <p className="font-black text-lg">{msToDaysStr(times.waiting)}</p>
-                                      </div>
-                                   </div>
-                                </div>
-                                <div className="p-4 space-y-4">
-                                   {/* Barra visual */}
-                                   {total > 0 && (
-                                     <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
-                                        <div style={{width: `${workingPercent}%`}} className="bg-emerald-500 h-full" title={`Procesado: ${workingPercent.toFixed(1)}%`}></div>
-                                        <div style={{width: `${waitingPercent}%`}} className="bg-red-500 h-full" title={`Espera: ${waitingPercent.toFixed(1)}%`}></div>
-                                     </div>
-                                   )}
-                                   {hasWaitAlert && (
-                                      <p className="text-xs font-black text-red-500 uppercase flex items-center gap-1"><AlertTriangle size={14}/> Este producto tiene un alto índice de tiempo de espera.</p>
-                                   )}
-                                   
-                                   {/* Detalles del Historial */}
-                                   {times.details.length > 0 && (
-                                      <div className="mt-4 border-t theme-border pt-4">
-                                         <p className="text-[10px] font-black uppercase theme-text-muted mb-2 tracking-widest">Desglose de Áreas y Esperas</p>
-                                         <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                                            {times.details.map((d, i) => (
-                                               <div key={i} className={`shrink-0 px-3 py-2 border rounded-xl flex flex-col min-w-[120px] ${d.type.includes('wait') ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'}`}>
-                                                  <span className="text-[10px] font-black uppercase tracking-wider">{d.type.includes('wait') ? 'ESPERA TRAS ' + d.from : d.area}</span>
-                                                  <span className="text-sm font-black">{msToHours(d.duration)}h</span>
-                                               </div>
-                                            ))}
-                                         </div>
-                                      </div>
-                                   )}
-                                </div>
-                             </div>
-                           );
-                        })}
-                     </div>
+                {/* CABECERA DEL DASHBOARD DEL PEDIDO */}
+                <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                        Dossier Activo
+                      </span>
+                      <span className="text-xs font-bold theme-text-muted uppercase">Cliente: {selectedGroup.cliente}</span>
+                    </div>
+                    <h1 className="text-2xl md:text-4xl font-black uppercase text-[var(--primary)] tracking-tight">
+                      PEDIDO #{selectedGroup.pedidoNum}
+                    </h1>
                   </div>
-               </div>
-             )}
+
+                  <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 custom-scrollbar">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProductId('ALL')}
+                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'theme-bg-input theme-border theme-text-muted hover:bg-purple-500/10'}`}
+                    >
+                      📦 Todos ({selectedGroup.products.length})
+                    </button>
+                    {selectedGroup.products.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setSelectedProductId(p.id)}
+                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'theme-bg-input theme-border theme-text-muted hover:bg-purple-500/10'}`}
+                      >
+                        {p.codArticulo || p.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* TABS DE SECCIÓN DEL DOSSIER */}
+                <div className="flex border-b theme-border gap-2 md:gap-4 overflow-x-auto custom-scrollbar pb-1">
+                  <button 
+                    onClick={() => setActiveTab('tiempos')}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'tiempos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                  >
+                    <Clock size={16} /> 1. Distribución de Tiempos por Área
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('comparativa')}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'comparativa' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                  >
+                    <Scale size={16} /> 2. Benchmarking Inter-Pedidos
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('insumos')}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'insumos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                  >
+                    <Package size={16} /> 3. Materias Primas e Insumos
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('historial')}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'historial' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                  >
+                    <Layers size={16} /> 4. Timeline y Trazabilidad
+                  </button>
+                </div>
+
+                {/* PESTAÑA 1: DISTRIBUCIÓN DE TIEMPOS POR ÁREA */}
+                {activeTab === 'tiempos' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="theme-bg-card p-5 rounded-2xl border theme-border flex items-center gap-4">
+                        <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                          <Clock size={24} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase theme-text-muted">Tiempo Total Procesado</p>
+                          <h4 className="text-xl md:text-2xl font-black text-[var(--primary)]">
+                            {msToTimeStr(pedidoMetrics?.globalWorkingMs)}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="theme-bg-card p-5 rounded-2xl border theme-border flex items-center gap-4">
+                        <div className="p-3 bg-purple-500/10 text-purple-500 rounded-xl">
+                          <Cpu size={24} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase theme-text-muted">Áreas Activas</p>
+                          <h4 className="text-xl md:text-2xl font-black text-[var(--primary)]">
+                            {Object.keys(pedidoMetrics?.aggregatedAreaDurations || {}).length} Secciones
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="theme-bg-card p-5 rounded-2xl border theme-border flex items-center gap-4">
+                        <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                          <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase theme-text-muted">Estado Global</p>
+                          <h4 className="text-sm font-black text-[var(--primary)] uppercase">
+                            {selectedGroup.products.every(p => p.isTerminado) ? '🟢 Terminado' : '🟡 En Procesamiento'}
+                          </h4>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* GRÁFICO DE BARRAS DE TIEMPO POR ÁREA */}
+                    <div className="theme-bg-card p-6 rounded-3xl border theme-border space-y-4">
+                      <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] flex items-center gap-2">
+                        <BarChart3 className="text-purple-500" /> Gráfico Comparativo de Tiempo por Sección
+                      </h3>
+
+                      {Object.keys(pedidoMetrics?.aggregatedAreaDurations || {}).length === 0 ? (
+                        <p className="text-xs italic theme-text-muted text-center py-6">Aún no hay registros de tiempo acumulados para este pedido.</p>
+                      ) : (
+                        <div className="space-y-4 pt-2">
+                          {Object.entries(pedidoMetrics.aggregatedAreaDurations).map(([area, ms]) => {
+                            const percent = pedidoMetrics.globalWorkingMs > 0 ? (ms / pedidoMetrics.globalWorkingMs) * 100 : 0;
+                            return (
+                              <div key={area} className="space-y-1.5">
+                                <div className="flex justify-between items-center text-xs font-black uppercase">
+                                  <span className="text-[var(--primary)]">{area}</span>
+                                  <span className="theme-text-muted">{msToTimeStr(ms)} ({percent.toFixed(1)}%)</span>
+                                </div>
+                                <div className="h-4 w-full theme-bg-input rounded-full overflow-hidden p-0.5 border theme-border">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-500 shadow-sm"
+                                    style={{ width: `${Math.max(percent, 2)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* PESTAÑA 2: BENCHMARKING INTER-PEDIDOS */}
+                {activeTab === 'comparativa' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-bold leading-relaxed">
+                      💡 <strong>Análisis Comparativo Inter-Pedidos:</strong> Compara automáticamente el tiempo que se demoró este producto en cada área con el promedio histórico registrado para este mismo artículo en pedidos anteriores.
+                    </div>
+
+                    {comparativeBenchmark.map(({ product, currentMetrics, otherInstancesCount, sameProductInstances, areaAverages, avgTotalWorkingMs, diffPercent }) => {
+                      const isFaster = diffPercent < 0;
+                      return (
+                        <div key={product.id} className="theme-bg-card p-6 rounded-3xl border theme-border space-y-6 shadow-sm">
+                          <div className="flex flex-wrap justify-between items-center gap-3 border-b theme-border pb-4">
+                            <div>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-purple-500">Artículo Analizado</span>
+                              <h3 className="text-lg md:text-xl font-black uppercase text-[var(--primary)]">
+                                {product.nombre} <span className="text-xs theme-text-muted font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
+                              </h3>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-bold theme-text-muted">Histórico: <strong>{otherInstancesCount}</strong> pedidos anteriores</span>
+                              {otherInstancesCount > 0 && (
+                                <span className={`text-xs font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 border ${isFaster ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'}`}>
+                                  {isFaster ? <TrendingDown size={14}/> : <TrendingUp size={14}/>}
+                                  {Math.abs(diffPercent).toFixed(1)}% {isFaster ? 'más eficiente' : 'más demorado'} que el promedio
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {otherInstancesCount === 0 ? (
+                            <div className="p-6 text-center text-xs italic theme-text-muted bg-black/5 dark:bg-white/5 rounded-2xl">
+                              No hay pedidos anteriores registrados en la base de datos para el artículo "{product.codArticulo || product.nombre}".
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-black uppercase tracking-wider text-[var(--primary)]">Comparación de Tiempos por Área (Este Pedido vs Promedio Histórico)</h4>
+                              
+                              <div className="grid grid-cols-1 gap-3">
+                                {Object.keys(currentMetrics.areaDurations).map(area => {
+                                  const currentMs = currentMetrics.areaDurations[area] || 0;
+                                  const avgMs = areaAverages[area] || 0;
+                                  const maxVal = Math.max(currentMs, avgMs) || 1;
+
+                                  const currentWidth = (currentMs / maxVal) * 100;
+                                  const avgWidth = (avgMs / maxVal) * 100;
+
+                                  return (
+                                    <div key={area} className="p-3.5 theme-bg-input rounded-2xl border theme-border space-y-2">
+                                      <div className="flex justify-between items-center text-xs font-black uppercase">
+                                        <span>{area}</span>
+                                        <div className="flex gap-4">
+                                          <span className="text-purple-600 dark:text-purple-400">Este Pedido: {msToTimeStr(currentMs)}</span>
+                                          <span className="theme-text-muted">Promedio Histórico: {msToTimeStr(avgMs)}</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                                          <div className="h-full bg-purple-600 rounded-full" style={{ width: `${currentWidth}%` }} title={`Este Pedido: ${msToTimeStr(currentMs)}`}></div>
+                                        </div>
+                                        <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                                          <div className="h-full bg-gray-400 dark:bg-gray-600 rounded-full" style={{ width: `${avgWidth}%` }} title={`Promedio Histórico: ${msToTimeStr(avgMs)}`}></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* PESTAÑA 3: MATERIAS PRIMAS E INSUMOS */}
+                {activeTab === 'insumos' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    {targetProducts.map(p => (
+                      <div key={p.id} className="theme-bg-card p-6 rounded-3xl border theme-border space-y-4 shadow-sm">
+                        <div className="flex justify-between items-center border-b theme-border pb-3">
+                          <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)]">
+                            Insumos de: {p.nombre} <span className="text-xs theme-text-muted font-bold">({p.codArticulo})</span>
+                          </h3>
+                        </div>
+
+                        {/* FORMULARIO AGREGAR INSUMO */}
+                        <div className="p-4 theme-bg-input rounded-2xl border theme-border space-y-3">
+                          <label className="text-xs font-black uppercase text-purple-600 dark:text-purple-400 block">Registrar Consumo de Materia Prima / Insumo:</label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input 
+                              type="text" 
+                              placeholder="Nombre Insumo (ej. MDF 18mm, Cold Roll 1/8)" 
+                              value={nuevoInsumoNombre}
+                              onChange={e => setNuevoInsumoNombre(e.target.value)}
+                              className="p-3 rounded-xl theme-bg-card border theme-border font-bold text-xs outline-none focus:ring-2 focus:ring-purple-500 text-[var(--primary)]"
+                            />
+                            <input 
+                              type="text" 
+                              placeholder="Cantidad / Unidad (ej. 2 Hojas, 5 Kg)" 
+                              value={nuevoInsumoCantidad}
+                              onChange={e => setNuevoInsumoCantidad(e.target.value)}
+                              className="p-3 rounded-xl theme-bg-card border theme-border font-bold text-xs outline-none focus:ring-2 focus:ring-purple-500 text-[var(--primary)]"
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => handleAddInsumo(p.id)}
+                              className="bg-purple-600 text-white font-black uppercase text-xs p-3 rounded-xl shadow-sm hover:brightness-125 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <Plus size={16} /> Guardar Insumo
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* LISTADO DE INSUMOS REGISTRADOS */}
+                        <div className="space-y-2 pt-2">
+                          {(!p.insumosMateriasPrimas || p.insumosMateriasPrimas.length === 0) ? (
+                            <p className="text-xs italic theme-text-muted text-center py-4">No se han registrado consumos de materia prima para este producto aún.</p>
+                          ) : (
+                            p.insumosMateriasPrimas.map((item, idx) => (
+                              <div key={idx} className="p-3 rounded-xl bg-black/5 dark:bg-white/5 border theme-border flex justify-between items-center">
+                                <div>
+                                  <span className="text-xs font-black uppercase text-[var(--primary)]">{item.nombre}</span>
+                                  <p className="text-[10px] theme-text-muted font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
+                                </div>
+                                <span className="text-xs font-black px-3 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-full border border-purple-500/30 uppercase">
+                                  {item.cantidad}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* PESTAÑA 4: TIMELINE Y TRAZABILIDAD */}
+                {activeTab === 'historial' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    {targetProducts.map(p => (
+                      <div key={p.id} className="theme-bg-card p-6 rounded-3xl border theme-border space-y-4 shadow-sm">
+                        <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] border-b theme-border pb-3">
+                          Histórico Completo: {p.nombre}
+                        </h3>
+
+                        <div className="space-y-3">
+                          {(p.historial || []).slice().reverse().map((h, idx) => (
+                            <div key={idx} className="p-3.5 theme-bg-input rounded-2xl border theme-border space-y-2">
+                              <div className="flex justify-between items-center text-xs font-black uppercase">
+                                <span className="px-2 py-0.5 bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded border border-purple-500/30">
+                                  {h.accion}
+                                </span>
+                                <span className="theme-text-muted text-[10px] font-bold">
+                                  {new Date(h.fecha).toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs font-bold uppercase bg-black/5 dark:bg-white/5 p-2 rounded-xl">
+                                <div><span className="text-[10px] theme-text-muted block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
+                                <div><span className="text-[10px] theme-text-muted block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
+                              </div>
+
+                              {h.nota && <p className="text-xs italic theme-text-muted">"{h.nota}"</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+            )}
           </div>
 
         </div>

@@ -90,9 +90,6 @@ const Header = () => {
                <Bell size={"1.2em"} className={totalNotifications > 0 ? 'animate-pulse' : ''} /> Recepciones
                {totalNotifications > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-bounce">{totalNotifications}</span>}
              </button>
-             <button type="button" onClick={() => setShowDossierModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-[10px] md:text-xs font-black uppercase transition-colors bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white border border-purple-500/20`}>
-               <Activity size={"1.2em"} /> Dossier
-             </button>
           </div>
 
           {/* LADO DERECHO: TOGGLE THEME DESLIZABLE NEON */}
