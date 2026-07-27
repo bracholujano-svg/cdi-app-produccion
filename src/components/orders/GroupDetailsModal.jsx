@@ -28,6 +28,9 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   if (!grouped[key].activeAreas.includes(p.areaActual)) {
                       grouped[key].activeAreas.push(p.areaActual);
                   }
+                  if (p.isTerminado) {
+                      grouped[key].isTerminado = true;
+                  }
               }
           });
           prods = Object.values(grouped);
@@ -123,7 +126,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     selectedBulkOrders.some(o => o.id === p.id) 
                       ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' 
                       : p.isTerminado
-                        ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)] bg-green-500/10 hover:border-green-400'
+                        ? 'border-green-500 dark:border-green-500 shadow-[0_0_12px_rgba(34,197,94,0.25)] bg-green-500/5 hover:border-green-400'
                         : isPartial 
                           ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)] hover:border-yellow-300' 
                           : 'theme-border shadow-sm hover:border-[var(--primary)]'
