@@ -292,11 +292,12 @@ const OrderDetailsModal = ({
 
                           const isGerente = supervisorProfile?.area === "Administrador / Todos";
                           const isDiseno = supervisorProfile?.area === "Diseño";
+                          const isProgramacion = supervisorProfile?.area === "Programación CNC";
                           
                           let allowedAreas = [];
                           if (isGerente) {
                             allowedAreas = AREAS || [];
-                          } else if (isDiseno) {
+                          } else if (isDiseno || isProgramacion) {
                             allowedAreas = ["Programación CNC", ...(AREAS_PLANTA || [])];
                           } else {
                             allowedAreas = (ROUTING_MAP && ROUTING_MAP[supervisorProfile?.area]) || [];

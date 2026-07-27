@@ -57,14 +57,14 @@ export const PERSONAL_DISENO = ["Ana Gómez", "Carlos Ruiz", "Sofía Vargas"];
 export const PERSONAL_CNC = ["Luis Martínez", "Pedro Sánchez", "Miguel Torres", "Jorge Díaz", "Raúl Castro"];
 
 export const ROUTING_MAP = {
-    "Comercial / Ventas": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC"],
+    "Comercial / Ventas": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio"],
     "Diseño": ["Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
-    "Programación CNC": ["Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
-    "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Ensamble"],
-    "Ebanistería": ["Pintura Líquida", "Pintura en Polvo", "Ensamble"],
-    "Corte y Dobles de Lámina y Tubería CNC": ["Área de Soldadura", "Área de Torno", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
-    "Área de Soldadura": ["Pintura en Polvo", "Pintura Líquida", "Ensamble"],
-    "Área de Torno": ["Área de Soldadura", "Pintura en Polvo", "Ensamble"],
+    "Programación CNC": ["Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
+    "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Ensamble", "Empaque"],
+    "Ebanistería": ["Pintura Líquida", "Pintura en Polvo", "Ensamble", "Empaque"],
+    "Corte y Dobles de Lámina y Tubería CNC": ["Área de Soldadura", "Área de Torno", "Pintura en Polvo", "Pintura Líquida", "Ensamble", "Empaque"],
+    "Área de Soldadura": ["Pintura en Polvo", "Pintura Líquida", "Ensamble", "Empaque"],
+    "Área de Torno": ["Área de Soldadura", "Pintura en Polvo", "Ensamble", "Empaque"],
     "Corte y Mecanizado de Vidrio": ["Ensamble", "Empaque"],
     "Pintura en Polvo": ["Ensamble", "Empaque"],
     "Pintura Líquida": ["Ensamble", "Empaque"],
