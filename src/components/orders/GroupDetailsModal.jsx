@@ -151,9 +151,9 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     </div>
 
                     <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] flex flex-col gap-1.5">
-                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate" title={p.activeAreas ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
+                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
                           <MapPin size={"1.2em"} className="shrink-0"/> 
-                          {p.activeAreas ? `ÁREAS: ${p.activeAreas.join(', ')}` : p.areaActual}
+                          {p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS: ${p.activeAreas.join(', ')}` : `ÁREA: ${p.areaActual}`}
                       </p>
                       
                       {isPartial && lastPartial && (
@@ -172,7 +172,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}
-                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas ? 'MÚLTIPLES ESTADOS' : p.estadoInterno}</p>
+                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>
                     </div>
 
                     {/* Botón Ver Planos */}
