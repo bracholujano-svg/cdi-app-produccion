@@ -1,7 +1,6 @@
-import React from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
@@ -43,6 +42,7 @@ const OrderDetailsModal = ({
   } = useAppContext();
 
   const [isTerminadoLocal, setIsTerminadoLocal] = React.useState(selectedOrder?.isTerminado || false);
+  const [expandedResumenArea, setExpandedResumenArea] = React.useState(null);
   
   React.useEffect(() => {
     setIsTerminadoLocal(selectedOrder?.isTerminado || false);
@@ -57,6 +57,36 @@ const OrderDetailsModal = ({
   const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
   const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
   const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
+
+  // Compute all unique areas this product family has visited
+  const detectedAreas = (() => {
+    const areaSet = new Set();
+    familyOrders.forEach(o => {
+      if (o?.areaActual) areaSet.add(o.areaActual);
+    });
+
+    const knownAreaList = ['Diseño', 'Programación', 'Corte CNC', ...AREAS_PLANTA];
+    unifiedHistorial.forEach(h => {
+      const accion = String(h?.accion || '');
+      knownAreaList.forEach(areaName => {
+        if (accion.toUpperCase().includes(areaName.toUpperCase())) {
+          areaSet.add(areaName);
+        }
+      });
+    });
+
+    unifiedBitacoraTurnos.forEach(n => { if (n?.area) areaSet.add(n.area); });
+    unifiedBitacoraCalidad.forEach(n => { if (n?.area) areaSet.add(n.area); });
+
+    return Array.from(areaSet).sort((a, b) => {
+      const idxA = knownAreaList.indexOf(a);
+      const idxB = knownAreaList.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  })();
 
   return (
       
@@ -475,6 +505,127 @@ const OrderDetailsModal = ({
                         </div>
                     </div>
                  )}
+              </div>
+
+              {/* Acordeón Resumen de Áreas */}
+              <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
+                <button type="button" onClick={() => setOpenSection(openSection === 'resumen_areas' ? null : 'resumen_areas')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-black/20 rounded-lg"><Layers size={18}/></div>
+                        <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Resumen de Áreas</span>
+                    </div>
+                    {openSection === 'resumen_areas' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
+                </button>
+                {openSection === 'resumen_areas' && (
+                    <div className="p-4 space-y-3 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                        {detectedAreas.length === 0 ? (
+                            <p className="text-xs italic theme-text-muted text-center py-2">No hay registro de áreas aún.</p>
+                        ) : (
+                            detectedAreas.map(areaName => {
+                                const areaTurnos = unifiedBitacoraTurnos.filter(n => 
+                                    n.area === areaName || 
+                                    (!n.area && familyOrders.some(o => o.areaActual === areaName && (o.bitacoraTurnos || []).some(bt => bt.id === n.id || (bt.fecha === n.fecha && bt.nota === n.nota))))
+                                );
+                                
+                                const areaCalidad = unifiedBitacoraCalidad.filter(n => 
+                                    n.area === areaName || 
+                                    (!n.area && familyOrders.some(o => o.areaActual === areaName && (o.bitacoraCalidad || []).some(bc => bc.id === n.id || (bc.fecha === n.fecha && bc.observacion === n.observacion))))
+                                );
+
+                                const totalRegistros = areaTurnos.length + areaCalidad.length;
+                                const isExpanded = expandedResumenArea === areaName;
+
+                                return (
+                                    <div key={areaName} className="theme-bg-card border theme-border rounded-xl overflow-hidden shadow-xs">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setExpandedResumenArea(isExpanded ? null : areaName)}
+                                            className="w-full p-3 flex items-center justify-between bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs md:text-sm font-black uppercase text-[var(--primary)]">{areaName}</span>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full theme-bg-input theme-text-muted border theme-border">
+                                                    {totalRegistros} {totalRegistros === 1 ? 'registro' : 'registros'}
+                                                </span>
+                                            </div>
+                                            {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className="p-3 space-y-4 bg-[var(--card-bg)] border-t theme-border animate-in slide-in-from-top-1">
+                                                {/* SECCIÓN AVANCES EN PLANTA */}
+                                                <div>
+                                                    <h5 className="text-[11px] font-black uppercase tracking-wider text-[var(--accent)] mb-2 flex items-center gap-1.5 border-b theme-border pb-1">
+                                                        <History size={13} /> Historial Avances de Planta ({areaTurnos.length})
+                                                    </h5>
+                                                    {areaTurnos.length === 0 ? (
+                                                        <p className="text-[11px] italic theme-text-muted pl-2">Sin avances registrados en esta área.</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {areaTurnos.map((n, i) => (
+                                                                <div key={i} className="theme-bg-input p-2.5 rounded-lg border theme-border text-xs">
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <span className="font-black text-[var(--primary)] uppercase">{n.actividad || 'Avance'}</span>
+                                                                        <span className="text-[10px] theme-text-muted font-bold">{new Date(n.fecha).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p className="italic theme-text-muted text-[11px] my-1">"{n.nota}"</p>
+                                                                    {n.foto && (
+                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black text-[var(--accent)] flex items-center gap-1 mt-1">
+                                                                            <ImageIcon size={12}/> Ver Evidencia
+                                                                        </button>
+                                                                    )}
+                                                                    <div className="flex justify-between items-center mt-1 pt-1 border-t border-black/10 dark:border-white/10 text-[10px]">
+                                                                        <span className="font-bold text-[var(--primary)]">OP: {n.operario || 'S/N'}</span>
+                                                                        <span className="theme-text-muted">SUP: {n.supervisor || 'S/N'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* SECCIÓN INSPECCIÓN CALIDAD */}
+                                                <div>
+                                                    <h5 className="text-[11px] font-black uppercase tracking-wider text-blue-500 mb-2 flex items-center gap-1.5 border-b theme-border pb-1">
+                                                        <UserCheck size={13} /> Inspección de Calidad ({areaCalidad.length})
+                                                    </h5>
+                                                    {areaCalidad.length === 0 ? (
+                                                        <p className="text-[11px] italic theme-text-muted pl-2">Sin inspecciones registradas en esta área.</p>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            {areaCalidad.map((n, i) => (
+                                                                <div key={i} className="theme-bg-input p-2.5 rounded-lg border theme-border text-xs">
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <span className={`font-black text-[10px] px-2 py-0.5 rounded uppercase ${
+                                                                            n.estado === 'APROBADO' ? 'bg-green-500/20 text-green-500 border border-green-500/30' :
+                                                                            n.estado === 'RETRABAJO' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
+                                                                            'bg-red-500/20 text-red-500 border border-red-500/30'
+                                                                        }`}>{n.estado}</span>
+                                                                        <span className="text-[10px] theme-text-muted font-bold">{new Date(n.fecha).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p className="italic theme-text-muted text-[11px] my-1">"{n.observacion}"</p>
+                                                                    {n.foto && (
+                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black text-[var(--accent)] flex items-center gap-1 mt-1">
+                                                                            <ImageIcon size={12}/> Ver Evidencia
+                                                                        </button>
+                                                                    )}
+                                                                    <div className="flex justify-between items-center mt-1 pt-1 border-t border-black/10 dark:border-white/10 text-[10px]">
+                                                                        <span className="font-bold text-[var(--primary)]">INSP: {n.inspector || 'S/N'}</span>
+                                                                        <span className="theme-text-muted">SUP: {n.supervisor || 'S/N'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
               </div>
             </div>
           </div>

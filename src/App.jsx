@@ -355,7 +355,9 @@ const {
   const addShiftNote = (isTerminadoFlag = null) => {
     if (!selectedOrder) return;
     const newNote = { 
-      id: Date.now(), supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
+      id: Date.now(), 
+      area: selectedOrder.areaActual,
+      supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
       actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
     };
     const updatedOrder = { ...selectedOrder, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
@@ -370,7 +372,9 @@ const {
   const addQualityNote = () => {
     if (!selectedOrder) return;
     const newNote = {
-      id: Date.now(), supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
+      id: Date.now(), 
+      area: selectedOrder.areaActual,
+      supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
       estado: calidadState, observacion: calidadNota || "Sin observaciones", foto: calidadPhoto, fecha: new Date().toISOString()
     };
     const updatedOrder = { ...selectedOrder, bitacoraCalidad: [...(selectedOrder.bitacoraCalidad || []), newNote] };
@@ -499,7 +503,7 @@ const {
       ids.forEach((id, index) => {
           const order = newOrdersList.find(o => o?.id === id);
           if(order) {
-            const newNote = { ...newNoteBase, id: Date.now() + index };
+            const newNote = { ...newNoteBase, area: order.areaActual, id: Date.now() + index };
             const updatedOrder = { ...order, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(order.bitacoraTurnos || []), newNote] };
             if (typeof isTerminadoFlag === 'boolean') {
               updatedOrder.isTerminado = isTerminadoFlag;
