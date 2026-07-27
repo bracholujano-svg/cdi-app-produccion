@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import CreatableSelect from 'react-select/creatable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2, Palette, ChevronRight } from 'lucide-react';
 
 export default function SCEntonacion({ supabase, inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
@@ -27,6 +27,37 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
   // Estados para cálculo de producción
   const [targetGramos, setTargetGramos] = useState('');
   const [ppgInputValue, setPpgInputValue] = useState('');
+
+  // Estados Catálogo
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [catalogColors, setCatalogColors] = useState([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+
+  const openCatalog = async () => {
+    setShowCatalogModal(true);
+    setIsLoadingCatalog(true);
+    try {
+      const { data, error } = await supabase.from('colores_aprobados').select('*').order('sistema_color', { ascending: true }).order('codigo_objetivo', { ascending: true });
+      if (!error && data) {
+        setCatalogColors(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingCatalog(false);
+    }
+  };
+
+  const handleSelectFromCatalog = (color) => {
+    setSistemaColor(color.sistema_color);
+    setCodigoObjetivo(color.codigo_objetivo);
+    setShowCatalogModal(false);
+    // Disparar búsqueda inmediatamente (usar timeout para esperar a que los estados se asienten)
+    setTimeout(() => {
+        const btn = document.getElementById('btn-buscar-receta');
+        if (btn) btn.click();
+    }, 100);
+  };
 
   // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
   const ppgOptions = useMemo(() => {
@@ -455,15 +486,20 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
 
   // Vista 1: Buscador
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-12">
-      <div className="mb-10 text-center md:text-left">
-        <h1 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex flex-col md:flex-row items-center gap-4">
-          <div className="p-4 bg-blue-100 rounded-2xl text-blue-600">
-            <FlaskConical size={40} />
-          </div>
-          SC Entonación
-        </h1>
-        <p className="text-base font-bold theme-text-muted mt-3 md:ml-20 tracking-wide">Módulo de búsqueda y formulación dinámica de recetas de pintura industrial.</p>
+    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-12 relative">
+      <div className="mb-10 text-center md:text-left flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
+        <div>
+            <h1 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex flex-col md:flex-row items-center gap-4">
+            <div className="p-4 bg-blue-100 rounded-2xl text-blue-600">
+                <FlaskConical size={40} />
+            </div>
+            SC Entonación
+            </h1>
+            <p className="text-base font-bold theme-text-muted mt-3 md:ml-20 tracking-wide">Módulo de búsqueda y formulación dinámica de recetas de pintura industrial.</p>
+        </div>
+        <button onClick={openCatalog} className="bg-[var(--accent)] text-[var(--card-bg)] px-6 py-3 rounded-2xl font-black uppercase shadow-lg shadow-[var(--accent)]/30 hover:brightness-110 flex items-center gap-2 self-center md:self-start">
+           <Palette size={"1.2em"} /> Catálogo de Colores
+        </button>
       </div>
 
       <div className="theme-bg-card p-6 md:p-10 rounded-[2rem] theme-border shadow-xl border-t-4 border-t-blue-500 relative overflow-hidden">
@@ -503,6 +539,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
           </div>
           <div className="col-span-12 md:col-span-2 flex gap-2">
             <button 
+              id="btn-buscar-receta"
               onClick={handleBuscar}
               disabled={isSearching || !codigoObjetivo}
               className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg shadow-slate-900/20 transition-colors flex items-center justify-center gap-2 h-[60px]"
@@ -639,6 +676,51 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CATÁLOGO */}
+      {showCatalogModal && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-end p-0 sm:p-2">
+          <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[480px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
+             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
+               <h2 className="text-xl font-black text-[var(--primary)] uppercase flex items-center gap-2"><Palette size={"1.2em"} /> Catálogo Aprobado</h2>
+               <button onClick={() => setShowCatalogModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)]">✕</button>
+             </div>
+             <div className="flex-1 overflow-y-auto p-4 bg-[var(--bg-main)] custom-scrollbar">
+               {isLoadingCatalog ? (
+                 <div className="flex justify-center items-center h-40">
+                   <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                 </div>
+               ) : catalogColors.length === 0 ? (
+                 <p className="text-center text-[var(--primary)]/50 font-bold p-8">No hay colores registrados aún.</p>
+               ) : (
+                 <div className="space-y-6">
+                   {Object.entries(catalogColors.reduce((acc, curr) => {
+                       if (!acc[curr.sistema_color]) acc[curr.sistema_color] = [];
+                       acc[curr.sistema_color].push(curr);
+                       return acc;
+                   }, {})).map(([sistema, colores]) => (
+                     <div key={sistema}>
+                       <h3 className="text-xs font-black text-[var(--primary)]/50 uppercase tracking-widest mb-3 border-b border-[var(--primary)]/10 pb-2">{sistema}</h3>
+                       <div className="grid grid-cols-2 gap-3">
+                         {colores.map(c => (
+                           <button 
+                             key={c.id} 
+                             onClick={() => handleSelectFromCatalog(c)}
+                             className="flex flex-col items-center bg-[var(--card-bg)] border theme-border p-3 rounded-2xl hover:border-[var(--accent)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden"
+                           >
+                             <div className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5" style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}></div>
+                             <span className="font-black text-[var(--primary)] text-sm w-full text-center truncate">{c.codigo_objetivo}</span>
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
+             </div>
           </div>
         </div>
       )}

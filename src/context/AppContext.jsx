@@ -80,6 +80,7 @@ export const AppContextProvider = ({ children }) => {
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [showReceptionModal, setShowReceptionModal] = useState(false);
+  const [showDossierModal, setShowDossierModal] = useState(false);
   const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
   const [showReportPreviewModal, setShowReportPreviewModal] = useState(false);
@@ -147,9 +148,14 @@ export const AppContextProvider = ({ children }) => {
 
   const [duplicateError, setDuplicateError] = useState("");
 
-  const [repDate, setRepDate] = useState(() => {
+  const [repDateStart, setRepDateStart] = useState(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   });
+  const [repTimeStart, setRepTimeStart] = useState('06:00');
+  const [repDateEnd, setRepDateEnd] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+  const [repTimeEnd, setRepTimeEnd] = useState('18:00');
   const [repSupervisor, setRepSupervisor] = useState("");
   const [generatedReportData, setGeneratedReportData] = useState([]);
 
@@ -178,6 +184,7 @@ export const AppContextProvider = ({ children }) => {
     showCoordViewModal, setShowCoordViewModal,
     showDashboardModal, setShowDashboardModal,
     showReceptionModal, setShowReceptionModal,
+    showDossierModal, setShowDossierModal,
     dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
@@ -221,7 +228,10 @@ export const AppContextProvider = ({ children }) => {
     searchResults, setSearchResults,
     showSearchSelector, setShowSearchSelector,
     duplicateError, setDuplicateError,
-    repDate, setRepDate,
+    repDateStart, setRepDateStart,
+    repTimeStart, setRepTimeStart,
+    repDateEnd, setRepDateEnd,
+    repTimeEnd, setRepTimeEnd,
     repSupervisor, setRepSupervisor,
     generatedReportData, setGeneratedReportData
   };

@@ -176,6 +176,14 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
     const daysLeft = getDaysLeft(order.fechaEntregaPrometida);
     const isOverdue = daysLeft !== null && daysLeft < 0;
 
+    // Invertir el orden final para mostrar lo más reciente primero
+    phases.reverse();
+    phases.forEach(p => {
+        if (p.events) {
+            p.events.reverse();
+        }
+    });
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4 animate-in fade-in duration-200">
             <div className="bg-[var(--bg-main)] w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-[var(--border-color)] overflow-hidden">

@@ -38,6 +38,8 @@ const BulkOrderDetailsModal = ({
     supervisorProfile,
     areaFilter,
     orders,
+    setOrders,
+    syncOrderToSupabase,
     showBulkModal, setShowBulkModal
   } = useAppContext();
 
@@ -55,6 +57,24 @@ const BulkOrderDetailsModal = ({
   }, [selectedBulkOrders]);
 
   if (!selectedBulkOrders || selectedBulkOrders.length === 0) return null;
+
+  const toggleTerminadoBulk = () => {
+    const allTerminado = selectedBulkOrders.every(o => o.isTerminado);
+    const newStatus = !allTerminado;
+    
+    let updatedOrders = [...orders];
+    let updatedBulk = [];
+
+    selectedBulkOrders.forEach(o => {
+        const updated = { ...o, isTerminado: newStatus };
+        updatedBulk.push(updated);
+        updatedOrders = updatedOrders.map(ord => ord.id === o.id ? updated : ord);
+        syncOrderToSupabase(updated);
+    });
+
+    setOrders(updatedOrders);
+    setSelectedBulkOrders(updatedBulk);
+  };
 
   return (
       
@@ -133,6 +153,10 @@ const BulkOrderDetailsModal = ({
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
                             <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Avance</button>
+                            
+                            <button type="button" onClick={toggleTerminadoBulk} className={`col-span-4 mt-2 ${selectedBulkOrders.every(o => o.isTerminado) ? 'bg-green-600 border-green-800' : 'bg-green-500 border-green-700'} text-white font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border transition-colors duration-200 hover:brightness-125 active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.5)]`}>
+                                {selectedBulkOrders.every(o => o.isTerminado) ? '✅ TODOS MARCADOS COMO TERMINADOS' : '✅ MARCAR TODOS COMO TERMINADOS'}
+                            </button>
                         </div>
                             </>
                           );

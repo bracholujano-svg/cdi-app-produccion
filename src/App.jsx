@@ -25,6 +25,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
+import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
@@ -91,11 +92,15 @@ const {
     searchResults, setSearchResults,
     showSearchSelector, setShowSearchSelector,
     duplicateError, setDuplicateError,
-    repDate, setRepDate,
+    repDateStart, setRepDateStart,
+    repTimeStart, setRepTimeStart,
+    repDateEnd, setRepDateEnd,
+    repTimeEnd, setRepTimeEnd,
     repSupervisor, setRepSupervisor,
     generatedReportData, setGeneratedReportData,
     selectedBulkOrders, setSelectedBulkOrders,
     showBulkModal, setShowBulkModal,
+    showDossierModal,
   } = useAppContext();
 
   const searchTerm = useAppStore(state => state.searchTerm);
@@ -399,7 +404,7 @@ const {
                   estadoInterno: 'En Espera', // o despachado según config
                   fechaEntregaPrometida: date,
                   asignado_a: personalAsignado,
-                  historial: [...(order.historial || []), newHistoryEntry] 
+                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
                 }
               : { 
                   ...order, 
@@ -414,7 +419,7 @@ const {
                       fechaEnvio: new Date().toISOString(),
                       isPartial: isPartial
                   },
-                  historial: [...(order.historial || []), newHistoryEntry] 
+                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
                 };
                 
             newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
@@ -430,7 +435,7 @@ const {
                   estadoInterno: 'En Espera', 
                   fechaEntregaPrometida: date,
                   asignado_a: personalAsignado,
-                  historial: [...(order.historial || []), {
+                  isTerminado: false, historial: [...(order.historial || []), {
                       ...newHistoryEntry,
                       accion: `Bifurcación hacia ${area}${asignadoText}`
                   }] 
@@ -451,7 +456,7 @@ const {
                       fechaEnvio: new Date().toISOString(),
                       isPartial: false // Las bifurcaciones no son parciales en sí
                   },
-                  historial: [...(order.historial || []), {
+                  isTerminado: false, historial: [...(order.historial || []), {
                       ...newHistoryEntry,
                       accion: `Bifurcación hacia ${area}${asignadoText}`
                   }] 
@@ -554,7 +559,7 @@ const {
                         estadoInterno: 'En Espera', 
                         fechaEntregaPrometida: date,
                         asignado_a: personalAsignado,
-                        historial: [...(order.historial || []), newHistoryEntry] 
+                        isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
                       }
                     : { 
                         ...order, 
@@ -569,7 +574,7 @@ const {
                             fechaEnvio: new Date().toISOString(),
                             isPartial: isPartial
                         },
-                        historial: [...(order.historial || []), newHistoryEntry] 
+                        isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
                       };
                       
                   newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
@@ -584,7 +589,7 @@ const {
                         estadoInterno: 'En Espera', 
                         fechaEntregaPrometida: date,
                         asignado_a: personalAsignado,
-                        historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
+                        isTerminado: false, historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
                       }
                     : { 
                         ...order,
@@ -602,7 +607,7 @@ const {
                             fechaEnvio: new Date().toISOString(),
                             isPartial: false
                         },
-                        historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
+                        isTerminado: false, historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
                       };
                   newOrdersList.push(targetOrder);
               }
@@ -651,7 +656,7 @@ const {
               ...order,
               estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
               transferenciaPendiente: null,
-              historial: [...(order.historial || []), newHistoryEntry]
+              isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
           }
           : {
               ...order,
@@ -661,7 +666,7 @@ const {
                  : [],
               estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
               transferenciaPendiente: null,
-              historial: [...(order.historial || []), newHistoryEntry]
+              isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
           };
 
       const newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
@@ -712,7 +717,7 @@ const {
                   ...order,
                   estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
                   transferenciaPendiente: null,
-                  historial: [...(order.historial || []), newHistoryEntry]
+                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
               }
               : {
                   ...order,
@@ -722,7 +727,7 @@ const {
                      : [],
                   estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
                   transferenciaPendiente: null,
-                  historial: [...(order.historial || []), newHistoryEntry]
+                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
               };
               
           newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
@@ -810,8 +815,12 @@ const {
   };
 
   const generateShiftReport = () => {
-    if (!repSupervisor || !repDate) return;
+    if (!repSupervisor || !repDateStart || !repTimeStart || !repDateEnd || !repTimeEnd) return;
     let entries = [];
+    
+    // Parsear fechas de inicio y fin para filtrado
+    const startDateTime = new Date(`${repDateStart}T${repTimeStart}:00`).getTime();
+    const endDateTime = new Date(`${repDateEnd}T${repTimeEnd}:00`).getTime();
     
     // Función para normalizar nombres y permitir búsquedas parciales (ignora mayúsculas y tildes)
     const normalizeName = (name) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
@@ -820,26 +829,34 @@ const {
         if (repSupervisor === "TODOS") return true;
         const selParts = normalizeName(repSupervisor).split(" ").filter(p => p.trim() !== "");
         const savNorm = normalizeName(savedName);
-        // Retorna verdadero si TODAS las palabras seleccionadas (ej. "Deyvis", "Bracho") están dentro del nombre completo guardado
         return selParts.every(part => savNorm.includes(part));
     };
 
     orders.forEach(order => {
       // Producción
-      const tech = (order?.bitacoraTurnos || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
-      tech.forEach(n => entries.push({ ...n, type: 'PRODUCCIÓN', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.actividad}: ${n.nota}`, person: `OP: ${n.operario}`, status: 'AVANCE' }));
+      const tech = (order?.bitacoraTurnos || []).filter(n => {
+        const t = new Date(n?.fecha).getTime();
+        return t >= startDateTime && t <= endDateTime && checkMatch(n?.supervisor);
+      });
+      tech.forEach(n => entries.push({ ...n, area: order?.areaActual || 'DESCONOCIDA', type: 'PRODUCCIÓN', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.actividad}: ${n.nota}`, person: `OP: ${n.operario}`, status: 'AVANCE' }));
       
       // Calidad
-      const cal = (order?.bitacoraCalidad || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && checkMatch(n?.supervisor));
-      cal.forEach(n => entries.push({ ...n, type: 'CALIDAD', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `Obs: ${n.observacion}`, person: `INSP: ${n.inspector}`, status: n.estado }));
+      const cal = (order?.bitacoraCalidad || []).filter(n => {
+        const t = new Date(n?.fecha).getTime();
+        return t >= startDateTime && t <= endDateTime && checkMatch(n?.supervisor);
+      });
+      cal.forEach(n => entries.push({ ...n, area: order?.areaActual || 'DESCONOCIDA', type: 'CALIDAD', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `Obs: ${n.observacion}`, person: `INSP: ${n.inspector}`, status: n.estado }));
       
       // Entregas (Trazabilidad)
-      const mov = (order?.historial || []).filter(n => getLocalYYYYMMDD(n?.fecha) === repDate && n?.accion?.includes('Entrega a') && checkMatch(n?.supervisor));
-      mov.forEach(n => entries.push({ ...n, type: 'TRASLADO', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.accion} | Obs: ${n.nota || 'N/A'}`, person: `DE: ${n.entrega} A: ${n.recibe}`, status: 'ENTREGADO' }));
+      const mov = (order?.historial || []).filter(n => {
+        const t = new Date(n?.fecha).getTime();
+        return t >= startDateTime && t <= endDateTime && n?.accion?.includes('Entrega a') && checkMatch(n?.supervisor);
+      });
+      mov.forEach(n => entries.push({ ...n, area: order?.areaActual || 'DESCONOCIDA', type: 'TRASLADO', orderOC: order?.pedidoNum, codArticulo: order?.codArticulo, orderName: order?.nombre, time: new Date(n.fecha).toLocaleTimeString(), detail: `${n.accion} | Obs: ${n.nota || 'N/A'}`, person: `DE: ${n.entrega} A: ${n.recibe}`, status: 'ENTREGADO' }));
     });
     
     if(entries.length === 0) {
-        alert("⚠️ No hay registros de actividades para este supervisor en la fecha seleccionada.");
+        alert("⚠️ No hay registros de actividades para este supervisor en el rango seleccionado.");
         return;
     }
     
@@ -1068,6 +1085,10 @@ const {
         />
       )}
 
+      {showDossierModal && (
+        <DossierDashboard />
+      )}
+
       {showTVMonitor && (
         <TVMonitorBoard 
             allOrders={orders} 
@@ -1173,9 +1194,19 @@ const {
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--primary)]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Operativa</label><input type="date" value={repDate} onChange={e=>setRepDate(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+              </div>
+
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>

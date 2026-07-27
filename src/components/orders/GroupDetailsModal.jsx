@@ -16,11 +16,28 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
   const filteredProducts = useMemo(() => {
       if (!activeGroupObj || !activeGroupObj.products) return [];
       const st = itemSearchTerm.toLowerCase().trim();
-      if (!st) return activeGroupObj.products;
-      return activeGroupObj.products.filter(p => {
+      
+      let prods = activeGroupObj.products;
+      if (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos') {
+          const grouped = {};
+          prods.forEach(p => {
+              const key = p.master_id || p.id;
+              if (!grouped[key]) {
+                  grouped[key] = { ...p, activeAreas: [p.areaActual] };
+              } else {
+                  if (!grouped[key].activeAreas.includes(p.areaActual)) {
+                      grouped[key].activeAreas.push(p.areaActual);
+                  }
+              }
+          });
+          prods = Object.values(grouped);
+      }
+
+      if (!st) return prods;
+      return prods.filter(p => {
           return (p.codArticulo || "").toLowerCase().includes(st) || (p.nombre || "").toLowerCase().includes(st);
       });
-  }, [activeGroupObj, itemSearchTerm]);
+  }, [activeGroupObj, itemSearchTerm, areaFilter]);
 
   const sortedProducts = useMemo(() => {
       return [...filteredProducts].sort((a, b) => {
@@ -123,7 +140,10 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     </div>
 
                     <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] flex flex-col gap-1.5">
-                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate"><MapPin size={"1.2em"}/> {p.areaActual}</p>
+                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate" title={p.activeAreas ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
+                          <MapPin size={"1.2em"} className="shrink-0"/> 
+                          {p.activeAreas ? `ÁREAS: ${p.activeAreas.join(', ')}` : p.areaActual}
+                      </p>
                       
                       {isPartial && lastPartial && (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md px-2 py-1.5 flex flex-col gap-0.5 shadow-sm">
@@ -141,7 +161,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}
-                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"}/> {p.estadoInterno}</p>
+                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas ? 'MÚLTIPLES ESTADOS' : p.estadoInterno}</p>
                     </div>
 
                     {/* Botón Ver Planos */}
