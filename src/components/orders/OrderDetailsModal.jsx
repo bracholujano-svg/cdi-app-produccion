@@ -547,18 +547,52 @@ const OrderDetailsModal = ({
                                 const totalRegistros = areaTurnos.length + areaCalidad.length;
                                 const isExpanded = expandedResumenArea === areaName;
 
+                                // Compute current status for this specific area
+                                const isCurrentLocation = familyOrders.some(o => o.areaActual === areaName && o.estadoInterno !== 'DESPACHADO');
+                                const isPendingReception = familyOrders.some(o => o.transferenciaPendiente?.haciaArea === areaName);
+                                const isPartial = familyOrders.some(o => (o.areaActual === areaName && o.isPartial) || (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaName)));
+                                const isTransferred = !isCurrentLocation && !isPendingReception && unifiedHistorial.some(h => (h.accion || '').toUpperCase().includes(areaName.toUpperCase()));
+
+                                let statusBadge = null;
+                                if (isCurrentLocation) {
+                                    statusBadge = (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 uppercase flex items-center gap-1">
+                                            📍 Ubicación Actual
+                                        </span>
+                                    );
+                                } else if (isPendingReception) {
+                                    statusBadge = (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 uppercase flex items-center gap-1 animate-pulse">
+                                            ⏳ Pendiente Recepción
+                                        </span>
+                                    );
+                                } else if (isPartial) {
+                                    statusBadge = (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 border border-yellow-500/30 uppercase flex items-center gap-1">
+                                            📦 Entrega Parcial
+                                        </span>
+                                    );
+                                } else if (isTransferred) {
+                                    statusBadge = (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 uppercase flex items-center gap-1">
+                                            ✓ Entregado Exitosamente
+                                        </span>
+                                    );
+                                }
+
                                 return (
                                     <div key={areaName} className="theme-bg-card border theme-border rounded-xl overflow-hidden shadow-xs">
                                         <button 
                                             type="button" 
                                             onClick={() => setExpandedResumenArea(isExpanded ? null : areaName)}
-                                            className="w-full p-3 flex items-center justify-between bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors"
+                                            className="w-full p-3 flex flex-wrap items-center justify-between gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors"
                                         >
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <span className="text-xs md:text-sm font-black uppercase text-[var(--primary)]">{areaName}</span>
                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full theme-bg-input theme-text-muted border theme-border">
                                                     {totalRegistros} {totalRegistros === 1 ? 'registro' : 'registros'}
                                                 </span>
+                                                {statusBadge}
                                             </div>
                                             {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                                         </button>
