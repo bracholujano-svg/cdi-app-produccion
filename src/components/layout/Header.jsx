@@ -34,11 +34,11 @@ const Header = () => {
 
   const pendingReceptions = orders.filter(o => 
     o?.transferenciaPendiente && 
-    (areaFilter === 'Todas' || o.transferenciaPendiente.haciaArea === areaFilter)
+    (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.transferenciaPendiente.haciaArea === areaFilter)
   ).length;
 
   const rejectedReceptions = orders.filter(o => 
-    o && (areaFilter === 'Todas' || o.areaActual === areaFilter) &&
+    o && (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.areaActual === areaFilter) &&
     (o.estadoInterno || "").startsWith("RECHAZADO POR")
   ).length;
 

@@ -22,7 +22,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
     // 1. ITEMS PENDIENTES
     const pendingItems = orders.filter(o => 
         o?.transferenciaPendiente && 
-        (areaFilter === 'Todas' || o.transferenciaPendiente.haciaArea === areaFilter)
+        (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.transferenciaPendiente.haciaArea === areaFilter)
     );
 
     const pendingGroups = pendingItems.reduce((acc, item) => {
@@ -33,7 +33,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
 
     // 2. ITEMS RECHAZADOS (Devueltos a mi área)
     const rejectedItems = orders.filter(o => 
-        o && (areaFilter === 'Todas' || o.areaActual === areaFilter) &&
+        o && (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.areaActual === areaFilter) &&
         (o.estadoInterno || "").startsWith("RECHAZADO POR")
     );
 
