@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
   ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers 
