@@ -43,6 +43,8 @@ const BulkOrderDetailsModal = ({
     showBulkModal, setShowBulkModal
   } = useAppContext();
 
+  const [isTerminadoLocal, setIsTerminadoLocal] = React.useState(false);
+
   // Limpiar estado cuando se abre el modal (cuando cambian los pedidos seleccionados)
   React.useEffect(() => {
     if (selectedBulkOrders && selectedBulkOrders.length > 0) {
