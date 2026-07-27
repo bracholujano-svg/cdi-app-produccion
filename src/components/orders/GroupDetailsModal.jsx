@@ -6,7 +6,7 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget } = useAppContext();
+  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget, areaFilter } = useAppContext();
   const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
