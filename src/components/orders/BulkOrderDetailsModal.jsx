@@ -196,6 +196,17 @@ const BulkOrderDetailsModal = ({
                               }
                             });
                           };
+
+                          const toggleAreaSelection = (areaName) => {
+                            setTempTransferAreas(prev => {
+                              const list = Array.isArray(prev) ? prev : [];
+                              if (list.includes(areaName)) {
+                                return list.filter(a => a !== areaName);
+                              } else {
+                                return [...list, areaName];
+                              }
+                            });
+                          };
                         
                           const getWorkload = (person) => {
                             return (orders || []).filter(o => {
@@ -224,9 +235,9 @@ const BulkOrderDetailsModal = ({
                                             return (
                                               <React.Fragment key={a}>
                                                 <button type="button" disabled={isDisabled}
-                                                    onClick={() => setTempTransferAreas([a])}
+                                                    onClick={() => toggleAreaSelection(a)}
                                                     className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
-                                                    {a}
+                                                    {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                                 {a === "Diseño" && isSelected && isGerente && (
                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
@@ -281,9 +292,9 @@ const BulkOrderDetailsModal = ({
                                             const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => setTempTransferAreas([a])}
+                                                    onClick={() => toggleAreaSelection(a)}
                                                     className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
-                                                    {a}
+                                                    {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
                                         })}
@@ -303,9 +314,9 @@ const BulkOrderDetailsModal = ({
                                             const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => setTempTransferAreas([a])}
+                                                    onClick={() => toggleAreaSelection(a)}
                                                     className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
-                                                    {a}
+                                                    {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
                                         })}
@@ -325,9 +336,9 @@ const BulkOrderDetailsModal = ({
                                             const isDisabled = !(allowedAreas || []).includes(a);
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => setTempTransferAreas([a])}
+                                                    onClick={() => toggleAreaSelection(a)}
                                                     className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-[10px] md:text-[11px] lg:text-xs font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
-                                                    {a}
+                                                    {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
                                         })}
