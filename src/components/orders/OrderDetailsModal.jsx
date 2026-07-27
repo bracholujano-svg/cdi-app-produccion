@@ -42,6 +42,12 @@ const OrderDetailsModal = ({
     syncOrderToSupabase
   } = useAppContext();
 
+  const [isTerminadoLocal, setIsTerminadoLocal] = React.useState(selectedOrder?.isTerminado || false);
+  
+  React.useEffect(() => {
+    setIsTerminadoLocal(selectedOrder?.isTerminado || false);
+  }, [selectedOrder?.id]);
+
   if (!selectedOrder) return null;
 
   const rootId = selectedOrder?.master_id || selectedOrder?.id;
@@ -51,15 +57,6 @@ const OrderDetailsModal = ({
   const unifiedHistorial = familyOrders.flatMap(o => o?.historial || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
   const unifiedBitacoraTurnos = familyOrders.flatMap(o => o?.bitacoraTurnos || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
   const unifiedBitacoraCalidad = familyOrders.flatMap(o => o?.bitacoraCalidad || []).filter(Boolean).sort((a,b) => new Date(b?.fecha || 0) - new Date(a?.fecha || 0));
-
-  const toggleTerminado = () => {
-    const isCurrentlyTerminado = selectedOrder.isTerminado || false;
-    const updatedOrder = { ...selectedOrder, isTerminado: !isCurrentlyTerminado };
-    const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
-    setOrders(newOrdersList);
-    setSelectedOrder(updatedOrder);
-    syncOrderToSupabase(updatedOrder);
-  };
 
   return (
       
@@ -146,13 +143,21 @@ const OrderDetailsModal = ({
                             </label>
                         </div>
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
-                        <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addShiftNote} className="col-span-4 bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Avance</button>
-                            
-                            <button type="button" onClick={toggleTerminado} className={`col-span-4 mt-2 ${selectedOrder.isTerminado ? 'bg-green-600 border-green-800' : 'bg-green-500 border-green-700'} text-white font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border transition-colors duration-200 hover:brightness-125 active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.5)]`}>
-                                {selectedOrder.isTerminado ? '✅ MARCADOS COMO TERMINADOS' : '✅ MARCAR COMO TERMINADO'}
-                            </button>
-                        </div>
+                          <div className="flex flex-col gap-3 mt-4">
+                              <label className="flex items-center justify-between p-4 rounded-xl border cursor-pointer select-none transition-colors duration-200 theme-bg-input theme-border hover:border-green-500 group">
+                                <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:text-[var(--primary)]'}`}>
+                                  {isTerminadoLocal ? '✅ MARCADO COMO TERMINADO' : 'MARCAR COMO TERMINADO'}
+                                </span>
+                                <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-white/10'}`}>
+                                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${isTerminadoLocal ? 'translate-x-7' : 'translate-x-0'}`} />
+                                </div>
+                                <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
+                              </label>
+
+                              <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
+                                Guardar Avance
+                              </button>
+                          </div>
                             </>
                           );
                         })()}

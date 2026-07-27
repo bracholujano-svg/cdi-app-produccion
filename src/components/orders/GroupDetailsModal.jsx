@@ -119,7 +119,15 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   const lastPartial = partialEvents.length > 0 ? partialEvents[partialEvents.length - 1] : null;
 
                   return (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer hover:border-[var(--primary)] transition-colors active:scale-95 bg-[var(--card-bg)] relative flex flex-col justify-between ${selectedBulkOrders.some(o => o.id === p.id) ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' : (isPartial ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)]' : 'theme-border shadow-sm')}`}>
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer transition-colors active:scale-95 bg-[var(--card-bg)] relative flex flex-col justify-between ${
+                    selectedBulkOrders.some(o => o.id === p.id) 
+                      ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' 
+                      : p.isTerminado
+                        ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)] bg-green-500/10 hover:border-green-400'
+                        : isPartial 
+                          ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_12px_rgba(250,204,21,0.25)] hover:border-yellow-300' 
+                          : 'theme-border shadow-sm hover:border-[var(--primary)]'
+                  }`}>
                     
                     <div>
                         <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>

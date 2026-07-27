@@ -352,13 +352,16 @@ const {
     setTimeout(() => setExcelSearchSuccess(""), 5000);
   };
 
-  const addShiftNote = () => {
+  const addShiftNote = (isTerminadoFlag = null) => {
     if (!selectedOrder) return;
     const newNote = { 
       id: Date.now(), supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
       actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
     };
     const updatedOrder = { ...selectedOrder, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
+    if (typeof isTerminadoFlag === 'boolean') {
+      updatedOrder.isTerminado = isTerminadoFlag;
+    }
     const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
     setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
     setShiftNoteText(""); setTempPhoto(null);
@@ -485,7 +488,7 @@ const {
     setSelectedOrder(null); 
   };
 
-  const handleBulkShiftNote = (ids) => {
+  const handleBulkShiftNote = (ids, isTerminadoFlag = null) => {
       if (!ids || ids.length === 0) return;
       let newOrdersList = [...orders];
       const newNoteBase = { 
@@ -498,6 +501,9 @@ const {
           if(order) {
             const newNote = { ...newNoteBase, id: Date.now() + index };
             const updatedOrder = { ...order, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(order.bitacoraTurnos || []), newNote] };
+            if (typeof isTerminadoFlag === 'boolean') {
+              updatedOrder.isTerminado = isTerminadoFlag;
+            }
             newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
             syncOrderToSupabase(updatedOrder);
           }
@@ -1070,7 +1076,7 @@ const {
       {showBulkModal && (
         <BulkOrderDetailsModal
           handleImageUpload={handleImageUpload}
-          addShiftNote={() => handleBulkShiftNote(selectedBulkOrders.map(o => o.id))}
+          addShiftNote={(isTerminadoFlag) => handleBulkShiftNote(selectedBulkOrders.map(o => o.id), isTerminadoFlag)}
           addQualityNote={() => handleBulkQualityNote(selectedBulkOrders.map(o => o.id))}
           updateTransfer={handleBulkTransfer}
           toggleMic={toggleMic}
