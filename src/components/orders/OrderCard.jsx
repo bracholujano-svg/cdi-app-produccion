@@ -92,8 +92,8 @@ const OrderCard = ({ group }) => {
         )}
         {(() => {
           const globalOrderProducts = orders.filter(o => o && o.pedidoNum === group.pedidoNum);
-          const uniqueActiveAreas = new Set(globalOrderProducts.map(p => p.areaActual).filter(Boolean));
-          if (uniqueActiveAreas.size > 1) {
+          const hasActiveBifurcation = globalOrderProducts.some(p => p && p.master_id);
+          if (hasActiveBifurcation) {
             return (
               <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
             );
