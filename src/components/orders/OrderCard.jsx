@@ -90,9 +90,16 @@ const OrderCard = ({ group }) => {
                 <Package size="1.2em" /> {partialProductsCount} LOTE PARCIAL
             </span>
         )}
-        {group.products?.some(p => Array.isArray(p.areas_compartidas) && p.areas_compartidas.length > 0) && (
-            <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
-        )}
+        {(() => {
+          const globalOrderProducts = orders.filter(o => o && o.pedidoNum === group.pedidoNum);
+          const uniqueActiveAreas = new Set(globalOrderProducts.map(p => p.areaActual).filter(Boolean));
+          if (uniqueActiveAreas.size > 1) {
+            return (
+              <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-[10px] md:text-xs lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* PROGRESS INDICATOR */}
