@@ -8,28 +8,48 @@ export const useOrders = () => {
 
     const syncOrderToSupabase = async (orderObject, isDelete = false) => {
         if (!orderObject || !orderObject.id) return;
-        try {
-            let dbError = null;
-            if (isDelete) {
-                const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
-                dbError = error;
-            } else {
-                const sanitizedOrder = deepSanitize(orderObject);
-                const { error } = await supabase.from('produccion_pedidos').upsert({
-                    id: sanitizedOrder.id,
-                    pedido_num: sanitizedOrder.pedidoNum || '',
-                    cliente: sanitizedOrder.cliente || '',
-                    areas_compartidas: sanitizedOrder.areas_compartidas || [],
-                    asignado_a: Array.isArray(sanitizedOrder.asignado_a) ? sanitizedOrder.asignado_a : (sanitizedOrder.asignado_a ? [sanitizedOrder.asignado_a] : []),
-                    data_completa: sanitizedOrder
-                });
-                dbError = error;
+        
+        let retries = 2;
+        while (retries >= 0) {
+            try {
+                let dbError = null;
+                if (isDelete) {
+                    const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
+                    dbError = error;
+                } else {
+                    const sanitizedOrder = deepSanitize(orderObject);
+                    const { error } = await supabase.from('produccion_pedidos').upsert({
+                        id: sanitizedOrder.id,
+                        pedido_num: sanitizedOrder.pedidoNum || '',
+                        cliente: sanitizedOrder.cliente || '',
+                        areas_compartidas: sanitizedOrder.areas_compartidas || [],
+                        asignado_a: Array.isArray(sanitizedOrder.asignado_a) ? sanitizedOrder.asignado_a : (sanitizedOrder.asignado_a ? [sanitizedOrder.asignado_a] : []),
+                        data_completa: sanitizedOrder
+                    });
+                    dbError = error;
+                }
+                
+                if (dbError) {
+                    if (dbError.message?.includes('Failed to fetch') && retries > 0) {
+                        retries--;
+                        await new Promise(res => setTimeout(res, 1000)); // wait 1s before retry
+                        continue;
+                    }
+                    console.error("DB Error al sincronizar orden:", dbError);
+                    alert(`❌ Error al guardar en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS o tu conexión a internet.`);
+                }
+                break; // success or non-retryable error
+            } catch (e) { 
+                if (e.message?.includes('Failed to fetch') && retries > 0) {
+                    retries--;
+                    await new Promise(res => setTimeout(res, 1000));
+                    continue;
+                }
+                console.error("Error al sincronizar orden", e); 
+                alert(`❌ Error inesperado de red: ${e.message || JSON.stringify(e)}. Verifica tu conexión.`);
+                break;
             }
-            if (dbError) {
-                console.error("DB Error al sincronizar orden:", dbError);
-                alert(`❌ Error al guardar en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
-            }
-        } catch (e) { console.error("Error al sincronizar orden", e); }
+        }
     };
 
     const syncAlertToSupabase = async (alertObject, isDelete = false) => {
