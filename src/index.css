@@ -109,7 +109,9 @@
     box-shadow: 0 0 0 1px var(--color-primary), 0 0 15px var(--color-primary-glow);
 }
 .theme-border { border-color: var(--color-border); }
-.theme-text-muted { color: var(--color-text-muted); }
+.theme-text-muted { color: var(--color-text-muted, var(--text-muted, #444841)) !important; }
+.theme-text-primary { color: var(--color-primary, var(--primary, #55624d)) !important; }
+.theme-text-main { color: var(--color-text-main, var(--text-main, #191c18)) !important; }
 
 /* Typography - Strict hierarchy */
 body, input, button, select, textarea { font-family: 'Outfit', sans-serif !important; }

@@ -685,8 +685,8 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-end p-0 sm:p-2">
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[480px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
              <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-               <h2 className="text-xl font-black text-[var(--color-primary)] uppercase flex items-center gap-2"><Palette size={"1.2em"} /> Catálogo Aprobado</h2>
-               <button onClick={() => setShowCatalogModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--color-primary)]">✕</button>
+               <h2 className="text-xl font-black theme-text-primary uppercase flex items-center gap-2"><Palette size={"1.2em"} /> Catálogo Aprobado</h2>
+               <button onClick={() => setShowCatalogModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-primary">✕</button>
              </div>
              <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-base)] custom-scrollbar">
                {isLoadingCatalog ? (
@@ -694,7 +694,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                    <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                  </div>
                ) : catalogColors.length === 0 ? (
-                 <p className="text-center text-[var(--color-primary)]/50 font-bold p-8">No hay colores registrados aún.</p>
+                 <p className="text-center theme-text-primary/50 font-bold p-8">No hay colores registrados aún.</p>
                ) : (
                  <div className="space-y-6">
                    {Object.entries(catalogColors.reduce((acc, curr) => {
@@ -703,7 +703,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                        return acc;
                    }, {})).map(([sistema, colores]) => (
                      <div key={sistema}>
-                       <h3 className="text-xs font-black text-[var(--color-primary)]/50 uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">{sistema}</h3>
+                       <h3 className="text-xs font-black theme-text-primary/50 uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">{sistema}</h3>
                        <div className="grid grid-cols-2 gap-3">
                          {colores.map(c => (
                            <button 
@@ -712,7 +712,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                              className="flex flex-col items-center bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-[var(--color-primary)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden"
                            >
                              <div className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5" style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}></div>
-                             <span className="font-black text-[var(--color-primary)] text-sm w-full text-center truncate">{c.codigo_objetivo}</span>
+                             <span className="font-black theme-text-primary text-sm w-full text-center truncate">{c.codigo_objetivo}</span>
                            </button>
                          ))}
                        </div>

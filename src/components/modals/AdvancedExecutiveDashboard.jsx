@@ -344,17 +344,17 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
     return (
         <div className="fixed inset-0 bg-black/80  z-[110] overflow-y-auto">
-            <div className="min-h-screen theme-bg-main text-[var(--color-text-main)] font-sans pb-10">
+            <div className="min-h-screen theme-bg-main theme-text-main font-sans pb-10">
                 {/* NAV */}
                 <nav className="sticky top-0 z-50 theme-bg-card shadow-sm border-b theme-border">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16 items-center">
                             <div className="flex items-center gap-2">
-                                <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black text-[var(--color-primary)] tracking-tighter">CDI</span>
+                                <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black theme-text-primary tracking-tighter">CDI</span>
                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                                 <div className="flex flex-col leading-none">
                                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold tracking-widest theme-text-muted">INFORME</span>
-                                    <span className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase">Ejecutivo</span>
+                                    <span className="text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase">Ejecutivo</span>
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -362,7 +362,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <button 
                                         key={tab} 
                                         onClick={() => setDashboardTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] theme-text-primary' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
@@ -398,7 +398,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="theme-bg-card p-8 rounded-[2.5rem] shadow-sm border theme-border flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h1 className="text-3xl font-black text-[var(--color-text-main)] uppercase tracking-tight" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado de Planta Actual</h1>
+                                    <h1 className="text-3xl font-black theme-text-main uppercase tracking-tight" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado de Planta Actual</h1>
                                     <p className="mt-4 theme-text-muted text-sm leading-relaxed max-w-2xl">
                                         Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
                                     </p>
@@ -420,7 +420,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                   </div>
                                 <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted">Despachados</p>
-                                    <h3 className="text-4xl font-black mt-1 text-[var(--color-primary)]">{despachadosCount}</h3>
+                                    <h3 className="text-4xl font-black mt-1 theme-text-primary">{despachadosCount}</h3>
                                 </div>
                                 <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm">
                                       <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-800 dark:text-red-500">Atrasos Críticos</p>
@@ -517,8 +517,8 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <thead>
                                         <tr className="theme-bg-card border-b theme-border">
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Pedido</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase tracking-widest">Artículo / Producto</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase tracking-widest text-center">Cant.</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase tracking-widest">Artículo / Producto</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase tracking-widest text-center">Cant.</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Cliente</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
@@ -528,17 +528,17 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <tbody>
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b theme-border hover:theme-bg-card/50 transition-colors">
-                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base text-[var(--color-text-main)]">#{o.pedidoNum}</td>
+                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base theme-text-main">#{o.pedidoNum}</td>
                                                 <td className="p-5">
-                                                    <div className="font-black text-[var(--color-primary)] text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
+                                                    <div className="font-black theme-text-primary text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
                                                     <div className="font-bold theme-text-muted text-xs truncate max-w-[200px]">{o.nombre || "S/N"}</div>
                                                 </td>
-                                                <td className="p-5 text-center font-black text-lg text-[var(--color-text-main)]">
+                                                <td className="p-5 text-center font-black text-lg theme-text-main">
                                                     {o.cantidad || 1}
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
                                                 <td className="p-5">
-                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--color-primary)]/30">{o.areaActual}</span>
+                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--color-primary)]/10 theme-text-primary px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--color-primary)]/30">{o.areaActual}</span>
                                                     {o.asignado_a && o.asignado_a.length > 0 && (
                                                         <div className="mt-2 flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <UserCheck size="1.2em" /> {Array.isArray(o.asignado_a) ? o.asignado_a.join(', ') : o.asignado_a}
@@ -572,12 +572,12 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 </div>
                                 <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
-                                        <h2 className="text-xl font-black uppercase text-[var(--color-primary)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
+                                        <h2 className="text-xl font-black uppercase theme-text-primary" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
-                                            <div className="w-10 h-10 bg-[var(--color-primary)] rounded-xl flex items-center justify-center font-black text-[var(--color-text-main)]">{despachadosCount}</div>
+                                            <div className="w-10 h-10 bg-[var(--color-primary)] rounded-xl flex items-center justify-center font-black theme-text-main">{despachadosCount}</div>
                                             <div>
                                                 <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
                                                 <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>
@@ -649,7 +649,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                     {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
                                                         <li key={i} className={`p-4 rounded-2xl border-l-4 text-xs md:text-sm lg:text-base ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
                                                             <div className="flex justify-between items-start mb-2">
-                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase text-[var(--color-text-main)]">PED: {q.pedidoNum}</span>
+                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase theme-text-main">PED: {q.pedidoNum}</span>
                                                                 <span className={`font-black uppercase px-2 py-1 rounded-md text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
                                                             </div>
                                                             <div className="flex gap-2 theme-text-muted mb-3 font-bold uppercase text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">

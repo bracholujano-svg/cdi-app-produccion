@@ -84,7 +84,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
           <div className="w-full max-w-[95vw] theme-bg-main h-[90vh] sm:h-[95vh] rounded-[2rem] flex flex-col border theme-border shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
-                 <h2 className="text-xl font-black text-[var(--color-primary)] truncate flex items-center gap-2">ORDEN: {activeGroupObj.pedidoNum} <span className="text-sm bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-lg text-[var(--color-primary)] font-bold tracking-widest border border-[var(--color-primary)]/20">({activeGroupObj.products.length} ÍTEMS)</span></h2>
+                 <h2 className="text-xl font-black theme-text-primary truncate flex items-center gap-2">ORDEN: {activeGroupObj.pedidoNum} <span className="text-sm bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-lg theme-text-primary font-bold tracking-widest border border-[var(--color-primary)]/20">({activeGroupObj.products.length} ÍTEMS)</span></h2>
                  <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate mt-1 ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
               </div>
               
@@ -94,12 +94,12 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   </button>
               )}
 
-              <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--color-primary)]/10 rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors text-[var(--color-primary)] text-xs font-bold mr-2">⬅ Panel IA</button>
-              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--color-primary)] shrink-0">✕</button>
+              <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--color-primary)]/10 rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors theme-text-primary text-xs font-bold mr-2">⬅ Panel IA</button>
+              <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-primary shrink-0">✕</button>
             </div>
 
             <div className="p-4 border-b theme-border bg-black/5 shrink-0 flex items-center gap-3">
-                <button type="button" onClick={selectAll} className="p-3 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors shrink-0 border border-[var(--color-primary)]/20 flex items-center justify-center" title="Seleccionar/Deseleccionar Todos">
+                <button type="button" onClick={selectAll} className="p-3 bg-[var(--color-primary)]/10 theme-text-primary rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors shrink-0 border border-[var(--color-primary)]/20 flex items-center justify-center" title="Seleccionar/Deseleccionar Todos">
                    {selectedBulkOrders.length === filteredProducts.length && filteredProducts.length > 0 ? <CheckSquare size={"1.2em"} /> : <Square size={"1.2em"} />}
                 </button>
                 <div className="relative flex-1">
@@ -134,7 +134,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     
                     <div>
                         <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>
-                            {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="text-[var(--color-primary)]" size={"1.4em"} /> : <Square className="text-[var(--color-primary)]/30" size={"1.4em"} />}
+                            {selectedBulkOrders.some(o => o.id === p.id) ? <CheckSquare className="theme-text-primary" size={"1.4em"} /> : <Square className="theme-text-primary/30" size={"1.4em"} />}
                         </button>
 
                         <div className="flex justify-start items-center mb-2 pr-8">
@@ -147,11 +147,11 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                         <div className="mb-2">
                            <span title={p.codArticulo} className="inline-block max-w-full text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
                         </div>
-                        <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--color-primary)]">{p.nombre}</h4>
+                        <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight theme-text-primary">{p.nombre}</h4>
                     </div>
 
                     <div className="mt-4 p-2 bg-[var(--color-base)] rounded-xl border border-[var(--color-border)] flex flex-col gap-1.5">
-                      <p className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
+                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
                           <MapPin size={"1.2em"} className="shrink-0"/> 
                           {p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS: ${p.activeAreas.join(', ')}` : `ÁREA: ${p.areaActual}`}
                       </p>
@@ -183,7 +183,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                                 e.stopPropagation(); 
                                 alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${p.codArticulo} vinculados a ReviSoft.`); 
                             }} 
-                            className="w-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 py-2 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors"
+                            className="w-full bg-[var(--color-primary)]/10 theme-text-primary hover:bg-[var(--color-primary)]/20 py-2 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors"
                         >
                             <FileText size={"1.2em"} /> Ver Planos
                         </button>
@@ -197,17 +197,17 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--color-primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Anterior
                   </button>
-                  <span className="font-bold text-xs md:text-sm lg:text-base text-[var(--color-primary)] px-2">
+                  <span className="font-bold text-xs md:text-sm lg:text-base theme-text-primary px-2">
                     Página {currentPage} de {totalPages}
                   </span>
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--color-primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Siguiente
                   </button>

@@ -24,15 +24,15 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
         <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
           <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
-              <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 text-[var(--color-primary)]"><Plus size={20} /> Nuevo Registro Planta</h2>
-              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-colors text-[var(--color-primary)]">✕</button>
+              <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 theme-text-primary"><Plus size={20} /> Nuevo Registro Planta</h2>
+              <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-colors theme-text-primary">✕</button>
             </div>
             
             <div className="overflow-y-auto p-5 md:p-8 custom-scrollbar">
                 <div className="bg-[var(--color-surface)] p-5 rounded-[1.5rem] border border-[var(--color-border)] shadow-inner mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="p-1.5 bg-[var(--color-primary)]/20 rounded-lg"><Search size={"1.2em"} className="text-[var(--color-primary)]"/></div>
-                        <p className="text-xs md:text-sm lg:text-base font-black uppercase text-[var(--color-primary)] tracking-widest">Puente Ribisoft (Autocompletar)</p>
+                        <div className="p-1.5 bg-[var(--color-primary)]/20 rounded-lg"><Search size={"1.2em"} className="theme-text-primary"/></div>
+                        <p className="text-xs md:text-sm lg:text-base font-black uppercase theme-text-primary tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                         <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase placeholder:text-black/30" />
@@ -64,7 +64,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                         </button>
                         
                         <div className="p-3 bg-[var(--color-base)] rounded-xl border border-[var(--color-border)] max-h-52 overflow-y-auto space-y-2 custom-scrollbar text-left">
-                          <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--color-primary)] uppercase tracking-wider mb-2">O carga un solo producto de forma individual:</p>
+                          <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-primary uppercase tracking-wider mb-2">O carga un solo producto de forma individual:</p>
                         {searchResults.map((res, idx) => (
                           <div 
                             key={idx} 
@@ -75,7 +75,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                             }}
                             className="p-2.5 bg-[var(--color-surface)] hover:bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] cursor-pointer transition-colors flex flex-col"
                           >
-                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase text-[var(--color-primary)]">
+                            <div className="flex justify-between text-xs md:text-sm lg:text-base font-black uppercase theme-text-primary">
                               <span>PEDIDO: {res.pedido}</span>
                               <span>ART: {res.articulo}</span>
                             </div>
@@ -92,16 +92,16 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
 
                 <form id="nuevoRegistroForm" onSubmit={createOrder} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nombre del Producto</label>
-                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOMBRE DEL PRODUCTO..." /></div>
+                    <input name="nombre" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="NOMBRE DEL PRODUCTO..." /></div>
                     
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Nº Pedido</label>
-                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="EJ: 12345" /></div>
+                    <input name="pedidoNum" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="EJ: 12345" /></div>
 
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Código de Artículo</label>
-                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="CÓDIGO..." /></div>
+                    <input name="codArticulo" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="CÓDIGO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Proyecto / Cliente</label>
-                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOMBRE DEL PROYECTO..." /></div>
+                    <input name="cliente" required className="w-full p-4 theme-bg-input rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="NOMBRE DEL PROYECTO..." /></div>
                     
                     <div className="md:col-span-2 space-y-1 mt-2">
                         <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área de Recepción Inicial (Producción)</label>
@@ -111,13 +111,13 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                     </div>
 
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Entrega</label>
-                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="QUIEN ENTREGA..." /></div>
+                    <input name="entregaPersona" required defaultValue={supervisorProfile.name} className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="QUIEN ENTREGA..." /></div>
                     
                     <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Firma Recibe</label>
-                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="QUIEN RECIBE..." /></div>
+                    <input name="recibePersona" required className="w-full p-4 theme-bg-input rounded-xl font-bold uppercase text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="QUIEN RECIBE..." /></div>
                     
                     <div className="md:col-span-2 space-y-1"><label className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-muted uppercase ml-1">Cantidad a Producir</label>
-                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="CANTIDAD..." /></div>
+                    <input name="cantidad" type="number" required className="w-full p-4 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="CANTIDAD..." /></div>
                     
                     <button type="submit" className="md:col-span-2 mt-4 bg-[var(--color-primary)] text-[var(--color-surface)] py-5 rounded-[1.5rem] font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border-b-[4px]   active:translate-y-[4px]">INICIAR PRODUCCIÓN</button>
                 </form>

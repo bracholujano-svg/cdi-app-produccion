@@ -96,7 +96,7 @@ const OrderDetailsModal = ({
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black uppercase truncate text-[var(--color-primary)]">PED: {selectedOrder.pedidoNum}</h2>
+                  <h2 className="text-base font-black uppercase truncate theme-text-primary">PED: {selectedOrder.pedidoNum}</h2>
                   {selectedOrder.cantidad && (
                     <span className="text-[10px] bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                       <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
@@ -110,7 +110,7 @@ const OrderDetailsModal = ({
                   </span>
                 )}
               </div>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--color-primary)] shrink-0">✕</button>
+              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-primary shrink-0">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
@@ -119,7 +119,7 @@ const OrderDetailsModal = ({
               <button 
                   type="button" 
                   onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${selectedOrder.codArticulo} vinculados a ReviSoft.`)} 
-                  className="w-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--color-primary)]/20"
+                  className="w-full bg-[var(--color-primary)]/10 theme-text-primary hover:bg-[var(--color-primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--color-primary)]/20"
               >
                   <FileText size={"1.3em"} /> Ver Planos del Producto
               </button>
@@ -143,7 +143,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] theme-text-primary hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -157,18 +157,18 @@ const OrderDetailsModal = ({
                           if (!canEdit) return null;
                           return (
                             <>
-                              <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOMBRE OPERARIO..." />
-                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--color-primary)]">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
+                              <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none theme-text-primary placeholder:theme-text-primary/40" placeholder="NOMBRE OPERARIO..." />
+                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none theme-text-primary">{CONFIG_PROCESOS[selectedOrder.areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
-                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none theme-text-primary placeholder:theme-text-primary/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 theme-text-primary'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
@@ -176,7 +176,7 @@ const OrderDetailsModal = ({
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                           <div className="flex flex-col gap-3 mt-4">
                               <label className="flex items-center justify-between p-4 rounded-xl border cursor-pointer select-none transition-colors duration-200 theme-bg-input theme-border hover:border-green-500 group">
-                                <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:text-[var(--color-primary)]'}`}>
+                                <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:theme-text-primary'}`}>
                                   {isTerminadoLocal ? '✅ MARCADO COMO TERMINADO' : 'MARCAR COMO TERMINADO'}
                                 </span>
                                 <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-white/10'}`}>
@@ -201,10 +201,10 @@ const OrderDetailsModal = ({
                             {showHistoryPlanta && (unifiedBitacoraTurnos || []).slice().reverse().map((n, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
-                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
+                                    <div className="flex justify-between items-center mb-1 pr-8"><span className="text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase">{n.actividad}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.nota}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--color-primary)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[var(--color-primary)]">OP: {n.operario}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase theme-text-primary">OP: {n.operario}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -214,7 +214,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] theme-text-primary hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Inspección Calidad</span>
@@ -229,21 +229,21 @@ const OrderDetailsModal = ({
                           return (
                             <>
                               <div className="flex gap-2">
-                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--color-primary)] border-transparent'}`}>APROBADO</button>
-                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--color-primary)] border-transparent'}`}>RETRABAJO</button>
-                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--color-primary)] border-transparent'}`}>RECHAZADO</button>
+                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 theme-text-primary border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 theme-text-primary border-transparent'}`}>RETRABAJO</button>
+                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 theme-text-primary border-transparent'}`}>RECHAZADO</button>
                         </div>
-                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOMBRE INSPECTOR..." />
+                        <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none theme-text-primary placeholder:theme-text-primary/40" placeholder="NOMBRE INSPECTOR..." />
                         <div className="relative">
-                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={calidadNota} onChange={e=>setCalidadNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none theme-text-primary placeholder:theme-text-primary/40" placeholder="OBSERVACIONES DE CALIDAD..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('calidad')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'calidad' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 theme-text-primary'}`}>{isListening && activeDictationTarget.current === 'calidad' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setCalidadPhoto)} />
                             </label>
@@ -266,8 +266,8 @@ const OrderDetailsModal = ({
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-xs md:text-sm lg:text-base font-black uppercase ${n.estado==='APROBADO' ? 'text-green-800 dark:text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-800 dark:text-yellow-500' : 'text-red-800 dark:text-red-500'}`}>{n.estado}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-xs md:text-sm lg:text-base italic theme-text-muted my-1">"{n.observacion}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--color-primary)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-[var(--color-primary)]">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    <div className="flex justify-between items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase theme-text-primary">INSP: {n.inspector}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -277,7 +277,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] theme-text-primary hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -337,7 +337,7 @@ const OrderDetailsModal = ({
                           return (
                             <>
                               <div className="w-full flex flex-col gap-2 mb-2">
-                                    <label className="text-[var(--color-primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
+                                    <label className="theme-text-primary font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
                                     <div className="group border border-blue-500/30 rounded-xl overflow-hidden mb-3">
                                         <div className="p-3 bg-blue-500/10 text-[10px] md:text-xs font-bold text-blue-500 uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/20 transition-colors">
@@ -358,7 +358,7 @@ const OrderDetailsModal = ({
                                                 </button>
                                                 {a === "Diseño" && isSelected && isGerente && (
                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="text-[var(--color-primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
+                                                        <label className="theme-text-primary font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                             {(PERSONAL_DISENO || []).map(person => {
                                                                 const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
@@ -375,7 +375,7 @@ const OrderDetailsModal = ({
                                                 )}
                                                 {a === "Programación CNC" && isSelected && (isDiseno || isGerente) && (
                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="text-[var(--color-primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
+                                                        <label className="theme-text-primary font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                             {(PERSONAL_CNC || []).map(person => {
                                                                 const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
@@ -463,20 +463,20 @@ const OrderDetailsModal = ({
                                 </div>
                             </div>
                         </div>
-                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" />
+                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary" />
                         <div className="grid grid-cols-1 gap-2">
-                            <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="FIRMA ENTREGA" />
+                            <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-primary/40" placeholder="FIRMA ENTREGA" />
                         </div>
                         <div className="relative">
-                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none theme-text-primary placeholder:theme-text-primary/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 theme-text-primary'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 theme-text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
@@ -485,7 +485,7 @@ const OrderDetailsModal = ({
                         
                         <label className="flex items-center gap-2 mb-2 p-3 bg-black/5 rounded-xl border border-black/10 cursor-pointer hover:bg-black/10 transition-colors">
                               <input type="checkbox" checked={tempIsPartial} onChange={(e) => setTempIsPartial(e.target.checked)} className="w-5 h-5 accent-[var(--color-primary)] rounded cursor-pointer" />
-                              <span className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)]">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
+                              <span className="text-xs md:text-sm lg:text-base font-black theme-text-primary">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
                         </label>
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
@@ -508,10 +508,10 @@ const OrderDetailsModal = ({
                             {showHistoryEntrega && (unifiedHistorial || []).slice().reverse().map((h, i) => (
                                 <div key={i} className="theme-bg-input p-3 rounded-xl border theme-border relative group animate-in slide-in-from-top-2">
                                     <button type="button" onClick={() => shareToWhatsApp('trazabilidad', h)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
-                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--color-primary)]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[var(--color-primary)] block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] text-[var(--color-primary)] block uppercase">RECIBE</span>{h.recibe}</div></div>
+                                    <div className="flex justify-between items-center mb-2 pr-8"><span className="bg-[var(--color-primary)]/20 theme-text-primary px-2 py-0.5 rounded text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase border border-[var(--color-primary)]/30">{h.accion}</span><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] theme-text-primary block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-xs md:text-sm lg:text-base lg:text-[11px] theme-text-primary block uppercase">RECIBE</span>{h.recibe}</div></div>
                                     {h.nota && <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-[var(--color-primary)] flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
+                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
                                     <div className="flex justify-end items-end mt-2"><span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
                                 </div>
                             ))}
@@ -522,7 +522,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Resumen de Áreas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                <button type="button" onClick={() => setOpenSection(openSection === 'resumen_areas' ? null : 'resumen_areas')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
+                <button type="button" onClick={() => setOpenSection(openSection === 'resumen_areas' ? null : 'resumen_areas')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] theme-text-primary hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><Layers size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Resumen de Áreas</span>
@@ -589,7 +589,7 @@ const OrderDetailsModal = ({
                                             className="w-full p-3 flex flex-wrap items-center justify-between gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors"
                                         >
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-xs md:text-sm font-black uppercase text-[var(--color-primary)]">{areaName}</span>
+                                                <span className="text-xs md:text-sm font-black uppercase theme-text-primary">{areaName}</span>
                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full theme-bg-input theme-text-muted border theme-border">
                                                     {totalRegistros} {totalRegistros === 1 ? 'registro' : 'registros'}
                                                 </span>
@@ -602,7 +602,7 @@ const OrderDetailsModal = ({
                                             <div className="p-3 space-y-4 bg-[var(--color-surface)] border-t theme-border animate-in slide-in-from-top-1">
                                                 {/* SECCIÓN AVANCES EN PLANTA */}
                                                 <div>
-                                                    <h5 className="text-[11px] font-black uppercase tracking-wider text-[var(--color-primary)] mb-2 flex items-center gap-1.5 border-b theme-border pb-1">
+                                                    <h5 className="text-[11px] font-black uppercase tracking-wider theme-text-primary mb-2 flex items-center gap-1.5 border-b theme-border pb-1">
                                                         <History size={13} /> Historial Avances de Planta ({areaTurnos.length})
                                                     </h5>
                                                     {areaTurnos.length === 0 ? (
@@ -612,17 +612,17 @@ const OrderDetailsModal = ({
                                                             {areaTurnos.map((n, i) => (
                                                                 <div key={i} className="theme-bg-input p-2.5 rounded-lg border theme-border text-xs">
                                                                     <div className="flex justify-between items-center mb-1">
-                                                                        <span className="font-black text-[var(--color-primary)] uppercase">{n.actividad || 'Avance'}</span>
+                                                                        <span className="font-black theme-text-primary uppercase">{n.actividad || 'Avance'}</span>
                                                                         <span className="text-[10px] theme-text-muted font-bold">{new Date(n.fecha).toLocaleString()}</span>
                                                                     </div>
                                                                     <p className="italic theme-text-muted text-[11px] my-1">"{n.nota}"</p>
                                                                     {n.foto && (
-                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black text-[var(--color-primary)] flex items-center gap-1 mt-1">
+                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black theme-text-primary flex items-center gap-1 mt-1">
                                                                             <ImageIcon size={12}/> Ver Evidencia
                                                                         </button>
                                                                     )}
                                                                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-black/10 dark:border-white/10 text-[10px]">
-                                                                        <span className="font-bold text-[var(--color-primary)]">OP: {n.operario || 'S/N'}</span>
+                                                                        <span className="font-bold theme-text-primary">OP: {n.operario || 'S/N'}</span>
                                                                         <span className="theme-text-muted">SUP: {n.supervisor || 'S/N'}</span>
                                                                     </div>
                                                                 </div>
@@ -652,12 +652,12 @@ const OrderDetailsModal = ({
                                                                     </div>
                                                                     <p className="italic theme-text-muted text-[11px] my-1">"{n.observacion}"</p>
                                                                     {n.foto && (
-                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black text-[var(--color-primary)] flex items-center gap-1 mt-1">
+                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-[10px] font-black theme-text-primary flex items-center gap-1 mt-1">
                                                                             <ImageIcon size={12}/> Ver Evidencia
                                                                         </button>
                                                                     )}
                                                                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-black/10 dark:border-white/10 text-[10px]">
-                                                                        <span className="font-bold text-[var(--color-primary)]">INSP: {n.inspector || 'S/N'}</span>
+                                                                        <span className="font-bold theme-text-primary">INSP: {n.inspector || 'S/N'}</span>
                                                                         <span className="theme-text-muted">SUP: {n.supervisor || 'S/N'}</span>
                                                                     </div>
                                                                 </div>
