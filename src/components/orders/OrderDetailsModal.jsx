@@ -569,8 +569,8 @@ const OrderDetailsModal = ({
                                     );
                                 } else if (isPartial) {
                                     statusBadge = (
-                                        <span className="text-sm font-black px-2 py-0.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 border border-yellow-500/30 uppercase flex items-center gap-1">
-                                            📦 Entrega Parcial
+                                        <span className="text-sm font-black px-2.5 py-1 rounded-md bg-amber-500/20 text-orange-950 dark:text-amber-300 border-2 border-amber-600 dark:border-amber-500 uppercase flex items-center gap-1 shadow-sm">
+                                            📦 ENTREGA PARCIAL
                                         </span>
                                     );
                                 } else if (isTransferred) {

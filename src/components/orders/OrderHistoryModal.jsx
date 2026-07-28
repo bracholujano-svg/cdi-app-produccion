@@ -258,8 +258,8 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                             {phase.area}
                                                         </h3>
                                                         {phase.events.some(e => e.isPartial) && (
-                                                            <span className="bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/30 px-2 py-0.5 rounded text-sm md:text-base font-black uppercase flex items-center gap-1 shadow-sm">
-                                                                <Package size="1.2em" /> Lote Parcial
+                                                            <span className="bg-amber-500/20 text-orange-950 dark:text-amber-300 border-2 border-amber-600 dark:border-amber-500 px-2 py-0.5 rounded text-sm md:text-base font-black uppercase flex items-center gap-1 shadow-sm">
+                                                                <Package size="1.2em" className="text-amber-700 dark:text-amber-400" /> ENTREGA PARCIAL
                                                             </span>
                                                         )}
                                                     </div>

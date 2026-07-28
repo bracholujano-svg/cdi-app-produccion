@@ -157,11 +157,11 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                       </p>
                       
                       {isPartial && lastPartial && (
-                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md px-2 py-1.5 flex flex-col gap-0.5 shadow-sm">
-                            <span className="text-sm md:text-base font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
-                                <Package size="1.2em" /> Lote Parcial
+                        <div className="bg-amber-500/20 border-2 border-amber-600 dark:border-amber-500 rounded-md px-2.5 py-1.5 flex flex-col gap-0.5 shadow-sm">
+                            <span className="text-sm md:text-base font-black text-orange-950 dark:text-amber-300 uppercase flex items-center gap-1.5">
+                                <Package size="1.2em" className="text-amber-700 dark:text-amber-400" /> ENTREGA PARCIAL
                             </span>
-                            <span className="text-sm md:text-base font-bold text-yellow-800/80 dark:text-yellow-500/80 uppercase truncate">
+                            <span className="text-sm md:text-base font-bold text-amber-900 dark:text-amber-400 uppercase truncate">
                                 De: {lastPartial.entrega || 'Sección Anterior'}
                             </span>
                         </div>
