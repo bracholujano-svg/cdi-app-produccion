@@ -279,26 +279,26 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
 
                             let rowBgClass = 'bg-black/5 dark:bg-[var(--color-surface)]/5 hover:bg-black/10 dark:hover:bg-[var(--color-surface)]/10';
                             let textClass = 'theme-text-main';
-                            let accentClass = 'theme-text-muted';
+                            let textColor = '#191c18';
                             
                             if (isRed) {
                                 rowBgClass = 'bg-red-500/15 border-l-4 border-l-red-600';
-                                textClass = 'text-red-950';
-                                accentClass = 'text-red-950';
+                                textClass = 'text-red-900';
+                                textColor = '#7f1d1d';
                             } else if (isYellow) {
-                                rowBgClass = 'bg-yellow-500/20 border-l-4 border-l-amber-600';
-                                textClass = 'text-amber-950';
-                                accentClass = 'text-amber-950';
+                                rowBgClass = 'bg-amber-500/20 border-l-4 border-l-amber-600';
+                                textClass = 'text-amber-900';
+                                textColor = '#78350f';
                             } else if (isGreen) {
                                 rowBgClass = 'bg-emerald-500/15 border-l-4 border-l-emerald-600';
-                                textClass = 'text-emerald-950';
-                                accentClass = 'text-emerald-950';
+                                textClass = 'text-emerald-900';
+                                textColor = '#064e3b';
                             }
 
                             const globalIndex = currentPage * ITEMS_PER_PAGE + idx + 1;
 
                             return (
-                                <div key={o.id} className={`flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b theme-border items-center transition-all ${rowBgClass}`}>
+                                <div key={o.id} style={{ color: textColor }} className={`flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b theme-border items-center transition-all ${rowBgClass}`}>
                                     {/* Semáforo Visual */}
                                     <div className="flex justify-center items-center">
                                         <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full shadow-md flex items-center justify-center
@@ -312,44 +312,44 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
 
                                     {/* Numeración */}
                                     <div className="flex justify-center items-center">
-                                        <span className={`text-lg md:text-xl font-black tabular-nums ${textClass}`}>
+                                        <span style={{ color: textColor }} className="text-lg md:text-xl font-black tabular-nums">
                                             {globalIndex}
                                         </span>
                                     </div>
                                     
                                     {/* Pedido */}
-                                    <div className={`font-black text-lg md:text-xl tabular-nums tracking-tighter ${textClass}`}>
+                                    <div style={{ color: textColor }} className="font-black text-lg md:text-xl tabular-nums tracking-tighter">
                                         #{o.pedidoNum}
                                     </div>
                                     
                                     {/* Cliente */}
-                                    <div className={`font-bold text-base lg:text-lg uppercase truncate ${textClass}`}>
+                                    <div style={{ color: textColor }} className="font-bold text-base lg:text-lg uppercase truncate">
                                         {o.cliente}
                                     </div>
                                     
                                     {/* Codigo y Cantidad */}
-                                    <div className="flex flex-col">
-                                        <span className={`text-sm md:text-base lg:text-lg font-black ${textClass}`}>{o.codArticulo}</span>
-                                        <span className={`text-base lg:text-lg font-black ${textClass}`}>Ctd: {o.cantidad}</span>
+                                    <div className="flex flex-col" style={{ color: textColor }}>
+                                        <span style={{ color: textColor }} className="text-sm md:text-base lg:text-lg font-black">{o.codArticulo}</span>
+                                        <span style={{ color: textColor }} className="text-base lg:text-lg font-black">Ctd: {o.cantidad}</span>
                                     </div>
                                     
                                     {/* Producto */}
-                                    <div className={`font-black text-base lg:text-lg uppercase truncate ${textClass}`}>
+                                    <div style={{ color: textColor }} className="font-black text-base lg:text-lg uppercase truncate">
                                         {o.nombre}
                                     </div>
 
                                     {/* Ingreso a la sección */}
-                                    <div className="flex flex-col">
-                                        <span className={`text-sm md:text-base font-black ${textClass}`}>
+                                    <div className="flex flex-col" style={{ color: textColor }}>
+                                        <span style={{ color: textColor }} className="text-sm md:text-base font-black">
                                             {o.fechaIngreso.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                                         </span>
-                                        <span className={`text-sm md:text-base font-bold uppercase ${textClass}`}>
+                                        <span style={{ color: textColor }} className="text-sm md:text-base font-bold uppercase">
                                             {o.fechaIngreso.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
 
                                     {/* Tiempo en el área */}
-                                    <div className={`font-black text-xl lg:text-2xl px-2 whitespace-nowrap tabular-nums ${textClass}`}>
+                                    <div style={{ color: textColor }} className="font-black text-xl lg:text-2xl px-2 whitespace-nowrap tabular-nums">
                                         {formatTimeInArea(o.timeInAreaMs)}
                                     </div>
 
