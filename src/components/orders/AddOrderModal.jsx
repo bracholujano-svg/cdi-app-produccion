@@ -22,7 +22,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   return (
       
         <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
-          <div className="theme-bg-card w-full h-full md:max-w-2xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
+          <div className="theme-bg-card w-full h-full md:max-w-7xl md:h-[75vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
               <h2 className="text-lg md:text-xl font-black uppercase flex items-center gap-2 theme-text-primary"><Plus size={20} /> Nuevo Registro Planta</h2>
               <button type="button" onClick={() => { setShowAddModal(false); setSearchResults([]); setShowSearchSelector(false); }} className="p-2.5 bg-black/5 hover:bg-black/10 rounded-xl transition-colors theme-text-primary">✕</button>

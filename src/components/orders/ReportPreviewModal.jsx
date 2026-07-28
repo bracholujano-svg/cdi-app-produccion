@@ -29,7 +29,7 @@ const ReportPreviewModal = () => {
 
   return (
     <div className="fixed inset-0 bg-slate-100 dark:bg-slate-900 z-[130] flex flex-col overflow-y-auto print:bg-white text-slate-800 dark:text-slate-200">
-      <div className="max-w-7xl mx-auto w-full p-4 md:p-8">
+      <div className="w-full max-w-[95vw] mx-auto p-4 md:p-8">
         
         {/* ENCABEZADO ACCIONES */}
         <div className="flex justify-between items-center mb-6 print:hidden bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">

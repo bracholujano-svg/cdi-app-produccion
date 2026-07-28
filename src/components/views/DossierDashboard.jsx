@@ -342,8 +342,8 @@ export default function DossierDashboard() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-2 md:p-6 animate-in fade-in duration-300">
-      <div className="bg-[var(--color-surface)] w-full h-full md:h-[95vh] md:max-w-7xl rounded-2xl md:rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border border-[var(--color-border)]">
+    <div className="fixed inset-0 z-[100] bg-[var(--color-surface)] flex animate-in fade-in duration-300">
+      <div className="w-full h-full overflow-hidden flex flex-col">
         
         {/* ENCABEZADO SUPERIOR */}
         <div className="p-4 md:p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-base)]">

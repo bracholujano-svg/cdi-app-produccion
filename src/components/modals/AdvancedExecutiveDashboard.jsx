@@ -8,7 +8,7 @@ import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 
 const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onClose }) => {
-    const { setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal, dashboardTab, setDashboardTab, appTheme, setAppTheme } = useAppContext();
+    const { setSelectedGroupPedido, setSelectedOrder, setShowDashboardModal, dashboardTab, setDashboardTab, appTheme, setAppTheme, isDarkMode, setIsDarkMode } = useAppContext();
     const setSearchTerm = useAppStore(state => state.setSearchTerm);
     // const [dashboardTab, setDashboardTab] = useState('resumen'); // Now using dashboardTab from context
     const [dashSearch, setDashSearch] = useState('');
@@ -347,7 +347,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
             <div className="min-h-screen theme-bg-main theme-text-main font-sans pb-10">
                 {/* NAV */}
                 <nav className="sticky top-0 z-50 theme-bg-card shadow-sm border-b theme-border">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="w-full 2xl:max-w-[95vw] mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16 items-center">
                             <div className="flex items-center gap-2">
                                 <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black theme-text-primary tracking-tighter">CDI</span>
@@ -376,13 +376,13 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             </div>
                             <div className="flex items-center shrink-0 ml-4">
                                 <div 
-                                    onClick={() => setAppTheme(appTheme === 'dark' ? 'light' : 'dark')} 
-                                    className={`relative w-14 h-7 flex items-center bg-black/10 dark:bg-black/30 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner ${appTheme === 'dark' ? 'border border-blue-500/30' : 'border border-black/10'}`}
+                                    onClick={() => setIsDarkMode(!isDarkMode)} 
+                                    className={`relative w-14 h-7 flex items-center bg-black/10 dark:bg-black/30 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner ${isDarkMode ? 'border border-blue-500/30' : 'border border-black/10'}`}
                                 >
                                     <div 
-                                        className={`absolute w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${appTheme === 'dark' ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
+                                        className={`absolute w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
                                     >
-                                        {appTheme === 'dark' ? <Moon size={12} color="white" /> : <Sun size={12} color="#f59e0b" />}
+                                        {isDarkMode ? <Moon size={12} color="white" /> : <Sun size={12} color="#f59e0b" />}
                                     </div>
                                 </div>
                             </div>
@@ -391,7 +391,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                     </div>
                 </nav>
 
-                <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                <main className="w-full 2xl:max-w-[95vw] mx-auto px-4 py-8 sm:px-6 lg:px-8">
                     
                     {/* TAB: RESUMEN */}
                     {dashboardTab === 'resumen' && (

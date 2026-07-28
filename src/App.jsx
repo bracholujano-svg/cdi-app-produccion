@@ -992,7 +992,7 @@ const {
                         {uniqueClients.map(c => <option key={c} value={c} />)}
                     </datalist>
                 </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden text-slate-900 dark:text-white" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
                     <option value="pedido_desc">Pedido (Desc)</option>
@@ -1002,7 +1002,7 @@ const {
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-slate-900 dark:text-white" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer theme-text-main" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>

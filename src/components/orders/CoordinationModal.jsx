@@ -26,7 +26,7 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
 
   return (
         <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-4">
-          <div className="theme-bg-card w-full max-w-3xl rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
+          <div className="theme-bg-card w-full max-w-[90vw] rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-3"><Megaphone size={20} className="theme-text-primary" /><h2 className="text-lg font-black uppercase theme-text-primary">Coordinación Logística</h2></div>
                 <button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl theme-text-primary">✕</button>
