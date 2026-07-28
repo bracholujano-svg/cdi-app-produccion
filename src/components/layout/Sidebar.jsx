@@ -88,23 +88,23 @@ const Sidebar = () => {
               <Activity size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Dossier</span>
             </button>
             
-            <div className="relative w-full" ref={themeDropdownRef}>
+            <div className="w-full flex flex-col gap-2" ref={themeDropdownRef}>
               <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className={`bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-pink-400 border transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1 ${isThemeOpen ? 'bg-pink-600/20 border-pink-500' : 'border-pink-500/30'}`}>
                 <Palette size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Temas</span>
               </button>
               {isThemeOpen && (
-                <div className="absolute left-[115%] top-0 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-2xl p-2 w-48 z-[90] flex flex-col gap-1">
-                  <button onClick={() => changeTheme('zafiro')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
-                    <span className="w-3 h-3 rounded-full bg-red-400"></span> Zafiro
+                <div className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl shadow-inner p-1 flex flex-col gap-1">
+                  <button onClick={() => changeTheme('zafiro')} className="flex items-center justify-start px-2 gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-[9px] font-bold uppercase text-[var(--text-main)]">
+                    <span className="w-3 h-3 rounded-full bg-red-400 flex-shrink-0"></span> <span className="truncate">Zafiro</span>
                   </button>
-                  <button onClick={() => changeTheme('ambar')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
-                    <span className="w-3 h-3 rounded-full bg-amber-400"></span> Ámbar
+                  <button onClick={() => changeTheme('ambar')} className="flex items-center justify-start px-2 gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-[9px] font-bold uppercase text-[var(--text-main)]">
+                    <span className="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></span> <span className="truncate">Ámbar</span>
                   </button>
-                  <button onClick={() => changeTheme('bosque')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Bosque
+                  <button onClick={() => changeTheme('bosque')} className="flex items-center justify-start px-2 gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-[9px] font-bold uppercase text-[var(--text-main)]">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></span> <span className="truncate">Bosque</span>
                   </button>
-                  <button onClick={() => changeTheme('eclipse')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
-                    <span className="w-3 h-3 rounded-full bg-gray-300"></span> Eclipse
+                  <button onClick={() => changeTheme('eclipse')} className="flex items-center justify-start px-2 gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-[9px] font-bold uppercase text-[var(--text-main)]">
+                    <span className="w-3 h-3 rounded-full bg-gray-300 flex-shrink-0"></span> <span className="truncate">Eclipse</span>
                   </button>
                 </div>
               )}

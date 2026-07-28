@@ -45,7 +45,7 @@ const Header = () => {
   const totalNotifications = pendingReceptions + rejectedReceptions;
 
   return (
-    <div className="sticky top-0 z-[50] w-full shadow-md">
+    <div className="sticky top-0 z-[50] w-full shadow-md theme-bg-main border-b theme-border">
       {mostUrgentOrder && (
         <div className="bg-red-600 text-white py-2 border-b border-red-800 whitespace-nowrap overflow-hidden">
           <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
