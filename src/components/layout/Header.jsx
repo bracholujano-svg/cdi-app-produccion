@@ -83,10 +83,10 @@ const Header = () => {
              <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm' : 'theme-text-muted hover:theme-text-primary'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>
+             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 bg-[var(--color-surface)] hover:text-red-500'}`}>
                Atrasos ({atrasadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 hover:text-green-500'}`}>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'DESPACHADOS' ? 'bg-green-500 text-white shadow-sm' : 'text-green-600 dark:text-green-500/70 bg-[var(--color-surface)] hover:text-green-500'}`}>
                Despachados ({despachadosCount})
              </button>
              <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center gap-1 text-sm md:text-base font-black uppercase transition-colors ${coordinationAlerts.length > 0 ? 'theme-text-primary hover:bg-[var(--color-primary)] hover:text-white' : 'theme-text-muted hover:theme-text-primary'}`}>
