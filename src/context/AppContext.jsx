@@ -88,7 +88,9 @@ export const AppContextProvider = ({ children }) => {
   
   const [isRegistering, setIsRegistering] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [appTheme, setAppTheme] = useState('dark');
+  const [appTheme, setAppTheme] = useState(() => {
+    return localStorage.getItem('app-theme') || 'cine';
+  });
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);

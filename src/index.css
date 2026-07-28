@@ -5,48 +5,48 @@
 
 /* New Dynamic Theming Engine (CSS Variables) */
 
-/* Tema 1: Zafiro Atardecer (Por Defecto) */
-body[data-theme="zafiro"] {
-    --color-base: #020617; /* Slate 950 */
-    --color-surface: #0f172a; /* Slate 900 Sólido */
-    --color-primary: #ff6b6b; /* Vibrant Coral */
-    --color-primary-glow: rgba(255, 107, 107, 0.2);
-    --color-text-main: #f8fafc;
-    --color-text-muted: #94a3b8;
-    --color-border: #1e293b; /* Slate 800 */
+/* Tema 1: Santuario (Digital Sanctuary) */
+:root[data-theme="santuario"] {
+    --color-base: #f8faf3; 
+    --color-surface: #f2f4ed; 
+    --color-primary: #55624d; 
+    --color-primary-glow: rgba(85, 98, 77, 0.2);
+    --color-text-main: #191c18;
+    --color-text-muted: #444841;
+    --color-border: #c5c8be; 
 }
 
-/* Tema 2: Ámbar Resplandeciente */
-body[data-theme="ambar"] {
-    --color-base: #0c0a09; /* Stone 950 */
-    --color-surface: #1c1917; /* Stone 900 Sólido */
-    --color-primary: #fbbf24; /* Amber Gold */
-    --color-primary-glow: rgba(251, 191, 36, 0.2);
-    --color-text-main: #fafaf9;
-    --color-text-muted: #a8a29e;
-    --color-border: #292524; /* Stone 800 */
+/* Tema 2: Autoridad (Precision Authority) */
+:root[data-theme="autoridad"] {
+    --color-base: #f8f9ff; 
+    --color-surface: #eff4ff; 
+    --color-primary: #000000; 
+    --color-primary-glow: rgba(0, 0, 0, 0.2);
+    --color-text-main: #0b1c30;
+    --color-text-muted: #444748;
+    --color-border: #c4c7c7; 
 }
 
-/* Tema 3: Bosque Profesional */
-body[data-theme="bosque"] {
-    --color-base: #022c22; /* Emerald 950 */
-    --color-surface: #064e3b; /* Emerald 900 Sólido */
-    --color-primary: #10b981; /* Emerald 500 (Elegante) */
-    --color-primary-glow: rgba(16, 185, 129, 0.2);
-    --color-text-main: #f0fdf4;
-    --color-text-muted: #6ee7b7;
-    --color-border: #047857; /* Emerald 700 */
+/* Tema 3: Cine (Cinematic Discovery) */
+:root[data-theme="cine"] {
+    --color-base: #0e0e0e; 
+    --color-surface: #1f1f1f; 
+    --color-primary: #ffb1c3; 
+    --color-primary-glow: rgba(255, 177, 195, 0.2);
+    --color-text-main: #e2e2e2;
+    --color-text-muted: #e5bcc4;
+    --color-border: #5c3f45; 
 }
 
-/* Tema 4: Eclipse Solar */
-body[data-theme="eclipse"] {
-    --color-base: #000000; /* Pure Black */
-    --color-surface: #171717; /* Neutral 900 Sólido */
-    --color-primary: #e5e5e5; /* Cool Silver */
-    --color-primary-glow: rgba(229, 229, 229, 0.2);
-    --color-text-main: #ffffff;
-    --color-text-muted: #a3a3a3;
-    --color-border: #262626; /* Neutral 800 */
+/* Tema 4: Fluidez (Digital Fluidity) */
+:root[data-theme="fluidez"] {
+    --color-base: #f8f9ff; 
+    --color-surface: #eff4ff; 
+    --color-primary: #006d32; 
+    --color-primary-glow: rgba(0, 109, 50, 0.2);
+    --color-text-main: #0b1c30;
+    --color-text-muted: #444748;
+    --color-border: #bbcbb9; 
 }
 
 .theme-bg-main { background-color: var(--color-base); color: var(--color-text-main); }
