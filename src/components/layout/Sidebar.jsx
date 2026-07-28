@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity } from 'lucide-react';
+import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Sparkles } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -17,6 +17,7 @@ const Sidebar = () => {
     setShowRecetarioModal,
     setShowReportConfigModal,
     setShowDossierModal,
+    setShowThemePlayground,
     setSupervisorProfile,
     setAreaFilter
   } = useAppContext();
@@ -65,6 +66,9 @@ const Sidebar = () => {
             </button>
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDossierModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-purple-400 border border-purple-500/30 transition-colors duration-200 hover:text-white hover:bg-purple-600 hover:border-purple-600 hover:-translate-y-1">
               <Activity size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Dossier</span>
+            </button>
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowThemePlayground(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-pink-400 border border-pink-500/30 transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1">
+              <Sparkles size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Sandbox UI</span>
             </button>
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-orange-600 hover:border-orange-600 hover:-translate-y-1">
               <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>

@@ -27,6 +27,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
+import ThemeTestPlayground from './components/views/ThemeTestPlayground';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,6 +58,8 @@ const {
     showReportPreviewModal, setShowReportPreviewModal,
     isRegistering, setIsRegistering,
     authError, setAuthError,
+    showDossierModal,
+    showThemePlayground,
     appTheme, setAppTheme,
     savedLogins, setSavedLogins,
     openSection, setOpenSection,
@@ -1101,6 +1104,10 @@ const {
 
       {showDossierModal && (
         <DossierDashboard />
+      )}
+
+      {showThemePlayground && (
+        <ThemeTestPlayground />
       )}
 
       {showTVMonitor && (
