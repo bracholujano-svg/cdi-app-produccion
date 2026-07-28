@@ -1,5 +1,5 @@
-import React from 'react';
-import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -17,10 +17,30 @@ const Sidebar = () => {
     setShowRecetarioModal,
     setShowReportConfigModal,
     setShowDossierModal,
-    setShowThemePlayground,
     setSupervisorProfile,
-    setAreaFilter
+    setAreaFilter,
+    appTheme, setAppTheme
   } = useAppContext();
+
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const themeDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target)) {
+        setIsThemeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const changeTheme = (t) => {
+    setAppTheme(t);
+    document.body.setAttribute('data-theme', t);
+    localStorage.setItem('app-theme', t);
+    setIsThemeOpen(false);
+  };
 
   const handleLogout = async () => { 
     await supabase.auth.signOut();
@@ -53,7 +73,7 @@ const Sidebar = () => {
 
       {/* CAJÓN OCULTO (SIDEBAR) */}
       <div onMouseLeave={() => setIsSidebarOpen(false)}
-      className={`fixed top-0 left-0 h-full w-[110px] md:w-[130px] bg-[var(--bg-main)] z-[80] border-r border-[var(--border-color)] shadow-[10px_0_30px_rgba(0,0,0,0.8)] transform transition-transform duration-300 ease-in-out flex flex-col items-center py-6 gap-6 overflow-y-auto custom-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      className={`fixed top-0 left-0 h-full w-[110px] md:w-[130px] bg-[var(--bg-main)] z-[80] border-r border-[var(--border-color)] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col items-center py-6 gap-6 overflow-y-auto custom-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <button onClick={() => setIsSidebarOpen(false)} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white transition-colors">
           <X size={"1.5em"} />
         </button>
@@ -67,9 +87,29 @@ const Sidebar = () => {
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDossierModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-purple-400 border border-purple-500/30 transition-colors duration-200 hover:text-white hover:bg-purple-600 hover:border-purple-600 hover:-translate-y-1">
               <Activity size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Dossier</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowThemePlayground(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-pink-400 border border-pink-500/30 transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1">
-              <Sparkles size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Sandbox UI</span>
-            </button>
+            
+            <div className="relative w-full" ref={themeDropdownRef}>
+              <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className={`bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-pink-400 border transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1 ${isThemeOpen ? 'bg-pink-600/20 border-pink-500' : 'border-pink-500/30'}`}>
+                <Palette size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Temas</span>
+              </button>
+              {isThemeOpen && (
+                <div className="absolute left-[115%] top-0 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl shadow-2xl p-2 w-48 z-[90] flex flex-col gap-1">
+                  <button onClick={() => changeTheme('zafiro')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
+                    <span className="w-3 h-3 rounded-full bg-red-400"></span> Zafiro
+                  </button>
+                  <button onClick={() => changeTheme('ambar')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
+                    <span className="w-3 h-3 rounded-full bg-amber-400"></span> Ámbar
+                  </button>
+                  <button onClick={() => changeTheme('bosque')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Bosque
+                  </button>
+                  <button onClick={() => changeTheme('eclipse')} className="flex items-center gap-2 p-2 w-full text-left rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main">
+                    <span className="w-3 h-3 rounded-full bg-gray-300"></span> Eclipse
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowCoordinationModal(true); }} className="bg-[var(--card-bg)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-[9px] md:text-[10px] uppercase shadow-lg text-[var(--text-muted)] border border-[var(--border-color)] transition-colors duration-200 hover:text-white hover:bg-orange-600 hover:border-orange-600 hover:-translate-y-1">
               <Megaphone size={"2em"} /><span className="text-center leading-tight">Coord</span>
             </button>

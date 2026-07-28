@@ -81,7 +81,6 @@ export const AppContextProvider = ({ children }) => {
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [showReceptionModal, setShowReceptionModal] = useState(false);
   const [showDossierModal, setShowDossierModal] = useState(false);
-  const [showThemePlayground, setShowThemePlayground] = useState(false); // <--- Sandbox Theme Playground
   
   const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
@@ -187,7 +186,6 @@ export const AppContextProvider = ({ children }) => {
     showDashboardModal, setShowDashboardModal,
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
-    showThemePlayground, setShowThemePlayground,
     dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,

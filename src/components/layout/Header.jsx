@@ -45,9 +45,9 @@ const Header = () => {
   const totalNotifications = pendingReceptions + rejectedReceptions;
 
   return (
-    <>
+    <div className="sticky top-0 z-[50] w-full shadow-md">
       {mostUrgentOrder && (
-        <div className="bg-red-600 text-white py-2 sticky top-0 z-[60] shadow-md border-b border-red-800 whitespace-nowrap overflow-hidden">
+        <div className="bg-red-600 text-white py-2 border-b border-red-800 whitespace-nowrap overflow-hidden">
           <div className="flex animate-marquee items-center text-xs md:text-sm lg:text-base font-black uppercase tracking-widest w-max pr-[100vw]">
             <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(getEffectiveDate(mostUrgentOrder))} DÍAS</span>
           </div>
@@ -62,7 +62,7 @@ const Header = () => {
           <div className="flex items-center gap-4">
              {/* LOGO */}
              <div className="flex items-center select-none cursor-pointer py-1" onClick={() => window.scrollTo(0,0)}>
-                 <CDILogo className="scale-[0.6] md:scale-75 origin-left" />
+                 <CDILogo className="scale-75 md:scale-90 origin-left" />
              </div>
 
             {/* PERFIL */}
@@ -109,7 +109,7 @@ const Header = () => {
 
         </div>
       </header>
-    </>
+    </div>
   );
 };
 

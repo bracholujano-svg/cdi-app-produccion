@@ -7,46 +7,46 @@
 
 /* Tema 1: Zafiro Atardecer (Por Defecto) */
 body[data-theme="zafiro"] {
-    --color-base: #0f172a; /* Slate 900 (Deep Navy) */
-    --color-surface: rgba(30, 41, 59, 0.65); /* Slate 800 with opacity */
+    --color-base: #020617; /* Slate 950 */
+    --color-surface: #0f172a; /* Slate 900 Sólido */
     --color-primary: #ff6b6b; /* Vibrant Coral */
-    --color-primary-glow: rgba(255, 107, 107, 0.4);
+    --color-primary-glow: rgba(255, 107, 107, 0.2);
     --color-text-main: #f8fafc;
     --color-text-muted: #94a3b8;
-    --color-border: rgba(255, 255, 255, 0.1);
+    --color-border: #1e293b; /* Slate 800 */
 }
 
 /* Tema 2: Ámbar Resplandeciente */
 body[data-theme="ambar"] {
-    --color-base: #1c1917; /* Stone 900 (Charcoal Grey) */
-    --color-surface: rgba(41, 37, 36, 0.65); /* Stone 800 */
+    --color-base: #0c0a09; /* Stone 950 */
+    --color-surface: #1c1917; /* Stone 900 Sólido */
     --color-primary: #fbbf24; /* Amber Gold */
-    --color-primary-glow: rgba(251, 191, 36, 0.4);
+    --color-primary-glow: rgba(251, 191, 36, 0.2);
     --color-text-main: #fafaf9;
     --color-text-muted: #a8a29e;
-    --color-border: rgba(255, 255, 255, 0.1);
+    --color-border: #292524; /* Stone 800 */
 }
 
-/* Tema 3: Bosque Neón */
+/* Tema 3: Bosque Profesional */
 body[data-theme="bosque"] {
-    --color-base: #064e3b; /* Emerald 900 (Deep Emerald) */
-    --color-surface: rgba(6, 95, 70, 0.65); /* Emerald 800 */
-    --color-primary: #84cc16; /* Electric Lime */
-    --color-primary-glow: rgba(132, 204, 22, 0.4);
+    --color-base: #022c22; /* Emerald 950 */
+    --color-surface: #064e3b; /* Emerald 900 Sólido */
+    --color-primary: #10b981; /* Emerald 500 (Elegante) */
+    --color-primary-glow: rgba(16, 185, 129, 0.2);
     --color-text-main: #f0fdf4;
-    --color-text-muted: #a7f3d0;
-    --color-border: rgba(255, 255, 255, 0.1);
+    --color-text-muted: #6ee7b7;
+    --color-border: #047857; /* Emerald 700 */
 }
 
 /* Tema 4: Eclipse Solar */
 body[data-theme="eclipse"] {
     --color-base: #000000; /* Pure Black */
-    --color-surface: rgba(23, 23, 23, 0.65); /* Neutral 900 */
+    --color-surface: #171717; /* Neutral 900 Sólido */
     --color-primary: #e5e5e5; /* Cool Silver */
-    --color-primary-glow: rgba(229, 229, 229, 0.3);
+    --color-primary-glow: rgba(229, 229, 229, 0.2);
     --color-text-main: #ffffff;
     --color-text-muted: #a3a3a3;
-    --color-border: rgba(255, 255, 255, 0.15);
+    --color-border: #262626; /* Neutral 800 */
 }
 
 .theme-bg-main { background-color: var(--color-base); color: var(--color-text-main); }
@@ -54,17 +54,13 @@ body[data-theme="eclipse"] {
     background-color: var(--color-surface); 
     color: var(--color-text-main);
     border: 1px solid var(--color-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
     border-radius: 16px; /* rounded-2xl */
 }
 .theme-bg-header { 
     background-color: var(--color-surface); 
     color: var(--color-text-main); 
     border-bottom: 1px solid var(--color-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
 }
 .theme-bg-input { 
     background-color: rgba(0,0,0,0.2); 
