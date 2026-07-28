@@ -223,7 +223,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                     </div>
                     <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-right min-w-[200px] w-full md:w-auto">
                         <p className="text-sm font-black uppercase text-gray-400">Fecha del Reporte</p>
-                        <p className="text-lg font-black theme-text-primary">{new Date().toLocaleDateString()}</p>
+                        <p className="text-lg font-black theme-text-main">{new Date().toLocaleDateString()}</p>
                         <p className="text-sm font-bold text-gray-500">{new Date().toLocaleTimeString()}</p>
                     </div>
                 </div>
@@ -248,7 +248,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Alertas Críticas de Atraso (AGRUPADAS) */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-[var(--color-primary)] pb-2 inline-flex"><Clock size={24} className="theme-text-primary"/> Lista de Retrasos Críticos</h3>
+                        <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-[var(--color-primary)] pb-2 inline-flex"><Clock size={24} className="theme-text-main"/> Lista de Retrasos Críticos</h3>
                         
                         <div className="space-y-4">
                             {delayedOrders.length > 0 ? delayedOrders.slice(0, 5).map((o, idx) => (

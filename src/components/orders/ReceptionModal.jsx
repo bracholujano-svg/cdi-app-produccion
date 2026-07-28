@@ -138,10 +138,10 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                 <div className="bg-[var(--bg-header)] border-b border-[var(--color-border)] shrink-0 flex flex-col">
                     <div className="p-5 flex justify-between items-center">
                         <div>
-                            <h2 className="text-xl font-black theme-text-primary uppercase">Panel de Recepciones</h2>
+                            <h2 className="text-xl font-black theme-text-main uppercase">Panel de Recepciones</h2>
                             <p className="text-sm md:text-base font-bold theme-text-muted">Verifique entregas o revise devoluciones</p>
                         </div>
-                        <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-primary shrink-0">✕</button>
+                        <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-main shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--color-border)]">
                         <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
@@ -164,8 +164,8 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                 Object.keys(pendingGroups).map(pedidoNum => (
                                     <div key={pedidoNum} className="space-y-2">
                                         <div onClick={() => toggleGroup(pendingGroups[pedidoNum])} className="bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg border border-[var(--color-primary)]/20 cursor-pointer hover:bg-[var(--color-primary)]/20 transition-colors flex justify-between items-center">
-                                            <span className="font-black text-sm theme-text-primary uppercase">PEDIDO: {pedidoNum}</span>
-                                            <span className="text-sm theme-text-primary font-bold theme-bg-card/10 px-2 py-0.5 rounded shadow-sm border border-[var(--color-primary)]/20">Seleccionar Grupo</span>
+                                            <span className="font-black text-sm theme-text-main uppercase">PEDIDO: {pedidoNum}</span>
+                                            <span className="text-sm theme-text-main font-bold theme-bg-card/10 px-2 py-0.5 rounded shadow-sm border border-[var(--color-primary)]/20">Seleccionar Grupo</span>
                                         </div>
                                         {pendingGroups[pedidoNum].map((item, idx) => (
                                             <div 
@@ -174,7 +174,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-transparent bg-black/5 dark:bg-[var(--color-surface)]/5 hover:bg-black/10 dark:hover:bg-[var(--color-surface)]/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-sm md:text-base font-bold uppercase theme-text-primary">{item.codArticulo} - {item.nombre}</p>
+                                                    <p className="text-sm md:text-base font-bold uppercase theme-text-main">{item.codArticulo} - {item.nombre}</p>
                                                     <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
                                                         <span className="text-sm bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
                                                         {item.transferenciaPendiente?.isPartial && (
@@ -228,28 +228,28 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                         <div className="theme-bg-card/50 dark:theme-bg-card/5 p-4 rounded-xl border theme-border shadow-sm">
                                             {selectedItems.length > 1 && (
                                             <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 p-3 rounded-xl mb-4">
-                                                <h3 className="font-black theme-text-primary uppercase flex items-center gap-2">
+                                                <h3 className="font-black theme-text-main uppercase flex items-center gap-2">
                                                     <CheckCircle size={16} /> Acción Masiva
                                                 </h3>
-                                                <p className="text-sm font-bold theme-text-primary mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
+                                                <p className="text-sm font-bold theme-text-main mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
                                             </div>
                                         )}
                                         <h3 className="font-black text-sm theme-text-muted uppercase mb-2">Datos de Envío</h3>
-                                            <p className="text-sm font-bold uppercase"><span className="theme-text-primary">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
+                                            <p className="text-sm font-bold uppercase"><span className="theme-text-main">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.nota && (
                                                 <div className="mt-2 p-3 bg-black/5 rounded-lg">
                                                     <p className="text-sm italic theme-text-main dark:theme-text-muted">"{selectedItems[0].transferenciaPendiente?.nota}"</p>
                                                 </div>
                                             )}
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.fotoEntrega && (
-                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-main text-sm font-bold flex items-center gap-1 hover:underline">
                                                     <ImageIcon size={14} /> Ver Foto de Evidencia de Envío
                                                 </button>
                                             )}
                                         </div>
 
                                         <div className="space-y-4">
-                                            <h3 className="font-black text-sm theme-text-primary uppercase">Inspección de Recibido</h3>
+                                            <h3 className="font-black text-sm theme-text-main uppercase">Inspección de Recibido</h3>
                                             
                                             <div>
                                                 <label className="block text-sm font-bold theme-text-muted mb-1">RECIBIDO POR (SU NOMBRE):</label>
@@ -268,7 +268,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 </div>
                                             )}
 
-                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:theme-bg-card/5 theme-text-primary py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
+                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:theme-bg-card/5 theme-text-main py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
                                                 <Camera size={16} /> Adjuntar Foto
                                             </button>
 

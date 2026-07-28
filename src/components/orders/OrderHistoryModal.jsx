@@ -190,14 +190,14 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 {/* Cabecera */}
                 <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex justify-between items-start relative shrink-0">
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-black theme-text-primary uppercase tracking-tight flex items-center gap-2">
+                        <h2 className="text-2xl md:text-3xl font-black theme-text-main uppercase tracking-tight flex items-center gap-2">
                             <History size="1em" /> Trazabilidad por Secciones
                         </h2>
                         <p className="text-sm font-bold theme-text-muted mt-1 flex items-center gap-2">
                             PEDIDO #{order.pedidoNum} | ART: {order.codArticulo}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-primary shrink-0">
+                    <button onClick={onClose} className="p-2 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-main shrink-0">
                         <X size={"1.5em"} />
                     </button>
                 </div>
@@ -210,11 +210,11 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Área Actual</span>
-                        <span className="text-sm md:text-base font-black theme-text-primary flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
+                        <span className="text-sm md:text-base font-black theme-text-main flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Estado Interno</span>
-                        <span className="text-sm md:text-base font-black theme-text-primary flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
+                        <span className="text-sm md:text-base font-black theme-text-main flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Tiempo Restante</span>
@@ -254,7 +254,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
                                                 <div>
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <h3 className="font-black text-sm md:text-base uppercase tracking-tight theme-text-primary flex items-center gap-2">
+                                                        <h3 className="font-black text-sm md:text-base uppercase tracking-tight theme-text-main flex items-center gap-2">
                                                             {phase.area}
                                                         </h3>
                                                         {phase.events.some(e => e.isPartial) && (
@@ -274,7 +274,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                     <span className="text-sm md:text-base font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg w-fit md:w-auto">
                                                         TIEMPO EN ÁREA
                                                     </span>
-                                                    <span className="text-sm md:text-base font-black theme-text-primary mt-1">
+                                                    <span className="text-sm md:text-base font-black theme-text-main mt-1">
                                                         {timeStr}
                                                     </span>
                                                 </div>
@@ -322,7 +322,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                                         <span>AUTOR: {ev.supervisor}</span>
                                                                         {ev.operario && <span>OPERARIO: {ev.operario}</span>}
                                                                         {ev.foto && (
-                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="theme-text-primary hover:underline flex items-center gap-1">
+                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="theme-text-main hover:underline flex items-center gap-1">
                                                                                 <ImageIcon size="1.2em" /> FOTO / ACTA
                                                                             </button>
                                                                         )}

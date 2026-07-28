@@ -187,7 +187,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                         <img src="/logo.png" alt="CDI Logo" className="w-full h-full object-contain" />
                     </div>
                     <div>
-                        <h1 className="text-xl md:text-2xl font-bold theme-text-primary tracking-widest uppercase flex items-center gap-2">
+                        <h1 className="text-xl md:text-2xl font-bold theme-text-main tracking-widest uppercase flex items-center gap-2">
                             <PlaneTakeoff size="1em" /> Monitor de Planta
                         </h1>
                         <div className="flex items-center gap-4 mt-1">
@@ -232,7 +232,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 {/* Lado Derecho: Reloj y Botón Salir */}
                 <div className="flex items-center gap-6">
                     <div className="text-right flex flex-col items-end">
-                        <span className="text-sm md:text-base theme-text-primary font-bold uppercase tracking-widest">
+                        <span className="text-sm md:text-base theme-text-main font-bold uppercase tracking-widest">
                             {currentTime.toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit', month: 'short' }).replace('.','')}
                         </span>
                         <span className="text-3xl md:text-5xl font-black theme-text-main tracking-tighter tabular-nums drop-shadow-sm">

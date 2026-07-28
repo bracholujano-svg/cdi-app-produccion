@@ -129,7 +129,7 @@ const OrderCard = ({ group }) => {
 
           return (
             <div className="mt-2 flex flex-col gap-1 w-full overflow-hidden">
-              <div className="flex justify-between items-center text-sm md:text-base font-black uppercase theme-text-primary opacity-70 gap-1 w-full">
+              <div className="flex justify-between items-center text-sm md:text-base font-black uppercase theme-text-main opacity-70 gap-1 w-full">
                 <span className="flex items-center gap-1 truncate"><Activity size={10} className="shrink-0" /> Avance</span>
                 <span className="shrink-0 whitespace-nowrap">{processedUnits} / {totalUnits} ({progressPercent}%)</span>
               </div>

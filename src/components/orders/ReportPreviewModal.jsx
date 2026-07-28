@@ -86,7 +86,7 @@ const ReportPreviewModal = () => {
                 Object.entries(groupedData).map(([area, items]) => (
                     <div key={area} className="break-inside-avoid">
                         <h3 className="text-xl font-black uppercase text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-l-4 border-[var(--color-primary)] pl-3">
-                            <MapPin className="theme-text-primary" /> ÁREA: {area} <span className="text-sm bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500">{items.length} EVENTOS</span>
+                            <MapPin className="theme-text-main" /> ÁREA: {area} <span className="text-sm bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500">{items.length} EVENTOS</span>
                         </h3>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

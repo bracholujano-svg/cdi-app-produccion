@@ -28,15 +28,15 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
         <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-[90vw] rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col max-h-[90vh]">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-3"><Megaphone size={20} className="theme-text-primary" /><h2 className="text-lg font-black uppercase theme-text-primary">Coordinación Logística</h2></div>
-                <button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl theme-text-primary">✕</button>
+                <div className="flex items-center gap-3"><Megaphone size={20} className="theme-text-main" /><h2 className="text-lg font-black uppercase theme-text-main">Coordinación Logística</h2></div>
+                <button type="button" onClick={() => setShowCoordinationModal(false)} className="p-2 bg-black/10 rounded-xl theme-text-main">✕</button>
             </div>
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
               <div className="theme-bg-main p-5 rounded-2xl border theme-border">
-                <h3 className="text-base lg:text-lg font-black theme-text-primary uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
+                <h3 className="text-base lg:text-lg font-black theme-text-main uppercase tracking-widest mb-4">Agregar Pedido a Alertas</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-primary/40" />
+                  <input value={inputManualPedido} onChange={e=>setInputManualPedido(e.target.value)} placeholder="Nº PEDIDO" className="p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-main/40" />
                   
                   <div className="relative" ref={dropdownRef}>
                     <input 
@@ -47,14 +47,14 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
                       }} 
                       onFocus={() => setShowDropdown(true)}
                       placeholder="CLIENTE / MARCA" 
-                      className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-primary/40" 
+                      className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-main/40" 
                     />
                     {showDropdown && filteredClients.length > 0 && (
                         <ul className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border theme-border rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
                             {filteredClients.map(cliente => (
                                 <li 
                                     key={cliente} 
-                                    className="p-3 hover:bg-[var(--color-primary)]/10 cursor-pointer font-bold text-base lg:text-lg theme-text-primary border-b theme-border last:border-b-0 uppercase"
+                                    className="p-3 hover:bg-[var(--color-primary)]/10 cursor-pointer font-bold text-base lg:text-lg theme-text-main border-b theme-border last:border-b-0 uppercase"
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         setInputManualCliente(cliente);
@@ -68,17 +68,17 @@ const CoordinationModal = ({ addItemToCoordList, saveBatchCoordination }) => {
                     )}
                   </div>
 
-                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary" />
-                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-primary/40" /></div>
+                  <input type="date" value={inputManualFecha} onChange={e=>setInputManualFecha(e.target.value)} className="p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-main" />
+                  <div className="md:col-span-2"><input value={inputManualDetalle} onChange={e=>setInputManualDetalle(e.target.value)} placeholder="OBSERVACIÓN (Opcional)" className="w-full p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase theme-text-primary placeholder:theme-text-main/40" /></div>
                   <button type="button" onClick={addItemToCoordList} className="bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-base lg:text-lg rounded-xl py-3 border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95">Añadir a Lista</button>
                 </div>
               </div>
               {coordList.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-base lg:text-lg font-black theme-text-primary uppercase tracking-widest">Lista Pendiente por Guardar</h3>
+                  <h3 className="text-base lg:text-lg font-black theme-text-main uppercase tracking-widest">Lista Pendiente por Guardar</h3>
                   {coordList.map(item => (
                     <div key={item.id} className="flex justify-between items-center theme-bg-main p-3.5 rounded-xl border theme-border">
-                      <div><span className="font-black uppercase text-base lg:text-lg block theme-text-primary">{item.pedidoNum} - {item.cliente}</span><span className="text-base theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
+                      <div><span className="font-black uppercase text-base lg:text-lg block theme-text-main">{item.pedidoNum} - {item.cliente}</span><span className="text-base theme-text-muted font-bold">Entrega: {item.fechaEntrega}</span></div>
                       <button type="button" onClick={() => setCoordList(coordList.filter(i => i.id !== item.id))} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={"1.2em"}/></button>
                     </div>
                   ))}

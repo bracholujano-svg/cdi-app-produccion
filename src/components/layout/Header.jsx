@@ -73,7 +73,7 @@ const Header = () => {
 
             {/* PERFIL */}
             <div className="hidden md:flex flex-col text-left pl-4 ml-2 border-l-2 theme-border shrink-0">
-              <span className="text-sm font-black theme-text-primary uppercase leading-none">{supervisorProfile?.name}</span>
+              <span className="text-sm font-black theme-text-main uppercase leading-none">{supervisorProfile?.name}</span>
               <span className="text-sm font-bold theme-text-muted uppercase mt-1">{supervisorProfile?.area}</span>
             </div>
           </div>
