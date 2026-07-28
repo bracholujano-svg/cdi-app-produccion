@@ -79,7 +79,7 @@ const Header = () => {
           </div>
           
           {/* CENTRO: BOTONES DE FILTRO */}
-          <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar max-w-[50vw]">
+          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar max-w-[50vw]">
              <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm' : 'theme-text-muted hover:theme-text-primary'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
@@ -106,7 +106,7 @@ const Header = () => {
              >
                 {/* Bola Deslizable */}
                 <div 
-                  className={`absolute w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
+                  className={`absolute w-5 h-5 theme-bg-card rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
                 >
                   {isDarkMode ? <Moon size={12} color="white" /> : <Sun size={12} color="#f59e0b" />}
                 </div>

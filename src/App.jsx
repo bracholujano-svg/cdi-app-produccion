@@ -1294,7 +1294,7 @@ const {
                                       faltantes.map((mat, i) => (
                                           <div key={'f'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-orange-200 bg-orange-50">
                                               <div className="flex justify-between items-start">
-                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 bg-white border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
+                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 theme-bg-card border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
                                                   {mat.sinOC && <span className="text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
                                               </div>
                                               <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
@@ -1318,7 +1318,7 @@ const {
                                       disponibles.map((mat, i) => (
                                           <div key={'d'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-green-200 bg-green-50">
                                               <div className="flex justify-between items-start">
-                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 bg-white border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
+                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 theme-bg-card border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
                                               </div>
                                               <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                                               <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mt-2 border-t pt-3 border-green-200">

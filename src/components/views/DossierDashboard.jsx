@@ -38,7 +38,7 @@ const HistorialView = React.memo(({ targetProducts }) => (
                   {new Date(h.fecha).toLocaleString()}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm font-bold uppercase bg-black/10 dark:bg-white/10 p-2 rounded-xl">
+              <div className="grid grid-cols-2 gap-2 text-sm font-bold uppercase bg-black/10 dark:theme-bg-card/10 p-2 rounded-xl">
                 <div><span className="text-sm theme-text-muted block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
                 <div><span className="text-sm theme-text-muted block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
               </div>
@@ -101,10 +101,10 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <div className="h-4 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
+                        <div className="h-4 w-full bg-black/10 dark:theme-bg-card/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
                           <div className="h-full bg-[var(--color-primary)] rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.max(currentWidth, 2)}%` }}></div>
                         </div>
-                        <div className="h-4 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
+                        <div className="h-4 w-full bg-black/10 dark:theme-bg-card/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
                           <div className="h-full bg-gray-500 rounded-full transition-all duration-500 shadow-sm opacity-60" style={{ width: `${Math.max(avgWidth, 2)}%` }}></div>
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export default function DossierDashboard() {
           <button 
             type="button" 
             onClick={() => setShowDossierModal(false)}
-            className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors theme-text-primary"
+            className="p-3 bg-black/5 dark:theme-bg-card/5 rounded-2xl hover:bg-black/10 dark:hover:bg-[var(--color-surface)]/10 transition-colors theme-text-primary"
           >
             <X size={24} />
           </button>
@@ -398,7 +398,7 @@ export default function DossierDashboard() {
                   >
                     <div className="flex justify-between items-start mb-1.5">
                       <h3 className="font-black text-base md:text-lg uppercase">#{g.pedidoNum}</h3>
-                      <span className="text-sm font-black px-2 py-0.5 bg-black/10 dark:bg-white/10 rounded-full">
+                      <span className="text-sm font-black px-2 py-0.5 bg-black/10 dark:theme-bg-card/10 rounded-full">
                         {g.products.length} PRODS
                       </span>
                     </div>

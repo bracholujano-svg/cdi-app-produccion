@@ -141,8 +141,8 @@ const BulkOrderDetailsModal = ({
                             <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:theme-text-primary'}`}>
                               {isTerminadoLocal ? '✅ MARCADO COMO TERMINADO' : 'MARCAR COMO TERMINADO'}
                             </span>
-                            <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-white/10'}`}>
-                              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${isTerminadoLocal ? 'translate-x-7' : 'translate-x-0'}`} />
+                            <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-[var(--color-surface)]/10'}`}>
+                              <div className={`w-5 h-5 rounded-full bg-[var(--color-surface)] transition-transform ${isTerminadoLocal ? 'translate-x-7' : 'translate-x-0'}`} />
                             </div>
                             <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
                           </label>
@@ -237,7 +237,7 @@ const BulkOrderDetailsModal = ({
                                               <React.Fragment key={a}>
                                                 <button type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                                 {a === "Diseño" && isSelected && isGerente && (
@@ -294,7 +294,7 @@ const BulkOrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
@@ -316,7 +316,7 @@ const BulkOrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
@@ -338,7 +338,7 @@ const BulkOrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )

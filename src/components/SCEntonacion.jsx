@@ -365,7 +365,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 value={gramosInput}
                 onChange={e => setGramosInput(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-sm"
+                className="w-full theme-bg-card dark:bg-slate-900 border border-slate-300 text-slate-800 dark:text-white text-lg font-black px-4 py-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-colors shadow-sm"
                 onKeyDown={e => e.key === 'Enter' && agregarGramos()}
               />
             </div>
@@ -382,7 +382,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
           
           {isScannerOpen && (
             <div className="mt-6 p-6 border-4 border-dashed border-blue-300 rounded-[2rem] bg-blue-50/50 relative ">
-              <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm"><X size={24}/></button>
+              <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 theme-bg-card dark:bg-slate-900 p-2 rounded-full shadow-sm"><X size={24}/></button>
               <div id="reader" className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-blue-200 bg-black"></div>
               <p className="text-center text-sm font-black text-blue-800 uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
                 <Camera size={18}/> Apunta el código de barras de la lata
@@ -449,7 +449,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                           value={gramosExtra[f.id_referencia] || ''}
                           onChange={(e) => setGramosExtra(prev => ({ ...prev, [f.id_referencia]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && sumarGramosFila(f.id_referencia)}
-                          className="w-16 px-2 py-1.5 text-sm font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-16 px-2 py-1.5 text-sm font-bold text-slate-800 dark:text-white theme-bg-card dark:bg-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button 
                           onClick={() => sumarGramosFila(f.id_referencia)} 

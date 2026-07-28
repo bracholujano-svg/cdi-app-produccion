@@ -133,7 +133,7 @@ const OrderCard = ({ group }) => {
                 <span className="flex items-center gap-1 truncate"><Activity size={10} className="shrink-0" /> Avance</span>
                 <span className="shrink-0 whitespace-nowrap">{processedUnits} / {totalUnits} ({progressPercent}%)</span>
               </div>
-              <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-black/10 dark:theme-bg-card/10 rounded-full overflow-hidden">
                 <div 
                   className={`h-full rounded-full transition-colors duration-1000 ${progressPercent === 100 ? 'bg-green-500' : 'bg-[var(--color-primary)]'}`} 
                   style={{ width: `${progressPercent}%` }}

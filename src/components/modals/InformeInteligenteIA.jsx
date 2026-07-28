@@ -192,7 +192,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
             {/* Controles de Exportación */}
-            <div className="flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex-wrap gap-4">
+            <div className="flex justify-between items-center theme-bg-card p-5 rounded-3xl shadow-sm border border-gray-100 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-[var(--color-primary)] rounded-xl flex items-center justify-center text-slate-900">
                         <BrainCircuit size={24} />
@@ -213,7 +213,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
             </div>
 
             {/* Contenedor del PDF */}
-            <div id="informe-pdf-content" className="bg-white p-6 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-10">
+            <div id="informe-pdf-content" className="theme-bg-card p-6 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-10">
                 
                 {/* Header del Reporte */}
                 <div className="border-b-2 border-gray-100 pb-6 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
@@ -293,7 +293,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                             <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-yellow-400 pb-2 inline-flex mb-6"><AlertTriangle size={24} className="text-yellow-500"/> Calidad Crítica Agrupada</h3>
                             <div className="space-y-3">
                                 {topQualityIssues.length > 0 ? topQualityIssues.map((grupo, idx) => (
-                                    <div key={idx} className="bg-white p-4 rounded-2xl border-l-4 border-yellow-400 shadow-sm text-sm hover:shadow-md cursor-pointer hover:bg-yellow-50 transition-colors relative group">
+                                    <div key={idx} className="theme-bg-card p-4 rounded-2xl border-l-4 border-yellow-400 shadow-sm text-sm hover:shadow-md cursor-pointer hover:bg-yellow-50 transition-colors relative group">
                                         <div className="hide-on-pdf absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-yellow-100 p-1.5 rounded-lg text-yellow-800">
                                             <Search size={16} />
                                         </div>

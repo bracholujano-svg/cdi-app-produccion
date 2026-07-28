@@ -183,7 +183,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 
                 {/* Lado Izquierdo: Título y Área */}
                 <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center transition-transform hover:scale-105 duration-500 bg-white rounded-2xl p-2 shadow-lg">
+                    <div className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center transition-transform hover:scale-105 duration-500 theme-bg-card rounded-2xl p-2 shadow-lg">
                         <img src="/logo.png" alt="CDI Logo" className="w-full h-full object-contain" />
                     </div>
                     <div>
@@ -213,14 +213,14 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                         <span className="text-sm md:text-base theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><Package size="1em"/> En Cola</span>
                         <span className="text-2xl md:text-3xl font-black theme-text-main">{metrics.total}</span>
                     </div>
-                    <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+                    <div className="w-px h-10 bg-black/10 dark:bg-[var(--color-surface)]/10"></div>
                     <div className="flex flex-col items-center">
                         <span className="text-sm md:text-base text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.entrega >= 80 ? 'text-emerald-500' : metrics.entrega >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {metrics.entrega}%
                         </span>
                     </div>
-                    <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
+                    <div className="w-px h-10 bg-black/10 dark:bg-[var(--color-surface)]/10"></div>
                     <div className="flex flex-col items-center">
                         <span className="text-sm md:text-base text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.calidad >= 90 ? 'text-blue-500' : metrics.calidad >= 70 ? 'text-yellow-500' : 'text-red-500'}`}>
@@ -277,7 +277,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                             const isYellow = o.trafficColor === 'yellow';
                             const isGreen = o.trafficColor === 'green';
 
-                            let rowBgClass = 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10';
+                            let rowBgClass = 'bg-black/5 dark:bg-[var(--color-surface)]/5 hover:bg-black/10 dark:hover:bg-[var(--color-surface)]/10';
                             let textClass = 'theme-text-main';
                             let accentClass = 'theme-text-muted';
                             
@@ -306,7 +306,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                               isYellow ? 'bg-yellow-500' : 
                                               'bg-emerald-500'}
                                         `}>
-                                            <div className="w-2 h-2 bg-white/50 rounded-full absolute top-1 md:top-2 left-1 md:left-2"></div>
+                                            <div className="w-2 h-2 theme-bg-card/50 rounded-full absolute top-1 md:top-2 left-1 md:left-2"></div>
                                         </div>
                                     </div>
 
@@ -373,7 +373,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                         
                         {/* Rellenar con filas vacías para mantener la simetría */}
                         {Array.from({ length: ITEMS_PER_PAGE - currentItems.length }).map((_, idx) => (
-                            <div key={`empty-${idx}`} className="flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b theme-border bg-black/5 dark:bg-white/5 opacity-50">
+                            <div key={`empty-${idx}`} className="flex-1 grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 border-b theme-border bg-black/5 dark:bg-[var(--color-surface)]/5 opacity-50">
                                 {/* Las celdas vacías mantienen la estructura del grid pero sin contenido */}
                                 <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
                             </div>
@@ -388,7 +388,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
             {totalPages > 1 && (
                 <div className="theme-bg-card p-2 flex justify-center items-center gap-2 border-t theme-border shrink-0">
                     {Array.from({ length: totalPages }).map((_, i) => (
-                        <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === currentPage ? 'w-12 bg-[var(--color-primary)]' : 'w-3 bg-black/20 dark:bg-white/20'}`}></div>
+                        <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === currentPage ? 'w-12 bg-[var(--color-primary)]' : 'w-3 bg-black/20 dark:bg-[var(--color-surface)]/20'}`}></div>
                     ))}
                     <span className="absolute right-4 text-sm font-black theme-text-muted uppercase tracking-widest">
                         Página {currentPage + 1} de {totalPages}

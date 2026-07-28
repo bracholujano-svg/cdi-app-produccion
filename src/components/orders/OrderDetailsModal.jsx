@@ -179,8 +179,8 @@ const OrderDetailsModal = ({
                                 <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:theme-text-primary'}`}>
                                   {isTerminadoLocal ? '✅ MARCADO COMO TERMINADO' : 'MARCAR COMO TERMINADO'}
                                 </span>
-                                <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-white/10'}`}>
-                                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${isTerminadoLocal ? 'translate-x-7' : 'translate-x-0'}`} />
+                                <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-[var(--color-surface)]/10'}`}>
+                                  <div className={`w-5 h-5 rounded-full bg-[var(--color-surface)] transition-transform ${isTerminadoLocal ? 'translate-x-7' : 'translate-x-0'}`} />
                                 </div>
                                 <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
                               </label>
@@ -204,7 +204,7 @@ const OrderDetailsModal = ({
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className="text-base lg:text-lg font-black theme-text-primary uppercase">{n.actividad}</span><span className="text-base text-sm font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-base lg:text-lg italic theme-text-muted my-1">"{n.nota}"</p>
                                     {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-base font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-primary">OP: {n.operario}</span><span className="text-base text-sm font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-primary">OP: {n.operario}</span><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -267,7 +267,7 @@ const OrderDetailsModal = ({
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-base lg:text-lg font-black uppercase ${n.estado==='APROBADO' ? 'text-green-800 dark:text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-800 dark:text-yellow-500' : 'text-red-800 dark:text-red-500'}`}>{n.estado}</span><span className="text-base text-sm font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-base lg:text-lg italic theme-text-muted my-1">"{n.observacion}"</p>
                                     {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-base font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
-                                    <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-primary">INSP: {n.inspector}</span><span className="text-base text-sm font-bold text-gray-500 uppercase">SUP: {n.supervisor}</span></div>
+                                    <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-primary">INSP: {n.inspector}</span><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -353,7 +353,7 @@ const OrderDetailsModal = ({
                                               <React.Fragment key={a}>
                                                 <button type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                                 {a === "Diseño" && isSelected && isGerente && (
@@ -410,7 +410,7 @@ const OrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
@@ -432,7 +432,7 @@ const OrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
@@ -454,7 +454,7 @@ const OrderDetailsModal = ({
                                             return (
                                                 <button key={a} type="button" disabled={isDisabled}
                                                     onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
+                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
                                                     {isSelected ? `✓ ${a}` : a}
                                                 </button>
                                             )
@@ -512,7 +512,7 @@ const OrderDetailsModal = ({
                                     <div className="grid grid-cols-2 gap-2 text-base font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-base md:text-sm lg:text-sm md:text-base lg:text-lg lg:text-sm theme-text-primary block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-base md:text-sm lg:text-sm md:text-base lg:text-lg lg:text-sm theme-text-primary block uppercase">RECIBE</span>{h.recibe}</div></div>
                                     {h.nota && <p className="text-base italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
                                     {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-base font-black theme-text-primary flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
-                                    <div className="flex justify-end items-end mt-2"><span className="text-base text-sm font-bold text-gray-500 uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
+                                    <div className="flex justify-end items-end mt-2"><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -586,7 +586,7 @@ const OrderDetailsModal = ({
                                         <button 
                                             type="button" 
                                             onClick={() => setExpandedResumenArea(isExpanded ? null : areaName)}
-                                            className="w-full p-3 flex flex-wrap items-center justify-between gap-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors"
+                                            className="w-full p-3 flex flex-wrap items-center justify-between gap-2 bg-black/5 dark:bg-[var(--color-surface)]/5 hover:bg-black/10 transition-colors"
                                         >
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <span className="text-sm md:text-base font-black uppercase theme-text-primary">{areaName}</span>

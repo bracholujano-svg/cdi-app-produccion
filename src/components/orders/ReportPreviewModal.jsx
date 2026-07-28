@@ -28,11 +28,11 @@ const ReportPreviewModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-100 dark:bg-slate-900 z-[130] flex flex-col overflow-y-auto print:bg-white text-slate-800 dark:text-slate-200">
+    <div className="fixed inset-0 bg-slate-100 dark:bg-slate-900 z-[130] flex flex-col overflow-y-auto print:bg-[var(--color-surface)] text-slate-800 dark:text-slate-200">
       <div className="w-full max-w-[95vw] mx-auto p-4 md:p-8">
         
         {/* ENCABEZADO ACCIONES */}
-        <div className="flex justify-between items-center mb-6 print:hidden bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex justify-between items-center mb-6 print:hidden theme-bg-card dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
           <h2 className="text-lg md:text-xl font-black uppercase text-slate-800 dark:text-white flex items-center gap-2">
             <Package /> Vista Previa del Reporte
           </h2>
@@ -47,7 +47,7 @@ const ReportPreviewModal = () => {
         </div>
 
         {/* CONTENIDO DEL REPORTE */}
-        <div className="bg-white dark:bg-slate-800 rounded-[2rem] print:rounded-none shadow-xl print:shadow-none border border-slate-200 dark:border-slate-700 print:border-0 p-6 md:p-10">
+        <div className="theme-bg-card dark:bg-slate-800 rounded-[2rem] print:rounded-none shadow-xl print:shadow-none border border-slate-200 dark:border-slate-700 print:border-0 p-6 md:p-10">
           
           {/* ENCABEZADO INFO */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 border-slate-200 dark:border-slate-700 pb-6 mb-8 gap-4">
@@ -98,7 +98,7 @@ const ReportPreviewModal = () => {
                                                 {getIconForType(item.type, item.status)}
                                                 <span className="text-sm font-black uppercase tracking-wider">{item.type}</span>
                                             </div>
-                                            <span className="text-sm font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                                            <span className="text-sm font-bold theme-bg-card dark:bg-slate-800 px-2 py-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-1">
                                                 <Clock size={12} /> {item.time.substring(0, 5)}
                                             </span>
                                         </div>
@@ -112,7 +112,7 @@ const ReportPreviewModal = () => {
                                             </div>
                                         </div>
 
-                                        <div className="bg-white/60 dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5 mb-3">
+                                        <div className="theme-bg-card/60 dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5 mb-3">
                                             <p className="text-sm font-bold text-slate-500 uppercase mb-1">Detalle / Acción</p>
                                             <p className="text-sm font-medium italic">{item.detail}</p>
                                         </div>
@@ -124,7 +124,7 @@ const ReportPreviewModal = () => {
                                             <p className="text-sm font-black uppercase text-slate-700 dark:text-slate-300">{item.person}</p>
                                         </div>
                                         <div>
-                                            <span className="text-sm font-black uppercase px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">{item.status}</span>
+                                            <span className="text-sm font-black uppercase px-2 py-1 rounded-md theme-bg-card dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">{item.status}</span>
                                         </div>
                                     </div>
                                 </div>

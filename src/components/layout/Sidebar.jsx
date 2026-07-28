@@ -75,12 +75,12 @@ const Sidebar = () => {
             <button type="button" onClick={() => { setIsSidebarOpen(false); setShowTVMonitor(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-sm md:text-base uppercase shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 hover:-translate-y-1">
               <Monitor size={"2em"} /><span className="text-center leading-tight">Monitor TV</span>
             </button>
-            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDossierModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-sm md:text-base uppercase shadow-lg text-purple-600 dark:text-purple-400 border border-purple-500/30 transition-colors duration-200 hover:text-white hover:bg-purple-600 hover:border-purple-600 hover:-translate-y-1">
+            <button type="button" onClick={() => { setIsSidebarOpen(false); setShowDossierModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-sm md:text-base uppercase shadow-lg text-purple-600 dark:text-purple-600 dark:text-purple-400 border border-purple-500/30 transition-colors duration-200 hover:text-white hover:bg-purple-600 hover:border-purple-600 hover:-translate-y-1">
               <Activity size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Dossier</span>
             </button>
             
             <div className="w-full flex flex-col gap-2 relative group" ref={themeDropdownRef}>
-              <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className={`bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-sm md:text-base uppercase shadow-lg text-pink-600 dark:text-pink-400 border transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1 ${isThemeOpen ? 'bg-pink-600/20 border-pink-500' : 'border-pink-500/30'}`}>
+              <button type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className={`bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-2 font-black text-sm md:text-base uppercase shadow-lg text-pink-600 dark:text-pink-600 dark:text-pink-400 border transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1 ${isThemeOpen ? 'bg-pink-600/20 border-pink-500' : 'border-pink-500/30'}`}>
                 <Palette size={"2em"} strokeWidth={2} /><span className="text-center leading-tight">Temas</span>
               </button>
               {isThemeOpen && (

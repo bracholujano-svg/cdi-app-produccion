@@ -35,8 +35,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                         <p className="text-base lg:text-lg font-black uppercase theme-text-primary tracking-widest">Puente Ribisoft (Autocompletar)</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase placeholder:text-black/30" />
-                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 bg-white text-black rounded-xl font-black text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchPedido} onChange={e=>setExcelSearchPedido(e.target.value)} placeholder="Nº PEDIDO" className="flex-1 p-3.5 theme-bg-card text-black rounded-xl font-black text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase placeholder:text-black/30" />
+                        <input value={excelSearchArticulo} onChange={e=>setExcelSearchArticulo(e.target.value)} placeholder="ÚLT. DÍGITOS ARTÍCULO" className="flex-1 p-3.5 theme-bg-card text-black rounded-xl font-black text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase placeholder:text-black/30" />
                         <button type="button" onClick={doExcelSearch} disabled={excelSearchLoading} className="bg-[var(--color-primary)] text-[var(--color-surface)] px-6 py-3.5 rounded-xl font-black text-base lg:text-lg uppercase shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95 disabled:opacity-50 shrink-0">
                             {excelSearchLoading ? '...' : 'BUSCAR'}
                         </button>

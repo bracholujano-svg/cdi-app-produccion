@@ -362,7 +362,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <button 
                                         key={tab} 
                                         onClick={() => setDashboardTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] theme-text-primary' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] theme-text-primary' : 'border-transparent theme-text-muted hover:theme-text-main'}`}
                                     >
                                         {tab}
                                     </button>
@@ -371,7 +371,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             <div className="flex items-center gap-2 ml-4 shrink-0 theme-bg-card p-2 rounded-xl border theme-border">
                                 <Calendar size={16} className="theme-text-muted" />
                                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-sm font-bold theme-text-muted bg-transparent outline-none" title="Desde" />
-                                <span className="text-gray-300">-</span>
+                                <span className="theme-text-muted">-</span>
                                 <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-sm font-bold theme-text-muted bg-transparent outline-none" title="Hasta" />
                             </div>
                             <div className="flex items-center shrink-0 ml-4">
@@ -380,7 +380,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     className={`relative w-14 h-7 flex items-center bg-black/10 dark:bg-black/30 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner ${isDarkMode ? 'border border-blue-500/30' : 'border border-black/10'}`}
                                 >
                                     <div 
-                                        className={`absolute w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
+                                        className={`absolute w-5 h-5 theme-bg-card rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
                                     >
                                         {isDarkMode ? <Moon size={12} color="white" /> : <Sun size={12} color="#f59e0b" />}
                                     </div>
@@ -697,10 +697,10 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 return (
                                                     <div key={idx} className="p-4 rounded-2xl border-l-4 shadow-sm" style={{ borderColor: borderColor, backgroundColor: bgColor }}>
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <h4 className="font-bold text-base lg:text-lg text-gray-800 uppercase">{sec.nombre}</h4>
+                                                            <h4 className="font-bold text-base lg:text-lg theme-text-main uppercase">{sec.nombre}</h4>
                                                             <span className="font-black text-base lg:text-lg" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
                                                         </div>
-                                                        <p className="text-base lg:text-lg text-gray-600 mt-2 font-medium">
+                                                        <p className="text-base lg:text-lg theme-text-main mt-2 font-medium">
                                                             {sec.causas.length > 0 ? `🔹 Top fallos: ${sec.causas.join(', ')}` : "🔹 Sin descripciones registradas."}
                                                         </p>
                                                     </div>
