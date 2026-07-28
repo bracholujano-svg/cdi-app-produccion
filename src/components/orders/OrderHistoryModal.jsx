@@ -205,19 +205,19 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 {/* Resumen Superior */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-black/5 border-b border-[var(--color-border)] shrink-0">
                     <div className="flex flex-col">
-                        <span className="text-[10px] md:text-sm font-bold theme-text-muted uppercase">Cliente</span>
+                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Cliente</span>
                         <span className="text-sm md:text-base font-black theme-text-main truncate">{order.cliente || 'S/N'}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] md:text-sm font-bold theme-text-muted uppercase">Área Actual</span>
+                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Área Actual</span>
                         <span className="text-sm md:text-base font-black theme-text-primary flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] md:text-sm font-bold theme-text-muted uppercase">Estado Interno</span>
+                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Estado Interno</span>
                         <span className="text-sm md:text-base font-black theme-text-primary flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] md:text-sm font-bold theme-text-muted uppercase">Tiempo Restante</span>
+                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Tiempo Restante</span>
                         <span className={`text-sm md:text-base font-black flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-emerald-500'}`}>
                             <Calendar size="1em"/> {daysLeft !== null ? (isOverdue ? `ATRASADO ${Math.abs(daysLeft)} DÍAS` : `${daysLeft} DÍAS`) : 'S/F'}
                         </span>
@@ -258,20 +258,20 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                             {phase.area}
                                                         </h3>
                                                         {phase.events.some(e => e.isPartial) && (
-                                                            <span className="bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/30 px-2 py-0.5 rounded text-[10px] md:text-sm font-black uppercase flex items-center gap-1 shadow-sm">
+                                                            <span className="bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/30 px-2 py-0.5 rounded text-sm md:text-base font-black uppercase flex items-center gap-1 shadow-sm">
                                                                 <Package size="1.2em" /> Lote Parcial
                                                             </span>
                                                         )}
                                                     </div>
                                                     {phase.asignado && (
-                                                        <div className="mt-2 flex items-center gap-1 text-[11px] md:text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                                                        <div className="mt-2 flex items-center gap-1 text-sm md:text-base font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <User size="1.2em" /> ASIGNADO A: {phase.asignado}
                                                         </div>
                                                     )}
                                                 </div>
                                                 
                                                 <div className="text-left md:text-right flex flex-col md:items-end">
-                                                    <span className="text-[10px] md:text-sm font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg w-fit md:w-auto">
+                                                    <span className="text-sm md:text-base font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg w-fit md:w-auto">
                                                         TIEMPO EN ÁREA
                                                     </span>
                                                     <span className="text-sm md:text-base font-black theme-text-primary mt-1">
@@ -280,7 +280,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] md:text-sm font-bold theme-text-muted bg-black/5 p-3 rounded-xl border border-[var(--color-border)]">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base font-bold theme-text-muted bg-black/5 p-3 rounded-xl border border-[var(--color-border)]">
                                                 <div className="flex items-center gap-2">
                                                     <Calendar size="1.5em" className="text-blue-500 shrink-0"/> 
                                                     <div>
@@ -302,7 +302,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                             {/* Detalles y Actividades Ocultos (Colapsable) */}
                                             {phase.events.length > 0 && (
                                                 <details className="mt-4 group cursor-pointer">
-                                                    <summary className="text-[10px] md:text-sm font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 w-fit outline-none select-none">
+                                                    <summary className="text-sm md:text-base font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 w-fit outline-none select-none">
                                                         <ChevronDown size="1.2em" className="group-open:rotate-180 transition-transform"/>
                                                         VER {phase.events.length} EVENTO(S) DE ACTIVIDAD
                                                     </summary>
@@ -310,7 +310,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                         {phase.events.map(ev => {
                                                             const SmallIcon = ev.icon;
                                                             return (
-                                                                <div key={ev.id} className="text-[10px] md:text-sm theme-text-main bg-[var(--color-base)] p-3 rounded-lg border border-[var(--color-border)] flex flex-col gap-1">
+                                                                <div key={ev.id} className="text-sm md:text-base theme-text-main bg-[var(--color-base)] p-3 rounded-lg border border-[var(--color-border)] flex flex-col gap-1">
                                                                     <div className="flex justify-between items-start gap-4">
                                                                         <span className={`font-black uppercase flex items-center gap-1 ${ev.textColor}`}>
                                                                             <SmallIcon size="1.2em"/> {ev.title}
@@ -318,7 +318,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                                         <span className="font-bold opacity-70 text-right shrink-0">{ev.fecha.toLocaleString()}</span>
                                                                     </div>
                                                                     <p className="italic font-bold theme-text-muted mt-1">"{ev.desc}"</p>
-                                                                    <div className="flex flex-wrap items-center gap-3 font-black opacity-70 text-[9px] uppercase mt-2">
+                                                                    <div className="flex flex-wrap items-center gap-3 font-black opacity-70 text-sm uppercase mt-2">
                                                                         <span>AUTOR: {ev.supervisor}</span>
                                                                         {ev.operario && <span>OPERARIO: {ev.operario}</span>}
                                                                         {ev.foto && (

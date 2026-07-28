@@ -165,7 +165,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                     <div key={pedidoNum} className="space-y-2">
                                         <div onClick={() => toggleGroup(pendingGroups[pedidoNum])} className="bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg border border-[var(--color-primary)]/20 cursor-pointer hover:bg-[var(--color-primary)]/20 transition-colors flex justify-between items-center">
                                             <span className="font-black text-sm theme-text-primary uppercase">PEDIDO: {pedidoNum}</span>
-                                            <span className="text-[10px] theme-text-primary font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-[var(--color-primary)]/20">Seleccionar Grupo</span>
+                                            <span className="text-sm theme-text-primary font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-[var(--color-primary)]/20">Seleccionar Grupo</span>
                                         </div>
                                         {pendingGroups[pedidoNum].map((item, idx) => (
                                             <div 
@@ -176,13 +176,13 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-sm md:text-base font-bold uppercase theme-text-primary">{item.codArticulo} - {item.nombre}</p>
                                                     <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
-                                                        <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
+                                                        <span className="text-sm bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
                                                         {item.transferenciaPendiente?.isPartial && (
-                                                            <span className="text-[9px] bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded font-black uppercase border border-blue-500/30">Parcial</span>
+                                                            <span className="text-sm bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded font-black uppercase border border-blue-500/30">Parcial</span>
                                                         )}
                                                     </div>
                                                 </div>
-                                                <p className="text-[10px] text-gray-500 mt-1 uppercase font-black">Hacia: {item.transferenciaPendiente?.haciaArea}</p>
+                                                <p className="text-sm text-gray-500 mt-1 uppercase font-black">Hacia: {item.transferenciaPendiente?.haciaArea}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -198,7 +198,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                     <div key={pedidoNum} className="space-y-2">
                                         <div onClick={() => toggleGroup(rejectedGroups[pedidoNum])} className="bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors flex justify-between items-center">
                                             <span className="font-black text-sm text-red-500 uppercase">PEDIDO: {pedidoNum}</span>
-                                            <span className="text-[10px] text-red-500 font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-red-500/20">Seleccionar Grupo</span>
+                                            <span className="text-sm text-red-500 font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-red-500/20">Seleccionar Grupo</span>
                                         </div>
                                         {rejectedGroups[pedidoNum].map((item, idx) => (
                                             <div 
@@ -209,7 +209,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 <div className="flex justify-between items-start">
                                                     <p className="text-sm md:text-base font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
                                                 </div>
-                                                <p className="text-[10px] text-red-500 mt-1 font-black animate-pulse">{item.estadoInterno}</p>
+                                                <p className="text-sm text-red-500 mt-1 font-black animate-pulse">{item.estadoInterno}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -252,12 +252,12 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                             <h3 className="font-black text-sm theme-text-primary uppercase">Inspección de Recibido</h3>
                                             
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 mb-1">RECIBIDO POR (SU NOMBRE):</label>
+                                                <label className="block text-sm font-bold text-gray-400 mb-1">RECIBIDO POR (SU NOMBRE):</label>
                                                 <input type="text" value={receptionName} onChange={e => setReceptionName(e.target.value)} className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm font-bold uppercase outline-none focus:border-[var(--color-primary)]" />
                                             </div>
                                             
                                             <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 mb-1">OBSERVACIONES / MOTIVO RECHAZO:</label>
+                                                <label className="block text-sm font-bold text-gray-400 mb-1">OBSERVACIONES / MOTIVO RECHAZO:</label>
                                                 <textarea value={receptionNotes} onChange={e => setReceptionNotes(e.target.value)} placeholder="Escriba aquí..." rows="3" className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm outline-none focus:border-[var(--color-primary)]"></textarea>
                                             </div>
 
@@ -275,11 +275,11 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                             {errorMsg && <p className="text-sm text-red-500 font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/30 text-center uppercase">{errorMsg}</p>}
 
                                             <div className="grid grid-cols-2 gap-2 pt-2">
-                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-[10px] md:text-sm shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-sm md:text-base shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>
-                                                <button onClick={handleConfirm} className="bg-[var(--color-primary)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-sm shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleConfirm} className="bg-[var(--color-primary)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-sm md:text-base shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
                                                     <CheckCircle size={18} />
                                                     Aceptar
                                                 </button>

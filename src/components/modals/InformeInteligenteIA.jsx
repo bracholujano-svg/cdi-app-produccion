@@ -258,7 +258,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                                     </div>
                                     <div className="bg-red-500 text-white w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 shadow-inner">
                                         <span className="text-xl font-black leading-none">{o.maxDaysLate}</span>
-                                        <span className="text-[10px] font-bold uppercase">Días</span>
+                                        <span className="text-sm font-bold uppercase">Días</span>
                                     </div>
                                     <div className="min-w-0 flex-1 pr-10">
                                         <div className="flex justify-between items-center mb-1">
@@ -307,10 +307,10 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                                                 <div key={i} onClick={() => handleProductDeepLink(grupo.pedido, f.articulo)} className="text-sm bg-slate-50 p-2 rounded-lg border border-slate-100 cursor-pointer hover:bg-yellow-100 transition-colors">
                                                     <span className="font-black text-slate-700">{f.articulo}: </span>
                                                     <span className="text-slate-500 italic">"{f.observacion}"</span>
-                                                    <span className="ml-2 font-black text-[9px] text-red-500 bg-red-50 px-1 py-0.5 rounded">{f.estado}</span>
+                                                    <span className="ml-2 font-black text-sm text-red-500 bg-red-50 px-1 py-0.5 rounded">{f.estado}</span>
                                                 </div>
                                             ))}
-                                            {grupo.fallos.length > 2 && <p className="text-[10px] text-gray-400 font-bold italic pl-2">+ {grupo.fallos.length - 2} fallos adicionales</p>}
+                                            {grupo.fallos.length > 2 && <p className="text-sm text-gray-400 font-bold italic pl-2">+ {grupo.fallos.length - 2} fallos adicionales</p>}
                                         </div>
                                     </div>
                                 )) : (

@@ -983,7 +983,7 @@ const {
                         list="client-options" 
                         type="text"
                         placeholder="BUSCAR CLIENTE..."
-                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
+                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-sm md:placeholder:text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
                         value={clientFilter === 'Todos' ? '' : clientFilter} 
                         onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
                         onFocus={(e) => e.target.select()}
@@ -992,7 +992,7 @@ const {
                         {uniqueClients.map(c => <option key={c} value={c} />)}
                     </datalist>
                 </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
                     <option value="pedido_desc">Pedido (Desc)</option>
@@ -1179,7 +1179,7 @@ const {
                       
                       {supervisorProfile?.area === "Administrador / Todos" ? (
                           <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-[11px] font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-2">Modificar Compromiso</span>
+                              <span className="text-sm font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-2">Modificar Compromiso</span>
                               <input 
                                   type="date" 
                                   value={alertItem.fechaEntrega} 
@@ -1189,7 +1189,7 @@ const {
                           </div>
                       ) : (
                           <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-[11px] font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-1">Compromiso</span>
+                              <span className="text-sm font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-1">Compromiso</span>
                               <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--color-primary)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
                           </div>
                       )}
@@ -1211,13 +1211,13 @@ const {
               <div className="space-y-1"><label className="text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-base lg:text-lg uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
               <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-base lg:text-lg py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
@@ -1299,10 +1299,10 @@ const {
                                               </div>
                                               <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                                               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-2 border-t pt-3 border-orange-200">
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase">Faltante</span><span className="text-sm md:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-orange-600 uppercase">Faltante</span><span className="text-sm md:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))
@@ -1322,9 +1322,9 @@ const {
                                               </div>
                                               <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                                               <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mt-2 border-t pt-3 border-green-200">
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))

@@ -158,17 +158,17 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                       
                       {isPartial && lastPartial && (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md px-2 py-1.5 flex flex-col gap-0.5 shadow-sm">
-                            <span className="text-[10px] md:text-sm font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
+                            <span className="text-sm md:text-base font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
                                 <Package size="1.2em" /> Lote Parcial
                             </span>
-                            <span className="text-[9px] md:text-[10px] font-bold text-yellow-800/80 dark:text-yellow-500/80 uppercase truncate">
+                            <span className="text-sm md:text-base font-bold text-yellow-800/80 dark:text-yellow-500/80 uppercase truncate">
                                 De: {lastPartial.entrega || 'Sección Anterior'}
                             </span>
                         </div>
                       )}
 
                       {p.asignado_a && p.asignado_a.length > 0 && (
-                          <div className="flex items-center gap-1 text-[10px] md:text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                          <div className="flex items-center gap-1 text-sm md:text-base font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}

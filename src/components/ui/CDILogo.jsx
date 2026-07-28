@@ -13,8 +13,8 @@ const CDILogo = ({ className = "" }) => {
       
       {/* Horizontal Text */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-1 text-center w-full mt-1">
-        <span className="text-[9px] md:text-[11px] font-bold tracking-[0.2em] theme-text-main leading-tight">DISEÑO EN</span>
-        <span className="text-[10px] md:text-[12px] font-black tracking-[0.2em] theme-text-main leading-tight">EXHIBICIÓN</span>
+        <span className="text-sm md:text-base font-bold tracking-[0.2em] theme-text-main leading-tight">DISEÑO EN</span>
+        <span className="text-sm md:text-base font-black tracking-[0.2em] theme-text-main leading-tight">EXHIBICIÓN</span>
       </div>
     </div>
   );

@@ -34,13 +34,13 @@ const HistorialView = React.memo(({ targetProducts }) => (
                 <span className="px-2 py-0.5 bg-[var(--primary-glow)] theme-text-primary rounded border border-[var(--color-primary)]">
                   {h.accion}
                 </span>
-                <span className="theme-text-muted text-[10px] font-bold">
+                <span className="theme-text-muted text-sm font-bold">
                   {new Date(h.fecha).toLocaleString()}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm font-bold uppercase bg-black/10 dark:bg-white/10 p-2 rounded-xl">
-                <div><span className="text-[10px] theme-text-muted block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
-                <div><span className="text-[10px] theme-text-muted block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
+                <div><span className="text-sm theme-text-muted block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
+                <div><span className="text-sm theme-text-muted block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
               </div>
               {h.nota && <p className="text-sm italic theme-text-muted">"{h.nota}"</p>}
             </div>
@@ -62,7 +62,7 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
         <div key={product.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-6 shadow-sm">
           <div className="flex flex-wrap justify-between items-center gap-3 border-b border-[var(--color-border)] pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest theme-text-primary">Artículo Analizado</span>
+              <span className="text-sm font-black uppercase tracking-widest theme-text-primary">Artículo Analizado</span>
               <h3 className="text-lg md:text-xl font-black uppercase theme-text-main">
                 {product.nombre} <span className="text-sm theme-text-muted font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
               </h3>
@@ -398,7 +398,7 @@ export default function DossierDashboard() {
                   >
                     <div className="flex justify-between items-start mb-1.5">
                       <h3 className="font-black text-base md:text-lg uppercase">#{g.pedidoNum}</h3>
-                      <span className="text-[10px] font-black px-2 py-0.5 bg-black/10 dark:bg-white/10 rounded-full">
+                      <span className="text-sm font-black px-2 py-0.5 bg-black/10 dark:bg-white/10 rounded-full">
                         {g.products.length} PRODS
                       </span>
                     </div>
@@ -435,7 +435,7 @@ export default function DossierDashboard() {
                 <div className="bg-[var(--color-base)] p-6 rounded-3xl border border-[var(--color-border)] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] theme-text-primary border border-[var(--color-primary)]">
+                      <span className="text-sm font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] theme-text-primary border border-[var(--color-primary)]">
                         Dossier Activo
                       </span>
                       <span className="text-sm font-bold theme-text-muted uppercase">Cliente: {selectedGroup.cliente}</span>
@@ -503,7 +503,7 @@ export default function DossierDashboard() {
                           <Clock size={24} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase theme-text-muted">Tiempo Total Procesado</p>
+                          <p className="text-sm font-black uppercase theme-text-muted">Tiempo Total Procesado</p>
                           <h4 className="text-xl md:text-2xl font-black theme-text-primary">
                             {msToTimeStr(pedidoMetrics?.globalWorkingMs)}
                           </h4>
@@ -515,7 +515,7 @@ export default function DossierDashboard() {
                           <Cpu size={24} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase theme-text-muted">Áreas Activas</p>
+                          <p className="text-sm font-black uppercase theme-text-muted">Áreas Activas</p>
                           <h4 className="text-xl md:text-2xl font-black theme-text-primary">
                             {Object.keys(pedidoMetrics?.aggregatedAreaDurations || {}).length} Secciones
                           </h4>
@@ -527,7 +527,7 @@ export default function DossierDashboard() {
                           <CheckCircle2 size={24} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase theme-text-muted">Estado Global</p>
+                          <p className="text-sm font-black uppercase theme-text-muted">Estado Global</p>
                           <h4 className="text-sm font-black theme-text-primary uppercase">
                             {selectedGroup.products.every(p => p.isTerminado) ? '🟢 Terminado' : '🟡 En Procesamiento'}
                           </h4>
@@ -621,7 +621,7 @@ export default function DossierDashboard() {
                               <div key={idx} className="p-3 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] flex justify-between items-center">
                                 <div>
                                   <span className="text-sm font-black uppercase theme-text-main">{item.nombre}</span>
-                                  <p className="text-[10px] theme-text-muted font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
+                                  <p className="text-sm theme-text-muted font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
                                 </div>
                                 <span className="text-sm font-black px-3 py-1 bg-[var(--primary-glow)] theme-text-primary rounded-full border border-[var(--color-primary)] uppercase">
                                   {item.cantidad}

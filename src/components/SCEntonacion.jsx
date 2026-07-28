@@ -400,11 +400,11 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             </h3>
             <div className="flex gap-4">
               <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
-                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Galones (Aprox)</span>
+                <span className="text-sm text-slate-400 font-black tracking-widest uppercase">Galones (Aprox)</span>
                 <span className="font-black text-blue-400 text-2xl">{(totalGramosActual / 3800).toFixed(2)} gal</span>
               </div>
               <div className="bg-slate-900 px-6 py-2 rounded-xl flex flex-col items-end border border-slate-700">
-                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">Suma Total</span>
+                <span className="text-sm text-slate-400 font-black tracking-widest uppercase">Suma Total</span>
                 <span className="font-black text-emerald-400 text-2xl">{totalGramosActual}g</span>
               </div>
             </div>
@@ -435,7 +435,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                   filasReceta.map(f => (
                     <tr key={f.id_referencia} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors group">
                       <td className="p-4 pl-6">
-                        <span className="block text-[10px] font-black text-blue-500/70 uppercase tracking-wider mb-1">{f.id_referencia !== f.descripcion ? f.id_referencia : 'CREADO MANUALMENTE'}</span>
+                        <span className="block text-sm font-black text-blue-500/70 uppercase tracking-wider mb-1">{f.id_referencia !== f.descripcion ? f.id_referencia : 'CREADO MANUALMENTE'}</span>
                         <span className="block text-base font-black text-slate-800 dark:text-white">{f.descripcion}</span>
                       </td>
                       <td className="p-4 text-xl font-black text-blue-700 text-right">{f.gramos}g</td>
@@ -600,7 +600,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 <h3 className="text-4xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{colorEncontrado.codigo_objetivo}</h3>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 p-4 rounded-xl border border-slate-100 w-full text-center">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">
+                <p className="text-sm font-black text-slate-500 uppercase tracking-widest leading-relaxed">
                   <AlertTriangle size={14} className="inline mr-1 text-orange-400 -mt-1"/>
                   Referencia visual aproximada.<br/>Guiarse estrictamente por la muestra física aprobada.
                 </p>
@@ -638,9 +638,9 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-b-2 border-slate-100">
-                      <th className="p-5 pl-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Base / Descripción PPG</th>
-                      <th className="p-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Gramos a Aplicar</th>
-                      <th className="p-5 pr-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Porcentaje</th>
+                      <th className="p-5 pl-8 text-sm font-black text-slate-400 uppercase tracking-widest">Base / Descripción PPG</th>
+                      <th className="p-5 text-sm font-black text-slate-400 uppercase tracking-widest text-center">Gramos a Aplicar</th>
+                      <th className="p-5 pr-8 text-sm font-black text-slate-400 uppercase tracking-widest text-right">Porcentaje</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -210,19 +210,19 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 {/* Centro: Métricas de Eficiencia */}
                 <div className="hidden lg:flex items-center gap-6 theme-bg-base px-8 py-3 rounded-2xl border theme-border">
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-sm theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><Package size="1em"/> En Cola</span>
+                        <span className="text-sm md:text-base theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><Package size="1em"/> En Cola</span>
                         <span className="text-2xl md:text-3xl font-black theme-text-main">{metrics.total}</span>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-sm text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
+                        <span className="text-sm md:text-base text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.entrega >= 80 ? 'text-emerald-500' : metrics.entrega >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {metrics.entrega}%
                         </span>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-sm text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
+                        <span className="text-sm md:text-base text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.calidad >= 90 ? 'text-blue-500' : metrics.calidad >= 70 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {metrics.calidad}%
                         </span>

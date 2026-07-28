@@ -60,14 +60,14 @@ const ReportPreviewModal = () => {
                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3 shadow-sm">
                     <User className="text-indigo-500" />
                     <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase">Supervisor</p>
+                        <p className="text-sm font-bold text-slate-500 uppercase">Supervisor</p>
                         <p className="font-black uppercase text-slate-800 dark:text-white">{repSupervisor}</p>
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3 shadow-sm">
                     <Calendar className="text-orange-500" />
                     <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase">Rango Operativo</p>
+                        <p className="text-sm font-bold text-slate-500 uppercase">Rango Operativo</p>
                         <p className="font-black uppercase text-slate-800 dark:text-white text-sm">
                             {repDateStart} {repTimeStart} a<br/>{repDateEnd} {repTimeEnd}
                         </p>
@@ -104,27 +104,27 @@ const ReportPreviewModal = () => {
                                         </div>
                                         
                                         <div className="mb-3">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Producto</p>
+                                            <p className="text-sm font-bold text-slate-500 uppercase">Producto</p>
                                             <p className="font-black text-sm uppercase truncate" title={item.orderName}>{item.orderName}</p>
                                             <div className="flex gap-2 mt-1">
-                                                <span className="text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50">OC: {item.orderOC}</span>
-                                                <span className="text-[10px] font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">ART: {item.codArticulo}</span>
+                                                <span className="text-sm font-black bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50">OC: {item.orderOC}</span>
+                                                <span className="text-sm font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">ART: {item.codArticulo}</span>
                                             </div>
                                         </div>
 
                                         <div className="bg-white/60 dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5 mb-3">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Detalle / Acción</p>
+                                            <p className="text-sm font-bold text-slate-500 uppercase mb-1">Detalle / Acción</p>
                                             <p className="text-sm font-medium italic">{item.detail}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-end pt-2 border-t border-black/5 dark:border-white/5 mt-auto">
                                         <div>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Responsable</p>
+                                            <p className="text-sm font-bold text-slate-500 uppercase">Responsable</p>
                                             <p className="text-sm font-black uppercase text-slate-700 dark:text-slate-300">{item.person}</p>
                                         </div>
                                         <div>
-                                            <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">{item.status}</span>
+                                            <span className="text-sm font-black uppercase px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">{item.status}</span>
                                         </div>
                                     </div>
                                 </div>
