@@ -132,10 +132,10 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
 
     return (
         <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-2 md:p-4">
-            <div className="w-full max-w-4xl bg-[var(--bg-main)] h-[90vh] md:h-[85vh] rounded-[2rem] flex flex-col border border-[var(--border-color)] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="w-full max-w-4xl bg-[var(--color-base)] h-[90vh] md:h-[85vh] rounded-[2rem] flex flex-col border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
                 
                 {/* HEADER CON PESTAÑAS */}
-                <div className="bg-[var(--bg-header)] border-b border-[var(--border-color)] shrink-0 flex flex-col">
+                <div className="bg-[var(--bg-header)] border-b border-[var(--color-border)] shrink-0 flex flex-col">
                     <div className="p-5 flex justify-between items-center">
                         <div>
                             <h2 className="text-xl font-black text-[var(--primary)] uppercase">Panel de Recepciones</h2>
@@ -143,8 +143,8 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                         </div>
                         <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 text-[var(--primary)] shrink-0">✕</button>
                     </div>
-                    <div className="flex border-t border-[var(--border-color)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--bg-main)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                    <div className="flex border-t border-[var(--color-border)]">
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
                         <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
@@ -155,7 +155,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
 
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* LIST VIEW (Izquierda) */}
-                    <div className="w-full md:w-1/2 overflow-y-auto custom-scrollbar border-r border-[var(--border-color)] p-4 space-y-4">
+                    <div className="w-full md:w-1/2 overflow-y-auto custom-scrollbar border-r border-[var(--color-border)] p-4 space-y-4">
                         
                         {activeTab === 'PENDIENTES' && (
                             Object.keys(pendingGroups).length === 0 ? (
@@ -279,7 +279,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>
-                                                <button onClick={handleConfirm} className="bg-[var(--accent)] text-[var(--bg-main)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleConfirm} className="bg-[var(--accent)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
                                                     <CheckCircle size={18} />
                                                     Aceptar
                                                 </button>

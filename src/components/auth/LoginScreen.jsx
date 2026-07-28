@@ -129,7 +129,7 @@ const LoginScreen = () => {
             </div>
           )}
 
-          <button type="submit" className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-colors">
+          <button type="submit" className="w-full bg-[var(--accent)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-colors">
             {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
           </button>
           <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>

@@ -344,7 +344,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
     return (
         <div className="fixed inset-0 bg-black/80  z-[110] overflow-y-auto">
-            <div className="min-h-screen theme-bg-main text-[var(--text-main)] font-sans pb-10">
+            <div className="min-h-screen theme-bg-main text-[var(--color-text-main)] font-sans pb-10">
                 {/* NAV */}
                 <nav className="sticky top-0 z-50 theme-bg-card shadow-sm border-b theme-border">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -398,7 +398,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                         <section className="space-y-8 animate-in fade-in duration-500">
                             <div className="theme-bg-card p-8 rounded-[2.5rem] shadow-sm border theme-border flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h1 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-tight" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado de Planta Actual</h1>
+                                    <h1 className="text-3xl font-black text-[var(--color-text-main)] uppercase tracking-tight" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado de Planta Actual</h1>
                                     <p className="mt-4 theme-text-muted text-sm leading-relaxed max-w-2xl">
                                         Reporte en vivo del flujo de producción de CDI Exhibiciones, analizando la eficiencia desde programación CNC hasta despacho final. Datos generados a partir de los registros operativos de planta.
                                     </p>
@@ -435,7 +435,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                         <canvas id="chartCargaAreas"></canvas>
                                     </div>
                                 </div>
-                                <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] border border-[var(--border-color)] shadow-sm">
+                                <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] border border-[var(--color-border)] shadow-sm">
                                     <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted mb-6">Tiempos de Ciclo en Planta (Real-Time)</h4>
                                     <div className="space-y-5">
                                         {(() => {
@@ -528,12 +528,12 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <tbody>
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b theme-border hover:theme-bg-card/50 transition-colors">
-                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base text-[var(--text-main)]">#{o.pedidoNum}</td>
+                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base text-[var(--color-text-main)]">#{o.pedidoNum}</td>
                                                 <td className="p-5">
                                                     <div className="font-black text-[var(--primary)] text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
                                                     <div className="font-bold theme-text-muted text-xs truncate max-w-[200px]">{o.nombre || "S/N"}</div>
                                                 </td>
-                                                <td className="p-5 text-center font-black text-lg text-[var(--text-main)]">
+                                                <td className="p-5 text-center font-black text-lg text-[var(--color-text-main)]">
                                                     {o.cantidad || 1}
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
@@ -547,7 +547,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted uppercase tracking-tight">{o.estadoInterno}</td>
                                                 <td className="p-5 text-center">
-                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--primary)] text-[var(--bg-main)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
+                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--primary)] text-[var(--color-base)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
                                                         <History size="1.2em" /> Historial
                                                     </button>
                                                 </td>
@@ -570,14 +570,14 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                         <canvas id="chartLogistica"></canvas>
                                     </div>
                                 </div>
-                                <div className="bg-[var(--card-bg)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
+                                <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
                                         <h2 className="text-xl font-black uppercase text-[var(--accent)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
-                                            <div className="w-10 h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center font-black text-[var(--text-main)]">{despachadosCount}</div>
+                                            <div className="w-10 h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center font-black text-[var(--color-text-main)]">{despachadosCount}</div>
                                             <div>
                                                 <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
                                                 <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>
@@ -649,7 +649,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                     {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
                                                         <li key={i} className={`p-4 rounded-2xl border-l-4 text-xs md:text-sm lg:text-base ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
                                                             <div className="flex justify-between items-start mb-2">
-                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase text-[var(--text-main)]">PED: {q.pedidoNum}</span>
+                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase text-[var(--color-text-main)]">PED: {q.pedidoNum}</span>
                                                                 <span className={`font-black uppercase px-2 py-1 rounded-md text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
                                                             </div>
                                                             <div className="flex gap-2 theme-text-muted mb-3 font-bold uppercase text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">

@@ -143,7 +143,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -151,7 +151,7 @@ const OrderDetailsModal = ({
                     {openSection === 'planta' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'planta' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
                           if (!canEdit) return null;
@@ -185,7 +185,7 @@ const OrderDetailsModal = ({
                                 <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
                               </label>
 
-                              <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
+                              <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
                                 Guardar Avance
                               </button>
                           </div>
@@ -214,7 +214,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Calidad */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'calidad' ? null : 'calidad')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><UserCheck size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Inspección Calidad</span>
@@ -222,16 +222,16 @@ const OrderDetailsModal = ({
                     {openSection === 'calidad' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'calidad' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
                           if (!canEdit) return null;
                           return (
                             <>
                               <div className="flex gap-2">
-                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>APROBADO</button>
-                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RETRABAJO</button>
-                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--border-color)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RECHAZADO</button>
+                            <button type="button" onClick={()=>setCalidadState('APROBADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='APROBADO' ? 'bg-green-500 text-white border-green-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>APROBADO</button>
+                            <button type="button" onClick={()=>setCalidadState('RETRABAJO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RETRABAJO' ? 'bg-yellow-500 text-white border-yellow-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RETRABAJO</button>
+                            <button type="button" onClick={()=>setCalidadState('RECHAZADO')} className={`flex-1 py-3 rounded-xl font-black text-xs md:text-sm lg:text-base uppercase transition-colors border border-[var(--color-border)] transition-colors duration-200  hover:brightness-125 active:scale-95 ${calidadState==='RECHAZADO' ? 'bg-red-500 text-white border-red-700' : 'bg-black/20 text-[var(--primary)] border-transparent'}`}>RECHAZADO</button>
                         </div>
                         <input value={calidadInspector} onChange={e=>setCalidadInspector(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE INSPECTOR..." />
                         <div className="relative">
@@ -250,7 +250,7 @@ const OrderDetailsModal = ({
                         </div>
                         {calidadPhoto && <img src={calidadPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="grid grid-cols-4 gap-2 mt-2">
-                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Inspección</button>
+                            <button type="button" onClick={addQualityNote} className="col-span-4 bg-[var(--primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-3.5 rounded-xl border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Guardar Inspección</button>
                         </div>
                             </>
                           );
@@ -277,7 +277,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -285,7 +285,7 @@ const OrderDetailsModal = ({
                     {openSection === 'entrega' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'entrega' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || String(supervisorProfile?.area || '').trim() === String(selectedOrder.areaActual).trim();
                           if (!canEdit) return null;
@@ -364,7 +364,7 @@ const OrderDetailsModal = ({
                                                                 const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
                                                                 const load = getWorkload(person);
                                                                 return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
                                                                         <span>{person}</span>
                                                                         <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
                                                                     </button>
@@ -381,7 +381,7 @@ const OrderDetailsModal = ({
                                                                 const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
                                                                 const load = getWorkload(person);
                                                                 return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
                                                                         <span>{person}</span>
                                                                         <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
                                                                     </button>
@@ -495,7 +495,7 @@ const OrderDetailsModal = ({
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                          }} className="w-full bg-[var(--accent)] text-[var(--color-surface)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
                             </>
                           );
                         })()}
@@ -522,7 +522,7 @@ const OrderDetailsModal = ({
 
               {/* Acordeón Resumen de Áreas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                <button type="button" onClick={() => setOpenSection(openSection === 'resumen_areas' ? null : 'resumen_areas')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                <button type="button" onClick={() => setOpenSection(openSection === 'resumen_areas' ? null : 'resumen_areas')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><Layers size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Resumen de Áreas</span>
@@ -530,7 +530,7 @@ const OrderDetailsModal = ({
                     {openSection === 'resumen_areas' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                 </button>
                 {openSection === 'resumen_areas' && (
-                    <div className="p-4 space-y-3 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-3 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {detectedAreas.length === 0 ? (
                             <p className="text-xs italic theme-text-muted text-center py-2">No hay registro de áreas aún.</p>
                         ) : (
@@ -599,7 +599,7 @@ const OrderDetailsModal = ({
                                         </button>
 
                                         {isExpanded && (
-                                            <div className="p-3 space-y-4 bg-[var(--card-bg)] border-t theme-border animate-in slide-in-from-top-1">
+                                            <div className="p-3 space-y-4 bg-[var(--color-surface)] border-t theme-border animate-in slide-in-from-top-1">
                                                 {/* SECCIÓN AVANCES EN PLANTA */}
                                                 <div>
                                                     <h5 className="text-[11px] font-black uppercase tracking-wider text-[var(--accent)] mb-2 flex items-center gap-1.5 border-b theme-border pb-1">

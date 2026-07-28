@@ -497,7 +497,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             </h1>
             <p className="text-base font-bold theme-text-muted mt-3 md:ml-20 tracking-wide">Módulo de búsqueda y formulación dinámica de recetas de pintura industrial.</p>
         </div>
-        <button onClick={openCatalog} className="bg-[var(--accent)] text-[var(--card-bg)] px-6 py-3 rounded-2xl font-black uppercase shadow-lg shadow-[var(--accent)]/30 hover:brightness-110 flex items-center gap-2 self-center md:self-start">
+        <button onClick={openCatalog} className="bg-[var(--accent)] text-[var(--color-surface)] px-6 py-3 rounded-2xl font-black uppercase shadow-lg shadow-[var(--accent)]/30 hover:brightness-110 flex items-center gap-2 self-center md:self-start">
            <Palette size={"1.2em"} /> Catálogo de Colores
         </button>
       </div>
@@ -688,7 +688,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                <h2 className="text-xl font-black text-[var(--primary)] uppercase flex items-center gap-2"><Palette size={"1.2em"} /> Catálogo Aprobado</h2>
                <button onClick={() => setShowCatalogModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)]">✕</button>
              </div>
-             <div className="flex-1 overflow-y-auto p-4 bg-[var(--bg-main)] custom-scrollbar">
+             <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-base)] custom-scrollbar">
                {isLoadingCatalog ? (
                  <div className="flex justify-center items-center h-40">
                    <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -709,7 +709,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                            <button 
                              key={c.id} 
                              onClick={() => handleSelectFromCatalog(c)}
-                             className="flex flex-col items-center bg-[var(--card-bg)] border theme-border p-3 rounded-2xl hover:border-[var(--accent)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden"
+                             className="flex flex-col items-center bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-[var(--accent)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden"
                            >
                              <div className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5" style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}></div>
                              <span className="font-black text-[var(--primary)] text-sm w-full text-center truncate">{c.codigo_objetivo}</span>

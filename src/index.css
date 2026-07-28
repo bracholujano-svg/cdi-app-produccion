@@ -88,7 +88,7 @@ body { background-color: var(--color-base); color: var(--color-text-main); }
 .animate-pulse-red { animation: pulse-red 2s infinite; }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
 
 @media print {
     body * { visibility: hidden; }

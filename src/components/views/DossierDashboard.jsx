@@ -23,26 +23,26 @@ const msToTimeStrLocal = (ms) => {
 const HistorialView = React.memo(({ targetProducts }) => (
   <div className="space-y-6 animate-in fade-in duration-300">
     {targetProducts.map(p => (
-      <div key={p.id} className="bg-[var(--card-bg)] p-6 rounded-3xl border border-[var(--border-color)] space-y-4 shadow-sm">
-        <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] border-b border-[var(--border-color)] pb-3">
+      <div key={p.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-4 shadow-sm">
+        <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] border-b border-[var(--color-border)] pb-3">
           Histórico Completo: {p.nombre}
         </h3>
         <div className="space-y-3">
           {(p.historial || []).slice().reverse().map((h, idx) => (
-            <div key={idx} className="p-4 bg-[var(--bg-main)] rounded-2xl border border-[var(--border-color)] space-y-2 hover:border-[var(--primary)] transition-colors">
+            <div key={idx} className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--primary)] transition-colors">
               <div className="flex justify-between items-center text-xs font-black uppercase">
                 <span className="px-2 py-0.5 bg-[var(--primary-glow)] text-[var(--primary)] rounded border border-[var(--primary)]">
                   {h.accion}
                 </span>
-                <span className="text-[var(--text-muted)] text-[10px] font-bold">
+                <span className="text-[var(--color-text-muted)] text-[10px] font-bold">
                   {new Date(h.fecha).toLocaleString()}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs font-bold uppercase bg-black/10 dark:bg-white/10 p-2 rounded-xl">
-                <div><span className="text-[10px] text-[var(--text-muted)] block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
-                <div><span className="text-[10px] text-[var(--text-muted)] block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
+                <div><span className="text-[10px] text-[var(--color-text-muted)] block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
+                <div><span className="text-[10px] text-[var(--color-text-muted)] block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
               </div>
-              {h.nota && <p className="text-xs italic text-[var(--text-muted)]">"{h.nota}"</p>}
+              {h.nota && <p className="text-xs italic text-[var(--color-text-muted)]">"{h.nota}"</p>}
             </div>
           ))}
         </div>
@@ -59,16 +59,16 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
     {comparativeBenchmark.map(({ product, currentMetrics, otherInstancesCount, areaAverages, diffPercent }) => {
       const isFaster = diffPercent < 0;
       return (
-        <div key={product.id} className="bg-[var(--card-bg)] p-6 rounded-3xl border border-[var(--border-color)] space-y-6 shadow-sm">
-          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-[var(--border-color)] pb-4">
+        <div key={product.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-6 shadow-sm">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-[var(--color-border)] pb-4">
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-[var(--primary)]">Artículo Analizado</span>
-              <h3 className="text-lg md:text-xl font-black uppercase text-[var(--text-main)]">
-                {product.nombre} <span className="text-xs text-[var(--text-muted)] font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
+              <h3 className="text-lg md:text-xl font-black uppercase text-[var(--color-text-main)]">
+                {product.nombre} <span className="text-xs text-[var(--color-text-muted)] font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-[var(--text-muted)]">Histórico: <strong>{otherInstancesCount}</strong> pedidos anteriores</span>
+              <span className="text-xs font-bold text-[var(--color-text-muted)]">Histórico: <strong>{otherInstancesCount}</strong> pedidos anteriores</span>
               {otherInstancesCount > 0 && (
                 <span className={`text-xs font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 border ${isFaster ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'}`}>
                   {isFaster ? <TrendingDown size={14}/> : <TrendingUp size={14}/>}
@@ -78,12 +78,12 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
             </div>
           </div>
           {otherInstancesCount === 0 ? (
-            <div className="p-6 text-center text-xs italic text-[var(--text-muted)] bg-[var(--bg-main)] rounded-2xl">
+            <div className="p-6 text-center text-xs italic text-[var(--color-text-muted)] bg-[var(--color-base)] rounded-2xl">
               No hay pedidos anteriores registrados en la base de datos para este artículo.
             </div>
           ) : (
             <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-main)]">Comparación de Tiempos por Área</h4>
+              <h4 className="text-xs font-black uppercase tracking-wider text-[var(--color-text-main)]">Comparación de Tiempos por Área</h4>
               <div className="grid grid-cols-1 gap-3">
                 {Object.keys(currentMetrics.areaDurations).map(area => {
                   const currentMs = currentMetrics.areaDurations[area] || 0;
@@ -92,12 +92,12 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
                   const currentWidth = (currentMs / maxVal) * 100;
                   const avgWidth = (avgMs / maxVal) * 100;
                   return (
-                    <div key={area} className="p-3.5 bg-[var(--bg-main)] rounded-2xl border border-[var(--border-color)] space-y-2 hover:border-[var(--primary)] transition-colors">
+                    <div key={area} className="p-3.5 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--primary)] transition-colors">
                       <div className="flex justify-between items-center text-xs font-black uppercase">
                         <span>{area}</span>
                         <div className="flex gap-4">
                           <span className="text-[var(--primary)]">Este Pedido: {msToTimeStrLocal(currentMs)}</span>
-                          <span className="text-[var(--text-muted)]">Promedio: {msToTimeStrLocal(avgMs)}</span>
+                          <span className="text-[var(--color-text-muted)]">Promedio: {msToTimeStrLocal(avgMs)}</span>
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -343,10 +343,10 @@ export default function DossierDashboard() {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-2 md:p-6 animate-in fade-in duration-300">
-      <div className="bg-[var(--card-bg)] w-full h-full md:h-[95vh] md:max-w-7xl rounded-2xl md:rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border border-[var(--border-color)]">
+      <div className="bg-[var(--color-surface)] w-full h-full md:h-[95vh] md:max-w-7xl rounded-2xl md:rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border border-[var(--color-border)]">
         
         {/* ENCABEZADO SUPERIOR */}
-        <div className="p-4 md:p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-main)]">
+        <div className="p-4 md:p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-base)]">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl border border-purple-500/20">
               <Activity size={28} />
@@ -373,7 +373,7 @@ export default function DossierDashboard() {
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
           
           {/* BARRA LATERAL IZQUIERDA: LISTA DE PEDIDOS */}
-          <div className={`w-full md:w-80 border-r theme-border flex flex-col bg-[var(--card-bg)] ${selectedGroup ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`w-full md:w-80 border-r theme-border flex flex-col bg-[var(--color-surface)] ${selectedGroup ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b theme-border">
               <div className="relative">
                 <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 theme-text-muted" />
@@ -416,7 +416,7 @@ export default function DossierDashboard() {
           </div>
 
           {/* ÁREA CENTRAL PRINCIPAL: DASHBOARD DEL PEDIDO */}
-          <div className={`flex-1 flex flex-col bg-[var(--bg-main)] overflow-hidden ${!selectedGroup ? 'hidden md:flex items-center justify-center p-8' : ''}`}>
+          <div className={`flex-1 flex flex-col bg-[var(--color-base)] overflow-hidden ${!selectedGroup ? 'hidden md:flex items-center justify-center p-8' : ''}`}>
             {!selectedGroup ? (
               <div className="text-center opacity-40 max-w-sm">
                 <BarChart3 size={64} className="mx-auto mb-4 text-purple-500 animate-pulse" />
@@ -432,15 +432,15 @@ export default function DossierDashboard() {
                 </button>
 
                 {/* CABECERA DEL DASHBOARD DEL PEDIDO */}
-                <div className="bg-[var(--bg-main)] p-6 rounded-3xl border border-[var(--border-color)] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="bg-[var(--color-base)] p-6 rounded-3xl border border-[var(--color-border)] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]">
                         Dossier Activo
                       </span>
-                      <span className="text-xs font-bold text-[var(--text-muted)] uppercase">Cliente: {selectedGroup.cliente}</span>
+                      <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase">Cliente: {selectedGroup.cliente}</span>
                     </div>
-                    <h1 className="text-2xl md:text-4xl font-black uppercase text-[var(--text-main)] tracking-tight">
+                    <h1 className="text-2xl md:text-4xl font-black uppercase text-[var(--color-text-main)] tracking-tight">
                       PEDIDO #{selectedGroup.pedidoNum}
                     </h1>
                   </div>
@@ -449,7 +449,7 @@ export default function DossierDashboard() {
                     <button
                       type="button"
                       onClick={() => setSelectedProductId('ALL')}
-                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--card-bg)] border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--primary)]'}`}
+                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--primary)]'}`}
                     >
                       📦 Todos ({selectedGroup.products.length})
                     </button>
@@ -458,7 +458,7 @@ export default function DossierDashboard() {
                         key={p.id}
                         type="button"
                         onClick={() => setSelectedProductId(p.id)}
-                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--card-bg)] border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--primary)]'}`}
+                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--primary)]'}`}
                       >
                         {p.codArticulo || p.nombre}
                       </button>
@@ -577,15 +577,15 @@ export default function DossierDashboard() {
                 {activeTab === 'insumos' && (
                   <div className="space-y-6 animate-in fade-in duration-300">
                     {targetProducts.map(p => (
-                      <div key={p.id} className="bg-[var(--card-bg)] p-6 rounded-3xl border border-[var(--border-color)] space-y-4 shadow-sm">
-                        <div className="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+                      <div key={p.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-4 shadow-sm">
+                        <div className="flex justify-between items-center border-b border-[var(--color-border)] pb-3">
                           <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)]">
-                            Insumos de: {p.nombre} <span className="text-xs text-[var(--text-muted)] font-bold">({p.codArticulo})</span>
+                            Insumos de: {p.nombre} <span className="text-xs text-[var(--color-text-muted)] font-bold">({p.codArticulo})</span>
                           </h3>
                         </div>
 
                         {/* FORMULARIO AGREGAR INSUMO */}
-                        <div className="p-4 bg-[var(--bg-main)] rounded-2xl border border-[var(--border-color)] space-y-3">
+                        <div className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-3">
                           <label className="text-xs font-black uppercase text-[var(--primary)] block">Registrar Consumo de Materia Prima / Insumo:</label>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <input 
@@ -593,14 +593,14 @@ export default function DossierDashboard() {
                               placeholder="Nombre Insumo (ej. MDF 18mm, Cold Roll 1/8)" 
                               value={nuevoInsumoNombre}
                               onChange={e => setNuevoInsumoNombre(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--text-main)]"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--color-text-main)]"
                             />
                             <input 
                               type="text" 
                               placeholder="Cantidad / Unidad (ej. 2 Hojas, 5 Kg)" 
                               value={nuevoInsumoCantidad}
                               onChange={e => setNuevoInsumoCantidad(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--text-main)]"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--color-text-main)]"
                             />
                             <button 
                               type="button" 
@@ -615,13 +615,13 @@ export default function DossierDashboard() {
                         {/* LISTADO DE INSUMOS REGISTRADOS */}
                         <div className="space-y-2 pt-2">
                           {(!p.insumosMateriasPrimas || p.insumosMateriasPrimas.length === 0) ? (
-                            <p className="text-xs italic text-[var(--text-muted)] text-center py-4">No se han registrado consumos de materia prima para este producto aún.</p>
+                            <p className="text-xs italic text-[var(--color-text-muted)] text-center py-4">No se han registrado consumos de materia prima para este producto aún.</p>
                           ) : (
                             p.insumosMateriasPrimas.map((item, idx) => (
-                              <div key={idx} className="p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] flex justify-between items-center">
+                              <div key={idx} className="p-3 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] flex justify-between items-center">
                                 <div>
-                                  <span className="text-xs font-black uppercase text-[var(--text-main)]">{item.nombre}</span>
-                                  <p className="text-[10px] text-[var(--text-muted)] font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
+                                  <span className="text-xs font-black uppercase text-[var(--color-text-main)]">{item.nombre}</span>
+                                  <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
                                 </div>
                                 <span className="text-xs font-black px-3 py-1 bg-[var(--primary-glow)] text-[var(--primary)] rounded-full border border-[var(--primary)] uppercase">
                                   {item.cantidad}

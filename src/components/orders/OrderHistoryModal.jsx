@@ -186,9 +186,9 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4 animate-in fade-in duration-200">
-            <div className="bg-[var(--bg-main)] w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-[var(--border-color)] overflow-hidden">
+            <div className="bg-[var(--color-base)] w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-[var(--color-border)] overflow-hidden">
                 {/* Cabecera */}
-                <div className="p-6 border-b border-[var(--border-color)] bg-[var(--card-bg)] flex justify-between items-start relative shrink-0">
+                <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex justify-between items-start relative shrink-0">
                     <div>
                         <h2 className="text-2xl md:text-3xl font-black text-[var(--primary)] uppercase tracking-tight flex items-center gap-2">
                             <History size="1em" /> Trazabilidad por Secciones
@@ -203,10 +203,10 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 </div>
 
                 {/* Resumen Superior */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-black/5 border-b border-[var(--border-color)] shrink-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-black/5 border-b border-[var(--color-border)] shrink-0">
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-bold theme-text-muted uppercase">Cliente</span>
-                        <span className="text-xs md:text-sm font-black text-[var(--text-main)] truncate">{order.cliente || 'S/N'}</span>
+                        <span className="text-xs md:text-sm font-black text-[var(--color-text-main)] truncate">{order.cliente || 'S/N'}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-bold theme-text-muted uppercase">Área Actual</span>
@@ -225,13 +225,13 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 </div>
 
                 {/* Línea de Tiempo por Fases (Áreas) */}
-                <div className="p-6 overflow-y-auto flex-1 bg-[var(--bg-main)]">
+                <div className="p-6 overflow-y-auto flex-1 bg-[var(--color-base)]">
                     {phases.length === 0 ? (
                         <div className="text-center p-10 font-bold theme-text-muted uppercase">
                             No hay registros en el historial para este pedido.
                         </div>
                     ) : (
-                        <div className="relative border-l-4 border-[var(--border-color)] ml-4 md:ml-8 space-y-8 pb-10">
+                        <div className="relative border-l-4 border-[var(--color-border)] ml-4 md:ml-8 space-y-8 pb-10">
                             {phases.map((phase) => {
                                 // Cálculo del tiempo invertido en esta área
                                 const durationMs = phase.fechaSalida ? phase.fechaSalida - phase.fechaIngreso : Date.now() - phase.fechaIngreso;
@@ -245,12 +245,12 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                 return (
                                     <div key={phase.id} className="relative pl-8 md:pl-12">
                                         {/* Nodo del Timeline */}
-                                        <div className="absolute -left-[22px] top-6 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--bg-main)] bg-[var(--primary)]">
+                                        <div className="absolute -left-[22px] top-6 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--color-base)] bg-[var(--primary)]">
                                             <MapPin size="1.2em" />
                                         </div>
 
                                         {/* Tarjeta Resumen de Fase */}
-                                        <div className="bg-[var(--card-bg)] p-5 rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow relative">
+                                        <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] shadow-sm hover:shadow-md transition-shadow relative">
                                             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
                                                 <div>
                                                     <div className="flex items-center gap-2 flex-wrap">
@@ -280,19 +280,19 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 p-3 rounded-xl border border-[var(--border-color)]">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 p-3 rounded-xl border border-[var(--color-border)]">
                                                 <div className="flex items-center gap-2">
                                                     <Calendar size="1.5em" className="text-blue-500 shrink-0"/> 
                                                     <div>
                                                         <span className="block opacity-70">FECHA DE INGRESO:</span>
-                                                        <span className="text-[var(--text-main)] text-xs font-black">{phase.fechaIngreso.toLocaleString()}</span>
+                                                        <span className="text-[var(--color-text-main)] text-xs font-black">{phase.fechaIngreso.toLocaleString()}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <ArrowRightLeft size="1.5em" className={`shrink-0 ${phase.fechaSalida ? "text-orange-500" : "text-emerald-500"}`}/> 
                                                     <div>
                                                         <span className="block opacity-70">FECHA DE SALIDA:</span>
-                                                        <span className={`text-xs font-black ${phase.fechaSalida ? "text-[var(--text-main)]" : "text-emerald-600 dark:text-emerald-400 uppercase"}`}>
+                                                        <span className={`text-xs font-black ${phase.fechaSalida ? "text-[var(--color-text-main)]" : "text-emerald-600 dark:text-emerald-400 uppercase"}`}>
                                                             {phase.fechaSalida ? phase.fechaSalida.toLocaleString() : 'ACTUALMENTE AQUÍ'}
                                                         </span>
                                                     </div>
@@ -310,7 +310,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                         {phase.events.map(ev => {
                                                             const SmallIcon = ev.icon;
                                                             return (
-                                                                <div key={ev.id} className="text-[10px] md:text-xs text-[var(--text-main)] bg-[var(--bg-main)] p-3 rounded-lg border border-[var(--border-color)] flex flex-col gap-1">
+                                                                <div key={ev.id} className="text-[10px] md:text-xs text-[var(--color-text-main)] bg-[var(--color-base)] p-3 rounded-lg border border-[var(--color-border)] flex flex-col gap-1">
                                                                     <div className="flex justify-between items-start gap-4">
                                                                         <span className={`font-black uppercase flex items-center gap-1 ${ev.textColor}`}>
                                                                             <SmallIcon size="1.2em"/> {ev.title}

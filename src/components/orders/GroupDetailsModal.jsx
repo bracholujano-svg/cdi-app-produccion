@@ -89,7 +89,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
               </div>
               
               {selectedBulkOrders.length > 0 && (
-                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--accent)] text-[var(--card-bg)] rounded-xl hover:brightness-110 transition-colors text-xs md:text-sm font-black mr-3 shadow-lg shadow-[var(--accent)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
+                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--accent)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-xs md:text-sm font-black mr-3 shadow-lg shadow-[var(--accent)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
                       <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
                   </button>
               )}
@@ -122,7 +122,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   const lastPartial = partialEvents.length > 0 ? partialEvents[partialEvents.length - 1] : null;
 
                   return (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer transition-colors active:scale-95 bg-[var(--card-bg)] relative flex flex-col justify-between ${
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[2px] cursor-pointer transition-colors active:scale-95 bg-[var(--color-surface)] relative flex flex-col justify-between ${
                     selectedBulkOrders.some(o => o.id === p.id) 
                       ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' 
                       : p.isTerminado
@@ -150,7 +150,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                         <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight text-[var(--primary)]">{p.nombre}</h4>
                     </div>
 
-                    <div className="mt-4 p-2 bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] flex flex-col gap-1.5">
+                    <div className="mt-4 p-2 bg-[var(--color-base)] rounded-xl border border-[var(--color-border)] flex flex-col gap-1.5">
                       <p className="text-xs md:text-sm lg:text-base font-black text-[var(--accent)] uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
                           <MapPin size={"1.2em"} className="shrink-0"/> 
                           {p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS: ${p.activeAreas.join(', ')}` : `ÁREA: ${p.areaActual}`}
@@ -197,7 +197,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Anterior
                   </button>
@@ -207,7 +207,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card text-[var(--primary)] font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Siguiente
                   </button>

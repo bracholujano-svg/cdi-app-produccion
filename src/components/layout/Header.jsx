@@ -74,7 +74,7 @@ const Header = () => {
           
           {/* CENTRO: BOTONES DE FILTRO */}
           <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar max-w-[50vw]">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--primary)] text-[var(--card-bg)] shadow-sm' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
+             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--primary)] text-[var(--color-surface)] shadow-sm' : 'theme-text-muted hover:text-[var(--primary)]'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
              <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-colors ${viewFilter === 'ATRASADOS' ? 'bg-red-500 text-white shadow-sm' : 'text-red-600 dark:text-red-500/70 hover:text-red-500'}`}>

@@ -969,7 +969,7 @@ const {
   return (
     <div className="min-h-screen font-sans pb-20 transition-colors duration-300 theme-bg-main" data-theme={appTheme}>
       
-      <div className="sticky top-0 z-40 bg-[var(--bg-main)] shadow-sm border-b theme-border">
+      <div className="sticky top-0 z-40 bg-[var(--color-base)] shadow-sm border-b theme-border">
         <Header />
         <div className="theme-bg-input p-2 flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1 group">
@@ -1008,23 +1008,23 @@ const {
                 </select>
 
                 <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0 text-slate-900 dark:text-white">
-                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
+                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
                         <LayoutList size={"1.2em"} />
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
+                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
 
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--primary)] text-[var(--card-bg)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
                     </button>
                 </div>
@@ -1049,7 +1049,7 @@ const {
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Anterior
             </button>
@@ -1057,7 +1057,7 @@ const {
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--card-bg)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Siguiente
             </button>
@@ -1132,9 +1132,9 @@ const {
         return (
           <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
             <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-              <div className="p-5 bg-[var(--accent)] text-[var(--card-bg)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
+              <div className="p-5 bg-[var(--accent)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
               
-              <div className="p-4 bg-[var(--card-bg)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">
+              <div className="p-4 bg-[var(--color-surface)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">
                 <input 
                   type="text" 
                   placeholder="🔎 Buscar Nº Pedido..." 
@@ -1152,7 +1152,7 @@ const {
                   <button 
                     type="button" 
                     onClick={() => setCoordSearchFecha('')} 
-                    className="px-4 rounded-xl border border-[var(--border-color)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
                     title="Limpiar Fecha"
                   >
                     Limpiar
@@ -1161,7 +1161,7 @@ const {
                 <button 
                   type="button" 
                   onClick={() => setCoordSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} 
-                  className="px-5 py-3 rounded-xl border border-[var(--border-color)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
                 >
                   {coordSortOrder === 'asc' ? '⬇️ ASCENDENTE' : '⬆️ DESCENDENTE'}
                 </button>
@@ -1184,7 +1184,7 @@ const {
                                   type="date" 
                                   value={alertItem.fechaEntrega} 
                                   onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                  className="w-full p-2.5 bg-transparent rounded-lg font-black text-sm md:text-base border border-[var(--border-color)] outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-[var(--primary)] transition-all" 
+                                  className="w-full p-2.5 bg-transparent rounded-lg font-black text-sm md:text-base border border-[var(--color-border)] outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-[var(--primary)] transition-all" 
                               />
                           </div>
                       ) : (
@@ -1220,7 +1220,7 @@ const {
                   <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
               </div>
 
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>

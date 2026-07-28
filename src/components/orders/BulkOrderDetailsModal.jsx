@@ -105,7 +105,7 @@ const BulkOrderDetailsModal = ({
 
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -113,7 +113,7 @@ const BulkOrderDetailsModal = ({
                     {openSection === 'planta' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'planta' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || selectedBulkOrders.every(p => String(supervisorProfile?.area || '').trim() === String(p.areaActual).trim());
                           if (!canEdit) return null;
@@ -147,7 +147,7 @@ const BulkOrderDetailsModal = ({
                             <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
                           </label>
 
-                          <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--card-bg)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--border-color)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
+                          <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
                             Guardar Avance en Lote
                           </button>
                         </div>
@@ -161,7 +161,7 @@ const BulkOrderDetailsModal = ({
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--card-bg)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -169,7 +169,7 @@ const BulkOrderDetailsModal = ({
                     {openSection === 'entrega' ? <ChevronUp size={"1.2em"}/> : <ChevronDown size={"1.2em"}/>}
                  </button>
                  {openSection === 'entrega' && (
-                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--bg-main)]">
+                    <div className="p-4 space-y-4 animate-in slide-in-from-top-2 bg-[var(--color-base)]">
                         {(() => {
                           const canEdit = supervisorProfile?.area === 'Administrador / Todos' || selectedBulkOrders.every(p => String(supervisorProfile?.area || '').trim() === String(p.areaActual).trim());
                           if (!canEdit) return null;
@@ -248,7 +248,7 @@ const BulkOrderDetailsModal = ({
                                                                 const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
                                                                 const load = getWorkload(person);
                                                                 return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
                                                                         <span>{person}</span>
                                                                         <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
                                                                     </button>
@@ -265,7 +265,7 @@ const BulkOrderDetailsModal = ({
                                                                 const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
                                                                 const load = getWorkload(person);
                                                                 return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--card-bg)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
+                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-[10px] md:text-[11px] flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
                                                                         <span>{person}</span>
                                                                         <span className={`px-2 py-0.5 rounded-full text-[9px] ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
                                                                     </button>
@@ -379,7 +379,7 @@ const BulkOrderDetailsModal = ({
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full bg-[var(--accent)] text-[var(--card-bg)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--border-color)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                          }} className="w-full bg-[var(--accent)] text-[var(--color-surface)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
                             </>
                           );
                         })()}
