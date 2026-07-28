@@ -67,12 +67,12 @@ const BulkOrderDetailsModal = ({
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[420px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
-                 <h2 className="text-xl font-black text-[var(--primary)] truncate">ACCIÓN MASIVA</h2>
+                 <h2 className="text-xl font-black text-[var(--color-primary)] truncate">ACCIÓN MASIVA</h2>
                  <p className="text-xs md:text-sm lg:text-base font-bold uppercase theme-text-muted truncate flex items-center gap-2 mt-1">
                      <Package size={"1.2em"}/> {selectedBulkOrders.length} PRODUCTOS
                  </p>
               </div>
-              <button type="button" onClick={() => setShowBulkModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">✕</button>
+              <button type="button" onClick={() => setShowBulkModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--color-primary)] shrink-0">✕</button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
@@ -81,7 +81,7 @@ const BulkOrderDetailsModal = ({
               <button 
                   type="button" 
                   onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${(selectedBulkOrders?.[0] || {}).codArticulo} vinculados a ReviSoft.`)} 
-                  className="w-full bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--primary)]/20"
+                  className="w-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors shadow-sm border border-[var(--color-primary)]/20"
               >
                   <FileText size={"1.3em"} /> Ver Planos del Producto
               </button>
@@ -105,7 +105,7 @@ const BulkOrderDetailsModal = ({
 
               {/* Acordeón Planta */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'planta' ? null : 'planta')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><History size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Avance en Planta</span>
@@ -119,18 +119,18 @@ const BulkOrderDetailsModal = ({
                           if (!canEdit) return null;
                           return (
                             <>
-                              <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOMBRE OPERARIO..." />
-                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--primary)]">{CONFIG_PROCESOS[(selectedBulkOrders?.[0] || {}).areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
+                              <input value={tempOperario} onChange={e=>setTempOperario(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOMBRE OPERARIO..." />
+                        <select value={tempShiftActivity} onChange={e=>setTempShiftActivity(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none text-[var(--color-primary)]">{CONFIG_PROCESOS[(selectedBulkOrders?.[0] || {}).areaActual]?.map(st=><option key={st} value={st}>{st}</option>)}</select>
                         <div className="relative">
-                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={shiftNoteText} onChange={e=>setShiftNoteText(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="NOVEDADES / FALTANTES..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('planta')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'planta' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'}`}>{isListening && activeDictationTarget.current === 'planta' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTempPhoto)} />
                             </label>
@@ -138,7 +138,7 @@ const BulkOrderDetailsModal = ({
                         {tempPhoto && <img src={tempPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         <div className="flex flex-col gap-3 mt-4">
                           <label className="flex items-center justify-between p-4 rounded-xl border cursor-pointer select-none transition-colors duration-200 theme-bg-input theme-border hover:border-green-500 group">
-                            <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:text-[var(--primary)]'}`}>
+                            <span className={`text-sm md:text-base font-black uppercase transition-colors ${isTerminadoLocal ? 'text-green-500' : 'theme-text-muted group-hover:text-[var(--color-primary)]'}`}>
                               {isTerminadoLocal ? '✅ MARCADO COMO TERMINADO' : 'MARCAR COMO TERMINADO'}
                             </span>
                             <div className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${isTerminadoLocal ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-black/20 dark:bg-white/10'}`}>
@@ -147,7 +147,7 @@ const BulkOrderDetailsModal = ({
                             <input type="checkbox" className="hidden" checked={isTerminadoLocal} onChange={(e) => setIsTerminadoLocal(e.target.checked)} />
                           </label>
 
-                          <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--accent)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
+                          <button type="button" onClick={() => addShiftNote(isTerminadoLocal)} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-all duration-200 hover:brightness-125 active:scale-95 shadow-md">
                             Guardar Avance en Lote
                           </button>
                         </div>
@@ -161,7 +161,7 @@ const BulkOrderDetailsModal = ({
 
               {/* Acordeón Entregas */}
               <div className="theme-bg-card border theme-border rounded-2xl overflow-hidden shadow-sm">
-                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--primary)] hover:brightness-110 transition-colors">
+                 <button type="button" onClick={() => setOpenSection(openSection === 'entrega' ? null : 'entrega')} className="w-full p-4 flex items-center justify-between bg-[var(--color-surface)] text-[var(--color-primary)] hover:brightness-110 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-black/20 rounded-lg"><ArrowRightLeft size={18}/></div>
                         <span className="font-black text-xs md:text-sm lg:text-base uppercase tracking-wide">Entregas Sección</span>
@@ -221,7 +221,7 @@ const BulkOrderDetailsModal = ({
                           return (
                             <>
                               <div className="w-full flex flex-col gap-2 mb-2">
-                                    <label className="text-[var(--primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
+                                    <label className="text-[var(--color-primary)] font-black text-xs md:text-sm lg:text-base uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
                                     <div className="group border border-blue-500/30 rounded-xl overflow-hidden mb-3">
                                         <div className="p-3 bg-blue-500/10 text-[10px] md:text-xs font-bold text-blue-500 uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/20 transition-colors">
@@ -242,7 +242,7 @@ const BulkOrderDetailsModal = ({
                                                 </button>
                                                 {a === "Diseño" && isSelected && isGerente && (
                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
+                                                        <label className="text-[var(--color-primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                             {(PERSONAL_DISENO || []).map(person => {
                                                                 const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
@@ -259,7 +259,7 @@ const BulkOrderDetailsModal = ({
                                                 )}
                                                 {a === "Programación CNC" && isSelected && (isDiseno || isGerente) && (
                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="text-[var(--primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
+                                                        <label className="text-[var(--color-primary)] font-black text-[10px] md:text-xs uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                             {(PERSONAL_CNC || []).map(person => {
                                                                 const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
@@ -347,20 +347,20 @@ const BulkOrderDetailsModal = ({
                                 </div>
                             </div>
                         </div>
-                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]" />
+                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-xs md:text-sm lg:text-base border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" />
                         <div className="grid grid-cols-1 gap-2">
-                            <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="FIRMA ENTREGA" />
+                            <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-xs md:text-sm lg:text-base uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="FIRMA ENTREGA" />
                         </div>
                         <div className="relative">
-                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--primary)] placeholder:text-[var(--primary)]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--primary)]/20 text-[var(--primary)]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-xs md:text-sm lg:text-base h-20 outline-none text-[var(--color-primary)] placeholder:text-[var(--color-primary)]/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
+                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
                         </div>
                         <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
                                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
-                            <label className="flex-1 cursor-pointer bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-[var(--primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--primary)]/20 transition-colors">
+                            <label className="flex-1 cursor-pointer bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 text-[var(--color-primary)] py-3 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm lg:text-base uppercase hover:bg-[var(--color-primary)]/20 transition-colors">
                                 <ImageIcon size={"1.2em"}/> Galería
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setTransferPhoto)} />
                             </label>
@@ -368,8 +368,8 @@ const BulkOrderDetailsModal = ({
                         {transferPhoto && <img src={transferPhoto} alt="preview" className="w-full h-32 object-cover rounded-xl border theme-border" />}
                         
                         <label className="flex items-center gap-2 mb-2 p-3 bg-black/5 rounded-xl border border-black/10 cursor-pointer hover:bg-black/10 transition-colors">
-                              <input type="checkbox" checked={tempIsPartial} onChange={(e) => setTempIsPartial(e.target.checked)} className="w-5 h-5 accent-[var(--primary)] rounded cursor-pointer" />
-                              <span className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)]">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
+                              <input type="checkbox" checked={tempIsPartial} onChange={(e) => setTempIsPartial(e.target.checked)} className="w-5 h-5 accent-[var(--color-primary)] rounded cursor-pointer" />
+                              <span className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)]">ENTREGA PARCIAL (CONSERVAR EN MI SECCIÓN)</span>
                         </label>
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
@@ -379,7 +379,7 @@ const BulkOrderDetailsModal = ({
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full bg-[var(--accent)] text-[var(--color-surface)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                          }} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] py-4 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
                             </>
                           );
                         })()}

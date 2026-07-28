@@ -91,15 +91,22 @@ export const AppContextProvider = ({ children }) => {
   const [appTheme, setAppTheme] = useState(() => {
     return localStorage.getItem('app-theme') || 'cine';
   });
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('dark-mode') === 'true';
+  });
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
-    if (appTheme === 'cine') {
+  }, [appTheme]);
+
+  useEffect(() => {
+    if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [appTheme]);
+    localStorage.setItem('dark-mode', isDarkMode);
+  }, [isDarkMode]);
 
   const [savedLogins, setSavedLogins] = useState(() => {
     const saved = safeStorage.get('cdi_recent_logins');
@@ -194,6 +201,7 @@ export const AppContextProvider = ({ children }) => {
     isRegistering, setIsRegistering,
     authError, setAuthError,
     appTheme, setAppTheme,
+    isDarkMode, setIsDarkMode,
     savedLogins, setSavedLogins,
     openSection, setOpenSection,
     showHistoryPlanta, setShowHistoryPlanta,

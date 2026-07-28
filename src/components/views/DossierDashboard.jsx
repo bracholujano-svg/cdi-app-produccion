@@ -24,14 +24,14 @@ const HistorialView = React.memo(({ targetProducts }) => (
   <div className="space-y-6 animate-in fade-in duration-300">
     {targetProducts.map(p => (
       <div key={p.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-4 shadow-sm">
-        <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] border-b border-[var(--color-border)] pb-3">
+        <h3 className="text-base md:text-lg font-black uppercase text-[var(--color-primary)] border-b border-[var(--color-border)] pb-3">
           Histórico Completo: {p.nombre}
         </h3>
         <div className="space-y-3">
           {(p.historial || []).slice().reverse().map((h, idx) => (
-            <div key={idx} className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--primary)] transition-colors">
+            <div key={idx} className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--color-primary)] transition-colors">
               <div className="flex justify-between items-center text-xs font-black uppercase">
-                <span className="px-2 py-0.5 bg-[var(--primary-glow)] text-[var(--primary)] rounded border border-[var(--primary)]">
+                <span className="px-2 py-0.5 bg-[var(--primary-glow)] text-[var(--color-primary)] rounded border border-[var(--color-primary)]">
                   {h.accion}
                 </span>
                 <span className="text-[var(--color-text-muted)] text-[10px] font-bold">
@@ -53,7 +53,7 @@ const HistorialView = React.memo(({ targetProducts }) => (
 
 const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
   <div className="space-y-6 animate-in fade-in duration-300">
-    <div className="p-4 rounded-2xl bg-[var(--primary-glow)] border border-[var(--primary)] text-[var(--primary)] text-xs font-bold leading-relaxed">
+    <div className="p-4 rounded-2xl bg-[var(--primary-glow)] border border-[var(--color-primary)] text-[var(--color-primary)] text-xs font-bold leading-relaxed">
       💡 <strong>Análisis Comparativo Inter-Pedidos:</strong> Compara automáticamente el tiempo que se demoró este producto en cada área con el promedio histórico registrado.
     </div>
     {comparativeBenchmark.map(({ product, currentMetrics, otherInstancesCount, areaAverages, diffPercent }) => {
@@ -62,7 +62,7 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
         <div key={product.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-6 shadow-sm">
           <div className="flex flex-wrap justify-between items-center gap-3 border-b border-[var(--color-border)] pb-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--primary)]">Artículo Analizado</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)]">Artículo Analizado</span>
               <h3 className="text-lg md:text-xl font-black uppercase text-[var(--color-text-main)]">
                 {product.nombre} <span className="text-xs text-[var(--color-text-muted)] font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
               </h3>
@@ -92,17 +92,17 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
                   const currentWidth = (currentMs / maxVal) * 100;
                   const avgWidth = (avgMs / maxVal) * 100;
                   return (
-                    <div key={area} className="p-3.5 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--primary)] transition-colors">
+                    <div key={area} className="p-3.5 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--color-primary)] transition-colors">
                       <div className="flex justify-between items-center text-xs font-black uppercase">
                         <span>{area}</span>
                         <div className="flex gap-4">
-                          <span className="text-[var(--primary)]">Este Pedido: {msToTimeStrLocal(currentMs)}</span>
+                          <span className="text-[var(--color-primary)]">Este Pedido: {msToTimeStrLocal(currentMs)}</span>
                           <span className="text-[var(--color-text-muted)]">Promedio: {msToTimeStrLocal(avgMs)}</span>
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <div className="h-4 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
-                          <div className="h-full bg-[var(--primary)] rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.max(currentWidth, 2)}%` }}></div>
+                          <div className="h-full bg-[var(--color-primary)] rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.max(currentWidth, 2)}%` }}></div>
                         </div>
                         <div className="h-4 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5">
                           <div className="h-full bg-gray-500 rounded-full transition-all duration-500 shadow-sm opacity-60" style={{ width: `${Math.max(avgWidth, 2)}%` }}></div>
@@ -352,7 +352,7 @@ export default function DossierDashboard() {
               <Activity size={28} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-black text-[var(--primary)] uppercase tracking-tight flex items-center gap-2">
+              <h2 className="text-xl md:text-2xl font-black text-[var(--color-primary)] uppercase tracking-tight flex items-center gap-2">
                 DOSSIER & BENCHMARKING DE PRODUCCIÓN
               </h2>
               <p className="text-xs md:text-sm font-bold theme-text-muted">
@@ -363,7 +363,7 @@ export default function DossierDashboard() {
           <button 
             type="button" 
             onClick={() => setShowDossierModal(false)}
-            className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--primary)]"
+            className="p-3 bg-black/5 dark:bg-white/5 rounded-2xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--color-primary)]"
           >
             <X size={24} />
           </button>
@@ -380,7 +380,7 @@ export default function DossierDashboard() {
                 <input 
                   type="text"
                   placeholder="Buscar pedido, cliente o código..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-purple-500 text-[var(--primary)]"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-purple-500 text-[var(--color-primary)]"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -420,7 +420,7 @@ export default function DossierDashboard() {
             {!selectedGroup ? (
               <div className="text-center opacity-40 max-w-sm">
                 <BarChart3 size={64} className="mx-auto mb-4 text-purple-500 animate-pulse" />
-                <h3 className="text-lg font-black uppercase tracking-widest text-[var(--primary)] mb-2">Seleccione un Pedido</h3>
+                <h3 className="text-lg font-black uppercase tracking-widest text-[var(--color-primary)] mb-2">Seleccione un Pedido</h3>
                 <p className="text-xs font-bold theme-text-muted">Elija un pedido de la lista izquierda para desplegar su gráfico comparativo, análisis de tiempos e insumos.</p>
               </div>
             ) : (
@@ -435,7 +435,7 @@ export default function DossierDashboard() {
                 <div className="bg-[var(--color-base)] p-6 rounded-3xl border border-[var(--color-border)] shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]">
+                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] text-[var(--color-primary)] border border-[var(--color-primary)]">
                         Dossier Activo
                       </span>
                       <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase">Cliente: {selectedGroup.cliente}</span>
@@ -449,7 +449,7 @@ export default function DossierDashboard() {
                     <button
                       type="button"
                       onClick={() => setSelectedProductId('ALL')}
-                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--primary)]'}`}
+                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}
                     >
                       📦 Todos ({selectedGroup.products.length})
                     </button>
@@ -458,7 +458,7 @@ export default function DossierDashboard() {
                         key={p.id}
                         type="button"
                         onClick={() => setSelectedProductId(p.id)}
-                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--primary)]'}`}
+                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]'}`}
                       >
                         {p.codArticulo || p.nombre}
                       </button>
@@ -504,7 +504,7 @@ export default function DossierDashboard() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase theme-text-muted">Tiempo Total Procesado</p>
-                          <h4 className="text-xl md:text-2xl font-black text-[var(--primary)]">
+                          <h4 className="text-xl md:text-2xl font-black text-[var(--color-primary)]">
                             {msToTimeStr(pedidoMetrics?.globalWorkingMs)}
                           </h4>
                         </div>
@@ -516,7 +516,7 @@ export default function DossierDashboard() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase theme-text-muted">Áreas Activas</p>
-                          <h4 className="text-xl md:text-2xl font-black text-[var(--primary)]">
+                          <h4 className="text-xl md:text-2xl font-black text-[var(--color-primary)]">
                             {Object.keys(pedidoMetrics?.aggregatedAreaDurations || {}).length} Secciones
                           </h4>
                         </div>
@@ -528,7 +528,7 @@ export default function DossierDashboard() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase theme-text-muted">Estado Global</p>
-                          <h4 className="text-sm font-black text-[var(--primary)] uppercase">
+                          <h4 className="text-sm font-black text-[var(--color-primary)] uppercase">
                             {selectedGroup.products.every(p => p.isTerminado) ? '🟢 Terminado' : '🟡 En Procesamiento'}
                           </h4>
                         </div>
@@ -537,7 +537,7 @@ export default function DossierDashboard() {
 
                     {/* GRÁFICO DE BARRAS DE TIEMPO POR ÁREA */}
                     <div className="theme-bg-card p-6 rounded-3xl border theme-border space-y-4">
-                      <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)] flex items-center gap-2">
+                      <h3 className="text-base md:text-lg font-black uppercase text-[var(--color-primary)] flex items-center gap-2">
                         <BarChart3 className="text-purple-500" /> Gráfico Comparativo de Tiempo por Sección
                       </h3>
 
@@ -550,7 +550,7 @@ export default function DossierDashboard() {
                             return (
                               <div key={area} className="space-y-1.5">
                                 <div className="flex justify-between items-center text-xs font-black uppercase">
-                                  <span className="text-[var(--primary)]">{area}</span>
+                                  <span className="text-[var(--color-primary)]">{area}</span>
                                   <span className="theme-text-muted">{msToTimeStr(ms)} ({percent.toFixed(1)}%)</span>
                                 </div>
                                 <div className="h-4 w-full theme-bg-input rounded-full overflow-hidden p-0.5 border theme-border">
@@ -579,33 +579,33 @@ export default function DossierDashboard() {
                     {targetProducts.map(p => (
                       <div key={p.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-4 shadow-sm">
                         <div className="flex justify-between items-center border-b border-[var(--color-border)] pb-3">
-                          <h3 className="text-base md:text-lg font-black uppercase text-[var(--primary)]">
+                          <h3 className="text-base md:text-lg font-black uppercase text-[var(--color-primary)]">
                             Insumos de: {p.nombre} <span className="text-xs text-[var(--color-text-muted)] font-bold">({p.codArticulo})</span>
                           </h3>
                         </div>
 
                         {/* FORMULARIO AGREGAR INSUMO */}
                         <div className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-3">
-                          <label className="text-xs font-black uppercase text-[var(--primary)] block">Registrar Consumo de Materia Prima / Insumo:</label>
+                          <label className="text-xs font-black uppercase text-[var(--color-primary)] block">Registrar Consumo de Materia Prima / Insumo:</label>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <input 
                               type="text" 
                               placeholder="Nombre Insumo (ej. MDF 18mm, Cold Roll 1/8)" 
                               value={nuevoInsumoNombre}
                               onChange={e => setNuevoInsumoNombre(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--color-text-main)]"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--color-primary)] text-[var(--color-text-main)]"
                             />
                             <input 
                               type="text" 
                               placeholder="Cantidad / Unidad (ej. 2 Hojas, 5 Kg)" 
                               value={nuevoInsumoCantidad}
                               onChange={e => setNuevoInsumoCantidad(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--primary)] text-[var(--color-text-main)]"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--color-primary)] text-[var(--color-text-main)]"
                             />
                             <button 
                               type="button" 
                               onClick={() => handleAddInsumo(p.id)}
-                              className="bg-[var(--primary)] text-white font-black uppercase text-xs p-3 rounded-xl shadow-sm hover:brightness-125 transition-colors flex items-center justify-center gap-1"
+                              className="bg-[var(--color-primary)] text-white font-black uppercase text-xs p-3 rounded-xl shadow-sm hover:brightness-125 transition-colors flex items-center justify-center gap-1"
                             >
                               <Plus size={16} /> Guardar Insumo
                             </button>
@@ -623,7 +623,7 @@ export default function DossierDashboard() {
                                   <span className="text-xs font-black uppercase text-[var(--color-text-main)]">{item.nombre}</span>
                                   <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
                                 </div>
-                                <span className="text-xs font-black px-3 py-1 bg-[var(--primary-glow)] text-[var(--primary)] rounded-full border border-[var(--primary)] uppercase">
+                                <span className="text-xs font-black px-3 py-1 bg-[var(--primary-glow)] text-[var(--color-primary)] rounded-full border border-[var(--color-primary)] uppercase">
                                   {item.cantidad}
                                 </span>
                               </div>

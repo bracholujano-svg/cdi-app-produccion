@@ -190,14 +190,14 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                 {/* Cabecera */}
                 <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex justify-between items-start relative shrink-0">
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-black text-[var(--primary)] uppercase tracking-tight flex items-center gap-2">
+                        <h2 className="text-2xl md:text-3xl font-black text-[var(--color-primary)] uppercase tracking-tight flex items-center gap-2">
                             <History size="1em" /> Trazabilidad por Secciones
                         </h2>
                         <p className="text-sm font-bold theme-text-muted mt-1 flex items-center gap-2">
                             PEDIDO #{order.pedidoNum} | ART: {order.codArticulo}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--primary)] shrink-0">
+                    <button onClick={onClose} className="p-2 bg-black/10 rounded-xl hover:bg-black/20 transition-colors text-[var(--color-primary)] shrink-0">
                         <X size={"1.5em"} />
                     </button>
                 </div>
@@ -210,11 +210,11 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-bold theme-text-muted uppercase">Área Actual</span>
-                        <span className="text-xs md:text-sm font-black text-[var(--accent)] flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
+                        <span className="text-xs md:text-sm font-black text-[var(--color-primary)] flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-bold theme-text-muted uppercase">Estado Interno</span>
-                        <span className="text-xs md:text-sm font-black text-[var(--primary)] flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
+                        <span className="text-xs md:text-sm font-black text-[var(--color-primary)] flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-bold theme-text-muted uppercase">Tiempo Restante</span>
@@ -245,7 +245,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                 return (
                                     <div key={phase.id} className="relative pl-8 md:pl-12">
                                         {/* Nodo del Timeline */}
-                                        <div className="absolute -left-[22px] top-6 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--color-base)] bg-[var(--primary)]">
+                                        <div className="absolute -left-[22px] top-6 w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[var(--color-base)] bg-[var(--color-primary)]">
                                             <MapPin size="1.2em" />
                                         </div>
 
@@ -254,7 +254,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
                                                 <div>
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <h3 className="font-black text-sm md:text-base uppercase tracking-tight text-[var(--primary)] flex items-center gap-2">
+                                                        <h3 className="font-black text-sm md:text-base uppercase tracking-tight text-[var(--color-primary)] flex items-center gap-2">
                                                             {phase.area}
                                                         </h3>
                                                         {phase.events.some(e => e.isPartial) && (
@@ -274,7 +274,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                     <span className="text-[10px] md:text-xs font-bold theme-text-muted bg-black/5 px-2 py-1 rounded-lg w-fit md:w-auto">
                                                         TIEMPO EN ÁREA
                                                     </span>
-                                                    <span className="text-sm md:text-base font-black text-[var(--accent)] mt-1">
+                                                    <span className="text-sm md:text-base font-black text-[var(--color-primary)] mt-1">
                                                         {timeStr}
                                                     </span>
                                                 </div>
@@ -322,7 +322,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                                         <span>AUTOR: {ev.supervisor}</span>
                                                                         {ev.operario && <span>OPERARIO: {ev.operario}</span>}
                                                                         {ev.foto && (
-                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="text-[var(--accent)] hover:underline flex items-center gap-1">
+                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="text-[var(--color-primary)] hover:underline flex items-center gap-1">
                                                                                 <ImageIcon size="1.2em" /> FOTO / ACTA
                                                                             </button>
                                                                         )}

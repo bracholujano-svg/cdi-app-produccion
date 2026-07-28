@@ -9,7 +9,7 @@ const CDILogo = ({ className = "" }) => {
       </span>
       
       {/* Divider */}
-      <div className="h-[3px] md:h-[4px] w-full bg-[var(--primary)] rounded-full mt-1 mb-1"></div>
+      <div className="h-[3px] md:h-[4px] w-full bg-[var(--color-primary)] rounded-full mt-1 mb-1"></div>
       
       {/* Horizontal Text */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-1 text-center w-full mt-1">

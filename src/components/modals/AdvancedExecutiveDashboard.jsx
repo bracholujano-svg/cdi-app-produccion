@@ -284,7 +284,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             datasets: [{
                                 label: 'Entregas Programadas',
                                 data: [12, 19, 15, 22, 30, 8], // Mocked trend para estética visual, ya que requiere histórico extenso
-                                borderColor: 'var(--accent)', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
+                                borderColor: 'var(--color-primary)', backgroundColor: 'rgba(234, 220, 186, 0.2)', fill: true, tension: 0.4
                             }]
                         },
                         options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
@@ -350,11 +350,11 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-16 items-center">
                             <div className="flex items-center gap-2">
-                                <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black text-[var(--primary)] tracking-tighter">CDI</span>
+                                <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black text-[var(--color-primary)] tracking-tighter">CDI</span>
                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                                 <div className="flex flex-col leading-none">
                                     <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold tracking-widest theme-text-muted">INFORME</span>
-                                    <span className="text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase">Ejecutivo</span>
+                                    <span className="text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase">Ejecutivo</span>
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -362,7 +362,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <button 
                                         key={tab} 
                                         onClick={() => setDashboardTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
@@ -410,17 +410,17 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-[var(--primary)] p-6 rounded-3xl text-white dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
+                                <div className="bg-[var(--color-primary)] p-6 rounded-3xl text-white dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
                                       <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Pedidos Activos</p>
                                       <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
                                   </div>
-                                  <div className="bg-[var(--accent)] p-6 rounded-3xl text-[#cdcbc8] dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
+                                  <div className="bg-[var(--color-primary)] p-6 rounded-3xl text-[#cdcbc8] dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
                                       <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Próximos a Entrega</p>
                                       <h3 className="text-4xl font-black mt-1 text-white dark:text-[#17181b]">{urgentesCount}</h3>
                                   </div>
                                 <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm">
                                     <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted">Despachados</p>
-                                    <h3 className="text-4xl font-black mt-1 text-[var(--primary)]">{despachadosCount}</h3>
+                                    <h3 className="text-4xl font-black mt-1 text-[var(--color-primary)]">{despachadosCount}</h3>
                                 </div>
                                 <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm">
                                       <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-800 dark:text-red-500">Atrasos Críticos</p>
@@ -504,9 +504,9 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
                                 <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--primary)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm theme-bg-card text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400" />
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm theme-bg-card text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400" />
                                 </div>
-                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-slate-900 dark:text-slate-100">
+                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-slate-900 dark:text-slate-100">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
@@ -517,8 +517,8 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <thead>
                                         <tr className="theme-bg-card border-b theme-border">
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Pedido</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase tracking-widest">Artículo / Producto</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--primary)] uppercase tracking-widest text-center">Cant.</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase tracking-widest">Artículo / Producto</th>
+                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black text-[var(--color-primary)] uppercase tracking-widest text-center">Cant.</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Cliente</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
                                             <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
@@ -530,7 +530,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                             <tr key={o.id} className="border-b theme-border hover:theme-bg-card/50 transition-colors">
                                                 <td className="p-5 font-black text-xs md:text-sm lg:text-base text-[var(--color-text-main)]">#{o.pedidoNum}</td>
                                                 <td className="p-5">
-                                                    <div className="font-black text-[var(--primary)] text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
+                                                    <div className="font-black text-[var(--color-primary)] text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
                                                     <div className="font-bold theme-text-muted text-xs truncate max-w-[200px]">{o.nombre || "S/N"}</div>
                                                 </td>
                                                 <td className="p-5 text-center font-black text-lg text-[var(--color-text-main)]">
@@ -538,7 +538,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
                                                 <td className="p-5">
-                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--primary)]/10 text-[var(--primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--primary)]/30">{o.areaActual}</span>
+                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--color-primary)]/30">{o.areaActual}</span>
                                                     {o.asignado_a && o.asignado_a.length > 0 && (
                                                         <div className="mt-2 flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <UserCheck size="1.2em" /> {Array.isArray(o.asignado_a) ? o.asignado_a.join(', ') : o.asignado_a}
@@ -547,7 +547,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 </td>
                                                 <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted uppercase tracking-tight">{o.estadoInterno}</td>
                                                 <td className="p-5 text-center">
-                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--primary)] text-[var(--color-base)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
+                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--color-primary)] text-[var(--color-base)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
                                                         <History size="1.2em" /> Historial
                                                     </button>
                                                 </td>
@@ -572,12 +572,12 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 </div>
                                 <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
-                                        <h2 className="text-xl font-black uppercase text-[var(--accent)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
+                                        <h2 className="text-xl font-black uppercase text-[var(--color-primary)]" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
                                         <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
-                                            <div className="w-10 h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center font-black text-[var(--color-text-main)]">{despachadosCount}</div>
+                                            <div className="w-10 h-10 bg-[var(--color-primary)] rounded-xl flex items-center justify-center font-black text-[var(--color-text-main)]">{despachadosCount}</div>
                                             <div>
                                                 <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
                                                 <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>

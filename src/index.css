@@ -6,7 +6,7 @@
 /* New Dynamic Theming Engine (CSS Variables) */
 
 /* Tema 1: Santuario (Digital Sanctuary) */
-:root[data-theme="santuario"] {
+:root[data-theme="santuario"]:not(.dark) {
     --color-base: #f8faf3; 
     --color-surface: #f2f4ed; 
     --color-primary: #55624d; 
@@ -15,9 +15,18 @@
     --color-text-muted: #444841;
     --color-border: #c5c8be; 
 }
+:root[data-theme="santuario"].dark {
+    --color-base: #111410;
+    --color-surface: #1a1f18;
+    --color-primary: #8da480;
+    --color-primary-glow: rgba(141, 164, 128, 0.2);
+    --color-text-main: #e8eae6;
+    --color-text-muted: #9fa69b;
+    --color-border: #3b4536;
+}
 
 /* Tema 2: Autoridad (Precision Authority) */
-:root[data-theme="autoridad"] {
+:root[data-theme="autoridad"]:not(.dark) {
     --color-base: #f8f9ff; 
     --color-surface: #eff4ff; 
     --color-primary: #000000; 
@@ -26,9 +35,27 @@
     --color-text-muted: #444748;
     --color-border: #c4c7c7; 
 }
+:root[data-theme="autoridad"].dark {
+    --color-base: #050a14;
+    --color-surface: #0b162c;
+    --color-primary: #ffffff;
+    --color-primary-glow: rgba(255, 255, 255, 0.2);
+    --color-text-main: #eef2f9;
+    --color-text-muted: #a6adb5;
+    --color-border: #2c3a4f;
+}
 
 /* Tema 3: Cine (Cinematic Discovery) */
-:root[data-theme="cine"] {
+:root[data-theme="cine"]:not(.dark) {
+    --color-base: #fff4f6; 
+    --color-surface: #ffe5ec; 
+    --color-primary: #e63968; 
+    --color-primary-glow: rgba(230, 57, 104, 0.2);
+    --color-text-main: #330d17;
+    --color-text-muted: #804a57;
+    --color-border: #ffb3c6; 
+}
+:root[data-theme="cine"].dark {
     --color-base: #0e0e0e; 
     --color-surface: #1f1f1f; 
     --color-primary: #ffb1c3; 
@@ -39,14 +66,23 @@
 }
 
 /* Tema 4: Fluidez (Digital Fluidity) */
-:root[data-theme="fluidez"] {
+:root[data-theme="fluidez"]:not(.dark) {
     --color-base: #f8f9ff; 
     --color-surface: #eff4ff; 
     --color-primary: #006d32; 
     --color-primary-glow: rgba(0, 109, 50, 0.2);
-    --color-text-main: #0b1c30;
-    --color-text-muted: #444748;
-    --color-border: #bbcbb9; 
+    --color-text-main: #1a1c1e;
+    --color-text-muted: #42474e;
+    --color-border: #c2c7cf; 
+}
+:root[data-theme="fluidez"].dark {
+    --color-base: #0f1418;
+    --color-surface: #182026;
+    --color-primary: #66c78e;
+    --color-primary-glow: rgba(102, 199, 142, 0.2);
+    --color-text-main: #e1e3e5;
+    --color-text-muted: #9aa0a6;
+    --color-border: #3b434a;
 }
 
 .theme-bg-main { background-color: var(--color-base); color: var(--color-text-main); }

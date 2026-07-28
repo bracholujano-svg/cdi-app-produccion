@@ -138,13 +138,13 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                 <div className="bg-[var(--bg-header)] border-b border-[var(--color-border)] shrink-0 flex flex-col">
                     <div className="p-5 flex justify-between items-center">
                         <div>
-                            <h2 className="text-xl font-black text-[var(--primary)] uppercase">Panel de Recepciones</h2>
+                            <h2 className="text-xl font-black text-[var(--color-primary)] uppercase">Panel de Recepciones</h2>
                             <p className="text-xs md:text-sm font-bold text-gray-400">Verifique entregas o revise devoluciones</p>
                         </div>
-                        <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 text-[var(--primary)] shrink-0">✕</button>
+                        <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 text-[var(--color-primary)] shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--color-border)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--accent)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
                         <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
@@ -163,18 +163,18 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                             ) : (
                                 Object.keys(pendingGroups).map(pedidoNum => (
                                     <div key={pedidoNum} className="space-y-2">
-                                        <div onClick={() => toggleGroup(pendingGroups[pedidoNum])} className="bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20 cursor-pointer hover:bg-[var(--primary)]/20 transition-colors flex justify-between items-center">
-                                            <span className="font-black text-sm text-[var(--primary)] uppercase">PEDIDO: {pedidoNum}</span>
-                                            <span className="text-[10px] text-[var(--primary)] font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-[var(--primary)]/20">Seleccionar Grupo</span>
+                                        <div onClick={() => toggleGroup(pendingGroups[pedidoNum])} className="bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg border border-[var(--color-primary)]/20 cursor-pointer hover:bg-[var(--color-primary)]/20 transition-colors flex justify-between items-center">
+                                            <span className="font-black text-sm text-[var(--color-primary)] uppercase">PEDIDO: {pedidoNum}</span>
+                                            <span className="text-[10px] text-[var(--color-primary)] font-bold bg-white/10 px-2 py-0.5 rounded shadow-sm border border-[var(--color-primary)]/20">Seleccionar Grupo</span>
                                         </div>
                                         {pendingGroups[pedidoNum].map((item, idx) => (
                                             <div 
                                                 key={idx} 
                                                 onClick={() => toggleItem(item)}
-                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-[var(--primary)] bg-[var(--primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
+                                                className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-xs md:text-sm font-bold uppercase text-[var(--primary)]">{item.codArticulo} - {item.nombre}</p>
+                                                    <p className="text-xs md:text-sm font-bold uppercase text-[var(--color-primary)]">{item.codArticulo} - {item.nombre}</p>
                                                     <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
                                                         <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
                                                         {item.transferenciaPendiente?.isPartial && (
@@ -227,38 +227,38 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                     <>
                                         <div className="bg-white/50 dark:bg-white/5 p-4 rounded-xl border theme-border shadow-sm">
                                             {selectedItems.length > 1 && (
-                                            <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 p-3 rounded-xl mb-4">
-                                                <h3 className="font-black text-[var(--accent)] uppercase flex items-center gap-2">
+                                            <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 p-3 rounded-xl mb-4">
+                                                <h3 className="font-black text-[var(--color-primary)] uppercase flex items-center gap-2">
                                                     <CheckCircle size={16} /> Acción Masiva
                                                 </h3>
-                                                <p className="text-xs font-bold text-[var(--primary)] mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
+                                                <p className="text-xs font-bold text-[var(--color-primary)] mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
                                             </div>
                                         )}
                                         <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Datos de Envío</h3>
-                                            <p className="text-sm font-bold uppercase"><span className="text-[var(--primary)]">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
+                                            <p className="text-sm font-bold uppercase"><span className="text-[var(--color-primary)]">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.nota && (
                                                 <div className="mt-2 p-3 bg-black/5 rounded-lg">
                                                     <p className="text-sm italic text-gray-600 dark:text-gray-300">"{selectedItems[0].transferenciaPendiente?.nota}"</p>
                                                 </div>
                                             )}
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.fotoEntrega && (
-                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 text-[var(--accent)] text-xs font-bold flex items-center gap-1 hover:underline">
+                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 text-[var(--color-primary)] text-xs font-bold flex items-center gap-1 hover:underline">
                                                     <ImageIcon size={14} /> Ver Foto de Evidencia de Envío
                                                 </button>
                                             )}
                                         </div>
 
                                         <div className="space-y-4">
-                                            <h3 className="font-black text-xs text-[var(--primary)] uppercase">Inspección de Recibido</h3>
+                                            <h3 className="font-black text-xs text-[var(--color-primary)] uppercase">Inspección de Recibido</h3>
                                             
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-400 mb-1">RECIBIDO POR (SU NOMBRE):</label>
-                                                <input type="text" value={receptionName} onChange={e => setReceptionName(e.target.value)} className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm font-bold uppercase outline-none focus:border-[var(--accent)]" />
+                                                <input type="text" value={receptionName} onChange={e => setReceptionName(e.target.value)} className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm font-bold uppercase outline-none focus:border-[var(--color-primary)]" />
                                             </div>
                                             
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-400 mb-1">OBSERVACIONES / MOTIVO RECHAZO:</label>
-                                                <textarea value={receptionNotes} onChange={e => setReceptionNotes(e.target.value)} placeholder="Escriba aquí..." rows="3" className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm outline-none focus:border-[var(--accent)]"></textarea>
+                                                <textarea value={receptionNotes} onChange={e => setReceptionNotes(e.target.value)} placeholder="Escriba aquí..." rows="3" className="w-full bg-[var(--bg-input)] border theme-border rounded-xl p-3 text-sm outline-none focus:border-[var(--color-primary)]"></textarea>
                                             </div>
 
                                             {tempPhoto && (
@@ -268,7 +268,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 </div>
                                             )}
 
-                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:bg-white/5 text-[var(--primary)] py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
+                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:bg-white/5 text-[var(--color-primary)] py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
                                                 <Camera size={16} /> Adjuntar Foto
                                             </button>
 
@@ -279,7 +279,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>
-                                                <button onClick={handleConfirm} className="bg-[var(--accent)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleConfirm} className="bg-[var(--color-primary)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
                                                     <CheckCircle size={18} />
                                                     Aceptar
                                                 </button>

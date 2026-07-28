@@ -194,7 +194,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
             {/* Controles de Exportación */}
             <div className="flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex-wrap gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[var(--primary)] rounded-xl flex items-center justify-center text-slate-900">
+                    <div className="w-12 h-12 bg-[var(--color-primary)] rounded-xl flex items-center justify-center text-slate-900">
                         <BrainCircuit size={24} />
                     </div>
                     <div>
@@ -206,7 +206,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                     <button onClick={handleWhatsAppShare} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl font-black uppercase text-sm hover:bg-green-100 transition-colors border border-green-200">
                         <Share2 size={18} /> WhatsApp
                     </button>
-                    <button onClick={handleDownloadPDF} disabled={isExporting} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[var(--primary)] text-slate-900 px-4 py-3 rounded-xl font-black uppercase text-sm hover:brightness-110 transition-colors shadow-sm">
+                    <button onClick={handleDownloadPDF} disabled={isExporting} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[var(--color-primary)] text-slate-900 px-4 py-3 rounded-xl font-black uppercase text-sm hover:brightness-110 transition-colors shadow-sm">
                         <Download size={18} /> {isExporting ? 'Generando...' : 'Descargar PDF'}
                     </button>
                 </div>
@@ -223,7 +223,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                     </div>
                     <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-right min-w-[200px] w-full md:w-auto">
                         <p className="text-xs font-black uppercase text-gray-400">Fecha del Reporte</p>
-                        <p className="text-lg font-black text-[var(--accent)]">{new Date().toLocaleDateString()}</p>
+                        <p className="text-lg font-black text-[var(--color-primary)]">{new Date().toLocaleDateString()}</p>
                         <p className="text-xs font-bold text-gray-500">{new Date().toLocaleTimeString()}</p>
                     </div>
                 </div>
@@ -248,7 +248,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Alertas Críticas de Atraso (AGRUPADAS) */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-[var(--primary)] pb-2 inline-flex"><Clock size={24} className="text-[var(--primary)]"/> Lista de Retrasos Críticos</h3>
+                        <h3 className="text-xl font-black uppercase text-slate-800 flex items-center gap-2 border-b-2 border-[var(--color-primary)] pb-2 inline-flex"><Clock size={24} className="text-[var(--color-primary)]"/> Lista de Retrasos Críticos</h3>
                         
                         <div className="space-y-4">
                             {delayedOrders.length > 0 ? delayedOrders.slice(0, 5).map((o, idx) => (

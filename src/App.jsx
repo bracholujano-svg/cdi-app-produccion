@@ -974,7 +974,7 @@ const {
         <div className="theme-bg-input p-2 flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="flex gap-2 flex-1 md:flex-none">
@@ -983,7 +983,7 @@ const {
                         list="client-options" 
                         type="text"
                         placeholder="BUSCAR CLIENTE..."
-                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
+                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
                         value={clientFilter === 'Todos' ? '' : clientFilter} 
                         onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
                         onFocus={(e) => e.target.select()}
@@ -992,7 +992,7 @@ const {
                         {uniqueClients.map(c => <option key={c} value={c} />)}
                     </datalist>
                 </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-ellipsis overflow-hidden text-slate-900 dark:text-white" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden text-slate-900 dark:text-white" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
                     <option value="pedido_desc">Pedido (Desc)</option>
@@ -1002,29 +1002,29 @@ const {
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--primary)] cursor-pointer text-slate-900 dark:text-white" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-slate-900 dark:text-white" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
 
                 <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0 text-slate-900 dark:text-white">
-                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
+                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
                         <LayoutList size={"1.2em"} />
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
+                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
 
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
+                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
+                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
                     </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
+                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
                     </button>
                 </div>
@@ -1049,15 +1049,15 @@ const {
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Anterior
             </button>
-            <span className="font-bold text-xs md:text-sm lg:text-base text-[var(--primary)] px-2">Página {currentPage} de {totalPages}</span>
+            <span className="font-bold text-xs md:text-sm lg:text-base text-[var(--color-primary)] px-2">Página {currentPage} de {totalPages}</span>
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--primary)] disabled:opacity-50 hover:bg-[var(--primary)] hover:text-[var(--color-surface)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Siguiente
             </button>
@@ -1132,7 +1132,7 @@ const {
         return (
           <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
             <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-              <div className="p-5 bg-[var(--accent)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
+              <div className="p-5 bg-[var(--color-primary)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
               
               <div className="p-4 bg-[var(--color-surface)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">
                 <input 
@@ -1140,19 +1140,19 @@ const {
                   placeholder="🔎 Buscar Nº Pedido..." 
                   value={coordSearchPedido} 
                   onChange={(e) => setCoordSearchPedido(e.target.value)} 
-                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)] uppercase"
+                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] uppercase"
                 />
                 <div className="flex gap-4 flex-1">
                   <input 
                     type="date" 
                     value={coordSearchFecha} 
                     onChange={(e) => setCoordSearchFecha(e.target.value)} 
-                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--primary)]"
+                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"
                   />
                   <button 
                     type="button" 
                     onClick={() => setCoordSearchFecha('')} 
-                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
                     title="Limpiar Fecha"
                   >
                     Limpiar
@@ -1161,7 +1161,7 @@ const {
                 <button 
                   type="button" 
                   onClick={() => setCoordSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} 
-                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--primary)] hover:bg-black/5 transition-colors"
+                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
                 >
                   {coordSortOrder === 'asc' ? '⬇️ ASCENDENTE' : '⬆️ DESCENDENTE'}
                 </button>
@@ -1175,27 +1175,27 @@ const {
                           <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 theme-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
                       )}
                       <span className="text-lg font-black text-blue-600 dark:text-blue-400 uppercase block leading-none pr-8">PED: {alertItem.pedidoNum}</span>
-                      <h4 className="text-sm font-bold text-[var(--primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
+                      <h4 className="text-sm font-bold text-[var(--color-primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
                       
                       {supervisorProfile?.area === "Administrador / Todos" ? (
                           <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-[11px] font-bold text-[var(--primary)]/70 uppercase block tracking-widest mb-2">Modificar Compromiso</span>
+                              <span className="text-[11px] font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-2">Modificar Compromiso</span>
                               <input 
                                   type="date" 
                                   value={alertItem.fechaEntrega} 
                                   onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                  className="w-full p-2.5 bg-transparent rounded-lg font-black text-sm md:text-base border border-[var(--color-border)] outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-[var(--primary)] transition-all" 
+                                  className="w-full p-2.5 bg-transparent rounded-lg font-black text-sm md:text-base border border-[var(--color-border)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-[var(--color-primary)] transition-all" 
                               />
                           </div>
                       ) : (
                           <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-[11px] font-bold text-[var(--primary)]/70 uppercase block tracking-widest mb-1">Compromiso</span>
-                              <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--accent)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
+                              <span className="text-[11px] font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-1">Compromiso</span>
+                              <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--color-primary)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
                           </div>
                       )}
                     </div>
                   ))}
-                  {filteredSortedAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--primary)]/50">No hay resultados</p>}
+                  {filteredSortedAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--color-primary)]/50">No hay resultados</p>}
                 </div>
               </div>
             </div>
@@ -1206,21 +1206,21 @@ const {
       {showReportConfigModal && (
         <div className="fixed inset-0 bg-black/80  z-[120] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--primary)]">✕</button></div>
+            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--color-primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--color-primary)]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>
@@ -1246,22 +1246,22 @@ const {
             <div className="fixed inset-0 bg-black/80  z-[150] flex items-center justify-center p-4">
               <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isNoMaterials ? 'border-yellow-500/30' : isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
                 <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 border-yellow-500/20' : isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isNoMaterials ? 'text-yellow-600' : isModalAlert ? 'text-orange-600' : 'text-[var(--accent)]'}`}>
+                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isNoMaterials ? 'text-yellow-600' : isModalAlert ? 'text-orange-600' : 'text-[var(--color-primary)]'}`}>
                     {isNoMaterials ? <AlertTriangle size={20} /> : isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
                     {isNoMaterials ? 'Pedidos Sin Insumos Requeridos' : isModalAlert ? 'Alerta de Insumos' : 'Inventario Suficiente'}
                   </h2>
-                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600' : isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--accent)]'}`}>✕</button>
+                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600' : isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--color-primary)]'}`}>✕</button>
                 </div>
                 
                 <div className="p-4 border-b theme-border theme-bg-main">
                     <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--primary)]/50" size={20} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]/50" size={20} />
                         <input 
                             type="text" 
                             placeholder="BUSCAR INSUMO O CÓDIGO..." 
                             value={materialsSearchTerm || ''} 
                             onChange={(e) => setMaterialsSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--accent)] font-bold uppercase text-xs md:text-sm lg:text-base text-[var(--primary)]"
+                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold uppercase text-xs md:text-sm lg:text-base text-[var(--color-primary)]"
                         />
                     </div>
                 </div>
@@ -1338,7 +1338,7 @@ const {
                     )}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--accent)] border border-green-700'}`}>Entendido</button>
+                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--color-primary)] border border-green-700'}`}>Entendido</button>
                 </div>
               </div>
             </div>
