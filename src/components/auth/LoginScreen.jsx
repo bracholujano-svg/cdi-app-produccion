@@ -88,42 +88,42 @@ const LoginScreen = () => {
           {savedLogins.length > 0 && !isRegistering && (
              <div className="flex flex-wrap gap-2 justify-center mb-4">
                {savedLogins.map((u, i) => (
-                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[var(--color-primary)]/10 theme-text-primary px-3 py-1.5 rounded-xl text-xs md:text-sm lg:text-base font-black border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/20 transition-colors">
+                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[var(--color-primary)]/10 theme-text-primary px-3 py-1.5 rounded-xl text-base lg:text-lg font-black border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/20 transition-colors">
                    {u?.name?.split(' ')[0]}
                  </button>
                ))}
              </div>
           )}
 
-          {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-xs md:text-sm lg:text-base font-bold uppercase flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/><span>{authError}</span></div>}
+          {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-base lg:text-lg font-bold uppercase flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/><span>{authError}</span></div>}
           
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
+              <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
               <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="EJ: JUAN PEREZ" />
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
+            <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
             <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--color-primary)] transition-colors">
               <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
-              <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-xs md:text-sm lg:text-base sm:text-xs md:text-sm lg:text-base flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
+              <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-base lg:text-lg sm:text-base lg:text-lg flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between items-center px-1">
-              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Clave Segura</label>
-              <span className="text-xs md:text-sm lg:text-base font-bold theme-text-primary uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 caracteres</span>
+              <label className="text-base lg:text-lg font-black theme-text-muted uppercase">Clave Segura</label>
+              <span className="text-base lg:text-lg font-bold theme-text-primary uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 caracteres</span>
             </div>
             <input name="password" type="password" minLength={6} title="Mínimo 6 caracteres (letras y números)" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="••••••" />
           </div>
 
           {isRegistering && (
             <div className="space-y-1">
-              <label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
-              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-xs md:text-sm lg:text-base focus:ring-2 focus:ring-[var(--color-primary)]">
+              <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
+              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-base lg:text-lg focus:ring-2 focus:ring-[var(--color-primary)]">
                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
@@ -132,7 +132,7 @@ const LoginScreen = () => {
           <button type="submit" className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-colors">
             {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
           </button>
-          <p className="text-center text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:theme-text-primary transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
+          <p className="text-center text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:theme-text-primary transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
             {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
           </p>
         </form>

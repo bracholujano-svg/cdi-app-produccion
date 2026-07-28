@@ -86,16 +86,16 @@ const Sidebar = () => {
               {isThemeOpen && (
                 <div className="absolute left-full top-0 ml-4 w-max bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl shadow-2xl p-2 flex flex-row items-center gap-2 animate-in slide-in-from-left-4 duration-300 z-[90]">
                   <div className="absolute w-3 h-3 bg-[var(--color-base)] border-l border-b border-[var(--color-border)] transform rotate-45 -left-[7px] top-8"></div>
-                  <button onClick={() => changeTheme('santuario')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main relative z-10 transition-colors">
+                  <button onClick={() => changeTheme('santuario')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-sm font-bold uppercase theme-text-main relative z-10 transition-colors">
                     <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: '#f8faf3', border: '1px solid #c5c8be' }}></span> <span className="truncate">Santuario</span>
                   </button>
-                  <button onClick={() => changeTheme('autoridad')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main relative z-10 transition-colors">
+                  <button onClick={() => changeTheme('autoridad')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-sm font-bold uppercase theme-text-main relative z-10 transition-colors">
                     <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: '#000000', border: '1px solid #c4c7c7' }}></span> <span className="truncate">Autoridad</span>
                   </button>
-                  <button onClick={() => changeTheme('cine')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main relative z-10 transition-colors">
+                  <button onClick={() => changeTheme('cine')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-sm font-bold uppercase theme-text-main relative z-10 transition-colors">
                     <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: '#ffb1c3', border: '1px solid #5c3f45' }}></span> <span className="truncate">Cine</span>
                   </button>
-                  <button onClick={() => changeTheme('fluidez')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main relative z-10 transition-colors">
+                  <button onClick={() => changeTheme('fluidez')} className="flex items-center justify-center px-3 gap-2 py-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-sm font-bold uppercase theme-text-main relative z-10 transition-colors">
                     <span className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: '#006d32', border: '1px solid #bbcbb9' }}></span> <span className="truncate">Fluidez</span>
                   </button>
                 </div>

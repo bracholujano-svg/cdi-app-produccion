@@ -139,15 +139,15 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                     <div className="p-5 flex justify-between items-center">
                         <div>
                             <h2 className="text-xl font-black theme-text-primary uppercase">Panel de Recepciones</h2>
-                            <p className="text-xs md:text-sm font-bold text-gray-400">Verifique entregas o revise devoluciones</p>
+                            <p className="text-sm md:text-base font-bold text-gray-400">Verifique entregas o revise devoluciones</p>
                         </div>
                         <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-primary shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--color-border)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
-                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-xs md:text-sm font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
+                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
                             <AlertTriangle size={16} /> Mis Devoluciones ({rejectedItems.length})
                         </button>
                     </div>
@@ -174,7 +174,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-xs md:text-sm font-bold uppercase theme-text-primary">{item.codArticulo} - {item.nombre}</p>
+                                                    <p className="text-sm md:text-base font-bold uppercase theme-text-primary">{item.codArticulo} - {item.nombre}</p>
                                                     <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
                                                         <span className="text-[10px] bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
                                                         {item.transferenciaPendiente?.isPartial && (
@@ -207,7 +207,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 className={`p-3 ml-2 rounded-xl border-2 cursor-pointer transition-colors ${selectedItems.find(i => i.id === item.id) ? 'border-red-500 bg-red-500/10' : 'border-transparent bg-red-500/5 hover:bg-red-500/10'}`}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-xs md:text-sm font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
+                                                    <p className="text-sm md:text-base font-bold uppercase text-red-600 dark:text-red-400">{item.codArticulo} - {item.nombre}</p>
                                                 </div>
                                                 <p className="text-[10px] text-red-500 mt-1 font-black animate-pulse">{item.estadoInterno}</p>
                                             </div>
@@ -231,10 +231,10 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 <h3 className="font-black theme-text-primary uppercase flex items-center gap-2">
                                                     <CheckCircle size={16} /> Acción Masiva
                                                 </h3>
-                                                <p className="text-xs font-bold theme-text-primary mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
+                                                <p className="text-sm font-bold theme-text-primary mt-1">Estás recibiendo {selectedItems.length} productos simultáneamente.</p>
                                             </div>
                                         )}
-                                        <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Datos de Envío</h3>
+                                        <h3 className="font-black text-sm text-gray-500 uppercase mb-2">Datos de Envío</h3>
                                             <p className="text-sm font-bold uppercase"><span className="theme-text-primary">Enviado por:</span> {selectedItems.length === 1 ? selectedItems[0].transferenciaPendiente?.entregadoPor : "MÚLTIPLES (Acción Masiva)"}</p>
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.nota && (
                                                 <div className="mt-2 p-3 bg-black/5 rounded-lg">
@@ -242,14 +242,14 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 </div>
                                             )}
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.fotoEntrega && (
-                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-primary text-sm font-bold flex items-center gap-1 hover:underline">
                                                     <ImageIcon size={14} /> Ver Foto de Evidencia de Envío
                                                 </button>
                                             )}
                                         </div>
 
                                         <div className="space-y-4">
-                                            <h3 className="font-black text-xs theme-text-primary uppercase">Inspección de Recibido</h3>
+                                            <h3 className="font-black text-sm theme-text-primary uppercase">Inspección de Recibido</h3>
                                             
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-400 mb-1">RECIBIDO POR (SU NOMBRE):</label>
@@ -268,18 +268,18 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 </div>
                                             )}
 
-                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:bg-white/5 theme-text-primary py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
+                                            <button onClick={handleCameraClick} className="w-full bg-black/5 dark:bg-white/5 theme-text-primary py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 border theme-border hover:bg-black/10 transition-colors">
                                                 <Camera size={16} /> Adjuntar Foto
                                             </button>
 
-                                            {errorMsg && <p className="text-xs text-red-500 font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/30 text-center uppercase">{errorMsg}</p>}
+                                            {errorMsg && <p className="text-sm text-red-500 font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/30 text-center uppercase">{errorMsg}</p>}
 
                                             <div className="grid grid-cols-2 gap-2 pt-2">
-                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-[10px] md:text-sm shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>
-                                                <button onClick={handleConfirm} className="bg-[var(--color-primary)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-xs shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleConfirm} className="bg-[var(--color-primary)] text-[var(--color-base)] py-3 rounded-xl font-black uppercase text-[10px] md:text-sm shadow-sm transition-colors hover:brightness-110 flex flex-col items-center justify-center gap-1">
                                                     <CheckCircle size={18} />
                                                     Aceptar
                                                 </button>
@@ -294,18 +294,18 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                             <div className="p-3 bg-red-500 text-white rounded-full"><AlertTriangle size={32} /></div>
                                             <div>
                                                 <h3 className="font-black text-red-600 dark:text-red-400 uppercase text-lg">PRODUCTO DEVUELTO</h3>
-                                                <p className="text-xs text-red-500 font-bold uppercase mt-1">Este producto fue rechazado por la siguiente área.</p>
+                                                <p className="text-sm text-red-500 font-bold uppercase mt-1">Este producto fue rechazado por la siguiente área.</p>
                                             </div>
                                         </div>
 
                                         <div className="bg-white/50 dark:bg-white/5 p-4 rounded-xl border theme-border shadow-sm mt-4">
-                                            <h3 className="font-black text-xs text-gray-500 uppercase mb-2">Motivo de la Devolución</h3>
+                                            <h3 className="font-black text-sm text-gray-500 uppercase mb-2">Motivo de la Devolución</h3>
                                             <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
                                                 <p className="text-sm font-bold text-red-800 dark:text-red-300 uppercase">{getRejectionReason(selectedItems[0])}</p>
                                             </div>
                                         </div>
 
-                                        <button onClick={handleAcknowledgeReject} className="w-full mt-4 bg-gray-800 text-white py-4 rounded-xl font-black uppercase text-xs shadow-xl transition-colors hover:bg-black active:scale-95 flex items-center justify-center gap-2">
+                                        <button onClick={handleAcknowledgeReject} className="w-full mt-4 bg-gray-800 text-white py-4 rounded-xl font-black uppercase text-sm shadow-xl transition-colors hover:bg-black active:scale-95 flex items-center justify-center gap-2">
                                             <CheckCircle size={16} /> Entendido (Quitar Alerta)
                                         </button>
                                     </div>
@@ -315,7 +315,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3 p-8 text-center">
                                 <Info size={32} className="opacity-50" />
-                                <span className="uppercase font-bold text-xs md:text-sm">Seleccione un producto del listado</span>
+                                <span className="uppercase font-bold text-sm md:text-base">Seleccione un producto del listado</span>
                             </div>
                         )}
                     </div>

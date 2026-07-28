@@ -30,7 +30,7 @@ const HistorialView = React.memo(({ targetProducts }) => (
         <div className="space-y-3">
           {(p.historial || []).slice().reverse().map((h, idx) => (
             <div key={idx} className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--color-primary)] transition-colors">
-              <div className="flex justify-between items-center text-xs font-black uppercase">
+              <div className="flex justify-between items-center text-sm font-black uppercase">
                 <span className="px-2 py-0.5 bg-[var(--primary-glow)] theme-text-primary rounded border border-[var(--color-primary)]">
                   {h.accion}
                 </span>
@@ -38,11 +38,11 @@ const HistorialView = React.memo(({ targetProducts }) => (
                   {new Date(h.fecha).toLocaleString()}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-bold uppercase bg-black/10 dark:bg-white/10 p-2 rounded-xl">
+              <div className="grid grid-cols-2 gap-2 text-sm font-bold uppercase bg-black/10 dark:bg-white/10 p-2 rounded-xl">
                 <div><span className="text-[10px] theme-text-muted block">ENTREGA:</span> {h.entrega || 'S/N'}</div>
                 <div><span className="text-[10px] theme-text-muted block">SUPERVISOR:</span> {h.supervisor || 'S/N'}</div>
               </div>
-              {h.nota && <p className="text-xs italic theme-text-muted">"{h.nota}"</p>}
+              {h.nota && <p className="text-sm italic theme-text-muted">"{h.nota}"</p>}
             </div>
           ))}
         </div>
@@ -53,7 +53,7 @@ const HistorialView = React.memo(({ targetProducts }) => (
 
 const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
   <div className="space-y-6 animate-in fade-in duration-300">
-    <div className="p-4 rounded-2xl bg-[var(--primary-glow)] border border-[var(--color-primary)] theme-text-primary text-xs font-bold leading-relaxed">
+    <div className="p-4 rounded-2xl bg-[var(--primary-glow)] border border-[var(--color-primary)] theme-text-primary text-sm font-bold leading-relaxed">
       💡 <strong>Análisis Comparativo Inter-Pedidos:</strong> Compara automáticamente el tiempo que se demoró este producto en cada área con el promedio histórico registrado.
     </div>
     {comparativeBenchmark.map(({ product, currentMetrics, otherInstancesCount, areaAverages, diffPercent }) => {
@@ -64,13 +64,13 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest theme-text-primary">Artículo Analizado</span>
               <h3 className="text-lg md:text-xl font-black uppercase theme-text-main">
-                {product.nombre} <span className="text-xs theme-text-muted font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
+                {product.nombre} <span className="text-sm theme-text-muted font-bold">(Cód: {product.codArticulo || 'S/N'})</span>
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold theme-text-muted">Histórico: <strong>{otherInstancesCount}</strong> pedidos anteriores</span>
+              <span className="text-sm font-bold theme-text-muted">Histórico: <strong>{otherInstancesCount}</strong> pedidos anteriores</span>
               {otherInstancesCount > 0 && (
-                <span className={`text-xs font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 border ${isFaster ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'}`}>
+                <span className={`text-sm font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 border ${isFaster ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'}`}>
                   {isFaster ? <TrendingDown size={14}/> : <TrendingUp size={14}/>}
                   {Math.abs(diffPercent).toFixed(1)}% {isFaster ? 'más eficiente' : 'más demorado'} que el promedio
                 </span>
@@ -78,12 +78,12 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
             </div>
           </div>
           {otherInstancesCount === 0 ? (
-            <div className="p-6 text-center text-xs italic theme-text-muted bg-[var(--color-base)] rounded-2xl">
+            <div className="p-6 text-center text-sm italic theme-text-muted bg-[var(--color-base)] rounded-2xl">
               No hay pedidos anteriores registrados en la base de datos para este artículo.
             </div>
           ) : (
             <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider theme-text-main">Comparación de Tiempos por Área</h4>
+              <h4 className="text-sm font-black uppercase tracking-wider theme-text-main">Comparación de Tiempos por Área</h4>
               <div className="grid grid-cols-1 gap-3">
                 {Object.keys(currentMetrics.areaDurations).map(area => {
                   const currentMs = currentMetrics.areaDurations[area] || 0;
@@ -93,7 +93,7 @@ const BenchmarkingView = React.memo(({ comparativeBenchmark }) => (
                   const avgWidth = (avgMs / maxVal) * 100;
                   return (
                     <div key={area} className="p-3.5 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-2 hover:border-[var(--color-primary)] transition-colors">
-                      <div className="flex justify-between items-center text-xs font-black uppercase">
+                      <div className="flex justify-between items-center text-sm font-black uppercase">
                         <span>{area}</span>
                         <div className="flex gap-4">
                           <span className="theme-text-primary">Este Pedido: {msToTimeStrLocal(currentMs)}</span>
@@ -355,7 +355,7 @@ export default function DossierDashboard() {
               <h2 className="text-xl md:text-2xl font-black theme-text-primary uppercase tracking-tight flex items-center gap-2">
                 DOSSIER & BENCHMARKING DE PRODUCCIÓN
               </h2>
-              <p className="text-xs md:text-sm font-bold theme-text-muted">
+              <p className="text-sm md:text-base font-bold theme-text-muted">
                 Análisis Comparativo Inter-Pedidos, Histórico de Tiempos y Consumo de Insumos
               </p>
             </div>
@@ -380,7 +380,7 @@ export default function DossierDashboard() {
                 <input 
                   type="text"
                   placeholder="Buscar pedido, cliente o código..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-purple-500 theme-text-primary"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-purple-500 theme-text-primary"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -402,13 +402,13 @@ export default function DossierDashboard() {
                         {g.products.length} PRODS
                       </span>
                     </div>
-                    <p className="text-xs font-bold opacity-80 truncate">{g.cliente}</p>
+                    <p className="text-sm font-bold opacity-80 truncate">{g.cliente}</p>
                   </div>
                 );
               })}
 
               {filteredPedidos.length === 0 && (
-                <div className="p-8 text-center text-slate-500 font-bold text-xs">
+                <div className="p-8 text-center text-slate-500 font-bold text-sm">
                   No se encontraron pedidos.
                 </div>
               )}
@@ -421,13 +421,13 @@ export default function DossierDashboard() {
               <div className="text-center opacity-40 max-w-sm">
                 <BarChart3 size={64} className="mx-auto mb-4 text-purple-500 animate-pulse" />
                 <h3 className="text-lg font-black uppercase tracking-widest theme-text-primary mb-2">Seleccione un Pedido</h3>
-                <p className="text-xs font-bold theme-text-muted">Elija un pedido de la lista izquierda para desplegar su gráfico comparativo, análisis de tiempos e insumos.</p>
+                <p className="text-sm font-bold theme-text-muted">Elija un pedido de la lista izquierda para desplegar su gráfico comparativo, análisis de tiempos e insumos.</p>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6">
                 
                 {/* BOTÓN VOLVER (MÓVIL) */}
-                <button onClick={() => setSelectedPedidoNum(null)} className="md:hidden flex items-center gap-2 text-purple-500 font-bold mb-2 text-xs uppercase">
+                <button onClick={() => setSelectedPedidoNum(null)} className="md:hidden flex items-center gap-2 text-purple-500 font-bold mb-2 text-sm uppercase">
                   <X size={16} /> Volver a la lista de pedidos
                 </button>
 
@@ -438,7 +438,7 @@ export default function DossierDashboard() {
                       <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-[var(--primary-glow)] theme-text-primary border border-[var(--color-primary)]">
                         Dossier Activo
                       </span>
-                      <span className="text-xs font-bold theme-text-muted uppercase">Cliente: {selectedGroup.cliente}</span>
+                      <span className="text-sm font-bold theme-text-muted uppercase">Cliente: {selectedGroup.cliente}</span>
                     </div>
                     <h1 className="text-2xl md:text-4xl font-black uppercase theme-text-main tracking-tight">
                       PEDIDO #{selectedGroup.pedidoNum}
@@ -449,7 +449,7 @@ export default function DossierDashboard() {
                     <button
                       type="button"
                       onClick={() => setSelectedProductId('ALL')}
-                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] theme-text-muted hover:border-[var(--color-primary)]'}`}
+                      className={`px-3 py-2 rounded-xl text-sm font-black uppercase border transition-all ${selectedProductId === 'ALL' ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] theme-text-muted hover:border-[var(--color-primary)]'}`}
                     >
                       📦 Todos ({selectedGroup.products.length})
                     </button>
@@ -458,7 +458,7 @@ export default function DossierDashboard() {
                         key={p.id}
                         type="button"
                         onClick={() => setSelectedProductId(p.id)}
-                        className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] theme-text-muted hover:border-[var(--color-primary)]'}`}
+                        className={`px-3 py-2 rounded-xl text-sm font-black uppercase border transition-all whitespace-nowrap ${selectedProductId === p.id ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md' : 'bg-[var(--color-surface)] border-[var(--color-border)] theme-text-muted hover:border-[var(--color-primary)]'}`}
                       >
                         {p.codArticulo || p.nombre}
                       </button>
@@ -470,25 +470,25 @@ export default function DossierDashboard() {
                 <div className="flex border-b theme-border gap-2 md:gap-4 overflow-x-auto custom-scrollbar pb-1">
                   <button 
                     onClick={() => setActiveTab('tiempos')}
-                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'tiempos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-sm uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'tiempos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
                   >
                     <Clock size={16} /> 1. Distribución de Tiempos por Área
                   </button>
                   <button 
                     onClick={() => setActiveTab('comparativa')}
-                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'comparativa' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-sm uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'comparativa' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
                   >
                     <Scale size={16} /> 2. Benchmarking Inter-Pedidos
                   </button>
                   <button 
                     onClick={() => setActiveTab('insumos')}
-                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'insumos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-sm uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'insumos' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
                   >
                     <Package size={16} /> 3. Materias Primas e Insumos
                   </button>
                   <button 
                     onClick={() => setActiveTab('historial')}
-                    className={`px-4 py-2.5 rounded-t-xl font-black text-xs uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'historial' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
+                    className={`px-4 py-2.5 rounded-t-xl font-black text-sm uppercase transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'historial' ? 'bg-purple-600 text-white border-t border-x border-purple-600' : 'theme-text-muted hover:bg-purple-500/10'}`}
                   >
                     <Layers size={16} /> 4. Timeline y Trazabilidad
                   </button>
@@ -542,14 +542,14 @@ export default function DossierDashboard() {
                       </h3>
 
                       {Object.keys(pedidoMetrics?.aggregatedAreaDurations || {}).length === 0 ? (
-                        <p className="text-xs italic theme-text-muted text-center py-6">Aún no hay registros de tiempo acumulados para este pedido.</p>
+                        <p className="text-sm italic theme-text-muted text-center py-6">Aún no hay registros de tiempo acumulados para este pedido.</p>
                       ) : (
                         <div className="space-y-4 pt-2">
                           {Object.entries(pedidoMetrics.aggregatedAreaDurations).map(([area, ms]) => {
                             const percent = pedidoMetrics.globalWorkingMs > 0 ? (ms / pedidoMetrics.globalWorkingMs) * 100 : 0;
                             return (
                               <div key={area} className="space-y-1.5">
-                                <div className="flex justify-between items-center text-xs font-black uppercase">
+                                <div className="flex justify-between items-center text-sm font-black uppercase">
                                   <span className="theme-text-primary">{area}</span>
                                   <span className="theme-text-muted">{msToTimeStr(ms)} ({percent.toFixed(1)}%)</span>
                                 </div>
@@ -580,32 +580,32 @@ export default function DossierDashboard() {
                       <div key={p.id} className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-border)] space-y-4 shadow-sm">
                         <div className="flex justify-between items-center border-b border-[var(--color-border)] pb-3">
                           <h3 className="text-base md:text-lg font-black uppercase theme-text-primary">
-                            Insumos de: {p.nombre} <span className="text-xs theme-text-muted font-bold">({p.codArticulo})</span>
+                            Insumos de: {p.nombre} <span className="text-sm theme-text-muted font-bold">({p.codArticulo})</span>
                           </h3>
                         </div>
 
                         {/* FORMULARIO AGREGAR INSUMO */}
                         <div className="p-4 bg-[var(--color-base)] rounded-2xl border border-[var(--color-border)] space-y-3">
-                          <label className="text-xs font-black uppercase theme-text-primary block">Registrar Consumo de Materia Prima / Insumo:</label>
+                          <label className="text-sm font-black uppercase theme-text-primary block">Registrar Consumo de Materia Prima / Insumo:</label>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <input 
                               type="text" 
                               placeholder="Nombre Insumo (ej. MDF 18mm, Cold Roll 1/8)" 
                               value={nuevoInsumoNombre}
                               onChange={e => setNuevoInsumoNombre(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--color-primary)] theme-text-main"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-sm outline-none focus:border-[var(--color-primary)] theme-text-main"
                             />
                             <input 
                               type="text" 
                               placeholder="Cantidad / Unidad (ej. 2 Hojas, 5 Kg)" 
                               value={nuevoInsumoCantidad}
                               onChange={e => setNuevoInsumoCantidad(e.target.value)}
-                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-xs outline-none focus:border-[var(--color-primary)] theme-text-main"
+                              className="p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] font-bold text-sm outline-none focus:border-[var(--color-primary)] theme-text-main"
                             />
                             <button 
                               type="button" 
                               onClick={() => handleAddInsumo(p.id)}
-                              className="bg-[var(--color-primary)] text-white font-black uppercase text-xs p-3 rounded-xl shadow-sm hover:brightness-125 transition-colors flex items-center justify-center gap-1"
+                              className="bg-[var(--color-primary)] text-white font-black uppercase text-sm p-3 rounded-xl shadow-sm hover:brightness-125 transition-colors flex items-center justify-center gap-1"
                             >
                               <Plus size={16} /> Guardar Insumo
                             </button>
@@ -615,15 +615,15 @@ export default function DossierDashboard() {
                         {/* LISTADO DE INSUMOS REGISTRADOS */}
                         <div className="space-y-2 pt-2">
                           {(!p.insumosMateriasPrimas || p.insumosMateriasPrimas.length === 0) ? (
-                            <p className="text-xs italic theme-text-muted text-center py-4">No se han registrado consumos de materia prima para este producto aún.</p>
+                            <p className="text-sm italic theme-text-muted text-center py-4">No se han registrado consumos de materia prima para este producto aún.</p>
                           ) : (
                             p.insumosMateriasPrimas.map((item, idx) => (
                               <div key={idx} className="p-3 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] flex justify-between items-center">
                                 <div>
-                                  <span className="text-xs font-black uppercase theme-text-main">{item.nombre}</span>
+                                  <span className="text-sm font-black uppercase theme-text-main">{item.nombre}</span>
                                   <p className="text-[10px] theme-text-muted font-bold">Registrado por: {item.registradoPor} • {new Date(item.fecha).toLocaleString()}</p>
                                 </div>
-                                <span className="text-xs font-black px-3 py-1 bg-[var(--primary-glow)] theme-text-primary rounded-full border border-[var(--color-primary)] uppercase">
+                                <span className="text-sm font-black px-3 py-1 bg-[var(--primary-glow)] theme-text-primary rounded-full border border-[var(--color-primary)] uppercase">
                                   {item.cantidad}
                                 </span>
                               </div>

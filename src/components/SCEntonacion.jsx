@@ -284,7 +284,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               NUEVA FORMULACIÓN
             </h2>
             <p className="text-lg font-bold mt-2">
-              <span className="text-slate-400 uppercase tracking-widest text-xs mr-2">COLOR OBJETIVO:</span>
+              <span className="text-slate-400 uppercase tracking-widest text-sm mr-2">COLOR OBJETIVO:</span>
               <span className="bg-slate-800 text-white px-3 py-1 rounded-lg">{sistemaColor}</span>
               <span className="text-blue-600 ml-2">{codigoObjetivo}</span>
             </p>
@@ -297,7 +297,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
         <div className="theme-bg-card p-6 md:p-8 rounded-[2rem] theme-border shadow-sm bg-gradient-to-br from-white to-slate-50">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
             <div className="col-span-12 md:col-span-7">
-              <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 1: Selecciona o Escribe la Base PPG</label>
+              <label className="block text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 1: Selecciona o Escribe la Base PPG</label>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <CreatableSelect
@@ -359,7 +359,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
               </div>
             </div>
             <div className="col-span-8 md:col-span-3">
-              <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 2: Gramos pesados</label>
+              <label className="block text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Paso 2: Gramos pesados</label>
               <input 
                 type="number" 
                 value={gramosInput}
@@ -414,9 +414,9 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 border-b-2 border-slate-200">
-                  <th className="p-4 pl-6 text-xs font-black text-slate-400 uppercase tracking-widest">Base / Descripción</th>
-                  <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">Gramos</th>
-                  <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right w-32">% Calculado</th>
+                  <th className="p-4 pl-6 text-sm font-black text-slate-400 uppercase tracking-widest">Base / Descripción</th>
+                  <th className="p-4 text-sm font-black text-slate-400 uppercase tracking-widest text-right w-32">Gramos</th>
+                  <th className="p-4 text-sm font-black text-slate-400 uppercase tracking-widest text-right w-32">% Calculado</th>
                   <th className="p-4 w-48"></th>
                 </tr>
               </thead>
@@ -427,7 +427,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                       <div className="inline-flex flex-col items-center justify-center opacity-40">
                         <FlaskConical size={48} className="mb-4 text-slate-400" />
                         <span className="text-sm font-black uppercase tracking-widest text-slate-500">Receta vacía</span>
-                        <span className="text-xs font-bold text-slate-400 mt-1">Añade bases PPG en la sección superior para comenzar</span>
+                        <span className="text-sm font-bold text-slate-400 mt-1">Añade bases PPG en la sección superior para comenzar</span>
                       </div>
                     </td>
                   </tr>
@@ -508,7 +508,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end relative z-10">
           <div className="col-span-12 md:col-span-4">
-            <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Sistema de Color</label>
+            <label className="block text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Sistema de Color</label>
             <div className="relative">
               <select 
                 value={sistemaColor}
@@ -527,7 +527,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
             </div>
           </div>
           <div className="col-span-12 md:col-span-6">
-            <label className="block text-xs font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Código Objetivo / Nombre</label>
+            <label className="block text-sm font-black text-[#a1bdc2] uppercase tracking-widest mb-2">Código Objetivo / Nombre</label>
             <input 
               type="text" 
               value={codigoObjetivo}
@@ -596,7 +596,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 style={{ backgroundColor: colorEncontrado.color_hexadecimal || '#ccc' }}
               ></div>
               <div className="text-center w-full">
-                <span className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">{colorEncontrado.sistema_color}</span>
+                <span className="block text-sm font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">{colorEncontrado.sistema_color}</span>
                 <h3 className="text-4xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{colorEncontrado.codigo_objetivo}</h3>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800 dark:border-slate-700 p-4 rounded-xl border border-slate-100 w-full text-center">
@@ -617,12 +617,12 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                 <div className="flex flex-wrap items-center gap-3">
                     <button 
                         onClick={handleEditRecipe}
-                        className="px-4 py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-yellow-500/30 transition-colors"
+                        className="px-4 py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl text-sm font-bold uppercase tracking-wide hover:bg-yellow-500/30 transition-colors"
                     >
                         Modificar Receta
                     </button>
                     <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
-                        <span className="text-xs font-bold text-slate-300 uppercase">Preparar:</span>
+                        <span className="text-sm font-bold text-slate-300 uppercase">Preparar:</span>
                         <input 
                             type="number" 
                             value={targetGramos}
@@ -630,7 +630,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                             placeholder="Ej. 15000"
                             className="w-24 bg-slate-900 border-none rounded-lg p-2 text-right font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 outline-none"
                         />
-                        <span className="text-xs font-bold text-slate-400">g</span>
+                        <span className="text-sm font-bold text-slate-400">g</span>
                     </div>
                 </div>
               </div>
@@ -647,7 +647,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                     {recetaExistente.map(req => (
                       <tr key={req.id} className="border-b border-slate-50 hover:bg-emerald-50/30 transition-colors">
                         <td className="p-5 pl-8">
-                          <span className="block text-xs font-black text-blue-500/70 uppercase tracking-wider mb-1">{req.id_referencia_ppg !== req.nombre_base ? req.id_referencia_ppg : 'CREADO MANUALMENTE'}</span>
+                          <span className="block text-sm font-black text-blue-500/70 uppercase tracking-wider mb-1">{req.id_referencia_ppg !== req.nombre_base ? req.id_referencia_ppg : 'CREADO MANUALMENTE'}</span>
                           <span className="block text-lg font-black text-slate-800 dark:text-white">{req.nombre_base}</span>
                         </td>
                         <td className="p-5 text-center">
@@ -703,7 +703,7 @@ export default function SCEntonacion({ supabase, inventario, onClose, supervisor
                        return acc;
                    }, {})).map(([sistema, colores]) => (
                      <div key={sistema}>
-                       <h3 className="text-xs font-black theme-text-primary/50 uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">{sistema}</h3>
+                       <h3 className="text-sm font-black theme-text-primary/50 uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">{sistema}</h3>
                        <div className="grid grid-cols-2 gap-3">
                          {colores.map(c => (
                            <button 

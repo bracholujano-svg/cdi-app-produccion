@@ -85,16 +85,16 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex-1 min-w-0 pr-4">
                  <h2 className="text-xl font-black theme-text-primary truncate flex items-center gap-2">ORDEN: {activeGroupObj.pedidoNum} <span className="text-sm bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-lg theme-text-primary font-bold tracking-widest border border-[var(--color-primary)]/20">({activeGroupObj.products.length} ÍTEMS)</span></h2>
-                 <p className={`text-xs md:text-sm lg:text-base font-bold uppercase truncate mt-1 ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+                 <p className={`text-base lg:text-lg font-bold uppercase truncate mt-1 ${!activeGroupObj.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{activeGroupObj.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
               </div>
               
               {selectedBulkOrders.length > 0 && (
-                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--color-primary)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-xs md:text-sm font-black mr-3 shadow-lg shadow-[var(--color-primary)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
+                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--color-primary)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-sm md:text-base font-black mr-3 shadow-lg shadow-[var(--color-primary)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
                       <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
                   </button>
               )}
 
-              <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--color-primary)]/10 rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors theme-text-primary text-xs font-bold mr-2">⬅ Panel IA</button>
+              <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--color-primary)]/10 rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors theme-text-primary text-sm font-bold mr-2">⬅ Panel IA</button>
               <button type="button" onClick={() => setSelectedGroupPedido(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-primary shrink-0">✕</button>
             </div>
 
@@ -107,7 +107,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                     <input 
                         type="text" 
                         placeholder="🔍 Filtrar artículo o producto (Ej: 1234)..." 
-                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-current"
+                        className="w-full pl-9 pr-4 py-3 rounded-xl theme-bg-card font-bold text-base lg:text-lg outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-current"
                         value={itemSearchTerm} 
                         onChange={(e) => setItemSearchTerm(e.target.value)} 
                     />
@@ -139,26 +139,26 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
 
                         <div className="flex justify-start items-center mb-2 pr-8">
                            {p.cantidad && (
-                             <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
+                             <span className="text-base bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-1 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                                <Package size={"1.1em"} /> CANT: {p.cantidad}
                              </span>
                            )}
                         </div>
                         <div className="mb-2">
-                           <span title={p.codArticulo} className="inline-block max-w-full text-xs md:text-sm lg:text-base bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
+                           <span title={p.codArticulo} className="inline-block max-w-full text-base lg:text-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
                         </div>
-                        <h4 className="font-black text-xs md:text-sm lg:text-base uppercase leading-tight theme-text-primary">{p.nombre}</h4>
+                        <h4 className="font-black text-base lg:text-lg uppercase leading-tight theme-text-primary">{p.nombre}</h4>
                     </div>
 
                     <div className="mt-4 p-2 bg-[var(--color-base)] rounded-xl border border-[var(--color-border)] flex flex-col gap-1.5">
-                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
+                      <p className="text-base lg:text-lg font-black theme-text-primary uppercase flex items-center gap-1 truncate" title={p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS ACTUALES: ${p.activeAreas.join(', ')}` : p.areaActual}>
                           <MapPin size={"1.2em"} className="shrink-0"/> 
                           {p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS: ${p.activeAreas.join(', ')}` : `ÁREA: ${p.areaActual}`}
                       </p>
                       
                       {isPartial && lastPartial && (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md px-2 py-1.5 flex flex-col gap-0.5 shadow-sm">
-                            <span className="text-[10px] md:text-xs font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
+                            <span className="text-[10px] md:text-sm font-black text-yellow-700 dark:text-yellow-500 uppercase flex items-center gap-1">
                                 <Package size="1.2em" /> Lote Parcial
                             </span>
                             <span className="text-[9px] md:text-[10px] font-bold text-yellow-800/80 dark:text-yellow-500/80 uppercase truncate">
@@ -168,11 +168,11 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                       )}
 
                       {p.asignado_a && p.asignado_a.length > 0 && (
-                          <div className="flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                          <div className="flex items-center gap-1 text-[10px] md:text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}
-                      <p className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>
+                      <p className="text-base lg:text-lg font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>
                     </div>
 
                     {/* Botón Ver Planos */}
@@ -183,7 +183,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                                 e.stopPropagation(); 
                                 alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${p.codArticulo} vinculados a ReviSoft.`); 
                             }} 
-                            className="w-full bg-[var(--color-primary)]/10 theme-text-primary hover:bg-[var(--color-primary)]/20 py-2 rounded-xl flex items-center justify-center gap-2 font-black text-xs md:text-sm uppercase transition-colors"
+                            className="w-full bg-[var(--color-primary)]/10 theme-text-primary hover:bg-[var(--color-primary)]/20 py-2 rounded-xl flex items-center justify-center gap-2 font-black text-sm md:text-base uppercase transition-colors"
                         >
                             <FileText size={"1.2em"} /> Ver Planos
                         </button>
@@ -197,17 +197,17 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-base lg:text-lg rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Anterior
                   </button>
-                  <span className="font-bold text-xs md:text-sm lg:text-base theme-text-primary px-2">
+                  <span className="font-bold text-base lg:text-lg theme-text-primary px-2">
                     Página {currentPage} de {totalPages}
                   </span>
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-xs md:text-sm lg:text-base rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
+                    className="px-6 py-3 border theme-border theme-bg-card theme-text-primary font-black uppercase text-base lg:text-lg rounded-xl disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors active:scale-95 shadow-sm"
                   >
                     Siguiente
                   </button>

@@ -353,8 +353,8 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-3xl font-black theme-text-primary tracking-tighter">CDI</span>
                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                                 <div className="flex flex-col leading-none">
-                                    <span className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base font-bold tracking-widest theme-text-muted">INFORME</span>
-                                    <span className="text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase">Ejecutivo</span>
+                                    <span className="text-base text-sm font-bold tracking-widest theme-text-muted">INFORME</span>
+                                    <span className="text-base lg:text-lg font-black theme-text-primary uppercase">Ejecutivo</span>
                                 </div>
                             </div>
                             <div className="flex space-x-2 md:space-x-6 h-full overflow-x-auto items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -362,7 +362,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     <button 
                                         key={tab} 
                                         onClick={() => setDashboardTab(tab)} 
-                                        className={`px-2 py-3 md:py-5 text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] theme-text-primary' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
+                                        className={`px-2 py-3 md:py-5 text-base font-black uppercase tracking-widest border-b-4 transition-colors whitespace-nowrap ${dashboardTab === tab ? 'border-[var(--color-primary)] theme-text-primary' : 'border-transparent theme-text-muted hover:text-gray-600'}`}
                                     >
                                         {tab}
                                     </button>
@@ -370,9 +370,9 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             </div>
                             <div className="flex items-center gap-2 ml-4 shrink-0 theme-bg-card p-2 rounded-xl border theme-border">
                                 <Calendar size={16} className="theme-text-muted" />
-                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-xs font-bold theme-text-muted bg-transparent outline-none" title="Desde" />
+                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-sm font-bold theme-text-muted bg-transparent outline-none" title="Desde" />
                                 <span className="text-gray-300">-</span>
-                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-xs font-bold theme-text-muted bg-transparent outline-none" title="Hasta" />
+                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-sm font-bold theme-text-muted bg-transparent outline-none" title="Hasta" />
                             </div>
                             <div className="flex items-center shrink-0 ml-4">
                                 <div 
@@ -404,39 +404,39 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                     </p>
                                 </div>
                                 <div className="bg-green-50 dark:bg-green-900/20 px-6 py-4 rounded-2xl border border-green-100 dark:border-green-800/50 text-center shrink-0">
-                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-green-800 dark:text-green-500" title="Índice de Salud de Planta (Evalúa tiempo restante vs. avance físico)">Índice de Salud (PHI)</p>
+                                      <p className="text-base lg:text-lg font-black uppercase tracking-widest text-green-800 dark:text-green-500" title="Índice de Salud de Planta (Evalúa tiempo restante vs. avance físico)">Índice de Salud (PHI)</p>
                                       <p className="text-4xl font-black text-green-800 dark:text-green-500">{eficiencia}%</p>
                                   </div>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-[var(--color-primary)] p-6 rounded-3xl text-white dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
-                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Pedidos Activos</p>
+                                      <p className="text-base lg:text-lg font-black uppercase tracking-widest opacity-80">Pedidos Activos</p>
                                       <h3 className="text-4xl font-black mt-1">{activosCount}</h3>
                                   </div>
                                   <div className="bg-[var(--color-primary)] p-6 rounded-3xl text-[#cdcbc8] dark:text-[#17181b] shadow-sm border-b-4 border-black/10 dark:border-white/10">
-                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest opacity-80">Próximos a Entrega</p>
+                                      <p className="text-base lg:text-lg font-black uppercase tracking-widest opacity-80">Próximos a Entrega</p>
                                       <h3 className="text-4xl font-black mt-1 text-white dark:text-[#17181b]">{urgentesCount}</h3>
                                   </div>
                                 <div className="theme-bg-card p-6 rounded-3xl border theme-border shadow-sm">
-                                    <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted">Despachados</p>
+                                    <p className="text-base lg:text-lg font-black uppercase tracking-widest theme-text-muted">Despachados</p>
                                     <h3 className="text-4xl font-black mt-1 theme-text-primary">{despachadosCount}</h3>
                                 </div>
                                 <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 shadow-sm">
-                                      <p className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest text-red-800 dark:text-red-500">Atrasos Críticos</p>
+                                      <p className="text-base lg:text-lg font-black uppercase tracking-widest text-red-800 dark:text-red-500">Atrasos Críticos</p>
                                       <h3 className="text-4xl font-black mt-1 text-red-800 dark:text-red-500">{atrasadosCount}</h3>
                                   </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="theme-bg-card p-8 rounded-[2.5rem] border theme-border shadow-sm">
-                                    <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
+                                    <h4 className="text-base lg:text-lg font-black uppercase tracking-widest theme-text-muted mb-6">Carga de Trabajo por Sección (Top Activas)</h4>
                                     <div className="relative w-full h-[300px]">
                                         <canvas id="chartCargaAreas"></canvas>
                                     </div>
                                 </div>
                                 <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] border border-[var(--color-border)] shadow-sm">
-                                    <h4 className="text-xs md:text-sm lg:text-base font-black uppercase tracking-widest theme-text-muted mb-6">Tiempos de Ciclo en Planta (Real-Time)</h4>
+                                    <h4 className="text-base lg:text-lg font-black uppercase tracking-widest theme-text-muted mb-6">Tiempos de Ciclo en Planta (Real-Time)</h4>
                                     <div className="space-y-5">
                                         {(() => {
 
@@ -477,7 +477,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                                                 return (
                                                 <div key={idx} className="">
-                                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                                    <div className="flex justify-between text-sm font-bold mb-1">
                                                         <span className="text-slate-600 truncate mr-2">{item.label}</span>
                                                         <span className={item.status === 'critical' ? 'text-red-600' : 'text-slate-600'}>{icon}{item.text}</span>
                                                     </div>
@@ -504,9 +504,9 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                             <div className="flex flex-col md:flex-row gap-4 mb-4">
                                 <div className="flex-1">
-                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold text-xs md:text-sm lg:text-base uppercase shadow-sm theme-bg-card text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400" />
+                                    <input type="text" value={dashSearch} onChange={(e) => setDashSearch(e.target.value)} placeholder="BUSCAR PEDIDO O CLIENTE..." className="w-full p-4 rounded-2xl border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold text-base lg:text-lg uppercase shadow-sm theme-bg-card text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400" />
                                 </div>
-                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-slate-900 dark:text-slate-100">
+                                <select value={dashArea} onChange={(e) => setDashArea(e.target.value)} className="theme-bg-card p-4 rounded-2xl border theme-border font-black text-base lg:text-lg uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-slate-900 dark:text-slate-100">
                                     <option value="TODAS">Todas las Áreas</option>
                                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                                 </select>
@@ -516,44 +516,44 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <table className="w-full text-left border-collapse min-w-[800px]">
                                     <thead>
                                         <tr className="theme-bg-card border-b theme-border">
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Pedido</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase tracking-widest">Artículo / Producto</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-primary uppercase tracking-widest text-center">Cant.</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Cliente</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
-                                            <th className="p-5 text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest text-center">Acciones</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Pedido</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-primary uppercase tracking-widest">Artículo / Producto</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-primary uppercase tracking-widest text-center">Cant.</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Cliente</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Área Actual</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Estado Interno</th>
+                                            <th className="p-5 text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest text-center">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {tableOrders.map(o => (
                                             <tr key={o.id} className="border-b theme-border hover:theme-bg-card/50 transition-colors">
-                                                <td className="p-5 font-black text-xs md:text-sm lg:text-base theme-text-main">#{o.pedidoNum}</td>
+                                                <td className="p-5 font-black text-base lg:text-lg theme-text-main">#{o.pedidoNum}</td>
                                                 <td className="p-5">
-                                                    <div className="font-black theme-text-primary text-xs md:text-sm lg:text-base">ART: {o.codArticulo || "S/N"}</div>
-                                                    <div className="font-bold theme-text-muted text-xs truncate max-w-[200px]">{o.nombre || "S/N"}</div>
+                                                    <div className="font-black theme-text-primary text-base lg:text-lg">ART: {o.codArticulo || "S/N"}</div>
+                                                    <div className="font-bold theme-text-muted text-sm truncate max-w-[200px]">{o.nombre || "S/N"}</div>
                                                 </td>
                                                 <td className="p-5 text-center font-black text-lg theme-text-main">
                                                     {o.cantidad || 1}
                                                 </td>
-                                                <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted">{o.cliente}</td>
+                                                <td className="p-5 font-bold text-base lg:text-lg theme-text-muted">{o.cliente}</td>
                                                 <td className="p-5">
-                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--color-primary)]/10 theme-text-primary px-3 py-1 rounded-full text-xs md:text-sm lg:text-base font-black uppercase border border-[var(--color-primary)]/30">{o.areaActual}</span>
+                                                    <span className="inline-block whitespace-nowrap text-center bg-[var(--color-primary)]/10 theme-text-primary px-3 py-1 rounded-full text-base lg:text-lg font-black uppercase border border-[var(--color-primary)]/30">{o.areaActual}</span>
                                                     {o.asignado_a && o.asignado_a.length > 0 && (
-                                                        <div className="mt-2 flex items-center gap-1 text-[10px] md:text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
+                                                        <div className="mt-2 flex items-center gap-1 text-[10px] md:text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 w-fit">
                                                             <UserCheck size="1.2em" /> {Array.isArray(o.asignado_a) ? o.asignado_a.join(', ') : o.asignado_a}
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="p-5 font-bold text-xs md:text-sm lg:text-base theme-text-muted uppercase tracking-tight">{o.estadoInterno}</td>
+                                                <td className="p-5 font-bold text-base lg:text-lg theme-text-muted uppercase tracking-tight">{o.estadoInterno}</td>
                                                 <td className="p-5 text-center">
-                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--color-primary)] text-[var(--color-base)] px-4 py-2 rounded-xl font-black text-[10px] md:text-xs uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
+                                                    <button type="button" onClick={() => setHistoryOrder(o)} className="bg-[var(--color-primary)] text-[var(--color-base)] px-4 py-2 rounded-xl font-black text-[10px] md:text-sm uppercase hover:brightness-110 active:scale-95 transition-all flex items-center gap-1 mx-auto shadow-sm">
                                                         <History size="1.2em" /> Historial
                                                     </button>
                                                 </td>
                                             </tr>
                                         ))}
-                                        {tableOrders.length === 0 && <tr><td colSpan="6" className="p-10 text-center theme-text-muted font-black uppercase text-xs md:text-sm lg:text-base">No hay resultados</td></tr>}
+                                        {tableOrders.length === 0 && <tr><td colSpan="6" className="p-10 text-center theme-text-muted font-black uppercase text-base lg:text-lg">No hay resultados</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
@@ -573,21 +573,21 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <div className="bg-[var(--color-surface)] p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
                                     <div>
                                         <h2 className="text-xl font-black uppercase theme-text-primary" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Resumen Logístico</h2>
-                                        <p className="text-xs md:text-sm lg:text-base text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
+                                        <p className="text-base lg:text-lg text-slate-400 mt-4 leading-relaxed italic">Monitoreo de entregas en muelle y alertas de seguridad para garantizar cumplimiento en transporte.</p>
                                     </div>
                                     <div className="mt-8 space-y-4">
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-slate-600">
                                             <div className="w-10 h-10 bg-[var(--color-primary)] rounded-xl flex items-center justify-center font-black theme-text-main">{despachadosCount}</div>
                                             <div>
-                                                <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-slate-400">Total Despachados</p>
-                                                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Pedidos fuera de planta</p>
+                                                <p className="text-base font-black uppercase text-slate-400">Total Despachados</p>
+                                                <p className="text-base lg:text-lg font-bold text-slate-200">Pedidos fuera de planta</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-2xl border border-yellow-500/30">
                                             <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center font-black text-white">{coordinationAlerts.length}</div>
                                             <div>
-                                                <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black uppercase text-yellow-400">Alertas de Coordinación</p>
-                                                <p className="text-xs md:text-sm lg:text-base font-bold text-slate-200">Prioridades altas marcadas</p>
+                                                <p className="text-base font-black uppercase text-yellow-400">Alertas de Coordinación</p>
+                                                <p className="text-base lg:text-lg font-bold text-slate-200">Prioridades altas marcadas</p>
                                             </div>
                                         </div>
                                     </div>
@@ -602,7 +602,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="flex-1 theme-bg-card p-8 rounded-[2.5rem] border theme-border shadow-sm flex flex-col">
                                     <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Estado Global de Calidad</h2>
-                                    <p className="text-xs md:text-sm lg:text-base theme-text-muted font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
+                                    <p className="text-base lg:text-lg theme-text-muted font-bold uppercase mb-6">Mapeo sobre el 100% de la producción registrada</p>
                                     <div className="relative w-full h-[300px] flex-1">
                                         <canvas id="chartCalidad"></canvas>
                                     </div>
@@ -610,36 +610,36 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <div className="flex-1 space-y-4">
                                     <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl text-white flex justify-between items-center">
                                         <div>
-                                            <h4 className="text-xs md:text-sm lg:text-base font-black text-slate-100 uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
+                                            <h4 className="text-base lg:text-lg font-black text-slate-100 uppercase tracking-widest mb-1">Cobertura de Inspección (ISO 9001)</h4>
                                             <p className="text-2xl font-black text-white">{porcentajeInspeccionado}%</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs md:text-sm lg:text-base text-slate-300 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
-                                            <p className="text-[10px] md:text-[11px] lg:text-xs text-slate-400 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
+                                            <p className="text-base lg:text-lg text-slate-300 font-bold uppercase">{itemsInspeccionados} de {basePlanta} productos</p>
+                                            <p className="text-[10px] md:text-[11px] lg:text-sm text-slate-400 font-bold uppercase mt-1">{totalInspeccionesRealizadas} actas totales</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="bg-green-50 p-4 rounded-2xl border border-green-200 shadow-sm">
-                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-green-700 uppercase mb-1">Tasa Aprobación</h4>
+                                            <h4 className="text-base font-black text-green-700 uppercase mb-1">Tasa Aprobación</h4>
                                             <p className="text-2xl font-black text-green-800">{porcentajeAprobado}%</p>
-                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-green-600 mt-1 font-bold uppercase">{itemsAprobados} productos OK</p>
+                                            <p className="text-base text-sm text-green-600 mt-1 font-bold uppercase">{itemsAprobados} productos OK</p>
                                         </div>
                                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 shadow-sm">
-                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-yellow-700 uppercase mb-1">Tasa Reprocesos</h4>
+                                            <h4 className="text-base font-black text-yellow-700 uppercase mb-1">Tasa Reprocesos</h4>
                                             <p className="text-2xl font-black text-yellow-800">{porcentajeRetrabajo}%</p>
-                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-yellow-700 mt-1 font-bold uppercase">{itemsRetrabajo} en corrección</p>
+                                            <p className="text-base text-sm text-yellow-700 mt-1 font-bold uppercase">{itemsRetrabajo} en corrección</p>
                                         </div>
                                         <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-sm">
-                                            <h4 className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm font-black text-red-700 uppercase mb-1">Tasa Rechazos</h4>
+                                            <h4 className="text-base font-black text-red-700 uppercase mb-1">Tasa Rechazos</h4>
                                             <p className="text-2xl font-black text-red-800">{porcentajeRechazo}%</p>
-                                            <p className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm md:text-[11px] lg:text-xs md:text-sm lg:text-base text-red-600 mt-1 font-bold uppercase">{itemsRechazados} mermas/scrap</p>
+                                            <p className="text-base text-sm text-red-600 mt-1 font-bold uppercase">{itemsRechazados} mermas/scrap</p>
                                         </div>
                                     </div>
                                     
                                     <div className="theme-bg-card rounded-3xl border theme-border shadow-sm overflow-hidden">
                                         <button type="button" onClick={() => setShowQualityObs(!showQualityObs)} className="w-full p-6 flex items-center justify-between hover:theme-bg-card transition-colors">
-                                            <h4 className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase">Últimas Observaciones (Planta Real)</h4>
+                                            <h4 className="text-base lg:text-lg font-black theme-text-muted uppercase">Últimas Observaciones (Planta Real)</h4>
                                             {showQualityObs ? <ChevronUp size={"1.2em"} className="theme-text-muted"/> : <ChevronDown size={"1.2em"} className="theme-text-muted"/>}
                                         </button>
                                         
@@ -647,24 +647,24 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                             <div className="p-6 pt-0 border-t theme-border max-h-80 overflow-y-auto custom-scrollbar">
                                                 <ul className="space-y-4 mt-4">
                                                     {allQualityNotes.length > 0 ? allQualityNotes.slice(0, 30).map((q, i) => (
-                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-xs md:text-sm lg:text-base ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
+                                                        <li key={i} className={`p-4 rounded-2xl border-l-4 text-base lg:text-lg ${q.estado === 'APROBADO' ? 'border-green-400 bg-green-50' : q.estado === 'RETRABAJO' ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'}`}>
                                                             <div className="flex justify-between items-start mb-2">
-                                                                <span className="font-black text-xs md:text-sm lg:text-base uppercase theme-text-main">PED: {q.pedidoNum}</span>
-                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
+                                                                <span className="font-black text-base lg:text-lg uppercase theme-text-main">PED: {q.pedidoNum}</span>
+                                                                <span className={`font-black uppercase px-2 py-1 rounded-md text-base ${q.estado === 'APROBADO' ? 'text-green-700 bg-green-200' : q.estado === 'RETRABAJO' ? 'text-yellow-700 bg-yellow-200' : 'text-red-700 bg-red-200'}`}>{q.estado}</span>
                                                             </div>
-                                                            <div className="flex gap-2 theme-text-muted mb-3 font-bold uppercase text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm">
+                                                            <div className="flex gap-2 theme-text-muted mb-3 font-bold uppercase text-base">
                                                                 <span>ART: {q.codArticulo}</span>
                                                                 <span>•</span>
                                                                 <span className="truncate">{q.cliente}</span>
                                                             </div>
-                                                            <p className="font-medium text-slate-700 mb-3 text-xs md:text-sm lg:text-base italic">"{q.observacion}"</p>
-                                                            <div className="text-xs md:text-sm lg:text-base md:text-xs md:text-sm lg:text-base lg:text-sm text-slate-400 flex justify-between items-end uppercase font-black">
+                                                            <p className="font-medium text-slate-700 mb-3 text-base lg:text-lg italic">"{q.observacion}"</p>
+                                                            <div className="text-base text-slate-400 flex justify-between items-end uppercase font-black">
                                                                 <span>INSP: {q.inspector}</span>
                                                                 <span>{new Date(q.fecha).toLocaleDateString()}</span>
                                                             </div>
                                                         </li>
                                                     )) : (
-                                                        <li className="text-xs md:text-sm lg:text-base theme-text-muted italic text-center py-4">No hay registros de calidad en el sistema.</li>
+                                                        <li className="text-base lg:text-lg theme-text-muted italic text-center py-4">No hay registros de calidad en el sistema.</li>
                                                     )}
                                                 </ul>
                                             </div>
@@ -679,7 +679,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                                     <div className="theme-bg-card p-8 rounded-[2.5rem] border theme-border shadow-sm flex flex-col">
                                         <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Frecuencia de Reprocesos</h2>
-                                        <p className="text-xs md:text-sm lg:text-base theme-text-muted font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
+                                        <p className="text-base lg:text-lg theme-text-muted font-bold uppercase mb-6">Identificación de cuellos de botella por sección</p>
                                         <div className="relative w-full h-[250px] flex-1">
                                             <canvas id="chartBarrasReproceso"></canvas>
                                         </div>
@@ -687,7 +687,7 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
 
                                     <div className="theme-bg-card p-8 rounded-[2.5rem] border theme-border shadow-sm flex flex-col">
                                         <h2 className="text-xl font-black uppercase tracking-tight mb-2" style={{ fontFamily: "\"Space Grotesk\", sans-serif" }}>Análisis de Causas Raíz</h2>
-                                        <p className="text-xs md:text-sm lg:text-base theme-text-muted font-bold uppercase mb-6">Top errores en secciones críticas</p>
+                                        <p className="text-base lg:text-lg theme-text-muted font-bold uppercase mb-6">Top errores en secciones críticas</p>
                                         <div className="overflow-y-auto max-h-[250px] custom-scrollbar pr-2 space-y-3">
                                             {sortedSecciones.map((sec, idx) => {
                                                 const ratio = maxTasa > 0 ? sec.tasa / maxTasa : 0;
@@ -697,10 +697,10 @@ const AdvancedExecutiveDashboard = ({ orders: rawOrders, coordinationAlerts, onC
                                                 return (
                                                     <div key={idx} className="p-4 rounded-2xl border-l-4 shadow-sm" style={{ borderColor: borderColor, backgroundColor: bgColor }}>
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <h4 className="font-bold text-xs md:text-sm lg:text-base text-gray-800 uppercase">{sec.nombre}</h4>
-                                                            <span className="font-black text-xs md:text-sm lg:text-base" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
+                                                            <h4 className="font-bold text-base lg:text-lg text-gray-800 uppercase">{sec.nombre}</h4>
+                                                            <span className="font-black text-base lg:text-lg" style={{ color: borderColor }}>{sec.tasa.toFixed(1)}%</span>
                                                         </div>
-                                                        <p className="text-xs md:text-sm lg:text-base text-gray-600 mt-2 font-medium">
+                                                        <p className="text-base lg:text-lg text-gray-600 mt-2 font-medium">
                                                             {sec.causas.length > 0 ? `🔹 Top fallos: ${sec.causas.join(', ')}` : "🔹 Sin descripciones registradas."}
                                                         </p>
                                                     </div>

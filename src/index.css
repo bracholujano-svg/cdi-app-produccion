@@ -49,8 +49,8 @@
 :root[data-theme="cine"]:not(.dark) {
     --color-base: #fff4f6; 
     --color-surface: #ffe5ec; 
-    --color-primary: #e63968; 
-    --color-primary-glow: rgba(230, 57, 104, 0.2);
+    --color-primary: #c41a45; 
+    --color-primary-glow: rgba(196, 26, 69, 0.2);
     --color-text-main: #330d17;
     --color-text-muted: #804a57;
     --color-border: #ffb3c6; 

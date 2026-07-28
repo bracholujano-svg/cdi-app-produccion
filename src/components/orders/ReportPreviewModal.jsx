@@ -68,7 +68,7 @@ const ReportPreviewModal = () => {
                     <Calendar className="text-orange-500" />
                     <div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase">Rango Operativo</p>
-                        <p className="font-black uppercase text-slate-800 dark:text-white text-xs">
+                        <p className="font-black uppercase text-slate-800 dark:text-white text-sm">
                             {repDateStart} {repTimeStart} a<br/>{repDateEnd} {repTimeEnd}
                         </p>
                     </div>
@@ -86,7 +86,7 @@ const ReportPreviewModal = () => {
                 Object.entries(groupedData).map(([area, items]) => (
                     <div key={area} className="break-inside-avoid">
                         <h3 className="text-xl font-black uppercase text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-l-4 border-[var(--color-primary)] pl-3">
-                            <MapPin className="theme-text-primary" /> ÁREA: {area} <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500">{items.length} EVENTOS</span>
+                            <MapPin className="theme-text-primary" /> ÁREA: {area} <span className="text-sm bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500">{items.length} EVENTOS</span>
                         </h3>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -96,9 +96,9 @@ const ReportPreviewModal = () => {
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-2">
                                                 {getIconForType(item.type, item.status)}
-                                                <span className="text-xs font-black uppercase tracking-wider">{item.type}</span>
+                                                <span className="text-sm font-black uppercase tracking-wider">{item.type}</span>
                                             </div>
-                                            <span className="text-xs font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                                            <span className="text-sm font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded-md shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-1">
                                                 <Clock size={12} /> {item.time.substring(0, 5)}
                                             </span>
                                         </div>
@@ -114,14 +114,14 @@ const ReportPreviewModal = () => {
 
                                         <div className="bg-white/60 dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5 mb-3">
                                             <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Detalle / Acción</p>
-                                            <p className="text-xs font-medium italic">{item.detail}</p>
+                                            <p className="text-sm font-medium italic">{item.detail}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-end pt-2 border-t border-black/5 dark:border-white/5 mt-auto">
                                         <div>
                                             <p className="text-[10px] font-bold text-slate-500 uppercase">Responsable</p>
-                                            <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300">{item.person}</p>
+                                            <p className="text-sm font-black uppercase text-slate-700 dark:text-slate-300">{item.person}</p>
                                         </div>
                                         <div>
                                             <span className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">{item.status}</span>

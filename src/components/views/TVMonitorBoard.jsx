@@ -210,19 +210,19 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 {/* Centro: Métricas de Eficiencia */}
                 <div className="hidden lg:flex items-center gap-6 theme-bg-base px-8 py-3 rounded-2xl border theme-border">
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-xs theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><Package size="1em"/> En Cola</span>
+                        <span className="text-[10px] md:text-sm theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><Package size="1em"/> En Cola</span>
                         <span className="text-2xl md:text-3xl font-black theme-text-main">{metrics.total}</span>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-xs text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
+                        <span className="text-[10px] md:text-sm text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.entrega >= 80 ? 'text-emerald-500' : metrics.entrega >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {metrics.entrega}%
                         </span>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-white/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-[10px] md:text-xs text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
+                        <span className="text-[10px] md:text-sm text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
                         <span className={`text-2xl md:text-3xl font-black ${metrics.calidad >= 90 ? 'text-blue-500' : metrics.calidad >= 70 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {metrics.calidad}%
                         </span>
@@ -245,18 +245,21 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 </div>
             </div>
 
-            {/* Cabecera de Tabla */}
-            <div className="grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-4 theme-bg-base theme-text-muted font-black text-xs md:text-sm uppercase tracking-widest border-b theme-border">
-                <div className="text-center">EST</div>
-                <div className="text-center">#</div>
-                <div>Pedido</div>
-                <div>Cliente</div>
-                <div>Cod / Cant</div>
-                <div>Producto</div>
-                <div>Ingreso Área</div>
-                <div>Tiempo en Sección</div>
-                <div className="text-right">Despacho En</div>
-            </div>
+            {/* Contenedor desplazable para la tabla entera (Cabecera + Cuerpo) */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden flex flex-col custom-scrollbar">
+                <div className="min-w-[1200px] flex flex-col flex-1">
+                    {/* Cabecera de Tabla */}
+                    <div className="grid grid-cols-[60px_60px_120px_minmax(150px,1fr)_120px_minmax(200px,2fr)_150px_150px_130px] gap-4 px-6 py-4 theme-bg-base theme-text-muted font-black text-sm md:text-base uppercase tracking-widest border-b theme-border shrink-0">
+                        <div className="text-center">EST</div>
+                        <div className="text-center">#</div>
+                        <div>Pedido</div>
+                        <div>Cliente</div>
+                        <div>Cod / Cant</div>
+                        <div>Producto</div>
+                        <div>Ingreso Área</div>
+                        <div>Tiempo en Sección</div>
+                        <div className="text-right">Despacho En</div>
+                    </div>
 
             {/* Lista de Vuelos (Pedidos) */}
             <div className="flex-1 overflow-hidden flex flex-col theme-bg-main">
@@ -320,18 +323,18 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                     </div>
                                     
                                     {/* Cliente */}
-                                    <div className={`font-bold text-xs md:text-sm lg:text-base uppercase truncate ${textClass}`}>
+                                    <div className={`font-bold text-base lg:text-lg uppercase truncate ${textClass}`}>
                                         {o.cliente}
                                     </div>
                                     
                                     {/* Codigo y Cantidad */}
                                     <div className="flex flex-col">
                                         <span className={`text-sm md:text-base lg:text-lg font-black ${accentClass}`}>{o.codArticulo}</span>
-                                        <span className={`text-xs md:text-sm lg:text-base font-black ${textClass}`}>Ctd: {o.cantidad}</span>
+                                        <span className={`text-base lg:text-lg font-black ${textClass}`}>Ctd: {o.cantidad}</span>
                                     </div>
                                     
                                     {/* Producto */}
-                                    <div className={`font-black text-xs md:text-sm lg:text-base uppercase truncate ${textClass}`}>
+                                    <div className={`font-black text-base lg:text-lg uppercase truncate ${textClass}`}>
                                         {o.nombre}
                                     </div>
 
@@ -340,13 +343,13 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                         <span className={`text-sm md:text-base font-black ${textClass}`}>
                                             {o.fechaIngreso.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                                         </span>
-                                        <span className={`text-xs md:text-sm font-bold uppercase ${accentClass}`}>
+                                        <span className={`text-sm md:text-base font-bold uppercase ${accentClass}`}>
                                             {o.fechaIngreso.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
 
                                     {/* Tiempo en el área */}
-                                    <div className={`font-black text-lg md:text-xl lg:text-2xl whitespace-nowrap tabular-nums ${textClass}`}>
+                                    <div className={`font-black text-xl lg:text-2xl px-2 whitespace-nowrap tabular-nums ${textClass}`}>
                                         {formatTimeInArea(o.timeInAreaMs)}
                                     </div>
 
@@ -378,6 +381,8 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                     </div>
                 )}
             </div>
+            </div>
+            </div>
 
             {/* Paginación / Footer */}
             {totalPages > 1 && (
@@ -385,7 +390,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                     {Array.from({ length: totalPages }).map((_, i) => (
                         <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === currentPage ? 'w-12 bg-[var(--color-primary)]' : 'w-3 bg-black/20 dark:bg-white/20'}`}></div>
                     ))}
-                    <span className="absolute right-4 text-xs font-black theme-text-muted uppercase tracking-widest">
+                    <span className="absolute right-4 text-sm font-black theme-text-muted uppercase tracking-widest">
                         Página {currentPage + 1} de {totalPages}
                     </span>
                 </div>

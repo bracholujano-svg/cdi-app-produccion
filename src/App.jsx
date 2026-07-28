@@ -974,7 +974,7 @@ const {
         <div className="theme-bg-input p-2 flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-xs md:text-sm lg:text-base outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-base lg:text-lg outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="flex gap-2 flex-1 md:flex-none">
@@ -983,7 +983,7 @@ const {
                         list="client-options" 
                         type="text"
                         placeholder="BUSCAR CLIENTE..."
-                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-xs text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
+                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-[10px] md:placeholder:text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
                         value={clientFilter === 'Todos' ? '' : clientFilter} 
                         onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
                         onFocus={(e) => e.target.select()}
@@ -992,7 +992,7 @@ const {
                         {uniqueClients.map(c => <option key={c} value={c} />)}
                     </datalist>
                 </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-xs lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-[10px] md:text-sm lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="ninguno">Orden Original</option>
                     <option value="pedido_asc">Pedido (Asc)</option>
                     <option value="pedido_desc">Pedido (Desc)</option>
@@ -1002,7 +1002,7 @@ const {
             </div>
             
             <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-xs md:text-sm lg:text-base uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer theme-text-main" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-base lg:text-lg uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer theme-text-main" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
                     <option value="Todas">Todas las Áreas</option>
                     {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
@@ -1049,15 +1049,15 @@ const {
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-base lg:text-lg border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Anterior
             </button>
-            <span className="font-bold text-xs md:text-sm lg:text-base text-[var(--color-primary)] px-2">Página {currentPage} de {totalPages}</span>
+            <span className="font-bold text-base lg:text-lg text-[var(--color-primary)] px-2">Página {currentPage} de {totalPages}</span>
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-6 py-3 rounded-xl font-black uppercase text-xs md:text-sm lg:text-base border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
+              className="px-6 py-3 rounded-xl font-black uppercase text-base lg:text-lg border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
             >
               Siguiente
             </button>
@@ -1140,19 +1140,19 @@ const {
                   placeholder="🔎 Buscar Nº Pedido..." 
                   value={coordSearchPedido} 
                   onChange={(e) => setCoordSearchPedido(e.target.value)} 
-                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] uppercase"
+                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] uppercase"
                 />
                 <div className="flex gap-4 flex-1">
                   <input 
                     type="date" 
                     value={coordSearchFecha} 
                     onChange={(e) => setCoordSearchFecha(e.target.value)} 
-                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm lg:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"
+                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"
                   />
                   <button 
                     type="button" 
                     onClick={() => setCoordSearchFecha('')} 
-                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
+                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-base lg:text-lg uppercase theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
                     title="Limpiar Fecha"
                   >
                     Limpiar
@@ -1161,7 +1161,7 @@ const {
                 <button 
                   type="button" 
                   onClick={() => setCoordSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} 
-                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-xs md:text-sm lg:text-base uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
+                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-base lg:text-lg uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
                 >
                   {coordSortOrder === 'asc' ? '⬇️ ASCENDENTE' : '⬆️ DESCENDENTE'}
                 </button>
@@ -1208,19 +1208,19 @@ const {
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
             <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--color-primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--color-primary)]">✕</button></div>
             <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-xs md:text-sm lg:text-base font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-xs md:text-sm lg:text-base uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-base lg:text-lg uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-[10px] md:text-xs font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-xs md:text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
+                  <div className="space-y-1"><label className="text-[10px] md:text-sm font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
               </div>
 
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-xs md:text-sm lg:text-base py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
+              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-base lg:text-lg py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
             </div>
           </div>
         </div>
@@ -1261,13 +1261,13 @@ const {
                             placeholder="BUSCAR INSUMO O CÓDIGO..." 
                             value={materialsSearchTerm || ''} 
                             onChange={(e) => setMaterialsSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold uppercase text-xs md:text-sm lg:text-base text-[var(--color-primary)]"
+                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold uppercase text-base lg:text-lg text-[var(--color-primary)]"
                         />
                     </div>
                 </div>
 
                 <div className="px-4 md:px-5 pt-2 pb-2 theme-bg-card z-20 border-b theme-border shadow-sm flex flex-col">
-                    <p className="text-xs md:text-sm lg:text-base font-bold text-slate-500 uppercase mb-4">
+                    <p className="text-base lg:text-lg font-bold text-slate-500 uppercase mb-4">
                       {isNoMaterials ? 'No se encontraron insumos registrados en base de datos para este pedido.' : isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
                     </p>
 
@@ -1285,7 +1285,7 @@ const {
                         <div className="p-10 rounded-xl border border-dashed border-yellow-200 bg-yellow-50 text-center">
                            <AlertTriangle size={48} className="mx-auto mb-4 text-yellow-400 opacity-50" />
                            <span className="text-sm md:text-base font-black text-yellow-600 uppercase">Sin información de insumos</span>
-                           <p className="text-xs md:text-sm font-bold text-yellow-500/80 mt-2">El sistema no detectó ningún requerimiento de material en Supabase asociado a este pedido y/o artículo.</p>
+                           <p className="text-sm md:text-base font-bold text-yellow-500/80 mt-2">El sistema no detectó ningún requerimiento de material en Supabase asociado a este pedido y/o artículo.</p>
                         </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-2 md:gap-6">
@@ -1294,21 +1294,21 @@ const {
                                       faltantes.map((mat, i) => (
                                           <div key={'f'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-orange-200 bg-orange-50">
                                               <div className="flex justify-between items-start">
-                                                  <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
-                                                  {mat.sinOC && <span className="text-xs font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
+                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 bg-white border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
+                                                  {mat.sinOC && <span className="text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
                                               </div>
-                                              <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                                              <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                                               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-2 border-t pt-3 border-orange-200">
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase">Faltante</span><span className="text-xs md:text-sm font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-xs md:text-sm font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase">Faltante</span><span className="text-sm md:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))
                                   ) : (
                                       <div className="p-4 rounded-xl border border-dashed border-orange-200 bg-orange-50/50 text-center">
-                                          <span className="text-xs md:text-sm font-bold text-orange-400 uppercase">Ningún material faltante.</span>
+                                          <span className="text-sm md:text-base font-bold text-orange-400 uppercase">Ningún material faltante.</span>
                                       </div>
                                   )}
                               </div>
@@ -1318,19 +1318,19 @@ const {
                                       disponibles.map((mat, i) => (
                                           <div key={'d'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-green-200 bg-green-50">
                                               <div className="flex justify-between items-start">
-                                                  <span className="text-xs md:text-sm lg:text-base font-black uppercase px-2 py-1 bg-white border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
+                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 bg-white border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
                                               </div>
-                                              <p className="font-bold text-xs md:text-sm lg:text-base uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
+                                              <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
                                               <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mt-2 border-t pt-3 border-green-200">
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-xs md:text-sm font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-xs md:text-sm font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
+                                                  <div className="flex flex-col"><span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
                                               </div>
                                           </div>
                                       ))
                                   ) : (
                                       <div className="p-4 rounded-xl border border-dashed border-green-200 bg-green-50/50 text-center">
-                                          <span className="text-xs md:text-sm font-bold text-green-400 uppercase">Ningún material disponible.</span>
+                                          <span className="text-sm md:text-base font-bold text-green-400 uppercase">Ningún material disponible.</span>
                                       </div>
                                   )}
                               </div>
@@ -1338,7 +1338,7 @@ const {
                     )}
                 </div>
                 <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-xs md:text-sm lg:text-base px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--color-primary)] border border-green-700'}`}>Entendido</button>
+                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-base lg:text-lg px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--color-primary)] border border-green-700'}`}>Entendido</button>
                 </div>
               </div>
             </div>

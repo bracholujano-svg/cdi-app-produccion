@@ -222,9 +222,9 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                         <p className="text-gray-500 font-bold uppercase tracking-widest mt-2">Diagnóstico de Planta y Logística</p>
                     </div>
                     <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-right min-w-[200px] w-full md:w-auto">
-                        <p className="text-xs font-black uppercase text-gray-400">Fecha del Reporte</p>
+                        <p className="text-sm font-black uppercase text-gray-400">Fecha del Reporte</p>
                         <p className="text-lg font-black theme-text-primary">{new Date().toLocaleDateString()}</p>
-                        <p className="text-xs font-bold text-gray-500">{new Date().toLocaleTimeString()}</p>
+                        <p className="text-sm font-bold text-gray-500">{new Date().toLocaleTimeString()}</p>
                     </div>
                 </div>
 
@@ -263,10 +263,10 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                                     <div className="min-w-0 flex-1 pr-10">
                                         <div className="flex justify-between items-center mb-1">
                                             <h4 className="font-black text-red-900 text-lg hover:underline decoration-red-400">PEDIDO #{o.pedidoNum}</h4>
-                                            <span className="text-xs font-black text-red-700 bg-red-200 px-2 py-0.5 rounded-full">{o.count} ARTÍCULOS</span>
+                                            <span className="text-sm font-black text-red-700 bg-red-200 px-2 py-0.5 rounded-full">{o.count} ARTÍCULOS</span>
                                         </div>
                                         <p className="font-bold text-red-700 text-sm uppercase truncate">{o.cliente}</p>
-                                        <p className="text-xs font-bold text-red-500 mt-2">Áreas afectadas: {Array.from(o.areas).join(', ')}</p>
+                                        <p className="text-sm font-bold text-red-500 mt-2">Áreas afectadas: {Array.from(o.areas).join(', ')}</p>
                                     </div>
                                 </div>
                             )) : (
@@ -299,12 +299,12 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                                         </div>
                                         <div className="flex justify-between items-start mb-2 gap-2">
                                             <span className="font-black text-slate-800 text-base hover:underline decoration-yellow-400">PEDIDO #{grupo.pedido}</span>
-                                            <span className="text-xs font-black text-yellow-700 bg-yellow-100 px-2 py-1 rounded-md shrink-0">{grupo.fallos.length} FALLOS</span>
+                                            <span className="text-sm font-black text-yellow-700 bg-yellow-100 px-2 py-1 rounded-md shrink-0">{grupo.fallos.length} FALLOS</span>
                                         </div>
-                                        <p className="text-gray-500 text-xs font-bold uppercase mb-2">{grupo.cliente}</p>
+                                        <p className="text-gray-500 text-sm font-bold uppercase mb-2">{grupo.cliente}</p>
                                         <div className="space-y-2 mt-2">
                                             {grupo.fallos.slice(0, 2).map((f, i) => (
-                                                <div key={i} onClick={() => handleProductDeepLink(grupo.pedido, f.articulo)} className="text-xs bg-slate-50 p-2 rounded-lg border border-slate-100 cursor-pointer hover:bg-yellow-100 transition-colors">
+                                                <div key={i} onClick={() => handleProductDeepLink(grupo.pedido, f.articulo)} className="text-sm bg-slate-50 p-2 rounded-lg border border-slate-100 cursor-pointer hover:bg-yellow-100 transition-colors">
                                                     <span className="font-black text-slate-700">{f.articulo}: </span>
                                                     <span className="text-slate-500 italic">"{f.observacion}"</span>
                                                     <span className="ml-2 font-black text-[9px] text-red-500 bg-red-50 px-1 py-0.5 rounded">{f.estado}</span>
@@ -321,7 +321,7 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
                     </div>
                 </div>
 
-                <div className="pt-8 border-t border-gray-100 text-center text-xs text-gray-400 font-bold uppercase tracking-widest">
+                <div className="pt-8 border-t border-gray-100 text-center text-sm text-gray-400 font-bold uppercase tracking-widest">
                     Generado automáticamente por el motor de análisis CDI - Documento Confidencial
                 </div>
             </div>
