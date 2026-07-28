@@ -282,17 +282,17 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                             let accentClass = 'theme-text-muted';
                             
                             if (isRed) {
-                                rowBgClass = 'bg-red-500/10 dark:bg-red-900/30 border-l-4 border-l-red-500';
-                                textClass = 'text-red-950 dark:text-red-100';
-                                accentClass = 'text-red-950 dark:text-red-100';
+                                rowBgClass = 'bg-red-500/15 border-l-4 border-l-red-600';
+                                textClass = 'text-red-950';
+                                accentClass = 'text-red-950';
                             } else if (isYellow) {
-                                rowBgClass = 'bg-yellow-500/10 dark:bg-yellow-900/30 border-l-4 border-l-yellow-500';
-                                textClass = 'text-yellow-950 dark:text-yellow-100';
-                                accentClass = 'text-yellow-950 dark:text-yellow-100';
+                                rowBgClass = 'bg-yellow-500/20 border-l-4 border-l-amber-600';
+                                textClass = 'text-amber-950';
+                                accentClass = 'text-amber-950';
                             } else if (isGreen) {
-                                rowBgClass = 'bg-emerald-500/10 dark:bg-emerald-900/30 border-l-4 border-l-emerald-500';
-                                textClass = 'text-emerald-950 dark:text-emerald-100';
-                                accentClass = 'text-emerald-950 dark:text-emerald-100';
+                                rowBgClass = 'bg-emerald-500/15 border-l-4 border-l-emerald-600';
+                                textClass = 'text-emerald-950';
+                                accentClass = 'text-emerald-950';
                             }
 
                             const globalIndex = currentPage * ITEMS_PER_PAGE + idx + 1;
