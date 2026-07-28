@@ -57,11 +57,10 @@ const Sidebar = () => {
         className="fixed left-0 top-0 w-6 h-full z-[55] bg-transparent hidden md:block"
       />
 
-      {/* SIDEBAR TRIGGER FLOTANTE */}
+      {/* BOTÓN HAMBURGUESA FLOTANTE */}
       <button 
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        onMouseEnter={() => setIsSidebarOpen(true)}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60] bg-[var(--card-bg)] text-[var(--primary)] p-3 md:p-4 rounded-r-2xl border-y border-r border-[var(--border-color)] shadow-xl hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] transition-colors duration-300 group"
+        onClick={() => setIsSidebarOpen(true)}
+        className="fixed top-1/2 left-0 -translate-y-1/2 bg-[var(--card-bg)] p-2 rounded-r-2xl shadow-[0_0_15px_rgba(0,0,0,0.2)] border border-[var(--border-color)] z-[60] group flex items-center justify-center hover:w-12 transition-all duration-300 text-[var(--text-main)]"
       >
         <Menu size={"1.5em"} className="group-hover:scale-110 transition-transform duration-200" />
       </button>

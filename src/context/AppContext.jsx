@@ -94,7 +94,7 @@ export const AppContextProvider = ({ children }) => {
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
-    if (appTheme === 'dark') {
+    if (appTheme === 'cine') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
