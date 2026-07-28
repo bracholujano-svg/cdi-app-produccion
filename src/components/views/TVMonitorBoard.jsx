@@ -283,16 +283,16 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                             
                             if (isRed) {
                                 rowBgClass = 'bg-red-500/10 dark:bg-red-900/30 border-l-4 border-l-red-500';
-                                textClass = 'text-red-900 dark:text-red-100';
-                                accentClass = 'text-red-700 dark:text-red-300';
+                                textClass = 'text-red-950 dark:text-red-100';
+                                accentClass = 'text-red-950 dark:text-red-100';
                             } else if (isYellow) {
                                 rowBgClass = 'bg-yellow-500/10 dark:bg-yellow-900/30 border-l-4 border-l-yellow-500';
-                                textClass = 'text-yellow-900 dark:text-yellow-100';
-                                accentClass = 'text-yellow-700 dark:text-yellow-300';
+                                textClass = 'text-yellow-950 dark:text-yellow-100';
+                                accentClass = 'text-yellow-950 dark:text-yellow-100';
                             } else if (isGreen) {
                                 rowBgClass = 'bg-emerald-500/10 dark:bg-emerald-900/30 border-l-4 border-l-emerald-500';
-                                textClass = 'text-emerald-900 dark:text-emerald-100';
-                                accentClass = 'text-emerald-700 dark:text-emerald-300';
+                                textClass = 'text-emerald-950 dark:text-emerald-100';
+                                accentClass = 'text-emerald-950 dark:text-emerald-100';
                             }
 
                             const globalIndex = currentPage * ITEMS_PER_PAGE + idx + 1;
@@ -312,7 +312,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
 
                                     {/* Numeración */}
                                     <div className="flex justify-center items-center">
-                                        <span className="text-lg md:text-xl font-black theme-text-muted tabular-nums">
+                                        <span className={`text-lg md:text-xl font-black tabular-nums ${textClass}`}>
                                             {globalIndex}
                                         </span>
                                     </div>
@@ -329,7 +329,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                     
                                     {/* Codigo y Cantidad */}
                                     <div className="flex flex-col">
-                                        <span className={`text-sm md:text-base lg:text-lg font-black ${accentClass}`}>{o.codArticulo}</span>
+                                        <span className={`text-sm md:text-base lg:text-lg font-black ${textClass}`}>{o.codArticulo}</span>
                                         <span className={`text-base lg:text-lg font-black ${textClass}`}>Ctd: {o.cantidad}</span>
                                     </div>
                                     
@@ -343,7 +343,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                         <span className={`text-sm md:text-base font-black ${textClass}`}>
                                             {o.fechaIngreso.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                                         </span>
-                                        <span className={`text-sm md:text-base font-bold uppercase ${accentClass}`}>
+                                        <span className={`text-sm md:text-base font-bold uppercase ${textClass}`}>
                                             {o.fechaIngreso.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
