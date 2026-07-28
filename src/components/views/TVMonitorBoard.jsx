@@ -215,15 +215,15 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-[var(--color-surface)]/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-sm md:text-base text-emerald-500 font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
-                        <span className={`text-2xl md:text-3xl font-black ${metrics.entrega >= 80 ? 'text-emerald-500' : metrics.entrega >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+                        <span className="text-sm md:text-base theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><TrendingUp size="1em"/> Eficiencia Entrega</span>
+                        <span className={`text-2xl md:text-3xl font-black ${metrics.entrega >= 80 ? 'text-emerald-600 dark:text-emerald-400' : metrics.entrega >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                             {metrics.entrega}%
                         </span>
                     </div>
                     <div className="w-px h-10 bg-black/10 dark:bg-[var(--color-surface)]/10"></div>
                     <div className="flex flex-col items-center">
-                        <span className="text-sm md:text-base text-blue-500 font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
-                        <span className={`text-2xl md:text-3xl font-black ${metrics.calidad >= 90 ? 'text-blue-500' : metrics.calidad >= 70 ? 'text-yellow-500' : 'text-red-500'}`}>
+                        <span className="text-sm md:text-base theme-text-muted font-black tracking-widest uppercase flex items-center gap-1"><CheckCircle size="1em"/> Calidad (Sin Rechazos)</span>
+                        <span className={`text-2xl md:text-3xl font-black ${metrics.calidad >= 90 ? 'text-blue-600 dark:text-blue-400' : metrics.calidad >= 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                             {metrics.calidad}%
                         </span>
                     </div>
