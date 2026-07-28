@@ -178,7 +178,12 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                     <div className="flex flex-col gap-1 items-end ml-2 shrink-0">
                                                         <span className="text-sm bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded font-bold uppercase">De: {item.areaActual}</span>
                                                         {item.transferenciaPendiente?.isPartial && (
-                                                            <span className="text-sm bg-amber-500/20 text-orange-950 dark:text-amber-300 px-2 py-0.5 rounded font-black uppercase border-2 border-amber-600 dark:border-amber-500">ENTREGA PARCIAL</span>
+                                                            <span 
+                                                                style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
+                                                                className="text-sm px-2 py-0.5 rounded font-black uppercase border-2"
+                                                            >
+                                                                ENTREGA PARCIAL
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </div>

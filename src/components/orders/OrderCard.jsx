@@ -86,8 +86,11 @@ const OrderCard = ({ group }) => {
       <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
         <span className={`px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-sm md:text-base lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
         {partialProductsCount > 0 && (
-            <span className="px-2.5 py-1 bg-amber-500/20 text-orange-950 dark:text-amber-300 rounded-md border-2 border-amber-600 dark:border-amber-500 font-black text-sm md:text-base lg:text-sm whitespace-nowrap truncate flex items-center gap-1.5 shadow-sm">
-                <Package size="1.2em" className="text-amber-700 dark:text-amber-400" /> {partialProductsCount} ENTREGA PARCIAL
+            <span 
+                style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
+                className="px-2.5 py-1 rounded-md border-2 font-black text-sm md:text-base lg:text-sm whitespace-nowrap truncate flex items-center gap-1.5 shadow-sm"
+            >
+                <Package size="1.2em" style={{ color: '#c2410c' }} /> {partialProductsCount} ENTREGA PARCIAL
             </span>
         )}
         {(() => {

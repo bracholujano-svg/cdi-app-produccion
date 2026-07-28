@@ -569,7 +569,10 @@ const OrderDetailsModal = ({
                                     );
                                 } else if (isPartial) {
                                     statusBadge = (
-                                        <span className="text-sm font-black px-2.5 py-1 rounded-md bg-amber-500/20 text-orange-950 dark:text-amber-300 border-2 border-amber-600 dark:border-amber-500 uppercase flex items-center gap-1 shadow-sm">
+                                        <span 
+                                            style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
+                                            className="text-sm font-black px-2.5 py-1 rounded-md border-2 uppercase flex items-center gap-1 shadow-sm"
+                                        >
                                             📦 ENTREGA PARCIAL
                                         </span>
                                     );
