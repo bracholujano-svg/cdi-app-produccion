@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import CreatableSelect from 'react-select/creatable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2, Palette, ChevronRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
-export default function SCEntonacion({ supabase, inventario, onClose, supervisorProfile }) {
+export default function SCEntonacion({ inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
   const [sistemaColor, setSistemaColor] = useState('PANTONE');
   const [codigoObjetivo, setCodigoObjetivo] = useState('');

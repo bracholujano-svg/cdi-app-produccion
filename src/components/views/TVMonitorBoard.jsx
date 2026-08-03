@@ -318,7 +318,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                     </div>
                                     
                                     {/* Pedido */}
-                                    <div style={{ color: textColor }} className="font-black text-lg md:text-xl tabular-nums tracking-tighter">
+                                    <div style={{ color: textColor }} className="font-mono font-bold text-lg md:text-xl tabular-nums tracking-tighter">
                                         #{o.pedidoNum}
                                     </div>
                                     
@@ -329,7 +329,7 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                                     
                                     {/* Codigo y Cantidad */}
                                     <div className="flex flex-col" style={{ color: textColor }}>
-                                        <span style={{ color: textColor }} className="text-sm md:text-base lg:text-lg font-black">{o.codArticulo}</span>
+                                        <span style={{ color: textColor }} className="text-sm md:text-base lg:text-lg font-mono font-bold">{o.codArticulo}</span>
                                         <span style={{ color: textColor }} className="text-base lg:text-lg font-black">Ctd: {o.cantidad}</span>
                                     </div>
                                     

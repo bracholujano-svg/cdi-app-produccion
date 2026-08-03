@@ -115,7 +115,8 @@
 
 /* Typography - Strict hierarchy */
 body, input, button, select, textarea { font-family: 'Outfit', sans-serif !important; }
-h1, h2, h3, h4, .font-oswald { font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; letter-spacing: -0.02em; color: var(--color-text-main); }
+h1, h2, h3, h4, .font-oswald { font-family: 'Outfit', sans-serif !important; font-weight: 700; letter-spacing: -0.02em; color: var(--color-text-main); }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
 
 body { background-color: var(--color-base); color: var(--color-text-main); }
 
@@ -128,15 +129,25 @@ body { background-color: var(--color-base); color: var(--color-text-main); }
 .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
 
+#print-root { display: none; }
+
 @media print {
-    body * { visibility: hidden; }
-    .fixed.inset-0.bg-white.z-\[130\] { position: absolute; left: 0; top: 0; right: 0; visibility: visible; height: auto !important; overflow: visible !important; }
-    .fixed.inset-0.bg-white.z-\[130\] * { visibility: visible; }
-    .print\:hidden { display: none !important; }
-    .print\:border-0 { border: none !important; }
-    .print\:p-0 { padding: 0 !important; }
-    .print\:bg-slate-200 { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
-    .print\:text-black { color: #000 !important; }
+  /* Ocultar UI principal y liberar RAM visual */
+  #root { display: none !important; }
+  /* Activar nodo puro de reporte */
+  #print-root {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: black;
+  }
+  @page { size: letter portrait; margin: 1.5cm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .avoid-break { page-break-inside: avoid; }
+  h1, h2, h3 { page-break-after: avoid; }
+  .print\:hidden { display: none !important; }
 }
 
 /* Custom Animations */

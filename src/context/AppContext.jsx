@@ -171,6 +171,7 @@ export const AppContextProvider = ({ children }) => {
 
   // Agrupamos el estado
   const contextValue = {
+    supabase,
     supabaseData,
     orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase,
     inventoryReservations,

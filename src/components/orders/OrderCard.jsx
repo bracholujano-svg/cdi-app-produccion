@@ -78,7 +78,7 @@ const OrderCard = ({ group }) => {
         <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
       </div>
       
-      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-black uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-800 dark:text-red-500' : 'theme-text-primary'}`}>
+      <h3 title={group.pedidoNum} className={`text-sm md:text-base font-mono font-bold uppercase leading-tight truncate ${isAtrasado || isUrgent ? 'text-red-800 dark:text-red-500' : 'theme-text-primary'}`}>
         PED: {group.pedidoNum}
       </h3>
       <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-base lg:text-lg ${!group.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>

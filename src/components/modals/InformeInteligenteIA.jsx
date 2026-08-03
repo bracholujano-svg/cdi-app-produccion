@@ -89,17 +89,18 @@ const InformeInteligenteIA = ({ orders, coordinationAlerts, onClose, setSearchTe
     // Solo tomamos los primeros 5 pedidos con problemas
     const topQualityIssues = Object.values(groupedQualityMap).slice(0, 5);
 
-    // WhatsApp export logic
+    // WhatsApp export logic (Meta Universal Fallback API)
     const handleWhatsAppShare = () => {
-        const text = `*Reporte Inteligente de Planta CDI*%0A%0A` +
-        `📦 *Pedidos Activos:* ${activosCount}%0A` +
-        `🚨 *Pedidos Atrasados:* ${delayedOrders.length}%0A` +
-        `🛑 *Cuello de Botella Actual:* ${bottleneckArea} (${areasCount[bottleneckArea] || 0} productos)%0A%0A` +
-        `*Atención Requerida:*%0A` +
-        (delayedOrders.length > 0 ? `El pedido más atrasado es el #${delayedOrders[0].pedidoNum} (${delayedOrders[0].cliente}) con ${delayedOrders[0].maxDaysLate} días de retraso.%0A` : `No hay atrasos críticos.%0A`) +
-        `%0A📌 Por favor, descarga el PDF detallado en el sistema para ver gráficos y reportes de calidad.`;
+        const rawText = `*Reporte Inteligente de Planta CDI*\n\n` +
+        `📦 *Pedidos Activos:* ${activosCount}\n` +
+        `🚨 *Pedidos Atrasados:* ${delayedOrders.length}\n` +
+        `🛑 *Cuello de Botella Actual:* ${bottleneckArea} (${areasCount[bottleneckArea] || 0} productos)\n\n` +
+        `*Atención Requerida:*\n` +
+        (delayedOrders.length > 0 ? `El pedido más atrasado es el #${delayedOrders[0].pedidoNum} (${delayedOrders[0].cliente}) con ${delayedOrders[0].maxDaysLate} días de retraso.\n` : `No hay atrasos críticos.\n`) +
+        `\n📌 Por favor, descarga el PDF detallado en el sistema para ver gráficos y reportes de calidad.`;
         
-        window.open(`https://wa.me/?text=${text}`, '_blank');
+        const encodedText = encodeURIComponent(rawText);
+        window.open(`https://wa.me/?text=${encodedText}`, '_blank', 'noopener,noreferrer');
     };
 
     // Deep Linking Handler
