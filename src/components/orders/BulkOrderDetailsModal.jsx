@@ -220,141 +220,141 @@ const BulkOrderDetailsModal = ({
 
                           return (
                             <>
-                              <div className="w-full flex flex-col gap-2 mb-2">
-                                    <label className="theme-text-main font-black text-base lg:text-lg uppercase text-center w-full block">DESTINO(S) DE TRANSFERENCIA:</label>
+                              <div className="w-full">
+                                    <label className="theme-text-main font-black text-base lg:text-lg uppercase text-center w-full block mb-3">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
-                                    <div className="group border border-blue-500/30 rounded-xl overflow-hidden mb-3">
-                                        <div className="p-3 bg-blue-500/10 text-sm md:text-base font-bold text-blue-500 uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/20 transition-colors">
+                                    <div className="group border-2 border-blue-500/60 dark:border-blue-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                        <div className="p-3.5 bg-blue-500/20 dark:bg-blue-950/80 text-blue-950 dark:text-blue-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/30 transition-colors">
                                             <span>Administrativo</span>
                                             <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
                                         </div>
                                         <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
                                                 {(AREAS_ADMIN || []).map(a => {
-                                            const isSelected = (tempTransferAreas || []).includes(a);
-                                            const isDisabled = !(allowedAreas || []).includes(a);
-                                            return (
-                                              <React.Fragment key={a}>
-                                                <button type="button" disabled={isDisabled}
-                                                    onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-blue-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'}`}>
-                                                    {isSelected ? `✓ ${a}` : a}
-                                                </button>
-                                                {a === "Diseño" && isSelected && isGerente && (
-                                                    <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="theme-text-main font-black text-sm md:text-base uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                            {(PERSONAL_DISENO || []).map(person => {
-                                                                const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
-                                                                const load = getWorkload(person);
-                                                                return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
-                                                                        <span>{person}</span>
-                                                                        <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {a === "Programación CNC" && isSelected && (isDiseno || isGerente) && (
-                                                    <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
-                                                        <label className="theme-text-main font-black text-sm md:text-base uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                                            {(PERSONAL_CNC || []).map(person => {
-                                                                const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
-                                                                const load = getWorkload(person);
-                                                                return (
-                                                                    <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-[var(--color-surface)] text-blue-900 dark:text-blue-300 border-blue-300/30 hover:bg-blue-500/10'}`}>
-                                                                        <span>{person}</span>
-                                                                        <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200/50 text-blue-800 dark:text-blue-300'}`}>{load} prods</span>
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                </React.Fragment>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                                             const isSelected = (tempTransferAreas || []).includes(a);
+                                             const isDisabled = !(allowedAreas || []).includes(a);
+                                             return (
+                                               <React.Fragment key={a}>
+                                                 <button type="button" disabled={isDisabled}
+                                                     onClick={() => toggleAreaSelection(a)}
+                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-2 border-blue-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-blue-50 dark:bg-blue-950/50 text-blue-950 dark:text-blue-200 border-2 border-blue-400/50 hover:bg-blue-100 dark:hover:bg-blue-900/50'}`}>
+                                                     {isSelected ? `✓ ${a}` : a}
+                                                 </button>
+                                                 {a === "Diseño" && isSelected && isGerente && (
+                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
+                                                         <label className="theme-text-main font-black text-sm md:text-base uppercase text-center w-full block mb-2">Asignar a Diseñador(es):</label>
+                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                             {(PERSONAL_DISENO || []).map(person => {
+                                                                 const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
+                                                                 const load = getWorkload(person);
+                                                                 return (
+                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-blue-950 dark:text-blue-200 border-blue-400/50 hover:bg-blue-100'}`}>
+                                                                         <span>{person}</span>
+                                                                         <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-200'}`}>{load} prods</span>
+                                                                     </button>
+                                                                 )
+                                                             })}
+                                                         </div>
+                                                     </div>
+                                                 )}
+                                                 {a === "Programación CNC" && isSelected && (isDiseno || isGerente) && (
+                                                     <div className="col-span-2 md:col-span-3 mt-1 mb-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-in slide-in-from-top-2">
+                                                         <label className="theme-text-main font-black text-sm md:text-base uppercase text-center w-full block mb-2">Asignar a Programador(es) CNC:</label>
+                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                             {(PERSONAL_CNC || []).map(person => {
+                                                                 const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
+                                                                 const load = getWorkload(person);
+                                                                 return (
+                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-blue-950 dark:text-blue-200 border-blue-400/50 hover:bg-blue-100'}`}>
+                                                                         <span>{person}</span>
+                                                                         <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-200'}`}>{load} prods</span>
+                                                                     </button>
+                                                                 )
+                                                             })}
+                                                         </div>
+                                                     </div>
+                                                 )}
+                                                 </React.Fragment>
+                                             )
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
 
-                            <div className="group border border-yellow-600/30 rounded-xl overflow-hidden mb-3">
-                                <div className="p-3 bg-yellow-600/10 text-sm md:text-base font-bold text-yellow-600 dark:text-yellow-500 uppercase flex justify-between items-center cursor-pointer hover:bg-yellow-600/20 transition-colors">
-                                    <span>Áreas Primarias</span>
-                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
-                                </div>
-                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
-                                        {(AREAS_PRIMARIAS || []).map(a => {
-                                            const isSelected = (tempTransferAreas || []).includes(a);
-                                            const isDisabled = !(allowedAreas || []).includes(a);
-                                            return (
-                                                <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-yellow-500 text-yellow-950 border-yellow-500' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20'}`}>
-                                                    {isSelected ? `✓ ${a}` : a}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                             <div className="group border-2 border-amber-500/60 dark:border-amber-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div className="p-3.5 bg-amber-500/25 dark:bg-amber-950/80 text-amber-950 dark:text-amber-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-amber-500/35 transition-colors">
+                                     <span>Áreas Primarias</span>
+                                     <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                 </div>
+                                 <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                         {(AREAS_PRIMARIAS || []).map(a => {
+                                             const isSelected = (tempTransferAreas || []).includes(a);
+                                             const isDisabled = !(allowedAreas || []).includes(a);
+                                             return (
+                                                 <button key={a} type="button" disabled={isDisabled}
+                                                     onClick={() => toggleAreaSelection(a)}
+                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-amber-500 text-amber-950 border-2 border-amber-600 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-950 dark:text-amber-200 border-2 border-amber-400/50 hover:bg-amber-100 dark:hover:bg-amber-900/50'}`}>
+                                                     {isSelected ? `✓ ${a}` : a}
+                                                 </button>
+                                             )
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
 
-                            <div className="group border border-emerald-600/30 rounded-xl overflow-hidden mb-3">
-                                <div className="p-3 bg-emerald-600/10 text-sm md:text-base font-bold text-emerald-600 dark:text-emerald-500 uppercase flex justify-between items-center cursor-pointer hover:bg-emerald-600/20 transition-colors">
-                                    <span>Áreas de Transformación</span>
-                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
-                                </div>
-                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
-                                        {(AREAS_SECUNDARIAS || []).map(a => {
-                                            const isSelected = (tempTransferAreas || []).includes(a);
-                                            const isDisabled = !(allowedAreas || []).includes(a);
-                                            return (
-                                                <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-emerald-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}>
-                                                    {isSelected ? `✓ ${a}` : a}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                             <div className="group border-2 border-emerald-500/60 dark:border-emerald-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div className="p-3.5 bg-emerald-500/20 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-emerald-500/30 transition-colors">
+                                     <span>Áreas de Transformación</span>
+                                     <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                 </div>
+                                 <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                         {(AREAS_SECUNDARIAS || []).map(a => {
+                                             const isSelected = (tempTransferAreas || []).includes(a);
+                                             const isDisabled = !(allowedAreas || []).includes(a);
+                                             return (
+                                                 <button key={a} type="button" disabled={isDisabled}
+                                                     onClick={() => toggleAreaSelection(a)}
+                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-2 border-emerald-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-200 border-2 border-emerald-400/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'}`}>
+                                                     {isSelected ? `✓ ${a}` : a}
+                                                 </button>
+                                             )
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
 
-                            <div className="group border border-purple-600/30 rounded-xl overflow-hidden mb-3">
-                                <div className="p-3 bg-purple-600/10 text-sm md:text-base font-bold text-purple-600 dark:text-purple-400 uppercase flex justify-between items-center cursor-pointer hover:bg-purple-600/20 transition-colors">
-                                    <span>Fases Finales</span>
-                                    <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
-                                </div>
-                                <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
-                                        {(AREAS_FINALES || []).map(a => {
-                                            const isSelected = (tempTransferAreas || []).includes(a);
-                                            const isDisabled = !(allowedAreas || []).includes(a);
-                                            return (
-                                                <button key={a} type="button" disabled={isDisabled}
-                                                    onClick={() => toggleAreaSelection(a)}
-                                                    className={`p-2 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black border uppercase transition-colors text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-purple-600' : isDisabled ? 'opacity-30 cursor-not-allowed bg-gray-200 theme-text-muted border-gray-300 dark:bg-gray-800 dark:border-gray-700' : 'bg-purple-500/10 text-purple-800 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20'}`}>
-                                                    {isSelected ? `✓ ${a}` : a}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 theme-bg-input rounded-xl font-black text-base lg:text-lg border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-main" />
-                        <div className="grid grid-cols-1 gap-2">
-                            <input id="entregadoPor" defaultValue={supervisorProfile?.name || ''} className="p-3.5 theme-bg-input rounded-xl font-bold text-base lg:text-lg uppercase border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] theme-text-primary placeholder:theme-text-main/40" placeholder="FIRMA ENTREGA" />
-                        </div>
-                        <div className="relative">
-                            <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-medium text-base lg:text-lg h-20 outline-none theme-text-primary placeholder:theme-text-main/40" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
-                            <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 theme-text-primary'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
-                        </div>
+                             <div className="group border-2 border-purple-500/60 dark:border-purple-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div className="p-3.5 bg-purple-500/20 dark:bg-purple-950/80 text-purple-950 dark:text-purple-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-purple-500/30 transition-colors">
+                                     <span>Fases Finales</span>
+                                     <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                 </div>
+                                 <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                         {(AREAS_FINALES || []).map(a => {
+                                             const isSelected = (tempTransferAreas || []).includes(a);
+                                             const isDisabled = !(allowedAreas || []).includes(a);
+                                             return (
+                                                 <button key={a} type="button" disabled={isDisabled}
+                                                     onClick={() => toggleAreaSelection(a)}
+                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-purple-50 dark:bg-purple-950/50 text-purple-950 dark:text-purple-200 border-2 border-purple-400/50 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}>
+                                                     {isSelected ? `✓ ${a}` : a}
+                                                 </button>
+                                             )
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                         <input type="date" value={tempTransferDate} onChange={e=>setTempTransferDate(e.target.value)} className="w-full p-3.5 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold text-base lg:text-lg border-2 border-slate-400 dark:border-slate-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white shadow-sm" />
+                         <div className="grid grid-cols-1 gap-2">
+                             <input id="entregadoPorBulk" defaultValue={supervisorProfile?.name || ''} className="p-3.5 bg-white dark:bg-slate-900 rounded-xl font-black text-base lg:text-lg uppercase border-2 border-slate-400 dark:border-slate-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 shadow-sm" placeholder="FIRMA ENTREGA" />
+                         </div>
+                         <div className="relative">
+                             <textarea value={transferNota} onChange={e=>setTransferNota(e.target.value)} className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-400 dark:border-slate-600 font-bold text-base lg:text-lg h-20 outline-none text-slate-900 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 shadow-sm" placeholder="OBSERVACIONES DE ENTREGA..."></textarea>
+                             <button type="button" onClick={()=>toggleMic('transfer')} className={`absolute bottom-3 right-3 p-2 rounded-lg ${isListening && activeDictationTarget.current === 'transfer' ? 'bg-red-500 text-white animate-pulse' : 'bg-[var(--color-primary)]/20 theme-text-primary'}`}>{isListening && activeDictationTarget.current === 'transfer' ? <Mic size={"1.2em"}/> : <MicOff size={"1.2em"}/>}</button>
+                         </div>
                         <div className="flex gap-2">
                             <label className="flex-1 cursor-pointer bg-black/20 border border-[var(--color-primary)]/30 theme-text-main py-3 rounded-xl flex items-center justify-center gap-2 font-black text-base lg:text-lg uppercase hover:bg-black/40 transition-colors">
                                 <Camera size={"1.2em"}/> Cámara
