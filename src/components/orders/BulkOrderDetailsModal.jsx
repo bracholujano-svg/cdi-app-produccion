@@ -222,22 +222,28 @@ const BulkOrderDetailsModal = ({
                             <>
                               <div className="w-full">
                                     <label className="theme-text-main font-black text-base lg:text-lg uppercase text-center w-full block mb-3">DESTINO(S) DE TRANSFERENCIA:</label>
-                                    
-                                    <div className="group border-2 border-blue-500/60 dark:border-blue-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
-                                        <div className="p-3.5 bg-blue-500/20 dark:bg-blue-950/80 text-blue-950 dark:text-blue-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-blue-500/30 transition-colors">
-                                            <span>Administrativo</span>
-                                            <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
-                                        </div>
-                                        <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
-                                                {(AREAS_ADMIN || []).map(a => {
-                                             const isSelected = (tempTransferAreas || []).includes(a);
-                                             const isDisabled = !(allowedAreas || []).includes(a);
-                                             return (
+                                     
+                                     <div className="group border-2 border-blue-500/60 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                         <div style={{ color: '#1e3a8a', backgroundColor: '#dbeafe', borderColor: '#3b82f6' }} className="p-3.5 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:brightness-95 transition-colors">
+                                             <span>Administrativo</span>
+                                             <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
+                                         </div>
+                                         <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
+                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900">
+                                                 {(AREAS_ADMIN || []).map(a => {
+                                              const isSelected = (tempTransferAreas || []).includes(a);
+                                              const isDisabled = !(allowedAreas || []).includes(a);
+                                              return (
                                                <React.Fragment key={a}>
                                                  <button type="button" disabled={isDisabled}
                                                      onClick={() => toggleAreaSelection(a)}
-                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-blue-600 text-white border-2 border-blue-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-blue-50 dark:bg-blue-950/50 text-blue-950 dark:text-blue-200 border-2 border-blue-400/50 hover:bg-blue-100 dark:hover:bg-blue-900/50'}`}>
+                                                     style={isSelected 
+                                                         ? { color: '#ffffff', backgroundColor: '#1d4ed8', borderColor: '#1e40af' }
+                                                         : isDisabled 
+                                                         ? { color: '#64748b', backgroundColor: '#e2e8f0', borderColor: '#cbd5e1', opacity: 0.5, cursor: 'not-allowed' }
+                                                         : { color: '#0f172a', backgroundColor: '#eff6ff', borderColor: '#3b82f6' }
+                                                     }
+                                                     className="p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight border-2">
                                                      {isSelected ? `✓ ${a}` : a}
                                                  </button>
                                                  {a === "Diseño" && isSelected && isGerente && (
@@ -248,7 +254,7 @@ const BulkOrderDetailsModal = ({
                                                                  const isAssigned = (tempAssignedPersonnel?.["Diseño"] || []).includes(person);
                                                                  const load = getWorkload(person);
                                                                  return (
-                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-blue-950 dark:text-blue-200 border-blue-400/50 hover:bg-blue-100'}`}>
+                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Diseño", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-blue-400/50 hover:bg-blue-100'}`}>
                                                                          <span>{person}</span>
                                                                          <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-200'}`}>{load} prods</span>
                                                                      </button>
@@ -265,7 +271,7 @@ const BulkOrderDetailsModal = ({
                                                                  const isAssigned = (tempAssignedPersonnel?.["Programación CNC"] || []).includes(person);
                                                                  const load = getWorkload(person);
                                                                  return (
-                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-blue-950 dark:text-blue-200 border-blue-400/50 hover:bg-blue-100'}`}>
+                                                                     <button key={person} type="button" onClick={() => toggleAssignedPersonnel("Programación CNC", person)} className={`p-2 rounded-lg font-bold text-sm md:text-base flex justify-between items-center transition-colors border shadow-sm ${isAssigned ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-blue-400/50 hover:bg-blue-100'}`}>
                                                                          <span>{person}</span>
                                                                          <span className={`px-2 py-0.5 rounded-full text-sm ml-1 font-black ${isAssigned ? 'bg-black/20 text-white' : 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-200'}`}>{load} prods</span>
                                                                      </button>
@@ -281,20 +287,26 @@ const BulkOrderDetailsModal = ({
                                  </div>
                              </div>
 
-                             <div className="group border-2 border-amber-500/60 dark:border-amber-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
-                                 <div className="p-3.5 bg-amber-500/25 dark:bg-amber-950/80 text-amber-950 dark:text-amber-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-amber-500/35 transition-colors">
+                             <div className="group border-2 border-amber-500/60 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div style={{ color: '#78350f', backgroundColor: '#fef3c7', borderColor: '#f59e0b' }} className="p-3.5 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:brightness-95 transition-colors">
                                      <span>Áreas Primarias</span>
                                      <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
                                  </div>
                                  <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900">
                                          {(AREAS_PRIMARIAS || []).map(a => {
                                              const isSelected = (tempTransferAreas || []).includes(a);
                                              const isDisabled = !(allowedAreas || []).includes(a);
                                              return (
                                                  <button key={a} type="button" disabled={isDisabled}
                                                      onClick={() => toggleAreaSelection(a)}
-                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-amber-500 text-amber-950 border-2 border-amber-600 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-950 dark:text-amber-200 border-2 border-amber-400/50 hover:bg-amber-100 dark:hover:bg-amber-900/50'}`}>
+                                                     style={isSelected 
+                                                         ? { color: '#0f172a', backgroundColor: '#f59e0b', borderColor: '#d97706' }
+                                                         : isDisabled 
+                                                         ? { color: '#64748b', backgroundColor: '#e2e8f0', borderColor: '#cbd5e1', opacity: 0.5, cursor: 'not-allowed' }
+                                                         : { color: '#0f172a', backgroundColor: '#fffbeb', borderColor: '#f59e0b' }
+                                                     }
+                                                     className="p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight border-2">
                                                      {isSelected ? `✓ ${a}` : a}
                                                  </button>
                                              )
@@ -303,20 +315,26 @@ const BulkOrderDetailsModal = ({
                                  </div>
                              </div>
 
-                             <div className="group border-2 border-emerald-500/60 dark:border-emerald-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
-                                 <div className="p-3.5 bg-emerald-500/20 dark:bg-emerald-950/80 text-emerald-950 dark:text-emerald-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-emerald-500/30 transition-colors">
+                             <div className="group border-2 border-emerald-500/60 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div style={{ color: '#064e3b', backgroundColor: '#d1fae5', borderColor: '#10b981' }} className="p-3.5 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:brightness-95 transition-colors">
                                      <span>Áreas de Transformación</span>
                                      <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
                                  </div>
                                  <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900">
                                          {(AREAS_SECUNDARIAS || []).map(a => {
                                              const isSelected = (tempTransferAreas || []).includes(a);
                                              const isDisabled = !(allowedAreas || []).includes(a);
                                              return (
                                                  <button key={a} type="button" disabled={isDisabled}
                                                      onClick={() => toggleAreaSelection(a)}
-                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-emerald-600 text-white border-2 border-emerald-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-200 border-2 border-emerald-400/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'}`}>
+                                                     style={isSelected 
+                                                         ? { color: '#ffffff', backgroundColor: '#047857', borderColor: '#065f46' }
+                                                         : isDisabled 
+                                                         ? { color: '#64748b', backgroundColor: '#e2e8f0', borderColor: '#cbd5e1', opacity: 0.5, cursor: 'not-allowed' }
+                                                         : { color: '#0f172a', backgroundColor: '#ecfdf5', borderColor: '#10b981' }
+                                                     }
+                                                     className="p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight border-2">
                                                      {isSelected ? `✓ ${a}` : a}
                                                  </button>
                                              )
@@ -325,20 +343,26 @@ const BulkOrderDetailsModal = ({
                                  </div>
                              </div>
 
-                             <div className="group border-2 border-purple-500/60 dark:border-purple-500/50 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
-                                 <div className="p-3.5 bg-purple-500/20 dark:bg-purple-950/80 text-purple-950 dark:text-purple-100 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:bg-purple-500/30 transition-colors">
+                             <div className="group border-2 border-purple-500/60 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
+                                 <div style={{ color: '#581c87', backgroundColor: '#f3e8ff', borderColor: '#a855f7' }} className="p-3.5 text-base lg:text-lg font-black uppercase flex justify-between items-center cursor-pointer hover:brightness-95 transition-colors">
                                      <span>Fases Finales</span>
                                      <ChevronDown size="1.2em" className="group-hover:rotate-180 transition-transform duration-300" />
                                  </div>
                                  <div className="max-h-0 group-hover:max-h-[800px] overflow-hidden transition-all duration-500 ease-in-out">
-                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-slate-50 dark:bg-slate-900">
                                          {(AREAS_FINALES || []).map(a => {
                                              const isSelected = (tempTransferAreas || []).includes(a);
                                              const isDisabled = !(allowedAreas || []).includes(a);
                                              return (
                                                  <button key={a} type="button" disabled={isDisabled}
                                                      onClick={() => toggleAreaSelection(a)}
-                                                     className={`p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight ${isSelected ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-md scale-[1.02]' : isDisabled ? 'opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-purple-50 dark:bg-purple-950/50 text-purple-950 dark:text-purple-200 border-2 border-purple-400/50 hover:bg-purple-100 dark:hover:bg-purple-900/50'}`}>
+                                                     style={isSelected 
+                                                         ? { color: '#ffffff', backgroundColor: '#7e22ce', borderColor: '#6b21a8' }
+                                                         : isDisabled 
+                                                         ? { color: '#64748b', backgroundColor: '#e2e8f0', borderColor: '#cbd5e1', opacity: 0.5, cursor: 'not-allowed' }
+                                                         : { color: '#0f172a', backgroundColor: '#faf5ff', borderColor: '#a855f7' }
+                                                     }
+                                                     className="p-2.5 min-h-[3.5rem] flex items-center justify-center rounded-xl text-sm md:text-base lg:text-sm font-black uppercase transition-all text-center shadow-sm leading-tight border-2">
                                                      {isSelected ? `✓ ${a}` : a}
                                                  </button>
                                              )
