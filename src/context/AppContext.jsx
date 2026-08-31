@@ -81,6 +81,7 @@ export const AppContextProvider = ({ children }) => {
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [showReceptionModal, setShowReceptionModal] = useState(false);
   const [showDossierModal, setShowDossierModal] = useState(false);
+  const [showPlantPlannerModal, setShowPlantPlannerModal] = useState(false);
   
   const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
@@ -196,6 +197,7 @@ export const AppContextProvider = ({ children }) => {
     showDashboardModal, setShowDashboardModal,
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
+    showPlantPlannerModal, setShowPlantPlannerModal,
     dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
@@ -222,8 +224,6 @@ export const AppContextProvider = ({ children }) => {
     calidadInspector, setCalidadInspector,
     calidadNota, setCalidadNota,
     calidadPhoto, setCalidadPhoto,
-    transferNota, setTransferNota,
-    transferPhoto, setTransferPhoto,
     isListening, setIsListening,
     recognitionRef,
     activeDictationTarget,

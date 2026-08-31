@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette } from 'lucide-react';
+import { Menu, Map, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -17,6 +17,7 @@ const Sidebar = () => {
     setShowRecetarioModal,
     setShowReportConfigModal,
     setShowDossierModal,
+    setShowPlantPlannerModal,
     setSupervisorProfile,
     setAreaFilter,
     appTheme, setAppTheme
@@ -69,6 +70,10 @@ const Sidebar = () => {
           <X size={"1.5em"} />
         </button>
         <div className="mt-12 flex flex-col gap-4 w-full px-2 mb-10">
+
+            <button title="Mapa Planta" type="button" onClick={() => { setIsSidebarOpen(false); setShowPlantPlannerModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-500 border border-indigo-500/30 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">
+              <Map size={"1.8em"} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Mapa Planta</span>
+            </button>
             <button title="Indicadores" type="button" onClick={() => { setIsSidebarOpen(false); setShowDashboardModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
               <BarChart2 size={"1.8em"} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Indicadores</span>
             </button>

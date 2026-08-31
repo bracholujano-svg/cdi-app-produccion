@@ -75,3 +75,5 @@ export const calcAreaTime = (areaKey, orders) => {
     const d = avgMs / (1000 * 60 * 60 * 24);
     return { time: d, text: d.toFixed(1) + ' Días' };
 };
+
+export const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16); });

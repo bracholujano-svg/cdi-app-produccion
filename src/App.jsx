@@ -10,6 +10,20 @@ import { searchInRibisoft, loginEnGoogle, registrarEnGoogle } from './services/a
 import { Plus, MessageSquare, Clock, ArrowRightLeft, Search, UserCheck, MapPin, History, Mic, MicOff, Calendar, FileText, Camera, User, AlertTriangle, Bell, Megaphone, Trash2, LayoutList, AlertCircle, BarChart2, Lock, LogOut, Info, Printer, Package, Sun, Moon, Image as ImageIcon, CheckCircle, ChevronDown, ChevronUp, FolderOpen, FlaskConical, Menu, X } from 'lucide-react';
 
 import { AppContextProvider, useAppContext } from './context/AppContext';
+
+import { useVoiceInput } from './hooks/useVoiceInput';
+import { useImageProcessor } from './hooks/useImageProcessor';
+import { executeTransfer, executeReception } from './services/OrderOperationsService';
+import { shareToWhatsApp } from './services/NotificationService';
+import { executeExcelSearch, fillFormWithResult as fillFormWithResultWrapper } from './services/ExternalSearchService';
+
+import FilterControls from './components/ui/FilterControls';
+import OrderGrid from './components/lists/OrderGrid';
+import MaterialsAlertModal from './components/modals/MaterialsAlertModal';
+import CoordViewModal from './components/modals/CoordViewModal';
+import ReportConfigModal from './components/modals/ReportConfigModal';
+import PlantPlannerModal from './components/modals/PlantPlannerModal';
+
 import { useAppStore } from './store/useAppStore';
 
 import GroupDetailsModal from './components/orders/GroupDetailsModal';
@@ -29,6 +43,8 @@ import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
+
+
   const [currentPage, setCurrentPage] = useState(1);
   const [coordSearchPedido, setCoordSearchPedido] = useState('');
   const [coordSearchFecha, setCoordSearchFecha] = useState('');
@@ -55,6 +71,7 @@ const {
     showTVMonitor, setShowTVMonitor,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
+    showPlantPlannerModal, setShowPlantPlannerModal,
     isRegistering, setIsRegistering,
     authError, setAuthError,
     appTheme, setAppTheme,
@@ -76,9 +93,8 @@ const {
     calidadPhoto, setCalidadPhoto,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
-    isListening, setIsListening,
+    
     recognitionRef,
-    activeDictationTarget,
     coordList, setCoordList,
     inputManualPedido, setInputManualPedido,
     inputManualCliente, setInputManualCliente,
@@ -102,6 +118,14 @@ const {
     showBulkModal, setShowBulkModal,
     showDossierModal,
   } = useAppContext();
+  const { isListening, toggleMic, activeDictationTarget } = useVoiceInput(React.useCallback((target, text) => {
+    if (target === 'transfer') setTransferNota(prev => (prev ? prev + ' ' : '') + text.trim());
+    else if (target === 'planta' || target === 'shift') setShiftNoteText(prev => (prev ? prev + ' ' : '') + text.trim());
+    else if (target === 'calidad') setCalidadNota(prev => (prev ? prev + ' ' : '') + text.trim());
+    else if (target === 'coord') setInputManualDetalle(prev => (prev ? prev + ' ' : '') + text.trim());
+  }, [setTransferNota, setShiftNoteText, setCalidadNota, setInputManualDetalle]));
+  const { handleImageUpload } = useImageProcessor(setTempPhoto);
+  const handleWhatsAppShare = (order) => shareToWhatsApp(order);
 
   const searchTerm = useAppStore(state => state.searchTerm);
   const setSearchTerm = useAppStore(state => state.setSearchTerm);
@@ -114,28 +138,6 @@ const {
   const sortBy = useAppStore(state => state.sortBy);
   const setSortBy = useAppStore(state => state.setSortBy);
 
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'es-CO';
-      recognitionRef.current.onresult = (event) => {
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-        }
-        if (finalTranscript) {
-          if (activeDictationTarget.current === 'planta') setShiftNoteText(prev => (prev + " " + finalTranscript).trim());
-          if (activeDictationTarget.current === 'calidad') setCalidadNota(prev => (prev + " " + finalTranscript).trim());
-          if (activeDictationTarget.current === 'transfer') setTransferNota(prev => (prev + " " + finalTranscript).trim());
-        }
-      };
-      recognitionRef.current.onend = () => setIsListening(false);
-      recognitionRef.current.onerror = () => setIsListening(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -156,66 +158,13 @@ const {
     }
   }, [selectedOrder]);
 
-  const fillFormWithResult = (result) => {
-    const form = document.getElementById('nuevoRegistroForm');
-    if (form) {
-        form.pedidoNum.value = result.pedido || "";
-        form.codArticulo.value = result.articulo || "";
-        form.cliente.value = result.cliente || "";
-        form.nombre.value = result.nombre || "";
-        form.cantidad.value = result.cantidad || 1;
-    }
-  };
+  const fillFormWithResult = (result, fillFn) => fillFormWithResultWrapper(result, fillFn);
 
-  const doExcelSearch = async () => {
-      setExcelSearchLoading(true); setExcelSearchError(""); setExcelSearchSuccess("");
-      setSearchResults([]); setShowSearchSelector(false);
-      try {
-          const results = await searchInRibisoft(excelSearchPedido, excelSearchArticulo);
-          if (results && results.length === 1) {
-              fillFormWithResult(results[0]);
-              setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre}`);
-          } else if (results && results.length > 1) {
-              setSearchResults(results);
-              setShowSearchSelector(true);
-              setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
-          }
-      } catch (err) { 
-          setExcelSearchError(err instanceof Error ? err.message : String(err)); 
-      } finally { 
-          setExcelSearchLoading(false); 
-      }
-  };
+  const doExcelSearch = async (term) => await executeExcelSearch(term);
 
 
 
-  const handleImageUpload = (e, setter) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; const MAX_HEIGHT = 800;
-        let width = img.width; let height = img.height;
-        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        setter(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const toggleMic = (target) => {
-    if (!recognitionRef.current) return;
-    if (isListening) { recognitionRef.current.stop(); setIsListening(false); } 
-    else { activeDictationTarget.current = target; recognitionRef.current.start(); setIsListening(true); }
-  };
 
   const deleteAlert = (alertId) => {
       const newAlerts = coordinationAlerts.filter(a => a?.id !== alertId);
@@ -383,115 +332,7 @@ const {
     setCalidadNota(""); setCalidadPhoto(null);
   };
 
-  const updateTransfer = (id, areas, date, en, re, isPartial = false) => {
-    const order = orders.find(o => o?.id === id);
-    if (!order || !areas || areas.length === 0) return;
-    
-    let newOrdersList = [...orders];
-    
-    areas.forEach((area, index) => {
-        const isDespacho = area === 'Despachos';
-        const personalAsignado = tempAssignedPersonnel[area] || [];
-        const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
-        const newHistoryEntry = { 
-            fecha: new Date().toISOString(), 
-            supervisor: supervisorProfile?.name || "S/N", 
-            accion: isPartial ? `Entrega Parcial a ${area}${asignadoText}` : `Entrega a ${area}${asignadoText}`, 
-            entrega: en, recibe: re, nota: transferNota, foto: transferPhoto 
-        };
-        
-        let targetOrder;
-        
-        if (index === 0) {
-            // El primer destino actualiza el master original
-            targetOrder = isDespacho 
-              ? { 
-                  ...order, 
-                  areaActual: area, 
-                  estadoInterno: 'En Espera', // o despachado según config
-                  fechaEntregaPrometida: date,
-                  asignado_a: personalAsignado,
-                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
-                }
-              : { 
-                  ...order, 
-                  estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
-                  fechaEntregaPrometida: date,
-                  asignado_a: personalAsignado,
-                  transferenciaPendiente: {
-                      haciaArea: area,
-                      entregadoPor: en || supervisorProfile?.name || "S/N",
-                      nota: transferNota,
-                      fotoEntrega: transferPhoto,
-                      fechaEnvio: new Date().toISOString(),
-                      isPartial: isPartial
-                  },
-                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
-                };
-                
-            newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
-        } else {
-            // Los destinos adicionales generan Clones (Bifurcación)
-            const cloneId = crypto.randomUUID();
-            targetOrder = isDespacho 
-              ? { 
-                  ...order, 
-                  id: cloneId,
-                  master_id: order.id,
-                  areaActual: area, 
-                  estadoInterno: 'En Espera', 
-                  fechaEntregaPrometida: date,
-                  asignado_a: personalAsignado,
-                  isTerminado: false, historial: [...(order.historial || []), {
-                      ...newHistoryEntry,
-                      accion: `Bifurcación hacia ${area}${asignadoText}`
-                  }] 
-                }
-              : { 
-                  ...order,
-                  id: cloneId,
-                  master_id: order.id,
-                  areaActual: order.areaActual,
-                  estadoInterno: `EN TRÁNSITO A ${area}`,
-                  fechaEntregaPrometida: date,
-                  asignado_a: personalAsignado,
-                  transferenciaPendiente: {
-                      haciaArea: area,
-                      entregadoPor: en || supervisorProfile?.name || "S/N",
-                      nota: transferNota,
-                      fotoEntrega: transferPhoto,
-                      fechaEnvio: new Date().toISOString(),
-                      isPartial: false // Las bifurcaciones no son parciales en sí
-                  },
-                  isTerminado: false, historial: [...(order.historial || []), {
-                      ...newHistoryEntry,
-                      accion: `Bifurcación hacia ${area}${asignadoText}`
-                  }] 
-                };
-            
-            newOrdersList.push(targetOrder);
-        }
-        
-        if (targetOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
-            const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === targetOrder.pedidoNum);
-            const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
-            if (allDispatched) {
-                const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (targetOrder.pedidoNum || "").toUpperCase());
-                if (alertObj) {
-                    const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
-                    setCoordinationAlerts(newAlerts);
-                    syncAlertToSupabase(alertObj, true);
-                }
-            }
-        }
-        
-        syncOrderToSupabase(targetOrder);
-    });
-    
-    setOrders(newOrdersList); 
-    setSelectedOrder(null); 
-  };
-
+  
   const handleBulkShiftNote = (ids, isTerminadoFlag = null) => {
       if (!ids || ids.length === 0) return;
       let newOrdersList = [...orders];
@@ -541,224 +382,67 @@ const {
       setSelectedBulkOrders([]);
   };
 
-  const handleBulkTransfer = (ids, areas, date, en, re, isPartial = false) => {
-      if (!ids || ids.length === 0 || !areas || areas.length === 0) return;
-      let newOrdersList = [...orders];
-      
-      ids.forEach((id) => {
-          const order = newOrdersList.find(o => o?.id === id);
-          if (!order) return;
-          
-          areas.forEach((area, index) => {
-              const isDespacho = area === 'Despachos';
-              const personalAsignado = tempAssignedPersonnel[area] || [];
-              const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
-              const newHistoryEntry = { 
-                  fecha: new Date().toISOString(), 
-                  supervisor: supervisorProfile?.name || "S/N", 
-                  accion: isPartial ? `Entrega Parcial a ${area}${asignadoText}` : `Entrega a ${area}${asignadoText}`, 
-                  entrega: en, recibe: re, nota: transferNota, foto: transferPhoto 
-              };
-              
-              let targetOrder;
-              if (index === 0) {
-                  targetOrder = isDespacho 
-                    ? { 
-                        ...order, 
-                        areaActual: area, 
-                        estadoInterno: 'En Espera', 
-                        fechaEntregaPrometida: date,
-                        asignado_a: personalAsignado,
-                        isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
-                      }
-                    : { 
-                        ...order, 
-                        estadoInterno: isPartial ? `ENTREGA PARCIAL EN TRÁNSITO A ${area}` : `EN TRÁNSITO A ${area}`,
-                        fechaEntregaPrometida: date,
-                        asignado_a: personalAsignado,
-                        transferenciaPendiente: {
-                            haciaArea: area,
-                            entregadoPor: en || supervisorProfile?.name || "S/N",
-                            nota: transferNota,
-                            fotoEntrega: transferPhoto,
-                            fechaEnvio: new Date().toISOString(),
-                            isPartial: isPartial
-                        },
-                        isTerminado: false, historial: [...(order.historial || []), newHistoryEntry] 
-                      };
-                      
-                  newOrdersList = newOrdersList.map(o => o?.id === id ? targetOrder : o);
-              } else {
-                  const cloneId = crypto.randomUUID();
-                  targetOrder = isDespacho 
-                    ? { 
-                        ...order, 
-                        id: cloneId,
-                        master_id: order.id,
-                        areaActual: area, 
-                        estadoInterno: 'En Espera', 
-                        fechaEntregaPrometida: date,
-                        asignado_a: personalAsignado,
-                        isTerminado: false, historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
-                      }
-                    : { 
-                        ...order,
-                        id: cloneId,
-                        master_id: order.id,
-                        areaActual: order.areaActual,
-                        estadoInterno: `EN TRÁNSITO A ${area}`,
-                        fechaEntregaPrometida: date,
-                        asignado_a: personalAsignado,
-                        transferenciaPendiente: {
-                            haciaArea: area,
-                            entregadoPor: en || supervisorProfile?.name || "S/N",
-                            nota: transferNota,
-                            fotoEntrega: transferPhoto,
-                            fechaEnvio: new Date().toISOString(),
-                            isPartial: false
-                        },
-                        isTerminado: false, historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
-                      };
-                  newOrdersList.push(targetOrder);
-              }
-              
-              if (targetOrder.estadoInterno === 'DESPACHADO' || area === 'Despachos') {
-                  const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === targetOrder.pedidoNum);
-                  const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
-                  if (allDispatched) {
-                      const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (targetOrder.pedidoNum || "").toUpperCase());
-                      if (alertObj) {
-                          const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
-                          setCoordinationAlerts(newAlerts);
-                          syncAlertToSupabase(alertObj, true);
-                      }
-                  }
-              }
-              syncOrderToSupabase(targetOrder);
-          });
-      });
-      
-      setOrders(newOrdersList);
-      setShowBulkModal(false);
-      setSelectedBulkOrders([]);
+    const updateTransfer = async (id, areas, date, operario, _, isPartial) => {
+    try {
+        const ids = Array.isArray(id) ? id : [id];
+        const { updatedOrders, updatedAlerts, ordersToSync, alertsToSync } = executeTransfer(ids, {
+            orders,
+            coordinationAlerts,
+            supervisorName: operario || supervisorProfile?.name || 'Desconocido',
+            areas: Array.isArray(areas) ? areas : [areas],
+            date: date || new Date().toISOString(),
+            entrega: operario || supervisorProfile?.name || 'Desconocido',
+            recibe: '',
+            isPartial: isPartial,
+            tempAssignedPersonnel,
+            transferNota,
+            transferPhoto
+        });
+
+        if (updatedOrders) setOrders(updatedOrders);
+        if (updatedAlerts) setCoordinationAlerts(updatedAlerts);
+        
+        for (const o of (ordersToSync || [])) await syncOrderToSupabase(o);
+        for (const a of (alertsToSync || [])) await syncAlertToSupabase(a);
+        
+        setTempAssignedPersonnel({});
+        setTransferNota('');
+        setTransferPhoto(null);
+    } catch (err) {
+        alert('Error en transferencia: ' + err.message);
+    }
   };
 
-  const processReception = (id, accepted, receptionName, notes, photo) => {
-      const order = orders.find(o => o?.id === id);
-      if (!order || !order.transferenciaPendiente) return;
-      
-      const isReject = !accepted;
-      const targetArea = order.transferenciaPendiente.haciaArea;
-      const isPartial = order.transferenciaPendiente.isPartial;
-      
-      const newHistoryEntry = {
-          fecha: new Date().toISOString(),
-          supervisor: supervisorProfile?.name || "S/N",
-          accion: isReject ? `Rechazo de ${targetArea}` : (isPartial ? `Recepción Parcial en ${targetArea}` : `Recepción en ${targetArea}`),
-          entrega: order.transferenciaPendiente.entregadoPor,
-          recibe: receptionName,
-          nota: notes,
-          foto: photo
-      };
-
-      const updatedOrder = isReject
-          ? {
-              ...order,
-              estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
-              transferenciaPendiente: null,
-              isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
-          }
-          : {
-              ...order,
-              areaActual: isPartial ? order.areaActual : targetArea,
-              areas_compartidas: isPartial 
-                 ? [...new Set([...(order.areas_compartidas || []), targetArea])] 
-                 : [],
-              estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
-              transferenciaPendiente: null,
-              isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
-          };
-
-      const newOrdersList = orders.map(o => o?.id === id ? updatedOrder : o);
-
-      if (!isReject && targetArea === 'Despachos') {
-          const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
-          const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
-          if (allDispatched) {
-              const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
-              if (alertObj) {
-                  const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
-                  setCoordinationAlerts(newAlerts);
-                  syncAlertToSupabase(alertObj, true);
-              }
-          }
-      }
-
-      setOrders(newOrdersList);
-      syncOrderToSupabase(updatedOrder);
+  const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial) => {
+    await updateTransfer(ids, areas, date, operario, _, isPartial);
+    setShowBulkModal(false);
   };
 
-  const processBulkReception = (ids, accepted, receptionName, notes, photo) => {
-      if (!ids || ids.length === 0) return;
-      let newOrdersList = [...orders];
-      const updatedOrdersToSync = [];
-      
-      const isReject = !accepted;
-      
-      ids.forEach((id) => {
-          const order = newOrdersList.find(o => o?.id === id);
-          if (!order || !order.transferenciaPendiente) return;
-          
-          const targetArea = order.transferenciaPendiente.haciaArea;
-          const isPartial = order.transferenciaPendiente.isPartial;
-          
-          const newHistoryEntry = {
-              fecha: new Date().toISOString(),
-              supervisor: supervisorProfile?.name || "S/N",
-              accion: isReject ? `Rechazo de ${targetArea}` : (isPartial ? `Recepción Parcial en ${targetArea}` : `Recepción en ${targetArea}`),
-              entrega: order.transferenciaPendiente.entregadoPor,
-              recibe: receptionName,
-              nota: notes,
-              foto: photo
-          };
-          
-          const updatedOrder = isReject
-              ? {
-                  ...order,
-                  estadoInterno: isPartial ? `ENTREGA PARCIAL RECHAZADA POR ${targetArea}` : `RECHAZADO POR ${targetArea}`,
-                  transferenciaPendiente: null,
-                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
-              }
-              : {
-                  ...order,
-                  areaActual: isPartial ? order.areaActual : targetArea,
-                  areas_compartidas: isPartial 
-                     ? [...new Set([...(order.areas_compartidas || []), targetArea])] 
-                     : [],
-                  estadoInterno: isPartial ? order.estadoInterno : (CONFIG_PROCESOS[targetArea]?.[0] || "En Espera"),
-                  transferenciaPendiente: null,
-                  isTerminado: false, historial: [...(order.historial || []), newHistoryEntry]
-              };
-              
-          newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
-          updatedOrdersToSync.push(updatedOrder);
-          
-          if (!isReject && targetArea === 'Despachos') {
-              const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === updatedOrder.pedidoNum);
-              const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
-              if (allDispatched) {
-                  const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (updatedOrder.pedidoNum || "").toUpperCase());
-                  if (alertObj) {
-                      const newAlerts = coordinationAlerts.filter(a => a?.id !== alertObj.id);
-                      setCoordinationAlerts(newAlerts);
-                      syncAlertToSupabase(alertObj, true);
-                  }
-              }
-          }
-      });
-      
-      setOrders(newOrdersList);
-      updatedOrdersToSync.forEach(o => syncOrderToSupabase(o));
+  const processReception = async (pedidoNum, isTotal = true, receptionName, receptionNotes, tempPhoto) => {
+    try {
+        const ids = Array.isArray(pedidoNum) ? pedidoNum : [pedidoNum];
+        const { updatedOrders, updatedAlerts, ordersToSync, alertsToSync } = executeReception(ids, {
+            orders,
+            coordinationAlerts,
+            supervisorName: supervisorProfile?.name || 'Desconocido',
+            accepted: isTotal,
+            receptionName: receptionName || supervisorProfile?.name || 'Desconocido',
+            notes: receptionNotes || '',
+            photo: tempPhoto || null
+        });
+
+        if (updatedOrders) setOrders(updatedOrders);
+        if (updatedAlerts) setCoordinationAlerts(updatedAlerts);
+        
+        for (const o of (ordersToSync || [])) await syncOrderToSupabase(o);
+        for (const a of (alertsToSync || [])) await syncAlertToSupabase(a);
+    } catch (err) {
+        alert('Error en recepción: ' + err.message);
+    }
+  };
+
+  const processBulkReception = async (pedidos, isTotal = true, receptionName, receptionNotes, tempPhoto) => {
+    await processReception(pedidos, isTotal, receptionName, receptionNotes, tempPhoto);
   };
 
   const addItemToCoordList = () => {
@@ -950,8 +634,19 @@ const {
   const activeGroupObj = finalGroupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
   // Pagination logic
+  // Avoid calling setState synchronously
+  const prevFilters = useRef({ searchTerm, areaFilter, viewFilter, clientFilter, sortBy });
   useEffect(() => {
-    setCurrentPage(1);
+    if (
+        prevFilters.current.searchTerm !== searchTerm ||
+        prevFilters.current.areaFilter !== areaFilter ||
+        prevFilters.current.viewFilter !== viewFilter ||
+        prevFilters.current.clientFilter !== clientFilter ||
+        prevFilters.current.sortBy !== sortBy
+    ) {
+        setCurrentPage(1);
+        prevFilters.current = { searchTerm, areaFilter, viewFilter, clientFilter, sortBy };
+    }
   }, [searchTerm, areaFilter, viewFilter, clientFilter, sortBy]);
 
   const itemsPerPage = 15;
@@ -971,101 +666,20 @@ const {
       
       <div className="sticky top-0 z-40 bg-[var(--color-base)] shadow-sm border-b theme-border">
         <Header />
-        <div className="theme-bg-input p-2 flex flex-col lg:flex-row gap-2">
-            <div className="relative flex-1 group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" size={"1.2em"} />
-                <input type="text" placeholder="Buscar pedido, artículo o producto..." className="w-full pl-8 pr-3 py-2 md:py-2.5 rounded-lg theme-bg-card font-bold text-base lg:text-lg outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            
-            <div className="flex gap-2 flex-1 md:flex-none">
-                <div className="flex-1 lg:w-48">
-                    <input 
-                        list="client-options" 
-                        type="text"
-                        placeholder="BUSCAR CLIENTE..."
-                        className="w-full theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] text-ellipsis overflow-hidden placeholder:normal-case placeholder:text-sm md:placeholder:text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400" 
-                        value={clientFilter === 'Todos' ? '' : clientFilter} 
-                        onChange={(e) => setClientFilter(e.target.value.toUpperCase() || 'Todos')}
-                        onFocus={(e) => e.target.select()}
-                    />
-                    <datalist id="client-options">
-                        {uniqueClients.map(c => <option key={c} value={c} />)}
-                    </datalist>
-                </div>
-                <select className="flex-1 lg:w-48 theme-bg-card px-2 py-2 md:py-2.5 rounded-lg font-black text-sm md:text-base lg:text-sm uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer text-ellipsis overflow-hidden theme-text-main" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                    <option value="ninguno">Orden Original</option>
-                    <option value="pedido_asc">Pedido (Asc)</option>
-                    <option value="pedido_desc">Pedido (Desc)</option>
-                    <option value="fecha_asc">F. Entrega (Asc)</option>
-                    <option value="fecha_desc">F. Entrega (Desc)</option>
-                </select>
-            </div>
-            
-            <div className="flex gap-2 justify-between">
-                <select className="flex-1 md:w-48 theme-bg-card px-3 py-2 md:py-2.5 rounded-lg font-black text-base lg:text-lg uppercase outline-none border theme-border focus:ring-2 focus:ring-[var(--color-primary)] cursor-pointer theme-text-main" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
-                    <option value="Todas">Todas las Áreas</option>
-                    {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-
-                <div className="flex theme-bg-card border theme-border rounded-lg p-0.5 gap-0.5 shrink-0 text-slate-900 dark:text-white">
-                    <button type="button" onClick={()=>setGridColumns(1)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===1 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Lista">
-                        <LayoutList size={"1.2em"} />
-                    </button>
-                    <button type="button" onClick={()=>setGridColumns(2)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===2 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Media">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    </button>
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`flex md:hidden p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
-                    </button>
-
-                    <button type="button" onClick={()=>setGridColumns(3)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===3 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Grande">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    </button>
-                    <button type="button" onClick={()=>setGridColumns(4)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===4 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Mediana">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="5" height="5"></rect><rect x="10" y="3" width="5" height="5"></rect><rect x="17" y="3" width="5" height="5"></rect><rect x="3" y="10" width="5" height="5"></rect><rect x="10" y="10" width="5" height="5"></rect><rect x="17" y="10" width="5" height="5"></rect><rect x="3" y="17" width="5" height="5"></rect><rect x="10" y="17" width="5" height="5"></rect><rect x="17" y="17" width="5" height="5"></rect></svg>
-                    </button>
-                    <button type="button" onClick={()=>setGridColumns(5)} className={`hidden md:flex p-1.5 rounded-md transition-colors ${gridColumns===5 ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'theme-text-muted hover:bg-black/5'}`} title="Cuadrícula Pequeña">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="18"></rect><rect x="8" y="3" width="4" height="18"></rect><rect x="14" y="3" width="4" height="18"></rect><rect x="20" y="3" width="4" height="18"></rect></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
+        <FilterControls uniqueClients={uniqueClients} />
       </div>
       <Sidebar />
 
-      <main className="w-full px-4 md:px-8 p-4 md:p-6 min-h-screen flex flex-col">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4 md:gap-5 flex-1 content-start`}>
-          {paginatedGroups.map(group => <OrderCard key={group.pedidoNum} group={group} />)}
-          {groupedArray.length === 0 && (
-            <div className="col-span-full text-center py-20 theme-text-muted">
-              <Package size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="font-black uppercase tracking-widest opacity-50">No hay pedidos en esta vista</p>
-            </div>
-          )}
-        </div>
+      <OrderGrid 
+        gridColsClass={gridColsClass} 
+        paginatedGroups={paginatedGroups} 
+        groupedArray={groupedArray} 
+        totalPages={totalPages} 
+        currentPage={currentPage} 
+        setCurrentPage={setCurrentPage} 
+      />
 
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-8 pb-10">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-6 py-3 rounded-xl font-black uppercase text-base lg:text-lg border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
-            >
-              Anterior
-            </button>
-            <span className="font-bold text-base lg:text-lg text-[var(--color-primary)] px-2">Página {currentPage} de {totalPages}</span>
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-6 py-3 rounded-xl font-black uppercase text-base lg:text-lg border theme-border theme-bg-card text-[var(--color-primary)] disabled:opacity-50 hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] transition-colors"
-            >
-              Siguiente
-            </button>
-          </div>
-        )}
-      </main>
-
-      <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} />
+      <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} isListening={isListening} activeDictationTarget={activeDictationTarget} />
 
       <RecetarioModal />
       <ReceptionModal processReception={processReception} processBulkReception={processBulkReception} />
@@ -1079,6 +693,8 @@ const {
         updateTransfer={updateTransfer}
         shareToWhatsApp={shareToWhatsApp}
         toggleMic={toggleMic}
+        isListening={isListening}
+        activeDictationTarget={activeDictationTarget}
       />
       
       {showBulkModal && (
@@ -1088,8 +704,12 @@ const {
           addQualityNote={() => handleBulkQualityNote(selectedBulkOrders.map(o => o.id))}
           updateTransfer={handleBulkTransfer}
           toggleMic={toggleMic}
+          isListening={isListening}
+          activeDictationTarget={activeDictationTarget}
         />
       )}
+
+      {showPlantPlannerModal && <PlantPlannerModal orders={orders} setShowPlantPlannerModal={setShowPlantPlannerModal} />}
 
       {showDashboardModal && (
         <AdvancedExecutiveDashboard 
@@ -1115,235 +735,27 @@ const {
 
       <ReportPreviewModal />
 
-      {showCoordViewModal && (() => {
-        let filteredSortedAlerts = [...coordinationAlerts];
-        if (coordSearchPedido) {
-          filteredSortedAlerts = filteredSortedAlerts.filter(a => a.pedidoNum.toLowerCase().includes(coordSearchPedido.toLowerCase()));
-        }
-        if (coordSearchFecha) {
-          filteredSortedAlerts = filteredSortedAlerts.filter(a => a.fechaEntrega === coordSearchFecha);
-        }
-        filteredSortedAlerts.sort((a, b) => {
-          const dateA = new Date(a.fechaEntrega).getTime();
-          const dateB = new Date(b.fechaEntrega).getTime();
-          return coordSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-        });
-
-        return (
-          <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
-            <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-              <div className="p-5 bg-[var(--color-primary)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10"><div className="flex items-center gap-3"><LayoutList size={20}/><h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2></div><button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button></div>
-              
-              <div className="p-4 bg-[var(--color-surface)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">
-                <input 
-                  type="text" 
-                  placeholder="🔎 Buscar Nº Pedido..." 
-                  value={coordSearchPedido} 
-                  onChange={(e) => setCoordSearchPedido(e.target.value)} 
-                  className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)] uppercase"
-                />
-                <div className="flex gap-4 flex-1">
-                  <input 
-                    type="date" 
-                    value={coordSearchFecha} 
-                    onChange={(e) => setCoordSearchFecha(e.target.value)} 
-                    className="flex-1 p-3 rounded-xl theme-bg-input border theme-border font-bold text-base lg:text-lg outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setCoordSearchFecha('')} 
-                    className="px-4 rounded-xl border border-[var(--color-border)] font-bold text-base lg:text-lg uppercase theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
-                    title="Limpiar Fecha"
-                  >
-                    Limpiar
-                  </button>
-                </div>
-                <button 
-                  type="button" 
-                  onClick={() => setCoordSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} 
-                  className="px-5 py-3 rounded-xl border border-[var(--color-border)] font-bold text-base lg:text-lg uppercase flex items-center justify-center gap-2 theme-text-muted hover:text-[var(--color-primary)] hover:bg-black/5 transition-colors"
-                >
-                  {coordSortOrder === 'asc' ? '⬇️ ASCENDENTE' : '⬆️ DESCENDENTE'}
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredSortedAlerts.map(alertItem => (
-                    <div key={alertItem.id} className="theme-bg-main p-5 rounded-[1.5rem] border-[2px] theme-border relative flex flex-col shadow-sm transition-all hover:shadow-md">
-                      {supervisorProfile?.area === "Administrador / Todos" && (
-                          <button type="button" onClick={() => deleteAlert(alertItem.id)} className="absolute top-4 right-4 p-2 theme-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"><Trash2 size={"1.2em"}/></button>
-                      )}
-                      <span className="text-lg font-black text-blue-600 dark:text-blue-400 uppercase block leading-none pr-8">PED: {alertItem.pedidoNum}</span>
-                      <h4 className="text-sm font-bold text-[var(--color-primary)] uppercase mt-1 truncate">{alertItem.cliente}</h4>
-                      
-                      {supervisorProfile?.area === "Administrador / Todos" ? (
-                          <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-sm font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-2">Modificar Compromiso</span>
-                              <input 
-                                  type="date" 
-                                  value={alertItem.fechaEntrega} 
-                                  onChange={(e) => updateAlertDate(alertItem.id, e.target.value)}
-                                  className="w-full p-2.5 bg-transparent rounded-lg font-black text-sm md:text-base border border-[var(--color-border)] outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-[var(--color-primary)] transition-all" 
-                              />
-                          </div>
-                      ) : (
-                          <div className="mt-4 p-3 theme-bg-input rounded-xl border theme-border flex-1 flex flex-col justify-end">
-                              <span className="text-sm font-bold text-[var(--color-primary)]/70 uppercase block tracking-widest mb-1">Compromiso</span>
-                              <p className="text-base font-black flex items-center gap-2 mt-0.5 text-[var(--color-primary)]"><Calendar size={"1.2em"} /> {formatLocalDate(alertItem.fechaEntrega)}</p>
-                          </div>
-                      )}
-                    </div>
-                  ))}
-                  {filteredSortedAlerts.length === 0 && <p className="col-span-full text-center p-10 font-black uppercase text-[var(--color-primary)]/50">No hay resultados</p>}
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      {showCoordViewModal && <CoordViewModal deleteAlert={deleteAlert} />}
 
       {showReportConfigModal && (
-        <div className="fixed inset-0 bg-black/80  z-[120] flex items-center justify-center p-4">
-          <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--color-primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--color-primary)]">✕</button></div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-1"><label className="text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-base lg:text-lg uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Fecha Inicio</label><input type="date" value={repDateStart} onChange={e=>setRepDateStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Hora Inicio</label><input type="time" value={repTimeStart} onChange={e=>setRepTimeStart(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Fecha Fin</label><input type="date" value={repDateEnd} onChange={e=>setRepDateEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-                  <div className="space-y-1"><label className="text-sm md:text-base font-black theme-text-muted uppercase tracking-widest">Hora Fin</label><input type="time" value={repTimeEnd} onChange={e=>setRepTimeEnd(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-bold text-sm md:text-base outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]" /></div>
-              </div>
-
-              <button type="button" onClick={generateShiftReport} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase text-base lg:text-lg py-4 rounded-xl border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 mt-2">Generar Vista Previa</button>
-            </div>
-          </div>
-        </div>
+        <ReportConfigModal 
+          repSupervisor={repSupervisor} setRepSupervisor={setRepSupervisor}
+          repDateStart={repDateStart} setRepDateStart={setRepDateStart}
+          repTimeStart={repTimeStart} setRepTimeStart={setRepTimeStart}
+          repDateEnd={repDateEnd} setRepDateEnd={setRepDateEnd}
+          repTimeEnd={repTimeEnd} setRepTimeEnd={setRepTimeEnd}
+          generateShiftReport={generateShiftReport}
+          setShowReportConfigModal={setShowReportConfigModal}
+        />
       )}
 
       
 
       {showMaterialsAlertModal && (
-        (() => {
-          const isNoMaterials = activeAlertMaterials.length === 0;
-          const isModalAlert = activeAlertMaterials.some(m => m.faltante > 0);
-          
-          const filtered = activeAlertMaterials.filter(m => 
-              !materialsSearchTerm || 
-              m.descripcion?.toLowerCase().includes(materialsSearchTerm.toLowerCase()) || 
-              m.id_referencia?.toLowerCase().includes(materialsSearchTerm.toLowerCase())
-          );
-          
-          const faltantes = filtered.filter(m => m.faltante > 0).sort((a, b) => (b.sinOC ? 1 : 0) - (a.sinOC ? 1 : 0));
-          const disponibles = filtered.filter(m => m.faltante <= 0);
-
-          return (
-            <div className="fixed inset-0 bg-black/80  z-[150] flex items-center justify-center p-4">
-              <div className={`w-full max-w-7xl theme-bg-card rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in duration-300 ${isNoMaterials ? 'border-yellow-500/30' : isModalAlert ? 'border-orange-500/30' : 'border-green-500/30'}`}>
-                <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 border-yellow-500/20' : isModalAlert ? 'bg-orange-500/10 border-orange-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                  <h2 className={`text-lg font-black uppercase flex items-center gap-2 ${isNoMaterials ? 'text-yellow-600' : isModalAlert ? 'text-orange-600' : 'text-[var(--color-primary)]'}`}>
-                    {isNoMaterials ? <AlertTriangle size={20} /> : isModalAlert ? <AlertTriangle size={20} /> : <CheckCircle size={20} />} 
-                    {isNoMaterials ? 'Pedidos Sin Insumos Requeridos' : isModalAlert ? 'Alerta de Insumos' : 'Inventario Suficiente'}
-                  </h2>
-                  <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`p-2.5 rounded-xl transition-colors shrink-0 ${isNoMaterials ? 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600' : isModalAlert ? 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-600' : 'bg-green-500/10 hover:bg-green-500/20 text-[var(--color-primary)]'}`}>✕</button>
-                </div>
-                
-                <div className="p-4 border-b theme-border theme-bg-main">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]/50" size={20} />
-                        <input 
-                            type="text" 
-                            placeholder="BUSCAR INSUMO O CÓDIGO..." 
-                            value={materialsSearchTerm || ''} 
-                            onChange={(e) => setMaterialsSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl theme-bg-input border theme-border outline-none focus:ring-2 focus:ring-[var(--color-primary)] font-bold uppercase text-base lg:text-lg text-[var(--color-primary)]"
-                        />
-                    </div>
-                </div>
-
-                <div className="px-4 md:px-5 pt-2 pb-2 theme-bg-card z-20 border-b theme-border shadow-sm flex flex-col">
-                    <p className="text-base lg:text-lg font-bold text-slate-500 uppercase mb-4">
-                      {isNoMaterials ? 'No se encontraron insumos registrados en base de datos para este pedido.' : isModalAlert ? 'Los siguientes materiales no cuentan con stock suficiente para este pedido.' : 'Este pedido cuenta con cobertura total de inventario para su ejecución.'}
-                    </p>
-
-                    {!isNoMaterials && (
-                        <div className="grid grid-cols-2 gap-2 md:gap-6 pr-2 md:pr-4">
-                            <h3 className="text-[14px] md:text-lg font-black text-orange-500 uppercase border-b-2 border-orange-500/30 pb-1">Materiales Faltantes</h3>
-                            <h3 className="text-[14px] md:text-lg font-black text-green-500 uppercase border-b-2 border-green-500/30 pb-1">Materiales Disponibles</h3>
-                        </div>
-                    )}
-                </div>
-
-                <div className="px-4 md:px-5 py-4 max-h-[50vh] overflow-y-auto custom-scrollbar">
-                    
-                    {isNoMaterials ? (
-                        <div className="p-10 rounded-xl border border-dashed border-yellow-200 bg-yellow-50 text-center">
-                           <AlertTriangle size={48} className="mx-auto mb-4 text-yellow-400 opacity-50" />
-                           <span className="text-sm md:text-base font-black text-yellow-600 uppercase">Sin información de insumos</span>
-                           <p className="text-sm md:text-base font-bold text-yellow-500/80 mt-2">El sistema no detectó ningún requerimiento de material en Supabase asociado a este pedido y/o artículo.</p>
-                        </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2 md:gap-6">
-                              <div className="space-y-3">
-                                  {faltantes.length > 0 ? (
-                                      faltantes.map((mat, i) => (
-                                          <div key={'f'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-orange-200 bg-orange-50">
-                                              <div className="flex justify-between items-start">
-                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 theme-bg-card border rounded-md border-orange-200 text-orange-700">Ref: {mat.id_referencia}</span>
-                                                  {mat.sinOC && <span className="text-sm font-black uppercase text-red-600 flex items-center gap-1"><AlertCircle size={"1.2em"}/> Sin Orden Compra</span>}
-                                              </div>
-                                              <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                                              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-2 border-t pt-3 border-orange-200">
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-orange-600 uppercase">Faltante</span><span className="text-sm md:text-base font-black text-red-600">{Number.isFinite(mat.faltante) ? Number(mat.faltante).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1') : mat.faltante}</span></div>
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                              </div>
-                                          </div>
-                                      ))
-                                  ) : (
-                                      <div className="p-4 rounded-xl border border-dashed border-orange-200 bg-orange-50/50 text-center">
-                                          <span className="text-sm md:text-base font-bold text-orange-400 uppercase">Ningún material faltante.</span>
-                                      </div>
-                                  )}
-                              </div>
-
-                              <div className="space-y-3">
-                                  {disponibles.length > 0 ? (
-                                      disponibles.map((mat, i) => (
-                                          <div key={'d'+i} className="p-4 rounded-xl border flex flex-col gap-2 border-green-200 bg-green-50">
-                                              <div className="flex justify-between items-start">
-                                                  <span className="text-base lg:text-lg font-black uppercase px-2 py-1 theme-bg-card border rounded-md border-green-200 text-green-700">Ref: {mat.id_referencia}</span>
-                                              </div>
-                                              <p className="font-bold text-base lg:text-lg uppercase text-slate-800 leading-tight">{mat.descripcion}</p>
-                                              <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mt-2 border-t pt-3 border-green-200">
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Solicitada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.requerida).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Asignada</span><span className="text-sm md:text-base font-black text-slate-700">{Number(mat.asignada).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                                  <div className="flex flex-col"><span className="text-sm md:text-base font-black text-slate-400 uppercase">Stock Reman.</span><span className="text-sm md:text-base font-black text-slate-500">{Number(mat.stockRestanteGlobal).toFixed(2).replace(/\.00$/, '').replace(/(\.[1-9])0$/, '$1')}</span></div>
-                                              </div>
-                                          </div>
-                                      ))
-                                  ) : (
-                                      <div className="p-4 rounded-xl border border-dashed border-green-200 bg-green-50/50 text-center">
-                                          <span className="text-sm md:text-base font-bold text-green-400 uppercase">Ningún material disponible.</span>
-                                      </div>
-                                  )}
-                              </div>
-                          </div>
-                    )}
-                </div>
-                <div className="p-4 bg-black/5 border-t theme-border flex justify-end">
-                    <button type="button" onClick={() => setShowMaterialsAlertModal(false)} className={`text-white font-black uppercase text-base lg:text-lg px-6 py-3 rounded-xl transition-colors duration-200 hover:brightness-125 active:scale-95 ${isNoMaterials ? 'bg-yellow-500 border border-yellow-700' : isModalAlert ? 'bg-orange-500 border border-orange-700' : 'bg-[var(--color-primary)] border border-green-700'}`}>Entendido</button>
-                </div>
-              </div>
-            </div>
-          );
-        })()
+        <MaterialsAlertModal 
+          activeAlertMaterials={activeAlertMaterials} 
+          setShowMaterialsAlertModal={setShowMaterialsAlertModal} 
+        />
       )}
 
     </div>

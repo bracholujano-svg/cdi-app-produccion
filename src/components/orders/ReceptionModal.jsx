@@ -280,7 +280,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                             {errorMsg && <p className="text-sm text-red-500 font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/30 text-center uppercase">{errorMsg}</p>}
 
                                             <div className="grid grid-cols-2 gap-2 pt-2">
-                                                <button onClick={handleReject} className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900 py-3 rounded-xl font-black uppercase text-sm md:text-base shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
+                                                <button onClick={handleReject} className="bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 py-3 rounded-xl font-black uppercase text-sm md:text-base shadow-sm transition-colors flex flex-col items-center justify-center gap-1">
                                                     <AlertTriangle size={18} />
                                                     Rechazar
                                                 </button>

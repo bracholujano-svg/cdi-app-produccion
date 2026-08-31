@@ -4,9 +4,9 @@ import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
-const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic }) => {
+const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic, isListening, activeDictationTarget }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, isListening, activeDictationTarget, areaFilter } = useAppContext();
+  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, areaFilter } = useAppContext();
   const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
