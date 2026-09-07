@@ -3,6 +3,7 @@ import CreatableSelect from 'react-select/creatable';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Search, Plus, Save, Camera, AlertTriangle, FlaskConical, X, CheckCircle2, Palette, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import EtpCopilotForm from './forms/EtpCopilotForm';
 
 export default function SCEntonacion({ inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
@@ -12,6 +13,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [recetaExistente, setRecetaExistente] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState('');
+  const [showEtpModal, setShowEtpModal] = useState(false);
+  const [savedColorId, setSavedColorId] = useState(null);
+  const [savedColorData, setSavedColorData] = useState(null);
 
   // Estados para la Vista 2 (Formulación)
   const [showFormulacion, setShowFormulacion] = useState(false);
@@ -99,7 +103,8 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         // ignorar errores de lectura continua
       });
 
-      return () => {
+      
+  return () => {
         if (scannerRef.current) {
           scannerRef.current.clear().catch(e => console.error(e));
         }
@@ -227,10 +232,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         
       if (recetaError) throw recetaError;
       
-      setSearchFeedback('✅ ¡Receta formulada y guardada con éxito!');
-      setShowFormulacion(false);
-      setFilasReceta([]);
-      handleBuscar();
+      setSearchFeedback('✅ ¡Fórmula guardada como borrador! Complete la ETP.');
+      setSavedColorId(colorId);
+      setSavedColorData({ id: colorId, codigo_objetivo: codObj });
+      setShowEtpModal(true);
       
     } catch (e) {
       console.error(e);
@@ -725,7 +730,61 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           </div>
         </div>
       )}
+      {showEtpModal && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[var(--color-surface)] w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl relative border border-[var(--color-border)] p-6">
+        <button onClick={() => { setShowEtpModal(false); setShowFormulacion(false); setFilasReceta([]); handleBuscar(); }} className="absolute top-4 right-4 p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors z-50">
+          <X className="w-6 h-6 theme-text-main" />
+        </button>
+        <div className="mb-6">
+            <h2 className="text-2xl font-black theme-text-main uppercase">Especificación Técnica de Proceso (ETP)</h2>
+            <p className="theme-text-muted">Complete los parámetros físicos de la muestra. Esta información será enviada al supervisor para su aprobación.</p>
+        </div>
+        <EtpCopilotForm 
+            colorId={savedColorId}
+            initialData={savedColorData}
+            onCancel={() => {
+                setShowEtpModal(false); 
+                setShowFormulacion(false); 
+                setFilasReceta([]); 
+                handleBuscar();
+            }}
+            onSave={async (etpData) => {
+                try {
+                    const { error } = await supabase.from('colores_aprobados')
+                        .update({
+                            sustrato_muestra: etpData.textoPreparacion, // Map fields from UI to DB
+                            tolerancia_delta_e: etpData.deltaE,
+                            catalizador_tipo: etpData.catalizador,
+                            disolvente_tipo: etpData.disolvente,
+                            procedimiento_preparacion: {
+                                preparacion: etpData.textoPreparacion,
+                                fondo: etpData.textoFondo,
+                                color: etpData.textoColor,
+                                acabado: etpData.textoAcabado
+                            },
+                            creado_por_id: supervisorProfile?.id || null,
+                            estado_aprobacion: 'pendiente_revision'
+                        })
+                        .eq('id', savedColorId);
+                    
+                    if (error) throw error;
+                    
+                    alert("ETP enviada a revisión con éxito.");
+                    setShowEtpModal(false);
+                    setShowFormulacion(false);
+                    setFilasReceta([]);
+                    handleBuscar();
+                } catch (err) {
+                    alert("Error al guardar ETP: " + err.message);
+                }
+            }}
+        />
+      </div>
+    </div>
+  )}
+
+
     </div>
   );
 }
-

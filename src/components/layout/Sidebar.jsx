@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Map, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette } from 'lucide-react';
+import { Menu, Map, X, BarChart2, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -15,6 +15,7 @@ const Sidebar = () => {
     setShowSearchSelector,
     setDuplicateError,
     setShowRecetarioModal,
+    setShowEtpSupervisorModal,
     setShowReportConfigModal,
     setShowDossierModal,
     setShowPlantPlannerModal,
