@@ -127,17 +127,14 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   const isSemaforoEnProceso = !isSemaforoTerminado && enProceso;
                   const isSemaforoEnEspera = !isSemaforoTerminado && !enProceso;
                   return (
-                  <div key={p.id} onClick={() => setSelectedOrder(p)} className={`theme-bg-card p-4 rounded-2xl border-[3px] cursor-pointer transition-colors active:scale-95 bg-[var(--color-surface)] relative flex flex-col justify-between ${
-                    selectedBulkOrders.some(o => o.id === p.id) 
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
-                      : isSemaforoTerminado
-                        ? 'border-green-500 dark:border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)] bg-green-500/10 hover:border-green-400'
-                        : isSemaforoEnProceso 
-                          ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.4)] bg-yellow-400/10 hover:border-yellow-300' 
-                          : isSemaforoEnEspera
-                            ? 'border-red-400 dark:border-red-500 shadow-[0_0_15px_rgba(248,113,113,0.4)] bg-red-400/5 hover:border-red-300'
-                            : 'theme-border shadow-sm hover:border-[var(--color-primary)]'
-                  }`}>
+                  <div key={p.id} onClick={() => setSelectedOrder(p)} className="p-4 rounded-2xl cursor-pointer transition-all active:scale-95 relative flex flex-col justify-between shadow-md hover:-translate-y-1"
+                  style={{
+                    borderWidth: '4px',
+                    borderStyle: 'solid',
+                    borderColor: selectedBulkOrders.some(o => o.id === p.id) ? '#3b82f6' : (isSemaforoTerminado ? '#22c55e' : (isSemaforoEnProceso ? '#eab308' : '#ef4444')),
+                    backgroundColor: selectedBulkOrders.some(o => o.id === p.id) ? 'rgba(59,130,246,0.05)' : (isSemaforoTerminado ? 'rgba(34,197,94,0.08)' : (isSemaforoEnProceso ? 'rgba(234,179,8,0.08)' : 'rgba(239,68,68,0.05)')),
+                    boxShadow: selectedBulkOrders.some(o => o.id === p.id) ? '0 0 15px rgba(59,130,246,0.3)' : (isSemaforoTerminado ? '0 0 15px rgba(34,197,94,0.3)' : (isSemaforoEnProceso ? '0 0 15px rgba(234,179,8,0.3)' : '0 0 15px rgba(239,68,68,0.2)'))
+                  }}>
                     
                     <div>
                         <button type="button" className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/10 transition-colors" onClick={(e) => toggleSelection(e, p)}>

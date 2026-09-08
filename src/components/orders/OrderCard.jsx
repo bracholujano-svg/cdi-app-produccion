@@ -70,12 +70,14 @@ const OrderCard = ({ group }) => {
   }, [group?.fechaEntregaPrometida]);
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 theme-bg-card relative group border-[3px] ${
-        trafficLightStatus === 'green' ? 'border-green-500 dark:border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.35)]' :
-        trafficLightStatus === 'yellow' ? 'border-yellow-400 dark:border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.35)]' :
-        trafficLightStatus === 'red' ? 'border-red-400 dark:border-red-500 shadow-[0_0_15px_rgba(248,113,113,0.35)]' :
-        'theme-border'
-      } flex flex-col min-w-0`}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className="rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 relative group flex flex-col min-w-0 shadow-sm hover:shadow-md"
+      style={{
+        borderWidth: '4px',
+        borderStyle: 'solid',
+        borderColor: trafficLightStatus === 'green' ? '#22c55e' : (trafficLightStatus === 'yellow' ? '#eab308' : (trafficLightStatus === 'red' ? '#ef4444' : 'var(--color-border)')),
+        backgroundColor: trafficLightStatus === 'green' ? 'rgba(34,197,94,0.05)' : (trafficLightStatus === 'yellow' ? 'rgba(234,179,8,0.05)' : (trafficLightStatus === 'red' ? 'rgba(239,68,68,0.03)' : 'var(--color-surface)')),
+        boxShadow: trafficLightStatus === 'green' ? '0 0 15px rgba(34,197,94,0.3)' : (trafficLightStatus === 'yellow' ? '0 0 15px rgba(234,179,8,0.3)' : (trafficLightStatus === 'red' ? '0 0 15px rgba(239,68,68,0.2)' : 'none'))
+      }}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
