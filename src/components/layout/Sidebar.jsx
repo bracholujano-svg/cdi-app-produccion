@@ -26,6 +26,25 @@ const Sidebar = () => {
   } = useAppContext();
 
   const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const [pendingEtpCount, setPendingEtpCount] = useState(0);
+
+  useEffect(() => {
+    if (supervisorProfile?.role === 'ADMIN' || supervisorProfile?.role === 'SUPERVISOR') {
+      const fetchPending = async () => {
+        try {
+          const { count } = await supabase.from('colores_aprobados')
+            .select('*', { count: 'exact', head: true })
+            .eq('estado_aprobacion', 'pendiente_revision');
+          setPendingEtpCount(count || 0);
+        } catch(e){}
+      };
+      fetchPending();
+      const channel = supabase.channel('formulas_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'colores_aprobados' }, fetchPending)
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [supervisorProfile]);
   const themeDropdownRef = useRef(null);
 
   useEffect(() => {
@@ -117,6 +136,13 @@ const Sidebar = () => {
             <button title="SC Color (Entonación)" type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
               <FlaskConical size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">SC Color</span>
             </button>
+            {(supervisorProfile?.role === 'ADMIN' || supervisorProfile?.role === 'SUPERVISOR') && (
+            <button title="Auditar Fórmulas ETP" type="button" onClick={() => { setIsSidebarOpen(false); setShowEtpSupervisorModal(true); }} className="relative bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
+              <AlertCircle size={"1.8em"} strokeWidth={2} />
+              <span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">ETP</span>
+              {pendingEtpCount > 0 && <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">{pendingEtpCount}</span>}
+            </button>
+            )}
             <button title="Reportes de Planta" type="button" onClick={() => { setIsSidebarOpen(false); setShowReportConfigModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
               <FileText size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Reportes</span>
             </button>
