@@ -49,8 +49,16 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                         preparacion: etpData.textoPreparacion,
                         fondo: etpData.textoFondo,
                         color: etpData.textoColor,
-                        acabado: etpData.textoAcabado
+                        acabado: etpData.textoAcabado,
+                        viscosidad: etpData.viscosidad,
+                        presion: etpData.presion,
+                        boquilla: etpData.boquilla,
+                        manos: etpData.manos,
+                        brillo: etpData.glossLevel,
+                        fondoObligatorio: etpData.fondoRequired
                     },
+                    cliente: etpData.cliente,
+                    sistema_color: etpData.colorSystem,
                     aprobado_por_id: supervisorProfile?.id || null,
                     estado_aprobacion: 'aprobado_produccion'
                 })
