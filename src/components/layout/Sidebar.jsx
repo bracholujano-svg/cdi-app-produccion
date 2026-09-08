@@ -6,6 +6,7 @@ import { supabase } from '../../supabaseClient';
 
 const Sidebar = () => {
   const {
+    supervisorProfile,
     isSidebarOpen, setIsSidebarOpen,
     setShowDashboardModal,
     setShowTVMonitor,
