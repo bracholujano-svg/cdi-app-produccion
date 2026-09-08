@@ -34,8 +34,22 @@ const OrderCard = ({ group }) => {
 
   const partialProductsCount = useMemo(() => {
       if (!group.products) return 0;
-      return group.products.filter(p => p && !p.isTerminado && p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"))).length;
-  }, [group.products]);
+      return group.products.filter(p => {
+          if (!p || p.isTerminado || p.estadoInterno === 'DESPACHADO' || p.estado === 'ENTREGADO' || p.areaActual === 'Despachos') return false;
+          
+          const allFamily = (orders || []).filter(o => o.pedidoNum === p.pedidoNum && o.codArticulo === p.codArticulo);
+          if (allFamily.length > 0) {
+              const allFinishedOrDespacho = allFamily.every(o => o.areaActual === 'Despachos' || o.isTerminado || o.estadoInterno === 'DESPACHADO' || o.estado === 'ENTREGADO');
+              if (allFinishedOrDespacho) return false;
+          }
+
+          if (!p.historial || p.historial.length === 0) return false;
+          const transfers = p.historial.filter(h => h.accion && (h.accion.toUpperCase().includes('ENTREGA') || h.accion.toUpperCase().includes('BIFURCACIÓN')));
+          if (transfers.length === 0) return false;
+          const lastTransfer = transfers[transfers.length - 1];
+          return lastTransfer.accion.toUpperCase().includes('PARCIAL');
+      }).length;
+  }, [group.products, orders]);
 
   
   const groupStats = useMemo(() => {

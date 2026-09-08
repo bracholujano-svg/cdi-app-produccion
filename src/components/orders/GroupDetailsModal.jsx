@@ -117,9 +117,13 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col custom-scrollbar">
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {paginatedProducts.map(p => {
-                  const isPartial = p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"));
-                  const partialEvents = isPartial ? p.historial.filter(h => h.accion && h.accion.toUpperCase().includes("PARCIAL")) : [];
-                  const lastPartial = partialEvents.length > 0 ? partialEvents[partialEvents.length - 1] : null;
+                  const allFamily = (orders || []).filter(o => o.pedidoNum === p.pedidoNum && o.codArticulo === p.codArticulo);
+                  const allFinishedOrDespacho = allFamily.length > 0 ? allFamily.every(o => o.areaActual === 'Despachos' || o.isTerminado || o.estadoInterno === 'DESPACHADO' || o.estado === 'ENTREGADO') : false;
+                  
+                  const transferEvents = (p.historial || []).filter(h => h.accion && (h.accion.toUpperCase().includes("ENTREGA") || h.accion.toUpperCase().includes("BIFURCACIÓN")));
+                  const lastTransfer = transferEvents.length > 0 ? transferEvents[transferEvents.length - 1] : null;
+                  const isPartial = lastTransfer && lastTransfer.accion.toUpperCase().includes("PARCIAL") && !p.isTerminado && p.estadoInterno !== 'DESPACHADO' && p.estado !== 'ENTREGADO' && p.areaActual !== 'Despachos' && !allFinishedOrDespacho;
+                  const lastPartial = isPartial ? lastTransfer : null;
 
                   
                   const enProceso = p.bitacoraTurnos && p.bitacoraTurnos.length > 0;
