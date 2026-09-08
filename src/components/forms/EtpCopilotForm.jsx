@@ -383,7 +383,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Preparación de Superficie</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoPreparacion: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoPreparacion: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.preparacion.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -398,7 +398,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-900">Aplicación del Fondo (CRÍTICO)</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoFondo: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoFondo: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.fondo.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -413,7 +413,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Aplicación del Entonador</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoColor: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoColor: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.color.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -428,7 +428,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Acabado Final (Topcoat)</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoAcabado: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoAcabado: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.acabado.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
