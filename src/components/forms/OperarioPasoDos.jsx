@@ -56,7 +56,7 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-2xl shadow-2xl w-[95%] md:w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
         
         {/* Cabecera del Modal */}
         <header className="bg-slate-900 text-white p-5 flex justify-between items-center">
@@ -147,11 +147,11 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
           </div>
 
           {/* Botones de acción */}
-          <div className="pt-4 border-t border-slate-200 flex justify-end gap-3 mt-auto">
+          <div className="pt-4 border-t border-slate-200 flex flex-col md:flex-row justify-end gap-3 sticky bottom-0 bg-white p-4 -mx-6 -mb-6 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
             <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
               Cerrar (Quedará en Borrador)
             </button>
-            <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-colors flex items-center gap-2 disabled:opacity-70">
+            <button type="submit" disabled={isSubmitting} className="w-full md:w-auto px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
               {isSubmitting ? <span className="animate-pulse">Enviando...</span> : <><CheckCircle size={16} /> Enviar a Revisión de Supervisor</>}
             </button>
           </div>

@@ -16,6 +16,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   const [aiDiagnosis, setAiDiagnosis] = useState('');
   const [highlightFields, setHighlightFields] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isMobileCopilotOpen, setIsMobileCopilotOpen] = useState(false);
   
   const ingredientes = Array.isArray(initialData?.ingredientes) 
     ? initialData.ingredientes 
@@ -184,15 +185,29 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
   return (
     <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[800px]">
-      <aside className="w-full lg:w-[320px] bg-slate-900 border-r border-slate-800 flex flex-col relative overflow-hidden flex-shrink-0">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900"></div>
-        <div className="p-6 relative z-10 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-              <Brain size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">IA Copilot</h2>
+      <aside className="w-full lg:w-[320px] bg-slate-900 lg:border-r border-slate-800 flex flex-col relative flex-shrink-0 transition-all duration-300">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900 pointer-events-none"></div>
+        
+        {/* Mobile Header Toggle */}
+        <button 
+          type="button"
+          onClick={() => setIsMobileCopilotOpen(!isMobileCopilotOpen)}
+          className="lg:hidden w-full flex items-center justify-between p-4 bg-slate-800/80 text-white font-bold border-b border-slate-700"
+        >
+          <div className="flex items-center gap-2">
+            <Brain size={20} className="text-blue-400" /> IA Copilot Settings
+          </div>
+          <ChevronRight size={20} className={`transition-transform ${isMobileCopilotOpen ? 'rotate-90' : ''}`} />
+        </button>
+
+        <div className={`flex-col ${isMobileCopilotOpen ? 'flex' : 'hidden'} lg:flex h-auto lg:h-full overflow-y-auto z-10`}>
+          <div className="p-6 relative border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                <Brain size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">IA Copilot</h2>
               <p className="text-xs text-slate-400">Motor Colorimetría ETP</p>
             </div>
           </div>
@@ -250,6 +265,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               <pre className="text-[10px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{aiDiagnosis}</pre>
             </div>
           )}
+        </div>
         </div>
       </aside>
 

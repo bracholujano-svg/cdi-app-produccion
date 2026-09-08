@@ -79,7 +79,7 @@ const Header = () => {
           </div>
           
           {/* CENTRO: BOTONES DE FILTRO */}
-          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar max-w-[50vw]">
+          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar w-full md:w-auto md:max-w-[50vw] order-last md:order-none mt-2 md:mt-0">
              <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border border-[var(--color-primary)] shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
