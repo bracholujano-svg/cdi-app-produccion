@@ -9,7 +9,7 @@ import { supabase } from '../../supabaseClient';
 
 export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onCancel, isSupervisorView = false, initialData = {} }) {
   const [colorSystem, setColorSystem] = useState(initialData?.sistema_color || 'RAL');
-  const [cliente, setCliente] = useState(initialData?.cliente || '');
+  const [cliente, setCliente] = useState(initialData?.procedimiento_preparacion?.cliente || initialData?.cliente || '');
   const [colorRef, setColorRef] = useState(initialData?.codigo_objetivo || '');
   const [glossLevel, setGlossLevel] = useState('40');
   const [isLoading, setIsLoading] = useState(false);

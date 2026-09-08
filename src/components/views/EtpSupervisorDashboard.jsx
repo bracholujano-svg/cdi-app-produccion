@@ -46,6 +46,7 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                     catalizador_tipo: etpData.catalizador,
                     disolvente_tipo: etpData.disolvente,
                     procedimiento_preparacion: {
+                        cliente: etpData.cliente,
                         preparacion: etpData.textoPreparacion,
                         fondo: etpData.textoFondo,
                         color: etpData.textoColor,
@@ -57,7 +58,7 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                         brillo: etpData.glossLevel,
                         fondoObligatorio: etpData.fondoRequired
                     },
-                    cliente: etpData.cliente,
+                    
                     sistema_color: etpData.colorSystem,
                     aprobado_por_id: supervisorProfile?.id || null,
                     estado_aprobacion: 'aprobado_produccion'
