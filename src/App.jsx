@@ -383,7 +383,7 @@ const {
       setSelectedBulkOrders([]);
   };
 
-    const updateTransfer = async (id, areas, date, operario, _, isPartial) => {
+    const updateTransfer = async (id, areas, date, operario, _, isPartial, partialQty) => {
     try {
         const ids = Array.isArray(id) ? id : [id];
         const { updatedOrders, updatedAlerts, ordersToSync, alertsToSync } = executeTransfer(ids, {
@@ -395,6 +395,7 @@ const {
             entrega: operario || supervisorProfile?.name || 'Desconocido',
             recibe: '',
             isPartial: isPartial,
+            partialQty: partialQty,
             tempAssignedPersonnel,
             transferNota,
             transferPhoto
@@ -414,8 +415,8 @@ const {
     }
   };
 
-  const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial) => {
-    await updateTransfer(ids, areas, date, operario, _, isPartial);
+  const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial, partialQty) => {
+    await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty);
     setShowBulkModal(false);
   };
 
