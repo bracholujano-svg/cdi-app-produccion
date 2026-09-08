@@ -160,7 +160,7 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                           {p.activeAreas && p.activeAreas.length > 1 ? `ÁREAS: ${p.activeAreas.join(', ')}` : `ÁREA: ${p.areaActual}`}
                       </p>
                       
-                      {isPartial && lastPartial && (
+                      {!isSemaforoTerminado && isPartial && lastPartial && (
                         <div 
                             style={{ backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
                             className="border-2 rounded-md px-2.5 py-1.5 flex flex-col gap-0.5 shadow-sm"

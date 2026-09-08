@@ -34,7 +34,7 @@ const OrderCard = ({ group }) => {
 
   const partialProductsCount = useMemo(() => {
       if (!group.products) return 0;
-      return group.products.filter(p => p && p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"))).length;
+      return group.products.filter(p => p && !p.isTerminado && p.historial && p.historial.some(h => h.accion && h.accion.toUpperCase().includes("PARCIAL"))).length;
   }, [group.products]);
 
   
@@ -70,14 +70,7 @@ const OrderCard = ({ group }) => {
   }, [group?.fechaEntregaPrometida]);
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className="rounded-[1.5rem] p-4 cursor-pointer transition-all hover:-translate-y-1 relative group flex flex-col min-w-0 shadow-sm hover:shadow-md"
-      style={{
-        borderWidth: '4px',
-        borderStyle: 'solid',
-        borderColor: trafficLightStatus === 'green' ? '#22c55e' : (trafficLightStatus === 'yellow' ? '#eab308' : (trafficLightStatus === 'red' ? '#ef4444' : 'var(--color-border)')),
-        backgroundColor: trafficLightStatus === 'green' ? 'rgba(34,197,94,0.05)' : (trafficLightStatus === 'yellow' ? 'rgba(234,179,8,0.05)' : (trafficLightStatus === 'red' ? 'rgba(239,68,68,0.03)' : 'var(--color-surface)')),
-        boxShadow: trafficLightStatus === 'green' ? '0 0 15px rgba(34,197,94,0.3)' : (trafficLightStatus === 'yellow' ? '0 0 15px rgba(234,179,8,0.3)' : (trafficLightStatus === 'red' ? '0 0 15px rgba(239,68,68,0.2)' : 'none'))
-      }}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--color-primary)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
