@@ -23,11 +23,29 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   const [isLocked, setIsLocked] = useState(initialData?.estado_aprobacion === 'aprobado_produccion');
   const componentRef = useRef(null);
   
-  const ingredientes = Array.isArray(initialData?.ingredientes) 
-    ? initialData.ingredientes 
-    : (typeof initialData?.ingredientes === 'string' ? JSON.parse(initialData.ingredientes || '[]') : []);
-    
-  const pesoTotal = initialData?.peso_total_g || ingredientes.reduce((acc, curr) => acc + (parseFloat(curr.peso_g) || 0), 0);
+  const [ingredientes, setIngredientes] = useState([]);
+  const [pesoTotal, setPesoTotal] = useState(0);
+
+  useEffect(() => {
+    let unmounted = false;
+    const loadRecipe = async () => {
+      if (initialData?.ingredientes && initialData.ingredientes.length > 0) {
+         const parsed = Array.isArray(initialData.ingredientes) ? initialData.ingredientes : JSON.parse(initialData.ingredientes || '[]');
+         if (!unmounted) {
+           setIngredientes(parsed);
+           setPesoTotal(initialData.peso_total_g || parsed.reduce((a,c) => a + (parseFloat(c.peso_g || c.peso || c.porcentaje_final) || 0), 0));
+         }
+      } else if (colorId) {
+         const { data, error } = await supabase.from('recetas_detalle').select('*').eq('id_color', colorId);
+         if (!error && data && !unmounted) {
+            setIngredientes(data);
+            setPesoTotal(data.reduce((a,c) => a + (parseFloat(c.porcentaje_final) || 0), 0));
+         }
+      }
+    };
+    loadRecipe();
+    return () => { unmounted = true; };
+  }, [initialData, colorId]);
 
   
   const [savedProcedures, setSavedProcedures] = useState({
@@ -80,6 +98,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     textoColor: '',
     textoAcabado: 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
   });
+  const [imagenMuestra, setImagenMuestra] = useState(initialData?.imagen_muestra || null);
 
   
 
@@ -194,66 +213,22 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  const handlePrintPDF = async () => {
-    if (!componentRef.current) return;
-    try {
-        setIsLoading(true);
-        const el = componentRef.current;
-        const originalWidth = el.style.width;
-        const originalHeight = el.style.height;
-        const originalPosition = el.style.position;
-        const originalOverflow = el.style.overflow;
-        const originalBg = el.style.backgroundColor;
-        
-        el.style.width = '1200px';
-        el.style.height = 'max-content';
-        el.style.position = 'absolute';
-        el.style.top = '0';
-        el.style.left = '0';
-        el.style.overflow = 'visible';
-        el.style.backgroundColor = '#ffffff';
-        el.style.zIndex = '-9999';
-
-        await new Promise(r => setTimeout(r, 200));
-        
-        const canvas = await html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            width: 1200,
-            windowWidth: 1200
-        });
-        
-        el.style.width = originalWidth;
-        el.style.height = originalHeight;
-        el.style.position = originalPosition;
-        el.style.overflow = originalOverflow;
-        el.style.backgroundColor = originalBg;
-        el.style.zIndex = 'auto';
-        
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`ETP_${colorRef || 'Color'}.pdf`);
-    } catch (err) {
-        console.error("Error al generar PDF:", err);
-    } finally {
-        setIsLoading(false);
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagenMuestra(reader.result);
+      reader.readAsDataURL(file);
     }
   };
+
+  const handlePrintPDF = () => { window.print(); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if(!isConfirmed) return;
     if (isSupervisorView) {
-        onSave({ colorSystem, colorRef, glossLevel, cliente, ...formData, ingredientes });
+        onSave({ colorSystem, colorRef, glossLevel, cliente, ...formData, ingredientes, imagen_muestra: imagenMuestra });
     } else {
         handlePrintPDF();
     }
@@ -262,8 +237,8 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   
 
   return (
-    <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[800px]">
-      <aside className="w-full lg:w-[320px] bg-slate-900 lg:border-r border-slate-800 flex flex-col relative flex-shrink-0 transition-all duration-300">
+    <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[800px] print:shadow-none print:border-none print:w-full print:block">
+      <aside className="w-full lg:w-[320px] bg-slate-900 lg:border-r border-slate-800 flex flex-col relative flex-shrink-0 transition-all duration-300 print:hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900 pointer-events-none"></div>
         
         {/* Mobile Header Toggle */}
@@ -348,7 +323,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       </aside>
 
       {}
-      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative h-[800px] overflow-y-auto custom-scroll">
+      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative h-[800px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white">
         <header className="bg-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 sticky top-0 z-20 shadow-sm">
             <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="w-14 h-14 rounded-md shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
@@ -362,14 +337,25 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                 </div>
             </div>
             
-            <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3 rounded-xl shadow-md border border-blue-700/50 flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                <div className="text-left md:text-right">
-                    <span className="block text-[10px] text-blue-200 uppercase font-bold tracking-wider">Tolerancia Estricta</span>
-                    <span className="text-xs font-semibold text-emerald-300">Control Calibrado</span>
+            <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3 rounded-xl shadow-md border border-blue-700/50 flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                <div className="flex flex-col items-center">
+                  <label className="cursor-pointer flex flex-col items-center justify-center border border-dashed border-blue-500 rounded-lg p-2 hover:bg-blue-800 transition-colors bg-blue-900/50 w-24 h-16 overflow-hidden">
+                    {imagenMuestra ? (
+                      <img src={imagenMuestra} alt="Muestra" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] font-bold text-blue-200 mt-1 uppercase text-center leading-tight">Cargar<br/>Muestra</span>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
                 </div>
-                <div className="bg-blue-800 px-3 py-1.5 rounded-lg border border-blue-600 shadow-inner flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <input type="text" name="deltaE" value={formData.deltaE} onChange={handleChange} className="text-sm font-black text-white bg-transparent outline-none w-24 text-right tracking-tight cursor-pointer" title="Editar tolerancia Delta E"/>
+
+                <div className="flex flex-col md:items-end w-full">
+                    <span className="block text-[10px] text-blue-200 uppercase font-bold tracking-wider mb-1">Resultado Colorimetría</span>
+                    <div className="bg-blue-800 px-3 py-2 rounded-lg border border-blue-600 shadow-inner flex items-center gap-2 w-full">
+                        <span className="text-xs text-blue-200 font-bold whitespace-nowrap">ΔE =</span>
+                        <input type="text" name="deltaE" value={formData.deltaE} onChange={handleChange} placeholder="Ej: 0.8" className="text-sm font-black text-white bg-slate-900/50 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-blue-700 focus:border-emerald-400" title="Medición Real Delta E"/>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse ml-1"></span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -539,7 +525,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           </div>
 
           </fieldset>
-          <div className="bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20">
+          <div className="bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 print:hidden">
             <label className="flex items-center gap-3 cursor-pointer group">
                 <div className={`relative flex items-center justify-center w-5 h-5 border-2 rounded transition-colors ${isConfirmed ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}`}>
                     <input type="checkbox" checked={isConfirmed} onChange={(e) => setIsConfirmed(e.target.checked)} className="absolute opacity-0 w-full h-full cursor-pointer" />
