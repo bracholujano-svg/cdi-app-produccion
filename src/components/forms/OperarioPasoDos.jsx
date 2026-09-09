@@ -14,6 +14,16 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
     disolvente_pct: '15',
     procedimiento_preparacion: 'Lijado grano 220, 2 manos base blanca.'
   });
+  const [imagenMuestra, setImagenMuestra] = useState(null);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagenMuestra(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,7 +39,7 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
       const { error } = await supabase.from('colores_aprobados')
         .update({ 
            sustrato_muestra: formData.sustrato_muestra,
-           tolerancia_delta_e: `ΔE < ${formData.tolerancia_delta_e}`,
+           tolerancia_delta_e: formData.tolerancia_delta_e,
            porcentaje_pasta_mateante: Number(formData.porcentaje_pasta_mateante) || 0,
            catalizador_tipo: `${formData.catalizador_pct}% (Ref: ${formData.catalizador_tipo})`,
            disolvente_tipo: `${formData.disolvente_pct}% (${formData.disolvente_tipo})`,
@@ -37,7 +47,8 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
              preparacion: formData.procedimiento_preparacion,
              fondo: '',
              color: '',
-             acabado: ''
+             acabado: '',
+             imagen_muestra: imagenMuestra
            },
            estado_aprobacion: 'pendiente_revision' 
         })

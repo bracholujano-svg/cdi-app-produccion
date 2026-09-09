@@ -98,7 +98,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     textoColor: '',
     textoAcabado: 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
   });
-  const [imagenMuestra, setImagenMuestra] = useState(initialData?.imagen_muestra || null);
+  const [imagenMuestra, setImagenMuestra] = useState(initialData?.procedimiento_preparacion?.imagen_muestra || initialData?.imagen_muestra || null);
 
   
 

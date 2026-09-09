@@ -237,7 +237,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       setSearchFeedback('✅ ¡Fórmula guardada como borrador! Complete la ETP.');
       setSavedColorId(colorId);
       setSavedColorData({ id: colorId, codigo_objetivo: codObj });
-      setShowEtpModal(true);
+      setShowOperarioModal(true);
       
     } catch (e) {
       console.error(e);
@@ -637,7 +637,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                         }}
                         className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-sm font-bold uppercase tracking-wide hover:bg-blue-500/30 transition-colors"
                     >
-                        {colorEncontrado?.estado_aprobacion === 'borrador' ? 'LLENAR ETP' : (colorEncontrado?.estado_aprobacion === 'pendiente_revision' ? 'ETP (PENDIENTE)' : 'VER ETP')}
+                        {colorEncontrado?.estado_aprobacion === 'borrador' ? 'DECLARAR PROCESO' : (colorEncontrado?.estado_aprobacion === 'pendiente_revision' ? 'VER ETP (REVISIÓN)' : 'VER ETP')}
                     </button>
                     <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
                         <span className="text-sm font-bold text-slate-300 uppercase">Preparar:</span>
