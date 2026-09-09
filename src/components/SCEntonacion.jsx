@@ -15,6 +15,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [isSearching, setIsSearching] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState('');
   const [showEtpModal, setShowEtpModal] = useState(false);
+  const [showOperarioModal, setShowOperarioModal] = useState(false);
   const [savedColorId, setSavedColorId] = useState(null);
   const [savedColorData, setSavedColorData] = useState(null);
 
