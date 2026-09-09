@@ -1,33 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import React, { useState, useEffect } from 'react';
 import { 
   Bell, Clock, CheckCircle2, ChevronRight, Inbox, PaintBucket, 
   Palette, Layers, SprayCan, CheckSquare, Brain, Wifi, Search, 
   Save, AlertTriangle, Terminal, FlaskConical, Droplet, Gauge, 
-  Crosshair, Ban, BookmarkPlus, AlertCircle, FileText, Check
+  Crosshair, Ban, BookmarkPlus, AlertCircle 
 } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
 
-export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onCancel, isSupervisorView = false, initialData = {} }) {
-  const [colorSystem, setColorSystem] = useState(initialData?.sistema_color || 'RAL');
-  const [cliente, setCliente] = useState(initialData?.procedimiento_preparacion?.cliente || initialData?.cliente || '');
-  const [colorRef, setColorRef] = useState(initialData?.codigo_objetivo || '');
+const EtpCopilotForm = ({ onSave, initialColorRef }) => {
+  const [colorSystem, setColorSystem] = useState('RAL');
+  const [colorRef, setColorRef] = useState(initialColorRef || '');
   const [glossLevel, setGlossLevel] = useState('40');
   const [isLoading, setIsLoading] = useState(false);
   const [aiDiagnosis, setAiDiagnosis] = useState('');
   const [highlightFields, setHighlightFields] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isMobileCopilotOpen, setIsMobileCopilotOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(initialData?.estado_aprobacion === 'aprobado_produccion');
-  const componentRef = useRef(null);
-  
-  const ingredientes = Array.isArray(initialData?.ingredientes) 
-    ? initialData.ingredientes 
-    : (typeof initialData?.ingredientes === 'string' ? JSON.parse(initialData.ingredientes || '[]') : []);
-    
-  const pesoTotal = initialData?.peso_total_g || ingredientes.reduce((acc, curr) => acc + (parseFloat(curr.peso_g) || 0), 0);
-
   
   const [savedProcedures, setSavedProcedures] = useState({
     preparacion: [
@@ -63,24 +49,28 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   ]);
 
   const [formData, setFormData] = useState({
-    nombreComercial: initialData?.codigo_objetivo || '',
+    nombreComercial: '',
     codigoInterno: '',
-    deltaE: initialData?.tolerancia_delta_e || 'ΔE < 0.8',
-    fondoRequired: initialData?.sustrato_muestra || '',
+    deltaE: 'ΔE < 0.8',
+    fondoRequired: '',
     requiereFondoBlancoPuro: false,
-    catalizador: initialData?.catalizador_tipo || '50% (Ref: CAT-50)',
-    disolvente: initialData?.disolvente_tipo || '10% - 15% (PU)',
+    catalizador: '50% (Ref: CAT-50)',
+    disolvente: '10% - 15% (PU)',
     boquilla: '1.3 mm',
     manos: '2 Manos Cruzadas',
     viscosidad: '18-20 seg',
     presion: '25 - 30 PSI',
     textoPreparacion: 'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.',
-    textoFondo: initialData?.sustrato_muestra ? `Fondo aplicado: ${initialData.sustrato_muestra}` : '',
+    textoFondo: '',
     textoColor: '',
     textoAcabado: 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
   });
 
-  
+  const [formula, setFormula] = useState([
+    { id: 1, componente: 'Base Poliuretano Transp.', peso: '800.0', color: 'bg-slate-200' },
+    { id: 2, componente: 'Tinte Azul Phthalo (T-45)', peso: '150.5', color: 'bg-blue-700' },
+    { id: 3, componente: 'Tinte Negro Intenso (T-10)', peso: '45.0', color: 'bg-black' }
+  ]);
 
   const handleSaveTemplate = (category, textValue) => {
     if (!textValue.trim()) return;
@@ -171,102 +161,25 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  
-  
-  const handleUnlock = async () => {
-    const pin = prompt("Ingrese la Clave Maestra para modificar este ETP:");
-    if (!pin) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('verificar_clave_admin', { pin_ingresado: pin });
-      if (error) throw error;
-      
-      if (data === true) {
-        setIsLocked(false);
-        alert("ETP Desbloqueado exitosamente.");
-      } else {
-        alert("Clave incorrecta. Acceso denegado.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error al verificar la clave.");
-    }
-  };
-
-  const handlePrintPDF = async () => {
-    if (!componentRef.current) return;
-    try {
-        setIsLoading(true);
-        const el = componentRef.current;
-        const originalClasses = el.className;
-        // Quitar clases problemáticas
-        el.className = originalClasses.replace('h-[800px]', 'h-auto').replace('overflow-y-auto', 'overflow-visible');
-        
-        const canvas = await html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            logging: true,
-            windowWidth: el.scrollWidth,
-            windowHeight: el.scrollHeight
-        });
-        
-        el.className = originalClasses;
-        
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`ETP_${colorRef || 'Color'}.pdf`);
-    } catch (err) {
-        console.error("Error al generar PDF:", err);
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if(!isConfirmed) return;
-    if (isSupervisorView) {
-        onSave({ colorSystem, colorRef, glossLevel, cliente, ...formData, ingredientes });
-    } else {
-        handlePrintPDF();
-    }
+    onSave({ colorSystem, colorRef, glossLevel, ...formData, formula });
   };
 
-  
+  const totalFormula = formula.reduce((acc, curr) => acc + parseFloat(curr.peso), 0).toFixed(1);
 
   return (
     <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[800px]">
-      <aside className="w-full lg:w-[320px] bg-slate-900 lg:border-r border-slate-800 flex flex-col relative flex-shrink-0 transition-all duration-300">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900 pointer-events-none"></div>
-        
-        {/* Mobile Header Toggle */}
-        <button 
-          type="button"
-          onClick={() => setIsMobileCopilotOpen(!isMobileCopilotOpen)}
-          className="lg:hidden w-full flex items-center justify-between p-4 bg-slate-800/80 text-white font-bold border-b border-slate-700"
-        >
-          <div className="flex items-center gap-2">
-            <Brain size={20} className="text-blue-400" /> IA Copilot Settings
-          </div>
-          <ChevronRight size={20} className={`transition-transform ${isMobileCopilotOpen ? 'rotate-90' : ''}`} />
-        </button>
-
-        <div className={`flex-col ${isMobileCopilotOpen ? 'flex' : 'hidden'} lg:flex h-auto lg:h-full overflow-y-auto z-10`}>
-          <div className="p-6 relative border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                <Brain size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">IA Copilot</h2>
+      <aside className="w-full lg:w-[320px] bg-slate-900 border-r border-slate-800 flex flex-col relative overflow-hidden flex-shrink-0">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900"></div>
+        <div className="p-6 relative z-10 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <Brain size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">IA Copilot</h2>
               <p className="text-xs text-slate-400">Motor Colorimetría ETP</p>
             </div>
           </div>
@@ -325,18 +238,16 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             </div>
           )}
         </div>
-        </div>
       </aside>
 
       {}
-      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative h-[800px] overflow-y-auto custom-scroll">
+      <div className="w-full flex flex-col bg-slate-50 relative h-[800px] overflow-y-auto custom-scroll">
         <header className="bg-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 sticky top-0 z-20 shadow-sm">
             <div className="flex items-center gap-4 w-full md:w-auto">
-                <div className="w-14 h-14 rounded-md shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
+                <div className="w-14 h-14 rounded-md shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: formula.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
                 <div className="flex-grow">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200">Ficha ETP</span>
-                        {isLocked && <button type="button" onClick={handleUnlock} className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 flex items-center gap-1"><AlertCircle size={12}/> Desbloquear ETP</button>}
                         {aiDiagnosis && <span className="text-blue-600 text-[10px] font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Sugerencia IA PPG</span>}
                     </div>
                     <input type="text" name="nombreComercial" value={formData.nombreComercial} onChange={handleChange} placeholder="Nombre Comercial / Código..." className="text-xl font-bold bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full text-slate-900 transition-colors uppercase"/>
@@ -378,8 +289,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             </div>
           </div>
 
-          <fieldset disabled={isLocked} className="group-disabled">
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-5 space-y-6">
                   <div>
                       <h2 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2"><FlaskConical size={16} /> 1. Formulación del Entonador</h2>
@@ -392,19 +302,19 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                                   </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100 text-slate-700">
-                                  {ingredientes.map((item, idx) => (
-                                      <tr key={item.id || idx} className={highlightFields ? 'bg-blue-50/30' : ''}>
+                                  {formula.map((item) => (
+                                      <tr key={item.id} className={highlightFields ? 'bg-blue-50/30' : ''}>
                                           <td className="py-3 px-4 flex items-center gap-2 text-xs font-medium">
-                                              <div className={`w-3 h-3 rounded-full border border-slate-200 shadow-sm ${item.color || 'bg-slate-400'}`}></div>{item.nombre || item.componente}
+                                              <div className={`w-3 h-3 rounded-full border border-slate-200 shadow-sm ${item.color}`}></div>{item.componente}
                                           </td>
                                           <td className="py-3 px-4 text-right">
-                                              <input type="text" value={item.peso_g || item.peso} readOnly className="w-16 text-right bg-transparent outline-none font-semibold text-slate-900 text-xs" />
+                                              <input type="text" value={item.peso} readOnly className="w-16 text-right bg-transparent outline-none font-semibold text-slate-900 text-xs" />
                                           </td>
                                       </tr>
                                   ))}
                                   <tr className="bg-slate-50 border-t-2 border-slate-200">
                                       <td className="py-3 px-4 text-xs font-bold text-slate-800 uppercase tracking-wide">Peso Total</td>
-                                      <td className="py-3 px-4 text-right text-xs font-bold text-blue-600">{pesoTotal.toFixed(1)} g</td>
+                                      <td className="py-3 px-4 text-right text-xs font-bold text-blue-600">{totalFormula} g</td>
                                   </tr>
                               </tbody>
                           </table>
@@ -460,7 +370,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Preparación de Superficie</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoPreparacion: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoPreparacion: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.preparacion.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -475,7 +385,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-900">Aplicación del Fondo (CRÍTICO)</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoFondo: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoFondo: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.fondo.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -490,7 +400,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Aplicación del Entonador</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoColor: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoColor: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.color.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -505,7 +415,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                               <div className="flex justify-between items-center mb-1">
                                   <h4 className="font-bold text-xs text-slate-800">Acabado Final (Topcoat)</h4>
                                   <div className="flex items-center gap-2">
-                                      <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoAcabado: e.target.value}) }} defaultValue="">
+                                      <select className="text-[11px] border border-slate-300 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoAcabado: e.target.value}) }} defaultValue="">
                                           <option value="" disabled>Plantillas...</option>
                                           {savedProcedures.acabado.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
                                       </select>
@@ -519,7 +429,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               </div>
           </div>
 
-          </fieldset>
           <div className="bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20">
             <label className="flex items-center gap-3 cursor-pointer group">
                 <div className={`relative flex items-center justify-center w-5 h-5 border-2 rounded transition-colors ${isConfirmed ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}`}>
@@ -539,3 +448,193 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     </div>
   );
 };
+
+const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
+  const [formData, setFormData] = useState({
+    sustrato_muestra: 'MDF crudo lijado', tolerancia_delta_e: '0.8',
+    porcentaje_pasta_mateante: '0', catalizador_tipo: 'CAT-50', catalizador_pct: '50',
+    disolvente_tipo: 'Thinner PU Standard', disolvente_pct: '10',
+    procedimiento_preparacion: 'Lijado grano 220, 2 manos base blanca.'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => { setIsSubmitting(false); onGuardarExitoso(); }, 1000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <header className="bg-slate-900 text-white p-5 flex justify-between items-center">
+          <div>
+            <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Paso 2 de 2</span>
+            <h2 className="text-lg font-bold mt-1">Declaración de Muestra Física</h2>
+            <p className="text-xs text-slate-400">Complete los datos reales de aplicación para enviar a revisión.</p>
+          </div>
+        </header>
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3">
+            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+            <p className="text-xs text-blue-800">Fórmula guardada como <strong>BORRADOR</strong>. Declare cómo aplicó la muestra para enviar a revisión de supervisor.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase flex items-center gap-2 border-b pb-2"><Layers size={14}/> 1. Base y Medición</h3>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Sustrato de la Muestra</label>
+                <select name="sustrato_muestra" value={formData.sustrato_muestra} onChange={handleChange} className="w-full px-3 py-2 rounded-md bg-slate-50 border border-slate-300 text-sm">
+                  <option value="MDF crudo lijado">MDF Crudo Lijado</option>
+                  <option value="Base Blanca">Mera Base Blanca</option>
+                  <option value="PU Blanco">Poliuretano Blanco</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Delta E de Aprobación</label>
+                <input type="number" step="0.1" name="tolerancia_delta_e" value={formData.tolerancia_delta_e} onChange={handleChange} className="w-full px-3 py-2 rounded-md bg-slate-50 border border-slate-300 text-sm font-bold" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-800 uppercase flex items-center gap-2 border-b pb-2"><Droplet size={14}/> 2. Mezcla de Aplicación</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-500 uppercase">Tipo Cat.</label>
+                  <input type="text" name="catalizador_tipo" value={formData.catalizador_tipo} onChange={handleChange} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-300 text-xs" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-500 uppercase">% Cat.</label>
+                  <input type="number" name="catalizador_pct" value={formData.catalizador_pct} onChange={handleChange} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-300 text-xs" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4 border-t flex justify-end gap-3 mt-auto">
+            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm text-slate-600 bg-slate-100 hover:bg-slate-200">Cerrar Borrador</button>
+            <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md">
+              {isSubmitting ? 'Enviando...' : 'Enviar a Revisión'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const SupervisorDashboard = () => {
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [pendientes, setPendientes] = useState([
+    { id: '1', nombre: 'Amarillo Tráfico', referencia: 'RAL 1023', operario: 'Juan Pérez', fecha: 'hace 10 min', deltaE: '0.6', sustrato: 'PU Blanco' },
+    { id: '2', nombre: 'Verde Corporativo', referencia: 'PANTONE 347 C', operario: 'Luis Gómez', fecha: 'hace 1 hora', deltaE: '0.9', sustrato: 'Mera Base Blanca' }
+  ]);
+
+  const handleAprobarETP = (etpData) => {
+    alert(`¡Color ${selectedColor?.referencia || etpData.colorRef} aprobado y liberado para producción con éxito!`);
+    if(selectedColor) setPendientes(pendientes.filter(p => p.id !== selectedColor.id));
+    setSelectedColor(null);
+  };
+
+  return (
+    <div className="p-4 md:p-8 animate-in fade-in">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3"><PaintBucket className="text-blue-600" /> Dashboard Supervisor</h1>
+        <p className="text-sm text-slate-500 mt-1">Gestión de Aprobaciones y Estandarización de Procesos (ETP).</p>
+      </header>
+
+      {selectedColor ? (
+        <div className="space-y-4 animate-in slide-in-from-bottom-4">
+           <button onClick={() => setSelectedColor(null)} className="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors">
+             &larr; Volver a Bandeja
+           </button>
+           <EtpCopilotForm initialColorRef={selectedColor.referencia} onSave={handleAprobarETP} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden max-w-4xl">
+          <div className="bg-slate-900 p-5 flex justify-between items-center">
+            <h2 className="text-white font-bold flex items-center gap-2"><Inbox size={18} className="text-blue-400" /> Bandeja de Pendientes</h2>
+            <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">{pendientes.length} Nuevos</div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {pendientes.length === 0 ? (
+              <div className="p-12 text-center text-slate-400"><CheckCircle2 size={48} className="mx-auto mb-3 opacity-20" /><p>No hay fórmulas pendientes.</p></div>
+            ) : (
+              pendientes.map((item) => (
+                <div key={item.id} className="p-5 hover:bg-slate-50 flex items-center justify-between gap-4 cursor-pointer" onClick={() => setSelectedColor(item)}>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0"><Clock className="text-amber-500" size={24} /></div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Requiere Aprobación</span>
+                        <span className="text-xs text-slate-400">{item.fecha}</span>
+                      </div>
+                      <h3 className="font-bold text-slate-900">{item.nombre} <span className="text-slate-500 font-normal ml-1">({item.referencia})</span></h3>
+                      <p className="text-xs text-slate-500 mt-1">Formulado por: <strong className="text-slate-700">{item.operario}</strong> | Sustrato: {item.sustrato}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm">
+                      Revisar con IA <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('supervisor');
+  const [showOperarioModal, setShowOperarioModal] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <nav className="bg-slate-800 border-b border-slate-900 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-6">
+          <div className="font-bold text-white py-4 border-r border-slate-700 pr-6 mr-2 flex items-center gap-2">
+             <Palette size={20} className="text-blue-400"/> ColorManager
+          </div>
+          <button onClick={() => setActiveTab('supervisor')} className={`py-4 px-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'supervisor' ? 'border-blue-400 text-blue-400' : 'border-transparent text-slate-300 hover:text-white'}`}>
+            Portal Supervisor
+          </button>
+          <button onClick={() => setActiveTab('operario')} className={`py-4 px-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'operario' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-300 hover:text-white'}`}>
+            Simulador Operario (Paso 2)
+          </button>
+        </div>
+      </nav>
+
+      <main className="flex-grow">
+        {activeTab === 'supervisor' ? (
+          <div className="max-w-7xl mx-auto"><SupervisorDashboard /></div>
+        ) : (
+          <div className="max-w-7xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Simulación de Formulación de Color</h2>
+            <p className="text-slate-500 mb-8 max-w-lg">Al presionar el botón, se simulará que el operario acaba de terminar de mezclar los tintes en el sistema y requiere declarar cómo aplicó la muestra para enviarla al supervisor.</p>
+            <button 
+              onClick={() => setShowOperarioModal(true)} 
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all flex items-center gap-3"
+            >
+              <Save size={20} /> Guardar Fórmula y Declarar Muestra
+            </button>
+            
+            {showOperarioModal && (
+              <OperarioPasoDos 
+                colorBorradorId="mock-123" 
+                onClose={() => setShowOperarioModal(false)} 
+                onGuardarExitoso={() => {
+                  alert('¡Muestra declarada y enviada a la bandeja del Supervisor!');
+                  setShowOperarioModal(false);
+                }} 
+              />
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

@@ -742,7 +742,6 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         </div>
       )}
       {showEtpModal && (
-        savedColorData?.estado_aprobacion === 'aprobado_produccion' ? (
           <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
               <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-slate-50 dark:bg-[#0f172a] rounded-3xl relative">
                   <button onClick={() => setShowEtpModal(false)} className="absolute top-4 right-4 z-50 p-2 bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
@@ -758,27 +757,26 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                   </div>
               </div>
           </div>
-        ) : (
+      )}
+      
+      {showOperarioModal && (
           <OperarioPasoDos 
               colorBorradorId={savedColorId}
               onClose={() => {
-                  setShowEtpModal(false); 
+                  setShowOperarioModal(false); 
                   setShowFormulacion(false); 
                   setFilasReceta([]); 
                   handleBuscar();
               }}
               onGuardarExitoso={() => {
                   alert('ETP enviada a revisión con éxito.');
-                  setShowEtpModal(false);
+                  setShowOperarioModal(false);
                   setShowFormulacion(false);
                   setFilasReceta([]);
                   handleBuscar();
               }}
           />
-        )
       )}
-
-
     </div>
   );
 }

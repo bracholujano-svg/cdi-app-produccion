@@ -1,0 +1,18 @@
+Created At: 2026-08-26T17:56:56-05:00
+Completed At: 2026-08-26T17:56:59-05:00
+
+The command exited with code 1.
+Output:
+[eval]:8
+    if (entry.content && typeof entry.content === 'string' && entry.content.includes('import React, { useState, useEffect, useRef, useMemo } from \\'react\\';')) {
+                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Expected ',', got '<lexing error>'
+
+SyntaxError: missing ) after argument list
+    at makeContextifyScript (node:internal/vm:194:14)
+    at compileScript (node:internal/process/execution:388:10)
+    at evalTypeScript (node:internal/process/execution:260:22)
+    at node:internal/main/eval_string:71:3
+
+Node.js v24.15.0
+
