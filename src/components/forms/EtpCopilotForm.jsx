@@ -16,6 +16,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   const [glossLevel, setGlossLevel] = useState('40');
   const [isLoading, setIsLoading] = useState(false);
   const [aiDiagnosis, setAiDiagnosis] = useState('');
+  const [previousFormData, setPreviousFormData] = useState(null);
   const [highlightFields, setHighlightFields] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isMobileCopilotOpen, setIsMobileCopilotOpen] = useState(false);
@@ -198,21 +199,39 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     try {
         setIsLoading(true);
         const el = componentRef.current;
-        const originalClasses = el.className;
-        // Quitar clases problemáticas
-        el.className = originalClasses.replace('h-[800px]', 'h-auto').replace('overflow-y-auto', 'overflow-visible');
+        const originalWidth = el.style.width;
+        const originalHeight = el.style.height;
+        const originalPosition = el.style.position;
+        const originalOverflow = el.style.overflow;
+        const originalBg = el.style.backgroundColor;
+        
+        el.style.width = '1200px';
+        el.style.height = 'max-content';
+        el.style.position = 'absolute';
+        el.style.top = '0';
+        el.style.left = '0';
+        el.style.overflow = 'visible';
+        el.style.backgroundColor = '#ffffff';
+        el.style.zIndex = '-9999';
+
+        await new Promise(r => setTimeout(r, 200));
         
         const canvas = await html2canvas(el, {
             scale: 2,
             useCORS: true,
-            logging: true,
-            windowWidth: el.scrollWidth,
-            windowHeight: el.scrollHeight
+            logging: false,
+            width: 1200,
+            windowWidth: 1200
         });
         
-        el.className = originalClasses;
+        el.style.width = originalWidth;
+        el.style.height = originalHeight;
+        el.style.position = originalPosition;
+        el.style.overflow = originalOverflow;
+        el.style.backgroundColor = originalBg;
+        el.style.zIndex = 'auto';
         
-        const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
@@ -221,7 +240,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`ETP_${colorRef || 'Color'}.pdf`);
     } catch (err) {
         console.error("Error al generar PDF:", err);
@@ -395,10 +414,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                                   {ingredientes.map((item, idx) => (
                                       <tr key={item.id || idx} className={highlightFields ? 'bg-blue-50/30' : ''}>
                                           <td className="py-3 px-4 flex items-center gap-2 text-xs font-medium">
-                                              <div className={`w-3 h-3 rounded-full border border-slate-200 shadow-sm ${item.color || 'bg-slate-400'}`}></div>{item.nombre || item.componente}
+                                              <div className={`w-3 h-3 rounded-full border border-slate-200 shadow-sm ${item.color || 'bg-slate-400'}`}></div>{item.nombre_base || item.nombre || item.componente}
                                           </td>
                                           <td className="py-3 px-4 text-right">
-                                              <input type="text" value={item.peso_g || item.peso} readOnly className="w-16 text-right bg-transparent outline-none font-semibold text-slate-900 text-xs" />
+                                              <input type="text" value={item.porcentaje_final || item.peso_g || item.peso} readOnly className="w-16 text-right bg-transparent outline-none font-semibold text-slate-900 text-xs" />
                                           </td>
                                       </tr>
                                   ))}
