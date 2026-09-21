@@ -94,7 +94,15 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     viscosidad: '18-20 seg',
     presion: '25 - 30 PSI',
     textoPreparacion: 'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.',
-    textoFondo: initialData?.sustrato_muestra ? `Fondo aplicado: ${initialData.sustrato_muestra}` : '',
+    textoFondo: (() => {
+    let fondoText = initialData?.sustrato_muestra ? `Sustrato: ${initialData.sustrato_muestra}` : '';
+    if (initialData?.procedimiento_preparacion?.fondo && typeof initialData.procedimiento_preparacion.fondo === 'object') {
+       const f = initialData.procedimiento_preparacion.fondo;
+       fondoText += `\nBase: ${f.tipo} (${f.color}). Manos: ${f.manos}.`;
+       fondoText += `\nMezcla Base: Cat ${f.catalizador} / Disolv ${f.disolvente}`;
+    }
+    return fondoText;
+  })(),
     textoColor: '',
     textoAcabado: 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
   });

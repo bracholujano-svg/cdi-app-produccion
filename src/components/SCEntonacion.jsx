@@ -237,6 +237,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       setSearchFeedback('✅ ¡Fórmula guardada como borrador! Complete la ETP.');
       setSavedColorId(colorId);
       setSavedColorData({ id: colorId, codigo_objetivo: codObj });
+      alert('✅ Fórmula guardada exitosamente. A continuación declare el proceso de la muestra.');
       setShowOperarioModal(true);
       
     } catch (e) {
