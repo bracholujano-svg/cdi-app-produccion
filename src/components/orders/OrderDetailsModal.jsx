@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers, Truck, CheckCircle2 
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
@@ -43,12 +43,27 @@ const OrderDetailsModal = ({
     syncOrderToSupabase
   } = useAppContext();
 
-  const [isTerminadoLocal, setIsTerminadoLocal] = React.useState(selectedOrder?.isTerminado || false);
-  const [tempPartialQty, setTempPartialQty] = React.useState(0);
-  const [expandedResumenArea, setExpandedResumenArea] = React.useState(null);
+  const [isTerminadoLocal, setIsTerminadoLocal] = useState(selectedOrder?.isTerminado || false);
+  const [tempPartialQty, setTempPartialQty] = useState(0);
+  const [expandedResumenArea, setExpandedResumenArea] = useState(null);
+
+  // Estado del Formulario Logístico para Despachos
+  const [datosLogistica, setDatosLogistica] = useState({
+    tipoTransporte: 'Propio',
+    empresaTransporte: '',
+    nombreChofer: '',
+    cedulaChofer: '',
+    placaMarca: '',
+    precintoSeguridad: '',
+    guiaRemesa: ''
+  });
   
-  React.useEffect(() => {
+  useEffect(() => {
     setIsTerminadoLocal(selectedOrder?.isTerminado || false);
+    if (!tempTransferDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setTempTransferDate(today);
+    }
   }, [selectedOrder?.id]);
 
   if (!selectedOrder) return null;
@@ -97,11 +112,16 @@ const OrderDetailsModal = ({
           <div className="theme-bg-card w-full h-full sm:h-[95vh] w-full max-w-[600px] w-full max-w-[800px] sm:w-[600px] md:w-[700px] md:w-[600px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
             <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
               <div className="flex flex-col truncate pr-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-base font-black uppercase truncate theme-text-main">PED: {selectedOrder.pedidoNum}</h2>
                   {selectedOrder.cantidad && (
                     <span className="text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                       <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
+                    </span>
+                  )}
+                  {selectedOrder.estadoInterno === 'DESPACHADO' && (
+                    <span className="text-sm bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-500/30 font-black truncate flex items-center gap-1 shadow-sm">
+                      <CheckCircle2 size={"1.1em"} /> DESPACHADO
                     </span>
                   )}
                 </div>
@@ -522,18 +542,129 @@ const OrderDetailsModal = ({
                                 </div>
                             )}
                         </div>
+                        {/* DIRECTIVA 2: FORMULARIO LOGÍSTICO CONDICIONAL SI SE SELECCIONA DESPACHOS */}
+                        {(tempTransferAreas || []).includes('Despachos') && (
+                          <div className="mb-3 p-4 rounded-2xl bg-purple-500/10 border-2 border-purple-500/40 space-y-3 animate-in fade-in duration-200">
+                            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-black text-sm md:text-base uppercase">
+                              <Truck size={20} className="shrink-0" />
+                              <span>Datos de Logística y Despacho (Salida de Planta)</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Tipo de Transporte *
+                                </label>
+                                <select 
+                                  value={datosLogistica.tipoTransporte}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, tipoTransporte: e.target.value }))}
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-black text-sm outline-none theme-text-primary"
+                                >
+                                  <option value="Propio">Propio</option>
+                                  <option value="Contratado por CDI">Contratado por CDI</option>
+                                  <option value="Cliente">Cliente</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Empresa de Transporte
+                                </label>
+                                <input 
+                                  value={datosLogistica.empresaTransporte}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, empresaTransporte: e.target.value }))}
+                                  placeholder="Ej. Servientrega, Envia..."
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Nombre del Chofer *
+                                </label>
+                                <input 
+                                  value={datosLogistica.nombreChofer}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, nombreChofer: e.target.value }))}
+                                  placeholder="Nombre completo"
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Cédula / ID del Chofer
+                                </label>
+                                <input 
+                                  value={datosLogistica.cedulaChofer}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, cedulaChofer: e.target.value }))}
+                                  placeholder="Nº Identificación"
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Placa del Vehículo y Marca
+                                </label>
+                                <input 
+                                  value={datosLogistica.placaMarca}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, placaMarca: e.target.value }))}
+                                  placeholder="Ej. ABC-123 Chevrolet"
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Contenedor / Precinto de Seguridad
+                                </label>
+                                <input 
+                                  value={datosLogistica.precintoSeguridad}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, precintoSeguridad: e.target.value }))}
+                                  placeholder="Nº Precinto / Contenedor"
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
+                                  Número de Guía / Remesa
+                                </label>
+                                <input 
+                                  value={datosLogistica.guiaRemesa}
+                                  onChange={e => setDatosLogistica(prev => ({ ...prev, guiaRemesa: e.target.value }))}
+                                  placeholder="Nº Guía de Despacho / Remesa"
+                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
+                              const isDespacho = (tempTransferAreas || []).includes('Despachos');
                               if(en && tempTransferDate && tempTransferAreas.length > 0) {
                                 
                                 if (tempIsPartial && tempTransferAreas.length > 1) { alert("No se puede hacer bifurcación (múltiples áreas) y entrega parcial fraccionada al mismo tiempo. Seleccione solo un área destino."); return; }
                                 if (tempIsPartial && tempPartialQty && (tempPartialQty <= 0 || tempPartialQty >= (selectedOrder.cantidad || 99999))) { alert("Para una entrega parcial, indique una cantidad válida menor al total del lote."); return; }
-                                updateTransfer(selectedOrder.id, tempTransferAreas, tempTransferDate, en, null, tempIsPartial, tempIsPartial && tempPartialQty ? tempPartialQty : false);
+                                updateTransfer(
+                                  selectedOrder.id, 
+                                  tempTransferAreas, 
+                                  tempTransferDate, 
+                                  en, 
+                                  null, 
+                                  tempIsPartial, 
+                                  tempIsPartial && tempPartialQty ? tempPartialQty : false,
+                                  isDespacho ? datosLogistica : null
+                                );
                                 setTempIsPartial(false);
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200   hover:brightness-125 active:scale-95">Confirmar Entrega de Sección</button>
+                          }} className={`w-full py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 ${(tempTransferAreas || []).includes('Despachos') ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500 shadow-purple-500/30' : 'bg-[var(--color-primary)] text-[var(--color-surface)]'}`}>
+                          {(tempTransferAreas || []).includes('Despachos') ? '🚀 Confirmar Despacho y Salida de Planta' : 'Confirmar Entrega de Sección'}
+                        </button>
                             </>
                           );
                         })()}

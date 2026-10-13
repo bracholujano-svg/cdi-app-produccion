@@ -70,5 +70,5 @@ export const ROUTING_MAP = {
     "Pintura Líquida": ["Ensamble", "Empaque"],
     "Ensamble": ["Empaque"],
     "Empaque": ["Despachos"],
-    "Despachos": []
+    "Despachos": ["Despachos"]
 };

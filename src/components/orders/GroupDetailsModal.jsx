@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap, Truck } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
@@ -189,7 +189,35 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                             <UserCheck size="1.2em" /> {Array.isArray(p.asignado_a) ? p.asignado_a.join(', ') : p.asignado_a}
                           </div>
                       )}
-                      <p className="text-base lg:text-lg font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>
+                      {/* DIRECTIVA 4: ACTUALIZACIÓN DE ETIQUETAS VISUALES EN CARDS */}
+                      {p.estadoInterno === 'DESPACHADO' || (p.areaActual === 'Despachos' && (p.isTerminado || p.estadoInterno === 'DESPACHADO')) ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 font-black text-sm md:text-base uppercase w-fit shadow-sm">
+                          <CheckCircle size="1.2em" className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>DESPACHADO</span>
+                        </div>
+                      ) : (
+                        <p className="text-base lg:text-lg font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>
+                      )}
+
+                      {/* Información de Logística si existe */}
+                      {p.datos_logistica && (
+                        <div className="mt-1 p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-xs font-bold border border-purple-200 dark:border-purple-800 space-y-0.5 text-purple-900 dark:text-purple-200">
+                          <div className="flex items-center gap-1 font-black">
+                            <Truck size={13} className="shrink-0 text-purple-600 dark:text-purple-400" />
+                            <span>{p.datos_logistica.tipoTransporte || 'Transporte'}{p.datos_logistica.empresaTransporte ? ` - ${p.datos_logistica.empresaTransporte}` : ''}</span>
+                          </div>
+                          {p.datos_logistica.nombreChofer && (
+                            <div className="text-[11px] opacity-90 pl-4">
+                              Chofer: <span className="font-black">{p.datos_logistica.nombreChofer}</span> {p.datos_logistica.placaMarca ? `(${p.datos_logistica.placaMarca})` : ''}
+                            </div>
+                          )}
+                          {p.datos_logistica.guiaRemesa && (
+                            <div className="text-[11px] opacity-90 pl-4">
+                              Guía: <span className="font-mono font-black">{p.datos_logistica.guiaRemesa}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Botón Ver Planos */}

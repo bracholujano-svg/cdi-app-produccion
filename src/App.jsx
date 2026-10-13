@@ -43,6 +43,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
+import DispatchHistoryTable from './components/views/DispatchHistoryTable';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
   const [isIndicatorsDrawerOpen, setIsIndicatorsDrawerOpen] = useState(false);
@@ -389,7 +390,7 @@ const {
       setSelectedBulkOrders([]);
   };
 
-    const updateTransfer = async (id, areas, date, operario, _, isPartial, partialQty) => {
+    const updateTransfer = async (id, areas, date, operario, _, isPartial, partialQty, logisticaData = null) => {
     try {
         const ids = Array.isArray(id) ? id : [id];
         const { updatedOrders, updatedAlerts, ordersToSync, alertsToSync } = executeTransfer(ids, {
@@ -404,7 +405,8 @@ const {
             partialQty: partialQty,
             tempAssignedPersonnel,
             transferNota,
-            transferPhoto
+            transferPhoto,
+            logisticaData
         });
 
         if (updatedOrders) setOrders(updatedOrders);
@@ -421,8 +423,8 @@ const {
     }
   };
 
-  const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial, partialQty) => {
-    await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty);
+  const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial, partialQty, logisticaData = null) => {
+    await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty, logisticaData);
     setShowBulkModal(false);
   };
 
@@ -600,10 +602,19 @@ const {
     const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
     const effectiveDate = alertMatch?.fechaEntrega;
 
-    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && getDaysLeft(effectiveDate) !== null && getDaysLeft(effectiveDate) < 0;
-    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO' && (getDaysLeft(effectiveDate) === null || getDaysLeft(effectiveDate) >= 0);
-    if (viewFilter === 'DESPACHADOS') return matchSearch && matchArea && matchClient && o.estadoInterno === 'DESPACHADO';
-    return matchSearch && matchArea && matchClient && o.estadoInterno !== 'DESPACHADO';
+    // DIRECTIVA 3: TODO ítem con estado 'DESPACHADO' debe ser EXCLUIDO de la vista de producción activa
+    const isDespachado = o.estadoInterno === 'DESPACHADO';
+
+    if (viewFilter === 'DESPACHADOS') {
+      return matchSearch && matchClient && isDespachado;
+    }
+
+    // Para cualquier otra vista (Producción activa, Atrasos, Cumplidos), excluir estrictamente DESPACHADO
+    if (isDespachado) return false;
+
+    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && getDaysLeft(effectiveDate) !== null && getDaysLeft(effectiveDate) < 0;
+    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && (getDaysLeft(effectiveDate) === null || getDaysLeft(effectiveDate) >= 0);
+    return matchSearch && matchArea && matchClient;
   });
 
   const groupedOrders = filteredOrders.reduce((acc, order) => {
@@ -702,14 +713,28 @@ const {
         setShowPlantPlannerModal={setShowPlantPlannerModal}
       />
 
-      <OrderGrid 
-        gridColsClass={gridColsClass} 
-        paginatedGroups={paginatedGroups} 
-        groupedArray={groupedArray} 
-        totalPages={totalPages} 
-        currentPage={currentPage} 
-        setCurrentPage={setCurrentPage} 
-      />
+      {viewFilter === 'DESPACHADOS' ? (
+        <DispatchHistoryTable 
+          filteredOrders={filteredOrders}
+          groupedArray={groupedArray}
+          paginatedGroups={paginatedGroups}
+          gridColsClass={gridColsClass}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          onSelectGroup={(pNum) => { setSelectedGroupPedido(pNum); setItemSearchTerm(''); }}
+          onSelectOrder={(ord) => setSelectedOrder(ord)}
+        />
+      ) : (
+        <OrderGrid 
+          gridColsClass={gridColsClass} 
+          paginatedGroups={paginatedGroups} 
+          groupedArray={groupedArray} 
+          totalPages={totalPages} 
+          currentPage={currentPage} 
+          setCurrentPage={setCurrentPage} 
+        />
+      )}
 
       <GroupDetailsModal activeGroupObj={activeGroupObj} handleImageUpload={handleImageUpload} addShiftNote={addShiftNote} toggleMic={toggleMic} isListening={isListening} activeDictationTarget={activeDictationTarget} />
 

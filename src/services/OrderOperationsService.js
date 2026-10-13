@@ -36,7 +36,8 @@ export const executeTransfer = (ids, {
     partialQty,
     tempAssignedPersonnel,
     transferNota,
-    transferPhoto
+    transferPhoto,
+    logisticaData = null
 }) => {
     if (!ids || ids.length === 0 || !areas || areas.length === 0) {
         return { updatedOrders: orders, updatedAlerts: null, ordersToSync: [], alertsToSync: [] };
@@ -101,11 +102,17 @@ export const executeTransfer = (ids, {
                     master_id: order.id,
                     cantidad: transferQty,
                     areaActual: area, 
-                    estadoInterno: 'En Espera', 
+                    estadoInterno: 'DESPACHADO', 
                     fechaEntregaPrometida: date,
+                    fechaDespacho: new Date().toISOString(),
                     asignado_a: personalAsignado,
-                    isTerminado: false, 
-                    historial: [...(order.historial || []), newHistoryEntry] 
+                    isTerminado: true, 
+                    datos_logistica: logisticaData || order.datos_logistica || null,
+                    historial: [...(order.historial || []), {
+                        ...newHistoryEntry,
+                        accion: `Despacho Parcial de Planta (Salida: ${transferQty} unds)`,
+                        logistica: logisticaData || null
+                    }] 
                 }
                 : { 
                     ...order,
@@ -165,11 +172,17 @@ export const executeTransfer = (ids, {
                     ? { 
                         ...order, 
                         areaActual: area, 
-                        estadoInterno: 'En Espera', 
+                        estadoInterno: 'DESPACHADO', 
                         fechaEntregaPrometida: date,
+                        fechaDespacho: new Date().toISOString(),
                         asignado_a: personalAsignado,
-                        isTerminado: false, 
-                        historial: [...(order.historial || []), newHistoryEntry] 
+                        isTerminado: true, 
+                        datos_logistica: logisticaData || order.datos_logistica || null,
+                        historial: [...(order.historial || []), {
+                            ...newHistoryEntry,
+                            accion: isPartial ? `Despacho Parcial de Planta (Salida)` : `Despacho Final de Planta (Salida)`,
+                            logistica: logisticaData || null
+                        }] 
                     }
                     : { 
                         ...order, 
@@ -198,11 +211,17 @@ export const executeTransfer = (ids, {
                         id: cloneId,
                         master_id: order.id,
                         areaActual: area, 
-                        estadoInterno: 'En Espera', 
+                        estadoInterno: 'DESPACHADO', 
                         fechaEntregaPrometida: date,
+                        fechaDespacho: new Date().toISOString(),
                         asignado_a: personalAsignado,
-                        isTerminado: false, 
-                        historial: [...(order.historial || []), { ...newHistoryEntry, accion: `Bifurcación hacia ${area}${asignadoText}` }] 
+                        isTerminado: true, 
+                        datos_logistica: logisticaData || order.datos_logistica || null,
+                        historial: [...(order.historial || []), { 
+                            ...newHistoryEntry, 
+                            accion: `Despacho de Planta hacia ${area}${asignadoText} (Salida)`,
+                            logistica: logisticaData || null
+                        }] 
                     }
                     : { 
                         ...order,

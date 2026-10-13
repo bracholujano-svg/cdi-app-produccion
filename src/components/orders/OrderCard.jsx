@@ -19,9 +19,10 @@ const OrderCard = ({ group }) => {
   const setItemSearchTerm = useAppStore(state => state.setItemSearchTerm);
 
   const daysLeft = getDaysLeft(group?.fechaEntregaPrometida);
-  const isAtrasado = daysLeft !== null && daysLeft < 0 && viewFilter !== 'DESPACHADOS';
-  const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && viewFilter !== 'DESPACHADOS';
-  const isCumplido = (daysLeft !== null && daysLeft > 3) || viewFilter === 'DESPACHADOS';
+  const isGroupDispatched = viewFilter === 'DESPACHADOS' || (group.products && group.products.length > 0 && group.products.every(p => p && p.estadoInterno === 'DESPACHADO'));
+  const isAtrasado = daysLeft !== null && daysLeft < 0 && !isGroupDispatched;
+  const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && !isGroupDispatched;
+  const isCumplido = (daysLeft !== null && daysLeft > 3) || isGroupDispatched;
 
   // LOGICA DE ALERTAS SUPABASE (DYNAMIC RESERVATION)
   const todosRequerimientos = inventoryReservations[group.pedidoNum] || [];
@@ -88,8 +89,8 @@ const OrderCard = ({ group }) => {
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
-          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-base lg:text-lg px-1.5 py-1 ${isAtrasado ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/20' : 'bg-[var(--color-primary)]/10 theme-text-primary border border-[var(--color-primary)]/20'}`}>
-            {isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (viewFilter === 'DESPACHADOS' ? `✅ DESPACHADO${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
+          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-base lg:text-lg px-1.5 py-1 ${isGroupDispatched ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 border border-emerald-500/30' : isAtrasado ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/20' : 'bg-[var(--color-primary)]/10 theme-text-primary border border-[var(--color-primary)]/20'}`}>
+            {isGroupDispatched ? `✅ DESPACHADO${formattedDate}` : (isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
           </div>
           {isNoMaterials && (
             <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-base lg:text-lg px-1.5 py-1 bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
@@ -119,7 +120,9 @@ const OrderCard = ({ group }) => {
       <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-base lg:text-lg ${!group.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
       
       <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
-        <span className={`px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-sm md:text-base lg:text-sm whitespace-nowrap truncate`}>{group.products?.length || 0} EN TU ÁREA</span>
+        <span className={`px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-sm md:text-base lg:text-sm whitespace-nowrap truncate`}>
+          {isGroupDispatched ? `${group.products?.length || 0} DESPACHADOS` : `${group.products?.length || 0} EN TU ÁREA`}
+        </span>
         {partialProductsCount > 0 && (
             <span 
                 style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
