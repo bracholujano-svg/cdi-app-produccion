@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { 
   Bell, Clock, CheckCircle2, ChevronRight, Inbox, PaintBucket, 
   Palette, Layers, SprayCan, CheckSquare, Search, 
@@ -183,8 +185,48 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  const handlePrintPDF = () => { 
-    window.print(); 
+  const handlePrintPDF = async () => { 
+    if (!componentRef.current) {
+      window.print();
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const element = componentRef.current;
+      
+      // Captura nítida con fondo blanco forzado al 100% y soporte CORS para imágenes
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1200,
+        ignoreElements: (el) => el.classList.contains('print:hidden')
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, Math.min(imgHeight, pageHeight));
+      
+      const fileName = `Ficha_ETP_${(colorRef || formData.nombreComercial || 'Color').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.warn("Fallo en html2canvas, usando diálogo de impresión nativo:", err);
+      window.print();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Tarea 1: Aprobación de ETP
@@ -370,7 +412,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[750px] print:shadow-none print:border-none print:w-full print:block">
       
       {/* Contenedor Principal de la Ficha Técnica (A4 Printable) */}
-      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:p-8">
+      <div ref={componentRef} style={{ backgroundColor: "#ffffff", color: "#0f172a" }} className="w-full flex flex-col bg-white text-slate-900 relative min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8">
         
         {/* Cabecera Formal Institucional (Solo Visible en Impresión Física A4) */}
         <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
@@ -403,6 +445,17 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         <header className="bg-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 sticky top-0 z-20 shadow-sm print:static print:border-none print:shadow-none print:p-0">
           
           <div className="flex items-center gap-4 w-full md:w-auto">
+            {onCancel && (
+              <button 
+                type="button" 
+                onClick={onCancel}
+                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors print:hidden flex items-center gap-1.5 text-xs font-black shadow-sm"
+                title="Volver a la pantalla anterior"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">Volver</span>
+              </button>
+            )}
             <div className="w-14 h-14 rounded-xl shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
             <div className="flex-grow">
               <div className="flex flex-wrap items-center gap-2 mb-1">

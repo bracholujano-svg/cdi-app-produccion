@@ -39,6 +39,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [catalogColors, setCatalogColors] = useState([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [cameFromCatalog, setCameFromCatalog] = useState(false);
 
   const openCatalog = async () => {
     setShowCatalogModal(true);
@@ -56,6 +57,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   };
 
   const handleSelectFromCatalog = (color) => {
+    setCameFromCatalog(true);
     setSistemaColor(color.sistema_color);
     setCodigoObjetivo(color.codigo_objetivo);
     setShowCatalogModal(false);
@@ -642,7 +644,36 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       )}
 
       {colorEncontrado && (
-        <div className="mt-12 animate-slide-up grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="mt-8 animate-slide-up space-y-6">
+          {/* Barra de Retroceso en Vista de Detalle */}
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+            <button 
+              onClick={() => {
+                setColorEncontrado(null);
+                if (cameFromCatalog) {
+                  setCameFromCatalog(false);
+                  openCatalog();
+                } else {
+                  setCodigoObjetivo('');
+                  setSearchFeedback('');
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 transition-colors shadow-sm"
+              title="Volver a la pantalla anterior"
+            >
+              <ArrowLeft size={18} />
+              <span>{cameFromCatalog ? 'Volver al Catálogo' : 'Volver a la Búsqueda'}</span>
+            </button>
+
+            <button 
+              onClick={openCatalog}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+            >
+              <Palette size={15} /> Ver Catálogo Completo
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-1">
             <div className="theme-bg-card p-8 rounded-[2rem] theme-border shadow-xl flex flex-col items-center justify-center h-full space-y-6 border-t-4 border-t-emerald-500">
               <div 
@@ -741,6 +772,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
