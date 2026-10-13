@@ -40,8 +40,11 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [catalogColors, setCatalogColors] = useState([]);
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [cameFromCatalog, setCameFromCatalog] = useState(false);
+  const [currentView, setCurrentView] = useState('inicio'); // 'inicio' | 'catalogo' | 'detalle' | 'formulacion'
+  const [selectedColor, setSelectedColor] = useState(null);
 
   const openCatalog = async () => {
+    setCurrentView('catalogo');
     setShowCatalogModal(true);
     setIsLoadingCatalog(true);
     try {
@@ -56,16 +59,31 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     }
   };
 
-  const handleSelectFromCatalog = (color) => {
+  const handleSelectFromCatalog = async (color) => {
     setCameFromCatalog(true);
+    setSelectedColor(color);
     setSistemaColor(color.sistema_color);
     setCodigoObjetivo(color.codigo_objetivo);
+    setSavedColorId(color.id);
+    setSavedColorData(color);
     setShowCatalogModal(false);
-    // Disparar búsqueda inmediatamente (usar timeout para esperar a que los estados se asienten)
-    setTimeout(() => {
-        const btn = document.getElementById('btn-buscar-receta');
-        if (btn) btn.click();
-    }, 100);
+    setCurrentView('detalle');
+    
+    // Cargar receta y datos del color directamente
+    setIsSearching(true);
+    try {
+      const { data: recetaData } = await supabase
+        .from('recetas_detalle')
+        .select('*')
+        .eq('id_color', color.id);
+      setColorEncontrado(color);
+      setRecetaExistente(recetaData || []);
+    } catch (e) {
+      console.error(e);
+      setColorEncontrado(color);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
@@ -139,7 +157,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           .eq('id_color', colorData.id);
           
         setColorEncontrado(colorData);
+        setSelectedColor(colorData);
         setRecetaExistente(recetaData || []);
+        setCurrentView('detalle');
       }
     } catch (e) {
       console.error(e);
@@ -646,31 +666,38 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       {colorEncontrado && (
         <div className="mt-8 animate-slide-up space-y-6">
           {/* Barra de Retroceso en Vista de Detalle */}
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
             <button 
               onClick={() => {
+                setSelectedColor(null);
                 setColorEncontrado(null);
+                setShowEtpModal(false);
                 if (cameFromCatalog) {
-                  setCameFromCatalog(false);
                   openCatalog();
                 } else {
                   setCodigoObjetivo('');
                   setSearchFeedback('');
+                  setCurrentView('inicio');
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 transition-colors shadow-sm"
-              title="Volver a la pantalla anterior"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors shadow-sm cursor-pointer"
+              title={cameFromCatalog ? "Volver al Catálogo de Colores" : "Volver a la Búsqueda"}
             >
               <ArrowLeft size={18} />
               <span>{cameFromCatalog ? 'Volver al Catálogo' : 'Volver a la Búsqueda'}</span>
             </button>
 
-            <button 
-              onClick={openCatalog}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors"
-            >
-              <Palette size={15} /> Ver Catálogo Completo
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500 uppercase hidden sm:inline">
+                {selectedColor?.sistema_color || sistemaColor} / {selectedColor?.codigo_objetivo || codigoObjetivo}
+              </span>
+              <button 
+                onClick={openCatalog}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <Palette size={15} /> Ver Catálogo Completo
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -782,7 +809,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[480px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
              <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
                <h2 className="text-xl font-black theme-text-main uppercase flex items-center gap-2"><Palette size={"1.2em"} /> Catálogo Aprobado</h2>
-               <button onClick={() => setShowCatalogModal(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2"><ArrowLeft size={18} /> VOLVER</button>
+               <button onClick={() => { setShowCatalogModal(false); setCurrentView('inicio'); }} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2 cursor-pointer shadow-sm"><ArrowLeft size={18} /> VOLVER AL INICIO</button>
              </div>
              <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-base)] custom-scrollbar">
                {isLoadingCatalog ? (
@@ -825,17 +852,59 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         </div>
       )}
       {showEtpModal && (
-          <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
-              <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-slate-50 dark:bg-[#0f172a] rounded-3xl relative">
-                  <button onClick={() => setShowEtpModal(false)} className="absolute top-4 right-4 z-50 p-2 bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
-                      ✕
-                  </button>
-                  <div className="p-4">
+          <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-2 md:p-4">
+              <div className="w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col bg-slate-50 dark:bg-[#0f172a] rounded-3xl relative shadow-2xl border border-slate-700">
+                  {/* Barra Superior con Botón Volver al Catálogo */}
+                  <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+                      <button 
+                          onClick={() => {
+                              setShowEtpModal(false);
+                              if (cameFromCatalog) {
+                                  setColorEncontrado(null);
+                                  setSelectedColor(null);
+                                  openCatalog();
+                              }
+                          }} 
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors shadow-sm cursor-pointer"
+                          title={cameFromCatalog ? "Volver al Catálogo de Colores" : "Volver al Detalle de Color"}
+                      >
+                          <ArrowLeft size={18} />
+                          <span>{cameFromCatalog ? 'Volver al Catálogo' : 'Volver al Detalle'}</span>
+                      </button>
+
+                      <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-400">
+                          <span>{savedColorData?.sistema_color || sistemaColor}</span>
+                          <ChevronRight size={14} />
+                          <span className="text-blue-400 font-black">{savedColorData?.codigo_objetivo || codigoObjetivo}</span>
+                      </div>
+
+                      <button 
+                          onClick={() => setShowEtpModal(false)} 
+                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-colors cursor-pointer"
+                          title="Cerrar Ficha Técnica"
+                      >
+                          <X size={20} />
+                      </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-2 sm:p-4 custom-scrollbar">
                       <EtpCopilotForm 
                           colorId={savedColorId} 
                           initialData={savedColorData}
+                          supervisorProfile={supervisorProfile}
                           isSupervisorView={false} 
-                          onCancel={() => setShowEtpModal(false)}
+                          onCancel={() => {
+                              setShowEtpModal(false);
+                              if (cameFromCatalog) {
+                                  setColorEncontrado(null);
+                                  setSelectedColor(null);
+                                  openCatalog();
+                              }
+                          }}
+                          onSave={() => {
+                              setShowEtpModal(false);
+                              handleBuscar();
+                          }}
                       />
                   </div>
               </div>
