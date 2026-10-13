@@ -38,12 +38,14 @@ import BulkOrderDetailsModal from './components/orders/BulkOrderDetailsModal';
 import OrderCard from './components/orders/OrderCard';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
+import IndicatorsDrawer from './components/layout/IndicatorsDrawer';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
+  const [isIndicatorsDrawerOpen, setIsIndicatorsDrawerOpen] = useState(false);
 
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -229,7 +231,10 @@ const {
       estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
       prioridad: existingAlert ? 'ALTA' : 'NORMAL',
       fechaIngresoArea: new Date().toISOString(), 
-      fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : null,
+      fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : (form.fechaEntrega?.value || null),
+      requisicion: (form.requisicion?.value || "").trim().toUpperCase(),
+      acabado: (form.acabado?.value || "").trim().toUpperCase(),
+      ordenProduccion: (form.ordenProduccion?.value || "").trim().toUpperCase(),
       bitacoraTurnos: [],
       bitacoraCalidad: [],
       historial: [{
@@ -672,6 +677,30 @@ const {
         <FilterControls uniqueClients={uniqueClients} />
       </div>
       <Sidebar />
+
+      {/* Botón Flotante en el borde izquierdo para desplegar Drawer de Indicadores */}
+      <button 
+        type="button"
+        onClick={() => setIsIndicatorsDrawerOpen(true)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:p-2.5 rounded-r-2xl shadow-2xl border-y border-r border-indigo-400 hover:pl-3.5 transition-all flex flex-col items-center gap-1 group cursor-pointer"
+        title="Abrir Panel de Indicadores"
+      >
+        <BarChart2 size={20} className="group-hover:scale-110 transition-transform" />
+        <span className="text-[10px] font-black uppercase tracking-wider [writing-mode:vertical-lr] rotate-180 hidden sm:inline-block">
+          Indicadores
+        </span>
+      </button>
+
+      {/* Panel Lateral Plegable (Drawer) para Indicadores */}
+      <IndicatorsDrawer 
+        isOpen={isIndicatorsDrawerOpen}
+        onClose={() => setIsIndicatorsDrawerOpen(false)}
+        orders={orders}
+        coordinationAlerts={coordinationAlerts}
+        setViewFilter={setViewFilter}
+        setShowDashboardModal={setShowDashboardModal}
+        setShowPlantPlannerModal={setShowPlantPlannerModal}
+      />
 
       <OrderGrid 
         gridColsClass={gridColsClass} 
