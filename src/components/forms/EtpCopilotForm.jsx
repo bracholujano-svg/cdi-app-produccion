@@ -187,79 +187,8 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  const handlePrintPDF = async () => { 
-    if (!componentRef.current) {
-      window.print();
-      return;
-    }
-
-    setIsSubmitting(true);
-    setIsGeneratingPDF(true);
-
-    try {
-      // Breve pausa para que React re-renderice etiquetas expandidas <p>/<div> y proporciones A4
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      const element = componentRef.current;
-      const originalScrollTop = element.scrollTop;
-      element.scrollTop = 0;
-
-      const targetWidth = 794; // Ancho estándar A4 en px (96 DPI)
-      
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        windowWidth: targetWidth,
-        width: targetWidth,
-        scrollX: 0,
-        scrollY: 0,
-        ignoreElements: (el) => el.classList.contains('print:hidden') || el.getAttribute('data-pdf-ignore') === 'true'
-      });
-
-      element.scrollTop = originalScrollTop;
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 8;
-      const printableWidth = pageWidth - (margin * 2);
-      const imgHeight = (canvas.height * printableWidth) / canvas.width;
-
-      if (imgHeight <= (pageHeight - (margin * 2))) {
-        pdf.addImage(imgData, 'JPEG', margin, margin, printableWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let position = margin;
-
-        pdf.addImage(imgData, 'JPEG', margin, position, printableWidth, imgHeight);
-        heightLeft -= (pageHeight - (margin * 2));
-
-        while (heightLeft > 0) {
-          position = position - (pageHeight - (margin * 2));
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', margin, position, printableWidth, imgHeight);
-          heightLeft -= (pageHeight - (margin * 2));
-        }
-      }
-      
-      const fileName = `Ficha_ETP_${(colorRef || formData.nombreComercial || 'Color').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
-      pdf.save(fileName);
-    } catch (err) {
-      console.warn("Fallo en html2canvas, usando diálogo de impresión nativo:", err);
-      window.print();
-    } finally {
-      setIsGeneratingPDF(false);
-      setIsSubmitting(false);
-    }
+  const handlePrintPDF = () => {
+    window.print();
   };
 
   // Tarea 1: Aprobación de ETP
@@ -445,10 +374,44 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[750px] print:shadow-none print:border-none print:w-full print:block">
       
       {/* Contenedor Principal de la Ficha Técnica (A4 Printable) */}
-      <div ref={componentRef} style={{ backgroundColor: "#ffffff", color: "#0f172a", width: isGeneratingPDF ? '794px' : undefined, maxWidth: isGeneratingPDF ? '794px' : undefined, margin: isGeneratingPDF ? '0 auto' : undefined }} className={`w-full flex flex-col bg-white text-slate-900 relative transition-all ${isGeneratingPDF ? 'h-auto overflow-visible p-6 shadow-none' : 'min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8'}`}>
+      <style>{`
+        @media print {
+          /* Forzar fuente Arial y tamaño 12pt para el texto general */
+          .etp-print-container, 
+          .etp-print-container p, 
+          .etp-print-container span, 
+          .etp-print-container td, 
+          .etp-print-container div,
+          .etp-print-container label {
+            font-family: Arial, sans-serif !important;
+            font-size: 12pt !important;
+            line-height: 1.5 !important;
+          }
+          
+          /* Forzar fuente Arial Black para todos los encabezados y títulos */
+          .etp-print-container h1, 
+          .etp-print-container h2, 
+          .etp-print-container h3, 
+          .etp-print-container h4, 
+          .etp-print-container th, 
+          .title-black {
+            font-family: 'Arial Black', Arial, sans-serif !important;
+            font-weight: 900 !important;
+          }
+
+          /* Reglas estrictas contra cortes en saltos de página */
+          .etp-print-container tr,
+          .etp-print-container .break-inside-avoid,
+          .etp-print-container .print\\:break-inside-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+      <div ref={componentRef} style={{ backgroundColor: "#ffffff", color: "#0f172a" }} className="etp-print-container w-full flex flex-col bg-white text-slate-900 relative min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8">
         
         {/* Cabecera Formal Institucional (Solo Visible en Impresión Física A4) */}
-        <div className="${isGeneratingPDF ? 'block' : 'hidden print:block'} mb-4 border-b-2 border-slate-900 pb-3">
+        <div className="hidden print:block mb-4 border-b-2 border-slate-900 pb-3">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">CDI EXHIBICIONES S.A.S.</h1>
@@ -758,7 +721,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               <div className="lg:col-span-5 space-y-6">
                 <div>
                   <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><FlaskConical size={16} className="text-blue-600"/> 1. Formulación del Entonador</h2>
-                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-visible print:overflow-visible shadow-sm mb-4 h-auto print:h-auto break-inside-avoid print:break-inside-avoid">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
                         <tr>
@@ -768,7 +731,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {ingredientes.map((item, idx) => (
-                          <tr key={item.id || idx}>
+                          <tr key={item.id || idx} className="break-inside-avoid print:break-inside-avoid">
                             <td className="py-3 px-4 flex items-center gap-2 text-xs font-medium">
                               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                               <div>
@@ -781,7 +744,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                             </td>
                           </tr>
                         ))}
-                        <tr className="bg-slate-50 border-t-2 border-slate-200">
+                        <tr className="bg-slate-50 border-t-2 border-slate-200 break-inside-avoid print:break-inside-avoid">
                           <td className="py-3 px-4 text-xs font-bold text-slate-800 uppercase tracking-wide">Peso Total</td>
                           <td className="py-3 px-4 text-right text-xs font-black text-blue-600">{pesoTotal.toFixed(1)} g</td>
                         </tr>
@@ -790,7 +753,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Catalizador</label>
                       {isGeneratingPDF ? (
                         <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.catalizador}</div>
@@ -810,7 +773,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                       )}
                     </div>
 
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Disolvente (Thinner)</label>
                       {isGeneratingPDF ? (
                         <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.disolvente}</div>
@@ -835,10 +798,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
               {/* Sección 2 y 3: Parámetros y Hoja de Ruta */}
               <div className="lg:col-span-7 space-y-8">
-                <div>
+                <div className="break-inside-avoid print:break-inside-avoid print:mt-4">
                   <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><SprayCan size={16} className="text-blue-600"/> 2. Parámetros de Aplicación</h2>
                   <div className="grid grid-cols-3 gap-3 h-auto print:h-auto overflow-visible print:overflow-visible">
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid">
                       <Droplet className="text-blue-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Viscosidad</span>
                       {isGeneratingPDF ? (
@@ -850,7 +813,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                         </>
                       )}
                     </div>
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid">
                       <Gauge className="text-slate-600 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Presión</span>
                       {isGeneratingPDF ? (
@@ -862,7 +825,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                         </>
                       )}
                     </div>
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid">
                       <Crosshair className="text-emerald-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Boquilla & Manos</span>
                       {isGeneratingPDF ? (
@@ -881,11 +844,11 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   </div>
                 </div>
 
-                <div>
+                <div className="break-inside-avoid print:break-inside-avoid print:mt-4">
                   <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><CheckSquare size={16} className="text-blue-600"/> 3. Hoja de Ruta</h2>
                   <div className="relative border-l-2 border-slate-200 ml-2 space-y-6 pb-2">
                     
-                    <div className="relative pl-6">
+                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
                       <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-200 border-2 border-white"></span>
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="font-bold text-xs text-slate-800">Preparación de Superficie</h4>
@@ -913,7 +876,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                       )}
                     </div>
                     
-                    <div className={`relative pl-6 p-2 rounded-2xl border -ml-2 ml-4 ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-100' : 'border-transparent'}`}>
+                    <div className={`relative pl-6 p-2 rounded-2xl border -ml-2 ml-4 break-inside-avoid print:break-inside-avoid ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-100' : 'border-transparent'}`}>
                       <span className={`absolute -left-[18px] top-3 w-4 h-4 rounded-full border-2 border-white ${formData.fondoRequired ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="font-bold text-xs text-slate-900">Aplicación del Fondo (CRÍTICO)</h4>
@@ -941,7 +904,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                       )}
                     </div>
 
-                    <div className="relative pl-6">
+                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
                       <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-200 border-2 border-white"></span>
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="font-bold text-xs text-slate-800">Aplicación del Entonador</h4>
@@ -969,7 +932,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                       )}
                     </div>
                     
-                    <div className="relative pl-6">
+                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
                       <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-800 border-2 border-white"></span>
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="font-bold text-xs text-slate-800">Acabado Final (Topcoat)</h4>
@@ -1081,7 +1044,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           </div>
 
           {/* Pie de Validez y Firma Oficial (Visible en PDF e Impresión) */}
-          <div className={`${isGeneratingPDF ? 'block' : 'hidden print:block'} mt-6 pt-4 border-t border-slate-300 text-[10px] text-slate-500 px-6 pb-4`}>
+          <div className="hidden print:block mt-6 pt-4 border-t border-slate-300 text-[10px] text-slate-500 px-6 pb-4 break-inside-avoid print:break-inside-avoid print:mt-6">
             <div className="flex justify-between items-end">
               <div>
                 <p className="font-bold text-slate-700 uppercase">CDI Exhibiciones S.A.S. - Control de Calidad y Procesos</p>

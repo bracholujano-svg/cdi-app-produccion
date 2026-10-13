@@ -166,6 +166,29 @@ body { background-color: var(--color-base); color: var(--color-text-main); }
   .print\:overflow-visible { overflow: visible !important; }
   .print\:whitespace-normal { white-space: normal !important; }
   .print\:break-words { overflow-wrap: break-word !important; word-break: break-word !important; }
+  .print\:break-inside-avoid { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .break-inside-avoid { break-inside: avoid !important; page-break-inside: avoid !important; }
+
+  /* Forzar fuente Arial y tamaño 12pt para el texto general */
+  .etp-print-container, .etp-print-container p, .etp-print-container span, .etp-print-container td, .etp-print-container div, .etp-print-container label {
+    font-family: Arial, sans-serif !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+  
+  /* Forzar fuente Arial Black para todos los encabezados y títulos */
+  .etp-print-container h1, .etp-print-container h2, .etp-print-container h3, .etp-print-container h4, .etp-print-container th, .title-black {
+    font-family: 'Arial Black', Arial, sans-serif !important;
+    font-weight: 900 !important;
+  }
+
+  /* Evitar cortes por la mitad en saltos de página */
+  .etp-print-container tr,
+  .etp-print-container .break-inside-avoid,
+  .etp-print-container .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }
 
 /* Custom Animations */
