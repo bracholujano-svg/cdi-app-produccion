@@ -120,9 +120,13 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                         <EtpCopilotForm 
                             colorId={selectedColor.id}
                             initialData={selectedColor}
+                            supervisorProfile={supervisorProfile}
                             isSupervisorView={true}
                             onCancel={() => setSelectedColor(null)}
-                            onSave={handleAprobar}
+                            onSave={() => {
+                                setSelectedColor(null);
+                                fetchPendientes();
+                            }}
                         />
                     </div>
                 </div>

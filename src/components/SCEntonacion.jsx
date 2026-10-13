@@ -323,46 +323,42 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                     isClearable
                     options={ppgOptions}
                     value={selectedPPG}
-                    inputValue={ppgInputValue}
-                    onInputChange={(val, actionMeta) => {
-                      if (actionMeta.action !== 'input-blur' && actionMeta.action !== 'menu-close') {
-                        setPpgInputValue(val);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (ppgInputValue && !selectedPPG) {
-                        setSelectedPPG({ value: ppgInputValue, label: ppgInputValue, descripcion: ppgInputValue });
-                      }
-                    }}
-                    onChange={(val) => {
-                      setSelectedPPG(val);
-                      setPpgInputValue('');
+                    onChange={(val) => setSelectedPPG(val)}
+                    onCreateOption={(inputValue) => {
+                      const newOption = { value: inputValue, label: inputValue, descripcion: inputValue };
+                      setSelectedPPG(newOption);
                     }}
                     placeholder="Escribe (ej. Amarillo 900) o busca en inventario..."
                     className="text-base font-bold shadow-sm"
-                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    closeMenuOnSelect={true}
+                    blurInputOnSelect={true}
                     styles={{ 
                       control: (base) => ({ 
                         ...base, 
                         borderRadius: '0.75rem', 
                         borderColor: '#cbd5e1', 
                         padding: '6px',
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        minHeight: '48px'
                       }),
-                      menuPortal: base => ({ ...base, zIndex: 9999 }),
+                      menuPortal: base => ({ ...base, zIndex: 99999 }),
                       option: (base, state) => ({
                         ...base,
                         color: '#0f172a',
                         backgroundColor: state.isFocused ? '#e2e8f0' : '#ffffff',
                         cursor: 'pointer',
-                        padding: '12px 16px',
-                        fontSize: '16px'
+                        padding: '14px 16px',
+                        fontSize: '15px',
+                        minHeight: '44px',
+                        touchAction: 'manipulation'
                       }),
                       menu: (base) => ({
                         ...base,
                         borderRadius: '0.75rem',
                         overflow: 'hidden',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)'
                       })
                     }}
                     formatCreateLabel={(inputValue) => `Crear "${inputValue}" manualmente`}
@@ -687,7 +683,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                         }}
                         className="px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-sm font-bold uppercase tracking-wide hover:bg-blue-500/30 transition-colors"
                     >
-                        {colorEncontrado?.estado_aprobacion === 'borrador' ? 'DECLARAR PROCESO' : (colorEncontrado?.estado_aprobacion === 'pendiente_revision' ? 'VER ETP (REVISIÓN)' : 'VER ETP')}
+                        {colorEncontrado?.estado_aprobacion === 'aprobado_produccion' ? '📄 VER FICHA TÉCNICA OFICIAL' : (colorEncontrado?.estado_aprobacion === 'pendiente_revision' ? '⏳ AUDITAR / APROBAR ETP' : (colorEncontrado?.estado_aprobacion === 'rechazado' ? '⚠️ CORRECCIONES REQUERIDAS' : 'DECLARAR PROCESO'))}
                     </button>
                     <div className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-xl border border-slate-600">
                         <span className="text-sm font-bold text-slate-300 uppercase">Preparar:</span>
@@ -779,7 +775,11 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                              onClick={() => handleSelectFromCatalog(c)}
                              className="flex flex-col items-center bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-[var(--color-primary)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden"
                            >
-                             <div className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5" style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}></div>
+                             <div className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5 relative" style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}>
+                                <span className={`absolute top-1 right-1 text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${c.estado_aprobacion === 'aprobado_produccion' ? 'bg-emerald-600 text-white' : c.estado_aprobacion === 'pendiente_revision' ? 'bg-amber-500 text-white' : 'bg-slate-700 text-white'}`}>
+                                  {c.estado_aprobacion === 'aprobado_produccion' ? 'Aprobado' : c.estado_aprobacion === 'pendiente_revision' ? 'Revisión' : 'Borrador'}
+                                </span>
+                              </div>
                              <span className="font-black theme-text-main text-sm w-full text-center truncate">{c.codigo_objetivo}</span>
                            </button>
                          ))}
