@@ -154,11 +154,18 @@ body { background-color: var(--color-base); color: var(--color-text-main); }
     background: white;
     color: black;
   }
-  @page { size: A4 portrait; margin: 1cm; }
+  @page { size: A4 portrait; margin: 8mm; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .avoid-break { page-break-inside: avoid; }
   h1, h2, h3 { page-break-after: avoid; }
   .print\:hidden { display: none !important; }
+  .print\:block { display: block !important; }
+  .print\:inline-block { display: inline-block !important; }
+  .print\:flex { display: flex !important; }
+  .print\:h-auto { height: auto !important; }
+  .print\:overflow-visible { overflow: visible !important; }
+  .print\:whitespace-normal { white-space: normal !important; }
+  .print\:break-words { overflow-wrap: break-word !important; word-break: break-word !important; }
 }
 
 /* Custom Animations */

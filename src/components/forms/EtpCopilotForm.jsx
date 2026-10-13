@@ -23,6 +23,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   const [estadoAprobacion, setEstadoAprobacion] = useState(initialData?.estado_aprobacion || 'borrador');
   const [isLocked, setIsLocked] = useState(initialData?.estado_aprobacion === 'aprobado_produccion');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Estados para Modal PIN y Lightbox
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -193,19 +194,32 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
 
     setIsSubmitting(true);
+    setIsGeneratingPDF(true);
+
     try {
+      // Breve pausa para que React re-renderice etiquetas expandidas <p>/<div> y proporciones A4
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       const element = componentRef.current;
+      const originalScrollTop = element.scrollTop;
+      element.scrollTop = 0;
+
+      const targetWidth = 794; // Ancho estándar A4 en px (96 DPI)
       
-      // Captura nítida con fondo blanco forzado al 100% y soporte CORS para imágenes
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        windowWidth: 1200,
-        ignoreElements: (el) => el.classList.contains('print:hidden')
+        windowWidth: targetWidth,
+        width: targetWidth,
+        scrollX: 0,
+        scrollY: 0,
+        ignoreElements: (el) => el.classList.contains('print:hidden') || el.getAttribute('data-pdf-ignore') === 'true'
       });
+
+      element.scrollTop = originalScrollTop;
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const pdf = new jsPDF({
@@ -216,9 +230,26 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      const margin = 8;
+      const printableWidth = pageWidth - (margin * 2);
+      const imgHeight = (canvas.height * printableWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, Math.min(imgHeight, pageHeight));
+      if (imgHeight <= (pageHeight - (margin * 2))) {
+        pdf.addImage(imgData, 'JPEG', margin, margin, printableWidth, imgHeight);
+      } else {
+        let heightLeft = imgHeight;
+        let position = margin;
+
+        pdf.addImage(imgData, 'JPEG', margin, position, printableWidth, imgHeight);
+        heightLeft -= (pageHeight - (margin * 2));
+
+        while (heightLeft > 0) {
+          position = position - (pageHeight - (margin * 2));
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', margin, position, printableWidth, imgHeight);
+          heightLeft -= (pageHeight - (margin * 2));
+        }
+      }
       
       const fileName = `Ficha_ETP_${(colorRef || formData.nombreComercial || 'Color').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
       pdf.save(fileName);
@@ -226,6 +257,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       console.warn("Fallo en html2canvas, usando diálogo de impresión nativo:", err);
       window.print();
     } finally {
+      setIsGeneratingPDF(false);
       setIsSubmitting(false);
     }
   };
@@ -413,10 +445,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[750px] print:shadow-none print:border-none print:w-full print:block">
       
       {/* Contenedor Principal de la Ficha Técnica (A4 Printable) */}
-      <div ref={componentRef} style={{ backgroundColor: "#ffffff", color: "#0f172a" }} className="w-full flex flex-col bg-white text-slate-900 relative min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8">
+      <div ref={componentRef} style={{ backgroundColor: "#ffffff", color: "#0f172a", width: isGeneratingPDF ? '794px' : undefined, maxWidth: isGeneratingPDF ? '794px' : undefined, margin: isGeneratingPDF ? '0 auto' : undefined }} className={`w-full flex flex-col bg-white text-slate-900 relative transition-all ${isGeneratingPDF ? 'h-auto overflow-visible p-6 shadow-none' : 'min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8'}`}>
         
         {/* Cabecera Formal Institucional (Solo Visible en Impresión Física A4) */}
-        <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
+        <div className="${isGeneratingPDF ? 'block' : 'hidden print:block'} mb-4 border-b-2 border-slate-900 pb-3">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">CDI EXHIBICIONES S.A.S.</h1>
@@ -450,7 +482,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               <button 
                 type="button" 
                 onClick={onCancel}
-                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors print:hidden flex items-center gap-1.5 text-xs font-black shadow-sm"
+                className={`p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5 text-xs font-black shadow-sm ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
                 title="Volver a la pantalla anterior"
               >
                 <ArrowLeft size={16} />
@@ -482,7 +514,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   <button 
                     type="button" 
                     onClick={() => setIsPinModalOpen(true)} 
-                    className="bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-black px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 transition-colors print:hidden shadow-sm"
+                    className={`bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-black px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 transition-colors shadow-sm ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
                   >
                     <Lock size={12}/> Desbloquear (Requiere Clave)
                   </button>
@@ -491,7 +523,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                     <button 
                       type="button" 
                       onClick={() => setIsLocked(true)} 
-                      className="bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-300 flex items-center gap-1 transition-colors print:hidden"
+                      className={`bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-300 flex items-center gap-1 transition-colors ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
                     >
                       <Unlock size={12}/> Bloquear Ficha
                     </button>
@@ -502,22 +534,33 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                 <button 
                   type="button" 
                   onClick={handlePrintPDF} 
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors print:hidden"
+                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
                   title="Generar Ficha Técnica para Archivo Físico"
                 >
                   <Printer size={13} /> Generar PDF / Imprimir Ficha
                 </button>
               </div>
 
-              <input 
-                type="text" 
-                disabled={isLocked}
-                name="nombreComercial" 
-                value={formData.nombreComercial} 
-                onChange={handleChange} 
-                placeholder="Nombre Comercial / Código..." 
-                className={`text-xl font-black bg-transparent outline-none w-full text-slate-900 transition-colors uppercase ${isLocked ? 'cursor-default' : 'border-b border-transparent hover:border-slate-300 focus:border-blue-500'}`}
-              />
+              {isGeneratingPDF ? (
+                <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight py-1">
+                  {formData.nombreComercial || colorRef || 'SIN NOMBRE'}
+                </h1>
+              ) : (
+                <>
+                  <h1 className="hidden print:block text-xl font-black text-slate-900 uppercase tracking-tight py-1">
+                    {formData.nombreComercial || colorRef || 'SIN NOMBRE'}
+                  </h1>
+                  <input 
+                    type="text" 
+                    disabled={isLocked}
+                    name="nombreComercial" 
+                    value={formData.nombreComercial} 
+                    onChange={handleChange} 
+                    placeholder="Nombre Comercial / Código..." 
+                    className={`text-xl font-black bg-transparent outline-none w-full text-slate-900 transition-colors uppercase print:hidden ${isLocked ? 'cursor-default' : 'border-b border-transparent hover:border-slate-300 focus:border-blue-500'}`}
+                  />
+                </>
+              )}
             </div>
           </div>
           
@@ -538,7 +581,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   </div>
                   {!isLocked && (
                     <label 
-                      className="absolute bottom-0 right-0 p-1 bg-slate-900/90 rounded-tl cursor-pointer text-blue-300 hover:text-white" 
+                      className={`absolute bottom-0 right-0 p-1 bg-slate-900/90 rounded-tl cursor-pointer text-blue-300 hover:text-white ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`} 
                       title="Cambiar Foto" 
                       onClick={e => e.stopPropagation()}
                     >
@@ -559,16 +602,23 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               <span className="block text-[10px] text-slate-300 uppercase font-bold tracking-wider mb-1">Resultado Colorimetría</span>
               <div className="bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 shadow-inner flex items-center gap-2 w-full">
                 <span className="text-xs text-blue-300 font-bold whitespace-nowrap">ΔE =</span>
-                <input 
-                  type="text" 
-                  disabled={isLocked}
-                  name="deltaE" 
-                  value={formData.deltaE} 
-                  onChange={handleChange} 
-                  placeholder="Ej: 0.8" 
-                  className={`text-sm font-black text-white bg-slate-900/70 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-slate-600 ${isLocked ? 'cursor-default' : 'focus:border-emerald-400'}`} 
-                  title="Medición Real Delta E"
-                />
+                {isGeneratingPDF ? (
+                  <span className="text-sm font-black text-white px-2 py-1">{formData.deltaE}</span>
+                ) : (
+                  <>
+                    <span className="hidden print:inline-block text-sm font-black text-white px-2 py-1">{formData.deltaE}</span>
+                    <input 
+                      type="text" 
+                      disabled={isLocked}
+                      name="deltaE" 
+                      value={formData.deltaE} 
+                      onChange={handleChange} 
+                      placeholder="Ej: 0.8" 
+                      className={`text-sm font-black text-white bg-slate-900/70 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-slate-600 print:hidden ${isLocked ? 'cursor-default' : 'focus:border-emerald-400'}`} 
+                      title="Medición Real Delta E"
+                    />
+                  </>
+                )}
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse ml-1"></span>
               </div>
             </div>
@@ -576,61 +626,89 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         </header>
 
         {/* Tarea 2: Franja de Identificación Técnica del Color (Ancho Completo w-full) */}
-        <div className="bg-white border-b border-slate-200 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 print:border-none print:px-0">
+        <div className={`bg-white border-b border-slate-200 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 ${isGeneratingPDF ? 'border-b-2 border-slate-100 px-0 py-3' : 'print:border-none print:px-0'}`}>
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sistema / Catálogo</label>
-            <select 
-              disabled={isLocked}
-              value={colorSystem} 
-              onChange={(e) => setColorSystem(e.target.value)} 
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-            >
-              <option value="RAL">RAL</option>
-              <option value="PANTONE">PANTONE</option>
-              <option value="NCS">NCS</option>
-              <option value="Pintuco">Pintuco</option>
-              <option value="Sherwin Williams">Sherwin Williams</option>
-              <option value="Benjamin Moore">Benjamin Moore</option>
-              <option value="Otros">Otros</option>
-            </select>
+            {isGeneratingPDF ? (
+              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{colorSystem}</div>
+            ) : (
+              <>
+                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{colorSystem}</div>
+                <select 
+                  disabled={isLocked}
+                  value={colorSystem} 
+                  onChange={(e) => setColorSystem(e.target.value)} 
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+                >
+                  <option value="RAL">RAL</option>
+                  <option value="PANTONE">PANTONE</option>
+                  <option value="NCS">NCS</option>
+                  <option value="Pintuco">Pintuco</option>
+                  <option value="Sherwin Williams">Sherwin Williams</option>
+                  <option value="Benjamin Moore">Benjamin Moore</option>
+                  <option value="Otros">Otros</option>
+                </select>
+              </>
+            )}
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Referencia Exacta / Código</label>
-            <input 
-              type="text" 
-              disabled={isLocked}
-              value={colorRef} 
-              onChange={(e) => setColorRef(e.target.value)} 
-              placeholder="Ej. 7005 C, 9010..." 
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold uppercase ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-            />
+            {isGeneratingPDF ? (
+              <div className="text-xs font-black text-slate-900 py-1.5 px-1 uppercase">{colorRef || 'N/A'}</div>
+            ) : (
+              <>
+                <div className="hidden print:block text-xs font-black text-slate-900 py-1 uppercase">{colorRef || 'N/A'}</div>
+                <input 
+                  type="text" 
+                  disabled={isLocked}
+                  value={colorRef} 
+                  onChange={(e) => setColorRef(e.target.value)} 
+                  placeholder="Ej. 7005 C, 9010..." 
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold uppercase print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+                />
+              </>
+            )}
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Acabado Final (Brillo %)</label>
-            <select 
-              disabled={isLocked}
-              value={glossLevel} 
-              onChange={(e) => setGlossLevel(e.target.value)} 
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-            >
-              {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(val => (
-                <option key={val} value={val}>{val}% {val <= 10 ? '(Mate)' : val === 40 ? '(Satinado)' : val >= 90 ? '(Alto Brillo)' : ''}</option>
-              ))}
-            </select>
+            {isGeneratingPDF ? (
+              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{glossLevel}% {glossLevel <= 10 ? '(Mate)' : String(glossLevel) === '40' ? '(Satinado)' : glossLevel >= 90 ? '(Alto Brillo)' : ''}</div>
+            ) : (
+              <>
+                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{glossLevel}% {glossLevel <= 10 ? '(Mate)' : String(glossLevel) === '40' ? '(Satinado)' : glossLevel >= 90 ? '(Alto Brillo)' : ''}</div>
+                <select 
+                  disabled={isLocked}
+                  value={glossLevel} 
+                  onChange={(e) => setGlossLevel(e.target.value)} 
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+                >
+                  {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(val => (
+                    <option key={val} value={val}>{val}% {val <= 10 ? '(Mate)' : val === 40 ? '(Satinado)' : val >= 90 ? '(Alto Brillo)' : ''}</option>
+                  ))}
+                </select>
+              </>
+            )}
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cliente / Proyecto</label>
-            <input 
-              type="text" 
-              disabled={isLocked}
-              value={cliente} 
-              onChange={(e) => setCliente(e.target.value)} 
-              placeholder="Cliente o Proyecto..." 
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-            />
+            {isGeneratingPDF ? (
+              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{cliente || 'Estándar CDI'}</div>
+            ) : (
+              <>
+                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{cliente || 'Estándar CDI'}</div>
+                <input 
+                  type="text" 
+                  disabled={isLocked}
+                  value={cliente} 
+                  onChange={(e) => setCliente(e.target.value)} 
+                  placeholder="Cliente o Proyecto..." 
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -638,32 +716,43 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         <form onSubmit={e => e.preventDefault()} className="flex-grow flex flex-col">
           
           {/* Fondo Obligatorio */}
-          <div className="px-6 pt-6">
-            <div className={`p-5 rounded-2xl shadow-sm border-l-4 transition-all duration-500 flex items-start gap-4 ${formData.fondoRequired ? 'bg-amber-50/80 border-amber-500' : 'bg-slate-100 border-slate-300'}`}>
-              <div className="mt-1">
-                <AlertTriangle className={`text-2xl ${formData.fondoRequired ? 'text-amber-500' : 'text-slate-400'}`} />
+          <div className={`${isGeneratingPDF ? 'px-0 pt-3' : 'px-6 pt-6'}`}>
+            <div className={`p-4 rounded-2xl shadow-sm border-l-4 transition-all duration-500 flex items-start gap-3 h-auto print:h-auto overflow-visible print:overflow-visible print:whitespace-normal print:break-words ${formData.fondoRequired ? 'bg-amber-50/80 border-amber-500' : 'bg-slate-100 border-slate-300'}`}>
+              <div className="mt-1 flex-shrink-0">
+                <AlertTriangle className={`text-xl ${formData.fondoRequired ? 'text-amber-500' : 'text-slate-400'}`} />
               </div>
-              <div className="flex-grow">
-                <h3 className={`font-bold text-sm tracking-wide ${formData.fondoRequired ? 'text-amber-900' : 'text-slate-500'}`}>FONDO OBLIGATORIO PARA ESTE COLOR</h3>
-                <p className={`text-xs mt-1 mb-3 ${formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'}`}>Para lograr el tono exacto, este color debe aplicarse sobre:</p>
-                <div className="relative">
-                  <Layers size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                  <input 
-                    type="text" 
-                    disabled={isLocked}
-                    name="fondoRequired" 
-                    value={formData.fondoRequired} 
-                    onChange={handleChange} 
-                    placeholder="Declarar fondo requerido..." 
-                    className={`w-full pl-9 pr-3 py-2 rounded-xl shadow-sm border text-sm font-bold outline-none transition-colors ${isLocked ? 'bg-white/80 border-transparent text-slate-900 cursor-default' : (formData.fondoRequired ? 'bg-white border-amber-300 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-500')}`}
-                  />
-                </div>
+              <div className="flex-grow min-w-0">
+                <h3 className={`font-bold text-xs uppercase tracking-wide ${formData.fondoRequired ? 'text-amber-900' : 'text-slate-500'}`}>FONDO OBLIGATORIO PARA ESTE COLOR</h3>
+                <p className={`text-[11px] mt-0.5 mb-2 ${formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'}`}>Para lograr el tono exacto, este color debe aplicarse sobre:</p>
+                {isGeneratingPDF ? (
+                  <div className="w-full py-1.5 px-3 bg-white rounded-lg border border-amber-200 text-xs font-bold text-slate-900 whitespace-normal break-words leading-relaxed">
+                    {formData.fondoRequired || 'Sustrato estándar'}
+                  </div>
+                ) : (
+                  <>
+                    <div className="hidden print:block w-full py-1 px-2 bg-white rounded-lg border border-amber-200 text-xs font-bold text-slate-900 whitespace-normal break-words leading-relaxed">
+                      {formData.fondoRequired || 'Sustrato estándar'}
+                    </div>
+                    <div className="relative print:hidden">
+                      <Layers size={16} className="absolute left-3 top-2.5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        disabled={isLocked}
+                        name="fondoRequired" 
+                        value={formData.fondoRequired} 
+                        onChange={handleChange} 
+                        placeholder="Declarar fondo requerido..." 
+                        className={`w-full pl-9 pr-3 py-2 rounded-xl shadow-sm border text-sm font-bold outline-none transition-colors ${isLocked ? 'bg-white/80 border-transparent text-slate-900 cursor-default' : (formData.fondoRequired ? 'bg-white border-amber-300 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-500')}`}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           <fieldset disabled={isLocked} className="group-disabled">
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${isGeneratingPDF ? 'p-0 mt-3 gap-4' : 'p-6'}`}>
               
               {/* Sección 1: Formulación del Entonador */}
               <div className="lg:col-span-5 space-y-6">
@@ -701,30 +790,44 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Catalizador</label>
-                      <select 
-                        disabled={isLocked}
-                        name="catalizador" 
-                        value={formData.catalizador} 
-                        onChange={handleChange} 
-                        className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
-                      >
-                        {catalystOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
-                      </select>
+                      {isGeneratingPDF ? (
+                        <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.catalizador}</div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.catalizador}</div>
+                          <select 
+                            disabled={isLocked}
+                            name="catalizador" 
+                            value={formData.catalizador} 
+                            onChange={handleChange} 
+                            className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none print:hidden ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
+                          >
+                            {catalystOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
+                          </select>
+                        </>
+                      )}
                     </div>
 
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Disolvente (Thinner)</label>
-                      <select 
-                        disabled={isLocked}
-                        name="disolvente" 
-                        value={formData.disolvente} 
-                        onChange={handleChange} 
-                        className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
-                      >
-                        {solventOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
-                      </select>
+                      {isGeneratingPDF ? (
+                        <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.disolvente}</div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.disolvente}</div>
+                          <select 
+                            disabled={isLocked}
+                            name="disolvente" 
+                            value={formData.disolvente} 
+                            onChange={handleChange} 
+                            className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none print:hidden ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
+                          >
+                            {solventOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
+                          </select>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -734,25 +837,46 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               <div className="lg:col-span-7 space-y-8">
                 <div>
                   <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><SprayCan size={16} className="text-blue-600"/> 2. Parámetros de Aplicación</h2>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
-                      <Droplet className="text-blue-500 mx-auto mb-2" size={24} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Viscosidad</span>
-                      <input type="text" disabled={isLocked} name="viscosidad" value={formData.viscosidad} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent"/>
+                  <div className="grid grid-cols-3 gap-3 h-auto print:h-auto overflow-visible print:overflow-visible">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                      <Droplet className="text-blue-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Viscosidad</span>
+                      {isGeneratingPDF ? (
+                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.viscosidad}</div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.viscosidad}</div>
+                          <input type="text" disabled={isLocked} name="viscosidad" value={formData.viscosidad} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent print:hidden"/>
+                        </>
+                      )}
                     </div>
-                    <div className="bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
-                      <Gauge className="text-slate-600 mx-auto mb-2" size={24} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Presión</span>
-                      <input type="text" disabled={isLocked} name="presion" value={formData.presion} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent"/>
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                      <Gauge className="text-slate-600 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Presión</span>
+                      {isGeneratingPDF ? (
+                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.presion}</div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.presion}</div>
+                          <input type="text" disabled={isLocked} name="presion" value={formData.presion} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent print:hidden"/>
+                        </>
+                      )}
                     </div>
-                    <div className="bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
-                      <Crosshair className="text-emerald-500 mx-auto mb-2" size={24} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Boquilla & Manos</span>
-                      <div className="flex items-center justify-center gap-1">
-                        <input type="text" disabled={isLocked} name="boquilla" value={formData.boquilla} onChange={handleChange} className="w-14 text-right font-bold text-slate-800 text-sm outline-none bg-transparent"/>
-                        <span className="text-slate-300">|</span>
-                        <input type="text" disabled={isLocked} name="manos" value={formData.manos} onChange={handleChange} className="w-full text-left font-bold text-slate-800 text-[11px] outline-none bg-transparent"/>
-                      </div>
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl text-center shadow-sm h-auto print:h-auto overflow-visible print:overflow-visible">
+                      <Crosshair className="text-emerald-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Boquilla & Manos</span>
+                      {isGeneratingPDF ? (
+                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.boquilla} | {formData.manos}</div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.boquilla} | {formData.manos}</div>
+                          <div className="flex items-center justify-center gap-1 print:hidden">
+                            <input type="text" disabled={isLocked} name="boquilla" value={formData.boquilla} onChange={handleChange} className="w-14 text-right font-bold text-slate-800 text-sm outline-none bg-transparent"/>
+                            <span className="text-slate-300">|</span>
+                            <input type="text" disabled={isLocked} name="manos" value={formData.manos} onChange={handleChange} className="w-full text-left font-bold text-slate-800 text-[11px] outline-none bg-transparent"/>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -775,7 +899,18 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoPreparacion" value={formData.textoPreparacion} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      {isGeneratingPDF ? (
+                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                          {formData.textoPreparacion}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                            {formData.textoPreparacion}
+                          </div>
+                          <textarea disabled={isLocked} name="textoPreparacion" value={formData.textoPreparacion} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                        </>
+                      )}
                     </div>
                     
                     <div className={`relative pl-6 p-2 rounded-2xl border -ml-2 ml-4 ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-100' : 'border-transparent'}`}>
@@ -792,7 +927,18 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoFondo" value={formData.textoFondo} onChange={handleChange} rows="3" className={`w-full text-xs p-2 rounded-xl resize-none outline-none font-medium ${isLocked ? 'bg-slate-50/80 border-transparent text-slate-900 cursor-default' : 'bg-white border border-slate-200 text-slate-800'}`}></textarea>
+                      {isGeneratingPDF ? (
+                        <div className="w-full text-xs text-slate-900 p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
+                          {formData.textoFondo}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block w-full text-xs text-slate-900 p-2 rounded-xl bg-blue-50/70 border border-blue-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
+                            {formData.textoFondo}
+                          </div>
+                          <textarea disabled={isLocked} name="textoFondo" value={formData.textoFondo} onChange={handleChange} rows="3" className={`w-full text-xs p-2 rounded-xl resize-none outline-none font-medium print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent text-slate-900 cursor-default' : 'bg-white border border-slate-200 text-slate-800'}`}></textarea>
+                        </>
+                      )}
                     </div>
 
                     <div className="relative pl-6">
@@ -809,7 +955,18 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoColor" value={formData.textoColor} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      {isGeneratingPDF ? (
+                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                          {formData.textoColor}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                            {formData.textoColor}
+                          </div>
+                          <textarea disabled={isLocked} name="textoColor" value={formData.textoColor} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                        </>
+                      )}
                     </div>
                     
                     <div className="relative pl-6">
@@ -826,7 +983,18 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoAcabado" value={formData.textoAcabado} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      {isGeneratingPDF ? (
+                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                          {formData.textoAcabado}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
+                            {formData.textoAcabado}
+                          </div>
+                          <textarea disabled={isLocked} name="textoAcabado" value={formData.textoAcabado} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                        </>
+                      )}
                     </div>
 
                   </div>
@@ -836,7 +1004,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           </fieldset>
 
           {/* Pie de Página con Botones de Acción */}
-          <div className="bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 print:hidden shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)]">
+          <div className={`bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
             
             {/* Casilla de Verificación de Procedimiento */}
             <label className="flex items-center gap-3 cursor-pointer group">
@@ -909,6 +1077,20 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                 </button>
               )}
 
+            </div>
+          </div>
+
+          {/* Pie de Validez y Firma Oficial (Visible en PDF e Impresión) */}
+          <div className={`${isGeneratingPDF ? 'block' : 'hidden print:block'} mt-6 pt-4 border-t border-slate-300 text-[10px] text-slate-500 px-6 pb-4`}>
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="font-bold text-slate-700 uppercase">CDI Exhibiciones S.A.S. - Control de Calidad y Procesos</p>
+                <p>Este documento es la especificación técnica oficial para la producción en planta.</p>
+              </div>
+              <div className="text-right">
+                <div className="w-48 border-b border-slate-400 mb-1"></div>
+                <p className="font-bold text-slate-800 uppercase">Firma / Aprobación Supervisor</p>
+              </div>
             </div>
           </div>
         </form>
