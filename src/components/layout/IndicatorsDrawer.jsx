@@ -64,14 +64,14 @@ export default function IndicatorsDrawer({
       {/* Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[120] transition-opacity animate-in fade-in duration-200"
           onClick={onClose}
         />
       )}
 
       {/* Drawer Panel */}
       <aside 
-        className={`fixed top-0 left-0 h-full w-80 md:w-96 bg-[var(--color-surface)] z-50 shadow-2xl border-r border-[var(--color-border)] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed top-0 left-0 h-full w-80 md:w-96 bg-[var(--color-surface)] z-[120] shadow-2xl border-r border-[var(--color-border)] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {/* Cabecera del Drawer */}
         <div className="p-4 md:p-5 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-base)]">

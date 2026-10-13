@@ -1,16 +1,71 @@
 import { getDaysLeft } from '../utils/helpers';
+import { AREAS_PLANTA } from '../utils/constants';
+
+// Áreas oficiales fijas de planta (desacoplando "PROGRAMACIÓN Y DISEÑO" en tarjetas independientes)
+export const OFFICIAL_PLANNER_AREAS = [
+    "Diseño",
+    "Programación CNC",
+    ...AREAS_PLANTA.filter(a => a !== 'Despachos')
+];
+
+/**
+ * Normaliza y desacopla cualquier área heredada como "PROGRAMACIÓN Y DISEÑO"
+ * garantizando que solo existan tarjetas oficiales e independientes.
+ */
+export const normalizePlannerArea = (rawArea) => {
+    if (!rawArea) return 'Por Asignar';
+    const clean = String(rawArea).trim();
+    const upper = clean.toUpperCase();
+
+    // Desacoplar "PROGRAMACIÓN Y DISEÑO" unificado
+    if (upper.includes('PROGRAMACIÓN Y DISEÑO') || upper.includes('PROGRAMACION Y DISENO') ||
+        upper.includes('DISEÑO Y PROGRAMACIÓN') || upper.includes('DISENO Y PROGRAMACION')) {
+        return 'Diseño';
+    }
+    if (upper === 'DISEÑO' || upper === 'DISENO') {
+        return 'Diseño';
+    }
+    if (upper === 'PROGRAMACIÓN CNC' || upper === 'PROGRAMACION CNC' || 
+        upper === 'PROGRAMACIÓN' || upper === 'PROGRAMACION') {
+        return 'Programación CNC';
+    }
+
+    const match = OFFICIAL_PLANNER_AREAS.find(a => a.toUpperCase() === upper);
+    if (match) return match;
+
+    return clean;
+};
 
 export const calculatePlantMatrix = (orders) => {
-    // 1. Filter out already dispatched orders
-    const activeOrders = orders.filter(o => o && o.estadoInterno !== 'DESPACHADO' && o.isTerminado !== true);
+    // 1. Filtrado estricto en tiempo real: excluir pedidos despachados, inactivos, terminados y clones convergidos
+    const activeOrders = (orders || []).filter(o => {
+        if (!o || !o.id) return false;
+
+        const estadoInt = String(o.estadoInterno || '').trim().toUpperCase();
+        const estado = String(o.estado || '').trim().toUpperCase();
+        const areaActual = String(o.areaActual || '').trim().toUpperCase();
+
+        // Excluir estrictamente si ya está despachado o entregado
+        if (estadoInt === 'DESPACHADO' || estadoInt === 'ENTREGADO' || estado === 'DESPACHADO' || estado === 'ENTREGADO') {
+            return false;
+        }
+
+        // Excluir si su área actual es Despachos o está marcado como terminado
+        if (areaActual === 'DESPACHOS' || o.isTerminado === true) {
+            return false;
+        }
+
+        // Excluir clones de bifurcaciones ya convergidas en áreas finales
+        if (o.master_id && ['ENSAMBLE', 'EMPAQUE', 'DESPACHOS'].includes(areaActual)) {
+            return false;
+        }
+
+        return true;
+    });
     
-    // 2. Identify all areas
-    const allAreas = new Set();
-    activeOrders.forEach(o => allAreas.add(o.areaActual || 'Por Asignar'));
-    
-    // 3. Initialize matrix
+    // 2. Inicializar matriz con las áreas oficiales fijas (garantizando tarjetas separadas: DISEÑO y PROGRAMACIÓN CNC)
     const matrix = {};
-    Array.from(allAreas).forEach(area => {
+    OFFICIAL_PLANNER_AREAS.forEach(area => {
         matrix[area] = {
             areaName: area,
             totalItems: 0,
@@ -21,9 +76,22 @@ export const calculatePlantMatrix = (orders) => {
         };
     });
 
-    // 4. Populate Matrix with Orders and Items
+    // 3. Poblar la matriz agrupando por área real normalizada
     activeOrders.forEach(order => {
-        const area = order.areaActual || 'Por Asignar';
+        const area = normalizePlannerArea(order.areaActual);
+        
+        // Si hay un área no estándar fuera de las oficiales pero válida y activa, inicializarla
+        if (!matrix[area]) {
+            matrix[area] = {
+                areaName: area,
+                totalItems: 0,
+                totalPedidos: 0,
+                pedidosVencidos: 0,
+                semaforoGeneral: 'green',
+                pedidos: {}
+            };
+        }
+        
         const pNum = order.pedidoNum || 'SIN_PEDIDO';
         
         if (!matrix[area].pedidos[pNum]) {
@@ -131,7 +199,17 @@ export const calculatePlantMatrix = (orders) => {
         });
     });
 
-    // 6. Sort areas alphabetically
-    const sortedAreas = Object.values(matrix).sort((a, b) => a.areaName.localeCompare(b.areaName));
+    // 6. Ordenar áreas según el flujo oficial de planta (Diseño y Programación CNC de primeros)
+    const areaOrderMap = {};
+    OFFICIAL_PLANNER_AREAS.forEach((name, idx) => {
+        areaOrderMap[name] = idx;
+    });
+
+    const sortedAreas = Object.values(matrix).sort((a, b) => {
+        const orderA = areaOrderMap[a.areaName] !== undefined ? areaOrderMap[a.areaName] : 999;
+        const orderB = areaOrderMap[b.areaName] !== undefined ? areaOrderMap[b.areaName] : 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.areaName.localeCompare(b.areaName);
+    });
     return sortedAreas;
 };

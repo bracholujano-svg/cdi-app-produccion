@@ -766,7 +766,15 @@ const {
         />
       )}
 
-      {showPlantPlannerModal && <PlantPlannerModal orders={orders} setShowPlantPlannerModal={setShowPlantPlannerModal} />}
+      {showPlantPlannerModal && (
+        <PlantPlannerModal 
+          orders={orders} 
+          setShowPlantPlannerModal={setShowPlantPlannerModal} 
+          addItemToCoordList={addItemToCoordList}
+          saveBatchCoordination={saveBatchCoordination}
+          deleteAlert={deleteAlert}
+        />
+      )}
 
       {showEtpSupervisorModal && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
