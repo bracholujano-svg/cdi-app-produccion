@@ -8,9 +8,9 @@ const _checkDispatchedAlert = (targetOrder, newOrdersList, coordinationAlerts) =
     let alertsToSync = [];
     let updatedAlerts = null;
 
-    if (targetOrder.estadoInterno === 'DESPACHADO' || targetOrder.areaActual === 'Despachos') {
+    if (targetOrder.estadoInterno === 'DESPACHADO') {
         const sameOrderProducts = newOrdersList.filter(o => o?.pedidoNum === targetOrder.pedidoNum);
-        const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO' || p?.areaActual === 'Despachos');
+        const allDispatched = sameOrderProducts.every(p => p?.estadoInterno === 'DESPACHADO');
         
         if (allDispatched) {
             const alertObj = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (targetOrder.pedidoNum || "").toUpperCase());
@@ -101,18 +101,14 @@ export const executeTransfer = (ids, {
                     id: cloneId,
                     master_id: order.id,
                     cantidad: transferQty,
-                    areaActual: area, 
-                    estadoInterno: 'DESPACHADO', 
-                    fechaEntregaPrometida: date,
-                    fechaDespacho: new Date().toISOString(),
+                    areaActual: 'Despachos', 
+                    estadoInterno: 'EN ESPERA', 
+                    fechaEntregaPrometida: date || order.fechaEntregaPrometida,
                     asignado_a: personalAsignado,
-                    isTerminado: true, 
-                    datos_logistica: logisticaData || order.datos_logistica || null,
-                    historial: [...(order.historial || []), {
-                        ...newHistoryEntry,
-                        accion: `Despacho Parcial de Planta (Salida: ${transferQty} unds)`,
-                        logistica: logisticaData || null
-                    }] 
+                    isTerminado: false, 
+                    datos_logistica: null,
+                    transferenciaPendiente: null,
+                    historial: [...(order.historial || []), newHistoryEntry] 
                 }
                 : { 
                     ...order,
@@ -171,18 +167,14 @@ export const executeTransfer = (ids, {
                 targetOrder = isDespacho 
                     ? { 
                         ...order, 
-                        areaActual: area, 
-                        estadoInterno: 'DESPACHADO', 
-                        fechaEntregaPrometida: date,
-                        fechaDespacho: new Date().toISOString(),
+                        areaActual: 'Despachos', 
+                        estadoInterno: 'EN ESPERA', 
+                        fechaEntregaPrometida: date || order.fechaEntregaPrometida,
                         asignado_a: personalAsignado,
-                        isTerminado: true, 
-                        datos_logistica: logisticaData || order.datos_logistica || null,
-                        historial: [...(order.historial || []), {
-                            ...newHistoryEntry,
-                            accion: isPartial ? `Despacho Parcial de Planta (Salida)` : `Despacho Final de Planta (Salida)`,
-                            logistica: logisticaData || null
-                        }] 
+                        isTerminado: false, 
+                        datos_logistica: null,
+                        transferenciaPendiente: null,
+                        historial: [...(order.historial || []), newHistoryEntry] 
                     }
                     : { 
                         ...order, 
@@ -210,17 +202,16 @@ export const executeTransfer = (ids, {
                         ...order, 
                         id: cloneId,
                         master_id: order.id,
-                        areaActual: area, 
-                        estadoInterno: 'DESPACHADO', 
-                        fechaEntregaPrometida: date,
-                        fechaDespacho: new Date().toISOString(),
+                        areaActual: 'Despachos', 
+                        estadoInterno: 'EN ESPERA', 
+                        fechaEntregaPrometida: date || order.fechaEntregaPrometida,
                         asignado_a: personalAsignado,
-                        isTerminado: true, 
-                        datos_logistica: logisticaData || order.datos_logistica || null,
+                        isTerminado: false, 
+                        datos_logistica: null,
+                        transferenciaPendiente: null,
                         historial: [...(order.historial || []), { 
                             ...newHistoryEntry, 
-                            accion: `Despacho de Planta hacia ${area}${asignadoText} (Salida)`,
-                            logistica: logisticaData || null
+                            accion: `Bifurcación hacia Despachos${asignadoText}` 
                         }] 
                     }
                     : { 
@@ -334,6 +325,77 @@ export const executeReception = (ids, {
                 updatedAlertsObj = updatedAlerts;
                 allAlertsToSync = [...allAlertsToSync, ...alertsToSync];
             }
+        }
+    });
+
+    return {
+        updatedOrders: newOrdersList,
+        updatedAlerts: updatedAlertsObj,
+        ordersToSync,
+        alertsToSync: allAlertsToSync
+    };
+};
+
+/**
+ * Ejecución del Despacho Logístico Final (Salida de Planta).
+ * Este es el ÚNICO método que actualiza el estado terminal 'DESPACHADO',
+ * registra los datos de transporte y chofer, y marca el ítem como terminado.
+ */
+export const executeDispatch = (ids, {
+    orders,
+    coordinationAlerts,
+    supervisorName,
+    date,
+    logisticaData,
+    nota,
+    foto
+}) => {
+    if (!ids || ids.length === 0) {
+        return { updatedOrders: orders, updatedAlerts: null, ordersToSync: [], alertsToSync: [] };
+    }
+
+    let newOrdersList = [...orders];
+    const ordersToSync = [];
+    let currentAlerts = [...coordinationAlerts];
+    let allAlertsToSync = [];
+    let updatedAlertsObj = null;
+
+    ids.forEach((id) => {
+        const orderIndex = newOrdersList.findIndex(o => o?.id === id);
+        if (orderIndex === -1) return;
+
+        const order = newOrdersList[orderIndex];
+
+        const historyEntry = {
+            fecha: new Date().toISOString(),
+            supervisor: supervisorName || "S/N",
+            accion: "Despacho Final de Planta (Salida)",
+            entrega: supervisorName || "S/N",
+            recibe: logisticaData?.nombreChofer || "Transporte",
+            nota: nota || "",
+            foto: foto || null,
+            logistica: logisticaData || null
+        };
+
+        const dispatchedOrder = {
+            ...order,
+            areaActual: 'Despachos',
+            estadoInterno: 'DESPACHADO',
+            isTerminado: true,
+            fechaDespacho: date || new Date().toISOString(),
+            datos_logistica: logisticaData || null,
+            transferenciaPendiente: null,
+            historial: [...(order.historial || []), historyEntry]
+        };
+
+        newOrdersList[orderIndex] = dispatchedOrder;
+        ordersToSync.push(dispatchedOrder);
+
+        const { updatedAlerts, alertsToSync } = _checkDispatchedAlert(dispatchedOrder, newOrdersList, currentAlerts);
+        if (updatedAlerts) {
+            currentAlerts = updatedAlerts;
+            updatedAlertsObj = updatedAlerts;
+            allAlertsToSync = [...allAlertsToSync, ...alertsToSync];
         }
     });
 

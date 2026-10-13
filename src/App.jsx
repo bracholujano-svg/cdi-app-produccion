@@ -14,7 +14,7 @@ import { AppContextProvider, useAppContext } from './context/AppContext';
 
 import { useVoiceInput } from './hooks/useVoiceInput';
 import { useImageProcessor } from './hooks/useImageProcessor';
-import { executeTransfer, executeReception } from './services/OrderOperationsService';
+import { executeTransfer, executeReception, executeDispatch } from './services/OrderOperationsService';
 import { shareToWhatsApp } from './services/NotificationService';
 import { executeExcelSearch, fillFormWithResult as fillFormWithResultWrapper } from './services/ExternalSearchService';
 
@@ -40,6 +40,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import IndicatorsDrawer from './components/layout/IndicatorsDrawer';
 import QualityDashboardModal from './components/modals/QualityDashboardModal';
+import LogisticsDispatchModal from './components/modals/LogisticsDispatchModal';
 import LoginScreen from './components/auth/LoginScreen';
 import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDashboard';
 import DossierDashboard from './components/views/DossierDashboard';
@@ -74,6 +75,7 @@ const {
     showCoordViewModal, setShowCoordViewModal,
     showDashboardModal, setShowDashboardModal,
     showQualityModal, setShowQualityModal,
+    showDispatchModal, dispatchOrders, closeDispatchModal, openDispatchModal,
     showTVMonitor, setShowTVMonitor,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
@@ -424,6 +426,34 @@ const {
     }
   };
 
+
+  const handleFinalDispatch = async (ids, dispatchPayload) => {
+    try {
+      const { updatedOrders, updatedAlerts, ordersToSync, alertsToSync } = executeDispatch(ids, {
+        orders,
+        coordinationAlerts,
+        supervisorName: dispatchPayload.supervisor || supervisorProfile?.name || 'Desconocido',
+        date: dispatchPayload.date || new Date().toISOString(),
+        logisticaData: dispatchPayload.logisticaData,
+        nota: dispatchPayload.nota,
+        foto: dispatchPayload.foto
+      });
+
+      if (updatedOrders) setOrders(updatedOrders);
+      if (updatedAlerts) setCoordinationAlerts(updatedAlerts);
+
+      for (const o of (ordersToSync || [])) await syncOrderToSupabase(o);
+      for (const a of (alertsToSync || [])) await syncAlertToSupabase(a);
+
+      if (selectedOrder && ids.includes(selectedOrder.id)) {
+        setSelectedOrder(null);
+      }
+    } catch (err) {
+      console.error("Error al registrar despacho:", err);
+      alert('Error al registrar despacho: ' + err.message);
+    }
+  };
+
   const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial, partialQty, logisticaData = null) => {
     await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty, logisticaData);
     setShowBulkModal(false);
@@ -766,6 +796,19 @@ const {
                 </div>
             </div>
         </div>
+      )}
+
+      
+      {showDispatchModal && (
+        <LogisticsDispatchModal 
+          isOpen={showDispatchModal}
+          orders={dispatchOrders}
+          onClose={closeDispatchModal}
+          onConfirm={async (payload) => {
+            await handleFinalDispatch(payload.ids, payload);
+            closeDispatchModal();
+          }}
+        />
       )}
 
       {showQualityModal && (

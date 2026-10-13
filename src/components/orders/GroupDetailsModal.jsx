@@ -6,7 +6,7 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic, isListening, activeDictationTarget }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, areaFilter } = useAppContext();
+  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, areaFilter, openDispatchModal } = useAppContext();
   const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
@@ -89,9 +89,20 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
               </div>
               
               {selectedBulkOrders.length > 0 && (
-                  <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--color-primary)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-sm md:text-base font-black mr-3 shadow-lg shadow-[var(--color-primary)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
-                      <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
-                  </button>
+                  <>
+                    {selectedBulkOrders.some(o => o.areaActual === 'Despachos' && o.estadoInterno !== 'DESPACHADO' && !o.isTerminado) && (
+                      <button 
+                        type="button" 
+                        onClick={() => openDispatchModal(selectedBulkOrders.filter(o => o.areaActual === 'Despachos' && o.estadoInterno !== 'DESPACHADO'))} 
+                        className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-all text-sm md:text-base font-black mr-2 shadow-lg shadow-purple-600/30 flex items-center gap-2 border border-white/20 active:scale-95 cursor-pointer"
+                      >
+                        <Truck size={"1.2em"} /> DAR SALIDA ({selectedBulkOrders.filter(o => o.areaActual === 'Despachos' && o.estadoInterno !== 'DESPACHADO').length})
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--color-primary)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-sm md:text-base font-black mr-3 shadow-lg shadow-[var(--color-primary)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
+                        <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
+                    </button>
+                  </>
               )}
 
               <button type="button" onClick={() => { setSelectedGroupPedido(null); setShowDashboardModal(true); }} className="px-3 py-2 bg-[var(--color-primary)]/10 rounded-xl hover:bg-[var(--color-primary)]/20 transition-colors theme-text-main text-sm font-bold mr-2">⬅ Panel IA</button>
@@ -190,10 +201,28 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                           </div>
                       )}
                       {/* DIRECTIVA 4: ACTUALIZACIÓN DE ETIQUETAS VISUALES EN CARDS */}
-                      {p.estadoInterno === 'DESPACHADO' || (p.areaActual === 'Despachos' && (p.isTerminado || p.estadoInterno === 'DESPACHADO')) ? (
+                      {p.estadoInterno === 'DESPACHADO' || (p.areaActual === 'Despachos' && p.isTerminado) ? (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 font-black text-sm md:text-base uppercase w-fit shadow-sm">
                           <CheckCircle size="1.2em" className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <span>DESPACHADO</span>
+                        </div>
+                      ) : p.areaActual === 'Despachos' ? (
+                        <div className="flex flex-col gap-2 w-full mt-1">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/40 text-purple-800 dark:text-purple-300 font-black text-xs uppercase w-fit shadow-sm">
+                            <Clock size="1.1em" className="text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span>EN ESPERA EN DESPACHOS</span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDispatchModal(p);
+                            }}
+                            className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                            title="Registrar salida de planta para este producto"
+                          >
+                            <Truck size={15} /> Dar Salida
+                          </button>
                         </div>
                       ) : (
                         <p className="text-base lg:text-lg font-black theme-text-muted uppercase flex items-center gap-1 mt-0.5 truncate"><Clock size={"1.2em"} className="shrink-0"/> {p.activeAreas && p.activeAreas.length > 1 ? 'MÚLTIPLES ESTADOS' : (p.estadoInterno || 'EN ESPERA')}</p>

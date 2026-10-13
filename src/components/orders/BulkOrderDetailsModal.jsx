@@ -41,7 +41,8 @@ const BulkOrderDetailsModal = ({
     orders,
     setOrders,
     syncOrderToSupabase,
-    showBulkModal, setShowBulkModal
+    showBulkModal, setShowBulkModal,
+    openDispatchModal
   } = useAppContext();
 
   const [isTerminadoLocal, setIsTerminadoLocal] = useState(false);
@@ -435,108 +436,10 @@ const BulkOrderDetailsModal = ({
                             )}
                         </div>
                         
-                        {/* DIRECTIVA 2: FORMULARIO LOGÍSTICO CONDICIONAL SI SE SELECCIONA DESPACHOS */}
-                        {(tempTransferAreas || []).includes('Despachos') && (
-                          <div className="mb-3 p-4 rounded-2xl bg-purple-500/10 border-2 border-purple-500/40 space-y-3 animate-in fade-in duration-200">
-                            <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-black text-sm md:text-base uppercase">
-                              <Truck size={20} className="shrink-0" />
-                              <span>Datos de Logística y Despacho (Salida de Planta)</span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Tipo de Transporte *
-                                </label>
-                                <select 
-                                  value={datosLogistica.tipoTransporte}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, tipoTransporte: e.target.value }))}
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-black text-sm outline-none theme-text-primary"
-                                >
-                                  <option value="Propio">Propio</option>
-                                  <option value="Contratado por CDI">Contratado por CDI</option>
-                                  <option value="Cliente">Cliente</option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Empresa de Transporte
-                                </label>
-                                <input 
-                                  value={datosLogistica.empresaTransporte}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, empresaTransporte: e.target.value }))}
-                                  placeholder="Ej. Servientrega, Envia..."
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Nombre del Chofer *
-                                </label>
-                                <input 
-                                  value={datosLogistica.nombreChofer}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, nombreChofer: e.target.value }))}
-                                  placeholder="Nombre completo"
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Cédula / ID del Chofer
-                                </label>
-                                <input 
-                                  value={datosLogistica.cedulaChofer}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, cedulaChofer: e.target.value }))}
-                                  placeholder="Nº Identificación"
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Placa del Vehículo y Marca
-                                </label>
-                                <input 
-                                  value={datosLogistica.placaMarca}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, placaMarca: e.target.value }))}
-                                  placeholder="Ej. ABC-123 Chevrolet"
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Contenedor / Precinto de Seguridad
-                                </label>
-                                <input 
-                                  value={datosLogistica.precintoSeguridad}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, precintoSeguridad: e.target.value }))}
-                                  placeholder="Nº Precinto / Contenedor"
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-
-                              <div className="md:col-span-2">
-                                <label className="text-xs font-black uppercase theme-text-muted block mb-1">
-                                  Número de Guía / Remesa
-                                </label>
-                                <input 
-                                  value={datosLogistica.guiaRemesa}
-                                  onChange={e => setDatosLogistica(prev => ({ ...prev, guiaRemesa: e.target.value }))}
-                                  placeholder="Nº Guía de Despacho / Remesa"
-                                  className="w-full p-2.5 rounded-xl theme-bg-input border theme-border font-bold text-sm outline-none theme-text-primary"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        
                         
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPorBulk').value.trim().toUpperCase();
-                              const isDespacho = (tempTransferAreas || []).includes('Despachos');
                               if(en && tempTransferDate && tempTransferAreas.length > 0) {
                                 if (tempIsPartial && tempTransferAreas.length > 1) { alert("No se puede hacer bifurcación a múltiples áreas y entrega parcial al mismo tiempo. Seleccione solo un área destino."); return; }
                                 if (tempIsPartial && tempPartialQty && selectedBulkOrders.length === 1) {
@@ -553,15 +456,15 @@ const BulkOrderDetailsModal = ({
                                   null, 
                                   tempIsPartial, 
                                   tempIsPartial && tempPartialQty ? tempPartialQty : false,
-                                  isDespacho ? datosLogistica : null
+                                  null
                                 );
                                 setTempIsPartial(false);
                                 setTempPartialQty(0);
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className={`w-full py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 ${(tempTransferAreas || []).includes('Despachos') ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500 shadow-purple-500/30' : 'bg-[var(--color-primary)] text-[var(--color-surface)]'}`}>
-                          {(tempTransferAreas || []).includes('Despachos') ? '🚀 Confirmar Despacho y Salida de Planta' : 'Confirmar Entrega de Sección'}
+                          }} className="w-full py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 bg-[var(--color-primary)] text-[var(--color-surface)]">
+                          Confirmar Entrega de Sección
                         </button>
                             </>
                           );

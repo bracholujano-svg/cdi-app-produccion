@@ -84,6 +84,20 @@ export const AppContextProvider = ({ children }) => {
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showPlantPlannerModal, setShowPlantPlannerModal] = useState(false);
   const [showQualityModal, setShowQualityModal] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchOrders, setDispatchOrders] = useState([]);
+
+  const openDispatchModal = (ordersToDispatch) => {
+    if (!ordersToDispatch) return;
+    const list = Array.isArray(ordersToDispatch) ? ordersToDispatch : [ordersToDispatch];
+    setDispatchOrders(list);
+    setShowDispatchModal(true);
+  };
+
+  const closeDispatchModal = () => {
+    setShowDispatchModal(false);
+    setDispatchOrders([]);
+  };
   
   const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
@@ -249,7 +263,10 @@ export const AppContextProvider = ({ children }) => {
     repDateEnd, setRepDateEnd,
     repTimeEnd, setRepTimeEnd,
     repSupervisor, setRepSupervisor,
-    generatedReportData, setGeneratedReportData
+    generatedReportData, setGeneratedReportData,
+    showDispatchModal, setShowDispatchModal,
+    dispatchOrders, setDispatchOrders,
+    openDispatchModal, closeDispatchModal
   };
 
   return (
