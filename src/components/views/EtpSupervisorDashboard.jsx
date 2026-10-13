@@ -99,7 +99,10 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                                 <div key={color.id} onClick={() => setSelectedColor(color)} className="p-5 border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-900/10 rounded-2xl cursor-pointer hover:shadow-md transition-all">
                                     <h3 className="font-black text-lg theme-text-main">{color.codigo_objetivo}</h3>
                                     <p className="text-sm theme-text-muted">Sistema: {color.sistema_color}</p>
-                                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-3 font-bold bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-md inline-block">Requiere Auditoría Técnica</p>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <span className="text-xs text-orange-600 dark:text-orange-400 font-bold bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-md inline-block">Pendiente</span>
+                                        <span className="text-xs font-black text-blue-600 dark:text-blue-400">Revisar / Elaborar ETP &rarr;</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -114,7 +117,7 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
                         <div className="mb-6 flex justify-between items-center">
                             <div>
                                 <h2 className="text-2xl font-black theme-text-main uppercase">Auditar ETP: {selectedColor.codigo_objetivo}</h2>
-                                <p className="theme-text-muted">Revise los parámetros enviados por el formulador o ejecute el análisis IA para obtener sugerencias del fabricante.</p>
+                                <p className="theme-text-muted">Revise los parámetros técnicos enviados por el formulador y complete la hoja de ruta para producción.</p>
                             </div>
                         </div>
                         <EtpCopilotForm 

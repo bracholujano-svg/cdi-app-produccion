@@ -1,24 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, Clock, CheckCircle2, ChevronRight, Inbox, PaintBucket, 
-  Palette, Layers, SprayCan, CheckSquare, Brain, Wifi, Search, 
-  Save, AlertTriangle, Terminal, FlaskConical, Droplet, Gauge, 
+  Palette, Layers, SprayCan, CheckSquare, Search, 
+  Save, AlertTriangle, FlaskConical, Droplet, Gauge, 
   Crosshair, Ban, BookmarkPlus, AlertCircle, FileText, Check,
   Lock, Unlock, Printer, XCircle, Share2, Cloud, Download, MessageCircle, MoreVertical, X, Camera
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onCancel, isSupervisorView = false, initialData = {} }) {
+  // Identificación del Color
   const [colorSystem, setColorSystem] = useState(initialData?.sistema_color || 'RAL');
   const [cliente, setCliente] = useState(initialData?.procedimiento_preparacion?.cliente || initialData?.cliente || '');
   const [colorRef, setColorRef] = useState(initialData?.codigo_objetivo || '');
-  const [glossLevel, setGlossLevel] = useState('40');
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiDiagnosis, setAiDiagnosis] = useState('');
-  const [previousFormData, setPreviousFormData] = useState(null);
-  const [highlightFields, setHighlightFields] = useState(false);
+  const [glossLevel, setGlossLevel] = useState(initialData?.procedimiento_preparacion?.brillo || '40');
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isMobileCopilotOpen, setIsMobileCopilotOpen] = useState(false);
   
   // Estado de aprobación y bloqueo (Solo Lectura por defecto si ya está aprobado)
   const [estadoAprobacion, setEstadoAprobacion] = useState(initialData?.estado_aprobacion || 'borrador');
@@ -94,8 +90,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     nombreComercial: initialData?.codigo_objetivo || '',
     codigoInterno: '',
     deltaE: initialData?.tolerancia_delta_e || 'ΔE < 0.8',
-    fondoRequired: initialData?.sustrato_muestra || '',
-    requiereFondoBlancoPuro: false,
+    fondoRequired: initialData?.sustrato_muestra || 'Sustrato estándar de madera/MDF',
     catalizador: initialData?.catalizador_tipo || '50% (Ref: CAT-50)',
     disolvente: initialData?.disolvente_tipo || '10% - 15% (PU)',
     boquilla: '1.3 mm',
@@ -114,7 +109,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       }
       return fondoText;
     })(),
-    textoColor: typeof initialData?.procedimiento_preparacion?.color === 'string' ? initialData.procedimiento_preparacion.color : '',
+    textoColor: typeof initialData?.procedimiento_preparacion?.color === 'string' ? initialData.procedimiento_preparacion.color : 'Aplicar 2 manos cruzadas de entonador a presión estándar.',
     textoAcabado: typeof initialData?.procedimiento_preparacion?.acabado === 'string' ? initialData.procedimiento_preparacion.acabado : 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
   });
 
@@ -130,79 +125,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       ...prev,
       [category]: [...prev[category], newTemplate]
     }));
-  };
-
-  const handleAiAnalysis = () => {
-    if (isLocked) return;
-    if (!colorRef.trim()) {
-      alert('Por favor ingrese una referencia de color.');
-      return;
-    }
-
-    setIsLoading(true);
-    setAiDiagnosis('');
-    setHighlightFields(true);
-    setIsConfirmed(false);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      const rawInput = colorRef.trim().toUpperCase();
-      const input = rawInput.includes(colorSystem.toUpperCase()) || colorSystem === 'Otros' 
-          ? rawInput 
-          : `${colorSystem.toUpperCase()} ${rawInput}`;
-          
-      let diag = '';
-      let updates = { ...formData, codigoInterno: `PU-${input.replace(/\s+/g, '-').substring(0,10)}`, nombreComercial: input };
-
-      if (input.includes('RAL 1') || input.includes('RAL 2') || input.includes('RAL 3') || input.includes('PANTONE 1')) {
-        diag = `> Match: ${input}\n> Familia: Cálida (Pigmentos orgánicos)\n> ALERTA: Baja opacidad detectada.\n> Directriz PPG: Obligatorio aislar con PU Blanco puro para garantizar reflexión de luz (L*).`;
-        updates = {
-          ...updates,
-          fondoRequired: 'PPG Primer Poliuretano Blanco Alta Cubriente',
-          requiereFondoBlancoPuro: true,
-          manos: '3 Manos (Baja Opacidad)',
-          textoFondo: 'Aplicar 1 mano húmeda de Poliuretano Blanco Brillante. Dejar secar mínimo 4 horas. NO LIJAR antes de aplicar el color.',
-          textoColor: 'Aplicar 3 manos a presión de 28 PSI. Evitar sobrecarga en bordes.',
-          textoAcabado: parseInt(glossLevel) >= 90 ? `Acabado Poliuretano Alto Brillo (${glossLevel}%).` : `Aplicar 1 mano de Barniz Poliuretano (${glossLevel}% Brillo).`
-        };
-      } else if (input.includes('RAL 4') || input.includes('RAL 5') || input.includes('NCS S 8')) {
-        diag = `> Match: ${input}\n> L* estimado: < 35 (Profundo)\n> Directriz PPG: Requiere Primer Gris Oscuro. Usar blanco causará sobreconsumo de entonador.`;
-        updates = {
-          ...updates,
-          fondoRequired: 'PPG Primer Gris Oscuro o Negro',
-          requiereFondoBlancoPuro: false,
-          manos: '2 Manos Cruzadas',
-          textoFondo: 'Aplicar 1 mano de Primer Gris Oscuro. Saturar el fondo permite alcanzar el color con menos capas.',
-          textoColor: 'Aplicar 2 manos cruzadas a presión de 25-30 PSI. Cubrimiento rápido.',
-          textoAcabado: parseInt(glossLevel) >= 90 ? `Acabado Poliuretano Alto Brillo (${glossLevel}%).` : `Aplicar 1 mano de Barniz Poliuretano (${glossLevel}% Brillo).`
-        };
-      } else if (input.includes('VERDE') || input.includes('RAL 6') || input.includes('VIOLETA')) {
-        diag = `> Match: ${input} (Crítico)\n> ALERTA METAMERÍA: Riesgo de amarilleo sobre fondo blanco.\n> Directriz PPG: Estabilizar con Primer Gris Claro (RAL 7035).`;
-        updates = {
-          ...updates,
-          fondoRequired: 'PPG Primer Gris Claro (RAL 7035)',
-          requiereFondoBlancoPuro: false,
-          manos: '2 Manos Cruzadas',
-          textoFondo: 'Fondo crítico. Aplicar PPG Primer Gris Claro (RAL 7035). Prohibido usar base 100% blanca, alterará el reflejo bajo luz D65.',
-          textoColor: 'Aplicar 2 manos cruzadas a presión de 25-30 PSI.',
-          textoAcabado: parseInt(glossLevel) >= 90 ? `Acabado Poliuretano Alto Brillo (${glossLevel}%).` : `Aplicar 1 mano de Barniz Poliuretano (${glossLevel}% Brillo).`
-        };
-      } else {
-         diag = `> Match: ${input}\n> Comportamiento estándar detectado.\n> Directriz PPG: Compatible con preparación universal.`;
-         updates = {
-           ...updates,
-           fondoRequired: 'PPG Base Blanca o Gris Claro Universal',
-           requiereFondoBlancoPuro: false,
-           textoFondo: 'Preparación estándar. Aplicar Primer Universal Gris claro o Base blanca. Lijar suavemente.',
-           textoColor: 'Aplicar 2 manos cruzadas de entonador a presión estándar.',
-           textoAcabado: parseInt(glossLevel) >= 90 ? `Aplicar Barniz PU Alto Brillo (${glossLevel}%).` : `Sellar con Barniz PU (${glossLevel}% Brillo).`
-         };
-      }
-      
-      setAiDiagnosis(diag);
-      setFormData(updates);
-      setTimeout(() => setHighlightFields(false), 2000);
-    }, 1500);
   };
 
   const handleChange = (e) => {
@@ -232,7 +154,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         if (!error && data?.user) isAuthenticated = true;
       }
 
-      // Validar también si coincide con pin maestro o PIN administrativo
       if (!isAuthenticated && (pinInput.trim() === '1234' || pinInput.trim() === 'admin123' || pinInput.trim().length >= 4)) {
         isAuthenticated = true;
       }
@@ -404,7 +325,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  // Tarea 4: Opciones del Lightbox
+  // Lightbox Handlers
   const handleCompartir = async () => {
     setIsLightboxMenuOpen(false);
     if (navigator.share) {
@@ -446,112 +367,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   };
 
   return (
-    <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[800px] print:shadow-none print:border-none print:w-full print:block">
+    <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[750px] print:shadow-none print:border-none print:w-full print:block">
       
-      {/* Panel Lateral: IA Copilot (Oculto en Impresión) */}
-      <aside className="w-full lg:w-[320px] bg-slate-900 lg:border-r border-slate-800 flex flex-col relative flex-shrink-0 transition-all duration-300 print:hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-slate-900 to-slate-900 pointer-events-none"></div>
-        
-        {/* Mobile Header Toggle */}
-        <button 
-          type="button"
-          onClick={() => setIsMobileCopilotOpen(!isMobileCopilotOpen)}
-          className="lg:hidden w-full flex items-center justify-between p-4 bg-slate-800/80 text-white font-bold border-b border-slate-700"
-        >
-          <div className="flex items-center gap-2">
-            <Brain size={20} className="text-blue-400" /> IA Copilot Settings
-          </div>
-          <ChevronRight size={20} className={`transition-transform ${isMobileCopilotOpen ? 'rotate-90' : ''}`} />
-        </button>
-
-        <div className={`flex-col ${isMobileCopilotOpen ? 'flex' : 'hidden'} lg:flex h-auto lg:h-full overflow-y-auto z-10`}>
-          <div className="p-6 relative border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                <Brain size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">IA Copilot</h2>
-                <p className="text-xs text-slate-400">Motor Colorimetría ETP</p>
-              </div>
-            </div>
-            <div className="mt-4 bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex items-center gap-2">
-              <Wifi size={14} className="text-emerald-400 animate-pulse" />
-              <p className="text-[10px] text-slate-300">Conectado a DB Global PPG</p>
-            </div>
-          </div>
-
-          <div className="p-6 relative z-10 flex flex-col gap-4 flex-grow">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Catálogo / Sistema de Color</label>
-              <select 
-                disabled={isLocked}
-                value={colorSystem} 
-                onChange={(e) => setColorSystem(e.target.value)} 
-                className={`w-full px-3 py-2.5 rounded-md bg-slate-800 border border-slate-700 text-white outline-none text-sm font-medium ${isLocked ? 'opacity-70 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}`}
-              >
-                <option value="RAL">RAL</option>
-                <option value="PANTONE">PANTONE</option>
-                <option value="NCS">NCS</option>
-                <option value="Pintuco">Pintuco</option>
-                <option value="Sherwin Williams">Sherwin Williams</option>
-                <option value="Benjamin Moore">Benjamin Moore</option>
-                <option value="Otros">Otros</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Referencia Exacta del Color</label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  disabled={isLocked}
-                  value={colorRef} 
-                  onChange={(e) => setColorRef(e.target.value)} 
-                  placeholder="Ej. 1023, 185 C" 
-                  className={`w-full pl-3 pr-10 py-2.5 rounded-md bg-slate-800 border border-slate-700 text-white outline-none text-sm uppercase placeholder-slate-500 font-bold ${isLocked ? 'opacity-70 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}`}
-                />
-                <Search size={16} className="absolute right-3 top-3 text-slate-500" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Acabado Final (Brillo %)</label>
-              <select 
-                disabled={isLocked}
-                value={glossLevel} 
-                onChange={(e) => setGlossLevel(e.target.value)} 
-                className={`w-full px-3 py-2.5 rounded-md bg-slate-800 border border-slate-700 text-white outline-none text-sm font-medium ${isLocked ? 'opacity-70 cursor-not-allowed' : 'focus:ring-2 focus:ring-blue-500'}`}
-              >
-                {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(val => (
-                  <option key={val} value={val}>{val}% {val <= 10 ? '(Mate)' : val === 40 ? '(Satinado)' : val >= 90 ? '(Alto Brillo)' : ''}</option>
-                ))}
-              </select>
-            </div>
-
-            <button 
-              type="button"
-              onClick={handleAiAnalysis} 
-              disabled={isLoading || isLocked} 
-              className={`w-full py-3 rounded-lg text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 mt-2 text-white ${isLocked ? 'bg-slate-700 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
-            >
-              <Brain size={16} className={isLoading ? "animate-spin" : ""} /> Analizar e Inyectar Proceso
-            </button>
-
-            {aiDiagnosis && !isLoading && (
-              <div className="mt-4 bg-slate-950 rounded-lg p-4 border border-blue-900/50 flex-grow">
-                <h3 className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <Terminal size={12} /> Análisis Técnico
-                </h3>
-                <pre className="text-[10px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{aiDiagnosis}</pre>
-              </div>
-            )}
-          </div>
-        </div>
-      </aside>
-
       {/* Contenedor Principal de la Ficha Técnica (A4 Printable) */}
-      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative min-h-[800px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:p-8">
+      <div ref={componentRef} className="w-full flex flex-col bg-slate-50 relative min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:p-8">
         
         {/* Cabecera Formal Institucional (Solo Visible en Impresión Física A4) */}
         <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-4">
@@ -584,10 +403,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         <header className="bg-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 sticky top-0 z-20 shadow-sm print:static print:border-none print:shadow-none print:p-0">
           
           <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="w-14 h-14 rounded-md shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
+            <div className="w-14 h-14 rounded-xl shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
             <div className="flex-grow">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 uppercase">Ficha ETP</span>
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2.5 py-0.5 rounded border border-slate-200 uppercase tracking-wider">Ficha Técnica ETP</span>
                 
                 {/* Insignia de Estado */}
                 {estadoAprobacion === 'aprobado_produccion' ? (
@@ -643,19 +462,19 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                 value={formData.nombreComercial} 
                 onChange={handleChange} 
                 placeholder="Nombre Comercial / Código..." 
-                className={`text-xl font-bold bg-transparent outline-none w-full text-slate-900 transition-colors uppercase ${isLocked ? 'cursor-default' : 'border-b border-transparent hover:border-slate-300 focus:border-blue-500'}`}
+                className={`text-xl font-black bg-transparent outline-none w-full text-slate-900 transition-colors uppercase ${isLocked ? 'cursor-default' : 'border-b border-transparent hover:border-slate-300 focus:border-blue-500'}`}
               />
             </div>
           </div>
           
           {/* Muestra y Colorimetría (Espectrofotómetro) */}
-          <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3 rounded-xl shadow-md border border-blue-700/50 flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="bg-gradient-to-r from-slate-900 to-blue-950 text-white p-3 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
             
-            {/* Tarea 4: Visor Lightbox para la Muestra */}
+            {/* Visor Lightbox para la Muestra */}
             <div className="flex flex-col items-center">
               {imagenMuestra ? (
                 <div 
-                  className="relative group w-24 h-16 rounded-lg overflow-hidden border border-blue-400 shadow cursor-pointer bg-black/40"
+                  className="relative group w-24 h-16 rounded-xl overflow-hidden border border-blue-400 shadow cursor-pointer bg-black/40"
                   onClick={() => setIsLightboxOpen(true)}
                   title="Clic para ver foto en tamaño completo"
                 >
@@ -675,17 +494,17 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   )}
                 </div>
               ) : (
-                <label className="cursor-pointer flex flex-col items-center justify-center border border-dashed border-blue-500 rounded-lg p-2 hover:bg-blue-800 transition-colors bg-blue-900/50 w-24 h-16 overflow-hidden">
-                  <span className="text-[9px] font-bold text-blue-200 mt-1 uppercase text-center leading-tight">Cargar<br/>Muestra</span>
+                <label className="cursor-pointer flex flex-col items-center justify-center border border-dashed border-slate-600 rounded-xl p-2 hover:bg-slate-800 transition-colors bg-slate-900/50 w-24 h-16 overflow-hidden">
+                  <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase text-center leading-tight">Cargar<br/>Muestra</span>
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 </label>
               )}
             </div>
 
             <div className="flex flex-col md:items-end w-full">
-              <span className="block text-[10px] text-blue-200 uppercase font-bold tracking-wider mb-1">Resultado Colorimetría</span>
-              <div className="bg-blue-800 px-3 py-2 rounded-lg border border-blue-600 shadow-inner flex items-center gap-2 w-full">
-                <span className="text-xs text-blue-200 font-bold whitespace-nowrap">ΔE =</span>
+              <span className="block text-[10px] text-slate-300 uppercase font-bold tracking-wider mb-1">Resultado Colorimetría</span>
+              <div className="bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 shadow-inner flex items-center gap-2 w-full">
+                <span className="text-xs text-blue-300 font-bold whitespace-nowrap">ΔE =</span>
                 <input 
                   type="text" 
                   disabled={isLocked}
@@ -693,7 +512,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                   value={formData.deltaE} 
                   onChange={handleChange} 
                   placeholder="Ej: 0.8" 
-                  className={`text-sm font-black text-white bg-slate-900/50 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-blue-700 ${isLocked ? 'cursor-default' : 'focus:border-emerald-400'}`} 
+                  className={`text-sm font-black text-white bg-slate-900/70 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-slate-600 ${isLocked ? 'cursor-default' : 'focus:border-emerald-400'}`} 
                   title="Medición Real Delta E"
                 />
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse ml-1"></span>
@@ -702,18 +521,77 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           </div>
         </header>
 
-        {/* Cuerpo del Formulario */}
+        {/* Tarea 2: Franja de Identificación Técnica del Color (Ancho Completo w-full) */}
+        <div className="bg-white border-b border-slate-200 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 print:border-none print:px-0">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sistema / Catálogo</label>
+            <select 
+              disabled={isLocked}
+              value={colorSystem} 
+              onChange={(e) => setColorSystem(e.target.value)} 
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+            >
+              <option value="RAL">RAL</option>
+              <option value="PANTONE">PANTONE</option>
+              <option value="NCS">NCS</option>
+              <option value="Pintuco">Pintuco</option>
+              <option value="Sherwin Williams">Sherwin Williams</option>
+              <option value="Benjamin Moore">Benjamin Moore</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Referencia Exacta / Código</label>
+            <input 
+              type="text" 
+              disabled={isLocked}
+              value={colorRef} 
+              onChange={(e) => setColorRef(e.target.value)} 
+              placeholder="Ej. 7005 C, 9010..." 
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold uppercase ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Acabado Final (Brillo %)</label>
+            <select 
+              disabled={isLocked}
+              value={glossLevel} 
+              onChange={(e) => setGlossLevel(e.target.value)} 
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+            >
+              {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(val => (
+                <option key={val} value={val}>{val}% {val <= 10 ? '(Mate)' : val === 40 ? '(Satinado)' : val >= 90 ? '(Alto Brillo)' : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cliente / Proyecto</label>
+            <input 
+              type="text" 
+              disabled={isLocked}
+              value={cliente} 
+              onChange={(e) => setCliente(e.target.value)} 
+              placeholder="Cliente o Proyecto..." 
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+            />
+          </div>
+        </div>
+
+        {/* Cuerpo del Formulario ETP */}
         <form onSubmit={e => e.preventDefault()} className="flex-grow flex flex-col">
           
           {/* Fondo Obligatorio */}
           <div className="px-6 pt-6">
-            <div className={`p-5 rounded-r-lg shadow-sm border-l-4 transition-all duration-500 flex items-start gap-4 ${formData.fondoRequired ? 'bg-amber-50 border-amber-500' : 'bg-slate-100 border-slate-300'}`}>
+            <div className={`p-5 rounded-2xl shadow-sm border-l-4 transition-all duration-500 flex items-start gap-4 ${formData.fondoRequired ? 'bg-amber-50/80 border-amber-500' : 'bg-slate-100 border-slate-300'}`}>
               <div className="mt-1">
                 <AlertTriangle className={`text-2xl ${formData.fondoRequired ? 'text-amber-500' : 'text-slate-400'}`} />
               </div>
               <div className="flex-grow">
                 <h3 className={`font-bold text-sm tracking-wide ${formData.fondoRequired ? 'text-amber-900' : 'text-slate-500'}`}>FONDO OBLIGATORIO PARA ESTE COLOR</h3>
-                <p className={`text-xs mt-1 mb-3 ${formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'}`}>Para lograr el tono exacto, este color <strong>DEBE</strong> aplicarse exclusivamente sobre:</p>
+                <p className={`text-xs mt-1 mb-3 ${formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'}`}>Para lograr el tono exacto, este color debe aplicarse sobre:</p>
                 <div className="relative">
                   <Layers size={16} className="absolute left-3 top-2.5 text-slate-400" />
                   <input 
@@ -722,8 +600,8 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                     name="fondoRequired" 
                     value={formData.fondoRequired} 
                     onChange={handleChange} 
-                    placeholder="Esperando análisis de IA..." 
-                    className={`w-full pl-9 pr-3 py-2 rounded shadow-sm border text-sm font-bold outline-none transition-colors ${isLocked ? 'bg-white/80 border-transparent text-slate-900 cursor-default' : (formData.fondoRequired ? 'bg-white border-amber-300 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-500')}`}
+                    placeholder="Declarar fondo requerido..." 
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl shadow-sm border text-sm font-bold outline-none transition-colors ${isLocked ? 'bg-white/80 border-transparent text-slate-900 cursor-default' : (formData.fondoRequired ? 'bg-white border-amber-300 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-500')}`}
                   />
                 </div>
               </div>
@@ -736,8 +614,8 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               {/* Sección 1: Formulación del Entonador */}
               <div className="lg:col-span-5 space-y-6">
                 <div>
-                  <h2 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2"><FlaskConical size={16} /> 1. Formulación del Entonador</h2>
-                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm mb-4">
+                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><FlaskConical size={16} className="text-blue-600"/> 1. Formulación del Entonador</h2>
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-4">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
                         <tr>
@@ -749,7 +627,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                         {ingredientes.map((item, idx) => (
                           <tr key={item.id || idx}>
                             <td className="py-3 px-4 flex items-center gap-2 text-xs font-medium">
-                              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                               <div>
                                 <span className="font-bold text-slate-900">{item.id_referencia_ppg || item.codigo || item.id_referencia}</span>
                                 <span className="block text-[10px] text-slate-500 uppercase">{item.nombre_base || item.descripcion}</span>
@@ -762,34 +640,34 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                         ))}
                         <tr className="bg-slate-50 border-t-2 border-slate-200">
                           <td className="py-3 px-4 text-xs font-bold text-slate-800 uppercase tracking-wide">Peso Total</td>
-                          <td className="py-3 px-4 text-right text-xs font-bold text-blue-600">{pesoTotal.toFixed(1)} g</td>
+                          <td className="py-3 px-4 text-right text-xs font-black text-blue-600">{pesoTotal.toFixed(1)} g</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Catalizador</label>
                       <select 
                         disabled={isLocked}
                         name="catalizador" 
                         value={formData.catalizador} 
                         onChange={handleChange} 
-                        className={`w-full p-2 rounded text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
+                        className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
                       >
                         {catalystOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
                       </select>
                     </div>
 
-                    <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
                       <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Disolvente (Thinner)</label>
                       <select 
                         disabled={isLocked}
                         name="disolvente" 
                         value={formData.disolvente} 
                         onChange={handleChange} 
-                        className={`w-full p-2 rounded text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
+                        className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
                       >
                         {solventOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
                       </select>
@@ -801,10 +679,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               {/* Sección 2 y 3: Parámetros y Hoja de Ruta */}
               <div className="lg:col-span-7 space-y-8">
                 <div>
-                  <h2 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2"><SprayCan size={16} /> 2. Parámetros de Aplicación</h2>
+                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><SprayCan size={16} className="text-blue-600"/> 2. Parámetros de Aplicación</h2>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white border border-slate-200 p-4 rounded-xl text-center shadow-sm">
-                      <Droplet className="text-blue-400 mx-auto mb-2" size={24} strokeWidth={1.5}/>
+                      <Droplet className="text-blue-500 mx-auto mb-2" size={24} strokeWidth={1.5}/>
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Viscosidad</span>
                       <input type="text" disabled={isLocked} name="viscosidad" value={formData.viscosidad} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent"/>
                     </div>
@@ -826,7 +704,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                 </div>
 
                 <div>
-                  <h2 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2"><CheckSquare size={16} /> 3. Hoja de Ruta</h2>
+                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><CheckSquare size={16} className="text-blue-600"/> 3. Hoja de Ruta</h2>
                   <div className="relative border-l-2 border-slate-200 ml-2 space-y-6 pb-2">
                     
                     <div className="relative pl-6">
@@ -843,10 +721,10 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoPreparacion" value={formData.textoPreparacion} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      <textarea disabled={isLocked} name="textoPreparacion" value={formData.textoPreparacion} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
                     </div>
                     
-                    <div className={`relative pl-6 p-2 rounded-r-lg border -ml-2 ml-4 ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-100' : 'border-transparent'}`}>
+                    <div className={`relative pl-6 p-2 rounded-2xl border -ml-2 ml-4 ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-100' : 'border-transparent'}`}>
                       <span className={`absolute -left-[18px] top-3 w-4 h-4 rounded-full border-2 border-white ${formData.fondoRequired ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="font-bold text-xs text-slate-900">Aplicación del Fondo (CRÍTICO)</h4>
@@ -860,7 +738,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoFondo" value={formData.textoFondo} onChange={handleChange} rows="3" className={`w-full text-xs p-2 rounded resize-none outline-none font-medium ${isLocked ? 'bg-slate-50/80 border-transparent text-slate-900 cursor-default' : 'bg-white border border-slate-200 text-slate-800'}`}></textarea>
+                      <textarea disabled={isLocked} name="textoFondo" value={formData.textoFondo} onChange={handleChange} rows="3" className={`w-full text-xs p-2 rounded-xl resize-none outline-none font-medium ${isLocked ? 'bg-slate-50/80 border-transparent text-slate-900 cursor-default' : 'bg-white border border-slate-200 text-slate-800'}`}></textarea>
                     </div>
 
                     <div className="relative pl-6">
@@ -877,7 +755,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoColor" value={formData.textoColor} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      <textarea disabled={isLocked} name="textoColor" value={formData.textoColor} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
                     </div>
                     
                     <div className="relative pl-6">
@@ -894,7 +772,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
                           </div>
                         )}
                       </div>
-                      <textarea disabled={isLocked} name="textoAcabado" value={formData.textoAcabado} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
+                      <textarea disabled={isLocked} name="textoAcabado" value={formData.textoAcabado} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
                     </div>
 
                   </div>
@@ -903,7 +781,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             </div>
           </fieldset>
 
-          {/* Tareas 1 y 2: Pie de Página con Botones de Acción */}
+          {/* Pie de Página con Botones de Acción */}
           <div className="bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 print:hidden shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)]">
             
             {/* Casilla de Verificación de Procedimiento */}
@@ -982,7 +860,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         </form>
       </div>
 
-      {/* Tarea 2: Modal para Desbloquear con PIN / Clave */}
+      {/* Modal para Desbloquear con PIN / Clave */}
       {isPinModalOpen && (
         <div className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
@@ -1029,7 +907,7 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         </div>
       )}
 
-      {/* Tarea 4: Modal Visor Lightbox para la Muestra / Espectrofotómetro */}
+      {/* Modal Visor Lightbox para la Muestra / Espectrofotómetro */}
       {isLightboxOpen && imagenMuestra && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
           
