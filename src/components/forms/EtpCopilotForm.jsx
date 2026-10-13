@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { 
+  ArrowLeft,
   Bell, Clock, CheckCircle2, ChevronRight, Inbox, PaintBucket, 
   Palette, Layers, SprayCan, CheckSquare, Search, 
   Save, AlertTriangle, FlaskConical, Droplet, Gauge, 
