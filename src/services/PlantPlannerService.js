@@ -37,7 +37,18 @@ export const normalizePlannerArea = (rawArea) => {
 };
 
 export const calculatePlantMatrix = (orders) => {
-    // 1. Filtrado estricto en tiempo real: excluir pedidos despachados, inactivos, terminados y clones convergidos
+    // 1. Filtrado estricto en tiempo real: excluir pedidos inactivos, despachados, finalizados y en tránsito
+    const INACTIVE_STATUSES = [
+        'DESPACHADO',
+        'FINALIZADO',
+        'INACTIVO',
+        'TERMINADO',
+        'COMPLETADO',
+        'ENTREGADO',
+        'CANCELADO',
+        'ANULADO'
+    ];
+
     const activeOrders = (orders || []).filter(o => {
         if (!o || !o.id) return false;
 
@@ -45,18 +56,32 @@ export const calculatePlantMatrix = (orders) => {
         const estado = String(o.estado || '').trim().toUpperCase();
         const areaActual = String(o.areaActual || '').trim().toUpperCase();
 
-        // Excluir estrictamente si ya está despachado o entregado
-        if (estadoInt === 'DESPACHADO' || estadoInt === 'ENTREGADO' || estado === 'DESPACHADO' || estado === 'ENTREGADO') {
+        // Excluir explícitamente cualquier ítem con estado inactivo o finalizado
+        if (INACTIVE_STATUSES.includes(estadoInt) || INACTIVE_STATUSES.includes(estado)) {
             return false;
         }
 
-        // Excluir si su área actual es Despachos o está marcado como terminado
-        if (areaActual === 'DESPACHOS' || o.isTerminado === true) {
+        if (estadoInt.includes('FINALIZAD') || estadoInt.includes('INACTIV') || 
+            estadoInt.includes('DESPACHAD') || estadoInt.includes('ENTREGAD') ||
+            estadoInt.includes('CANCELAD') || estadoInt.includes('ANULAD')) {
+            return false;
+        }
+
+        // Excluir si su área actual es Despachos o está marcado como terminado/finalizado
+        if (areaActual === 'DESPACHOS' || o.isTerminado === true || o.isFinalizado === true) {
             return false;
         }
 
         // Excluir clones de bifurcaciones ya convergidas en áreas finales
         if (o.master_id && ['ENSAMBLE', 'EMPAQUE', 'DESPACHOS'].includes(areaActual)) {
+            return false;
+        }
+
+        // Excluir si ya fue despachado/movido en tránsito fuera de esta área
+        if (o.transferenciaPendiente && o.transferenciaPendiente.haciaArea && o.transferenciaPendiente.haciaArea !== o.areaActual) {
+            return false;
+        }
+        if (estadoInt.includes('TRÁNSITO') || estadoInt.includes('TRANSITO')) {
             return false;
         }
 

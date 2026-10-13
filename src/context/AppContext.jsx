@@ -83,6 +83,7 @@ export const AppContextProvider = ({ children }) => {
   const [showReceptionModal, setShowReceptionModal] = useState(false);
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showPlantPlannerModal, setShowPlantPlannerModal] = useState(false);
+  const [showQualityModal, setShowQualityModal] = useState(false);
   
   const [dashboardTab, setDashboardTab] = useState('resumen');
   const [showReportConfigModal, setShowReportConfigModal] = useState(false);
@@ -200,6 +201,7 @@ export const AppContextProvider = ({ children }) => {
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
     showPlantPlannerModal, setShowPlantPlannerModal,
+    showQualityModal, setShowQualityModal,
     dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,

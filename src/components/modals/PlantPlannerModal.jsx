@@ -8,6 +8,7 @@ import { calculatePlantMatrix } from '../../services/PlantPlannerService';
 import IndicatorsDrawer from '../layout/IndicatorsDrawer';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
+import { supabase } from '../../supabaseClient';
 
 const PlantPlannerModal = ({ 
     orders, 
@@ -30,7 +31,8 @@ const PlantPlannerModal = ({
         inputManualDetalle = '', 
         setInputManualDetalle,
         setViewFilter,
-        setShowDashboardModal
+        setShowDashboardModal,
+        setOrders
     } = useAppContext();
 
     // Pestañas principales: 'matriz' (Matriz de Áreas) o 'coordinacion' (Coordinación Logística)
@@ -38,6 +40,27 @@ const PlantPlannerModal = ({
 
     // Estado para el Drawer lateral de Indicadores
     const [showIndicadores, setShowIndicadores] = useState(false);
+    // Sincronización en tiempo real y limpieza de caché al abrir el Planificador
+    useEffect(() => {
+        let isMounted = true;
+        const refreshPlannerOrders = async () => {
+            try {
+                await supabase.auth.getSession();
+                const { data, error } = await supabase.from('produccion_pedidos').select('data_completa');
+                if (!error && data && isMounted && setOrders) {
+                    const fresh = data
+                        .map(r => r.data_completa)
+                        .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum);
+                    setOrders(fresh);
+                }
+            } catch (err) {
+                console.error("Error al refrescar órdenes en Planificador:", err);
+            }
+        };
+        refreshPlannerOrders();
+        return () => { isMounted = false; };
+    }, []);
+
 
     // Búsqueda y expansión de áreas/pedidos en la Matriz
     const [searchTerm, setSearchTerm] = useState('');
