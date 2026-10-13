@@ -220,7 +220,42 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         logging: false,
         scrollY: -window.scrollY, // Evitar desfases si el usuario scrolleó
         windowWidth: elemento.scrollWidth,
-        windowHeight: elemento.scrollHeight
+        windowHeight: elemento.scrollHeight,
+        onclone: (clonedDoc) => {
+          // 1. Inyección de CSS estricto solo para el PDF
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            /* Forzar fuente Arial y tamaño estricto de 12pt en absolutamente todo el texto */
+            * {
+              font-family: 'Arial', sans-serif !important;
+              font-size: 12pt !important;
+              line-height: 1.5 !important;
+            }
+            
+            /* Forzar fuente Arial Black para todos los Títulos, Cabeceras y Negritas */
+            h1, h2, h3, h4, h5, h6, th, strong, b, .font-bold, .font-black {
+              font-family: 'Arial Black', sans-serif !important;
+              font-weight: 900 !important;
+            }
+            
+            /* Ajustes críticos para que la nueva fuente más grande no rompa los contenedores */
+            .truncate {
+              white-space: normal !important;
+              overflow: visible !important;
+            }
+            input, textarea {
+              height: auto !important;
+              min-height: max-content !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+          
+          // 2. Expandir inputs y textareas para asegurar que el texto 12pt no quede oculto
+          const textareas = clonedDoc.querySelectorAll('textarea');
+          textareas.forEach(ta => {
+            ta.style.height = ta.scrollHeight + 'px';
+          });
+        }
       });
 
       // TAREA 2: Paginación Real con jsPDF (Algoritmo Matemático Exacto)
