@@ -17,6 +17,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
 
   // Estados del Escáner de Cajetines
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatusText, setScanStatusText] = useState('');
   const [scanError, setScanError] = useState('');
   const [scanSuccess, setScanSuccess] = useState('');
   const [scannedImage, setScannedImage] = useState(null);
@@ -50,6 +52,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
 
     setScanError('');
     setScanSuccess('');
+    setScanProgress(5);
+    setScanStatusText('Cargando imagen...');
     setIsAnalyzing(true);
 
     const reader = new FileReader();
@@ -59,7 +63,10 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
 
       try {
         // Tarea 3: Extracción Lógica con IA de Visión y System Prompt Estricto
-        const extracted = await analizarCajetinConIA(base64);
+        const extracted = await analizarCajetinConIA(base64, (progress, status) => {
+          setScanProgress(progress);
+          if (status) setScanStatusText(status);
+        });
 
         // Parsear fecha DD/MM/AAAA a formato input YYYY-MM-DD si aplica
         let parsedDate = '';
@@ -94,6 +101,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
         setScanError(`Error al procesar cajetín: ${err.message || 'No se pudo leer la imagen'}. Puedes ingresar los datos manualmente.`);
       } finally {
         setIsAnalyzing(false);
+        setScanProgress(0);
+        setScanStatusText('');
       }
     };
     reader.readAsDataURL(file);
@@ -171,7 +180,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
                 {isAnalyzing ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    <span>Analizando cajetín con IA...</span>
+                    <span>{scanStatusText || 'Analizando cajetín...'} {scanProgress > 0 ? `(${scanProgress}%)` : ''}</span>
                   </>
                 ) : (
                   <>
@@ -186,9 +195,19 @@ const AddOrderModal = ({ createOrder, createBulkOrders }) => {
             {isAnalyzing && (
               <div className="mt-4 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center gap-3 text-indigo-600 dark:text-indigo-400">
                 <Loader2 size={20} className="animate-spin shrink-0" />
-                <p className="text-xs font-bold uppercase tracking-wider">
-                  Analizando cajetín con IA... Extrayendo especificaciones y codificación.
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider truncate">
+                    {scanStatusText || 'Analizando cajetín con OCR real...'}
+                  </p>
+                  {scanProgress > 0 && (
+                    <div className="w-full bg-indigo-200/50 dark:bg-indigo-900/50 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div 
+                        className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" 
+                        style={{ width: `${scanProgress}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
