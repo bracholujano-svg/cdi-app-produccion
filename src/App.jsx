@@ -168,7 +168,29 @@ const {
 
   const fillFormWithResult = (result, fillFn) => fillFormWithResultWrapper(result, fillFn);
 
-  const doExcelSearch = async (term) => await executeExcelSearch(term);
+  // Búsqueda real en Supabase (tabla ribisoft_pedidos) para la pestaña "Buscar en Base de Datos".
+  // Antes recibía el evento del clic como único argumento y descartaba el resultado,
+  // por eso el botón no hacía nada visible. Devuelve los resultados para que el modal
+  // pueda rellenar su formulario controlado cuando hay una sola coincidencia.
+  const doExcelSearch = async () => {
+    setExcelSearchLoading(true); setExcelSearchError(""); setExcelSearchSuccess("");
+    setSearchResults([]); setShowSearchSelector(false);
+    try {
+      const { success, results, error } = await executeExcelSearch(excelSearchPedido, excelSearchArticulo);
+      if (!success) {
+        setExcelSearchError(error || "ERROR DESCONOCIDO EN LA BÚSQUEDA.");
+        return [];
+      }
+      if (results.length > 1) {
+        setSearchResults(results);
+        setShowSearchSelector(true);
+        setExcelSearchSuccess(`💡 Se encontraron ${results.length} coincidencias. Selecciona la correcta abajo.`);
+      }
+      return results;
+    } finally {
+      setExcelSearchLoading(false);
+    }
+  };
 
 
 

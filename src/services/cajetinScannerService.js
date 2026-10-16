@@ -1,3 +1,8 @@
+// Cascada de modelos multimodales verificados con la clave del proyecto (ListModels, 15/10/2026).
+// Si uno responde 404/429/503 se pasa de inmediato al siguiente.
+// Nota: gemini-2.5-flash responde 404 ("no longer available to new users"); 2.0 y 1.5 ya no aparecen en la lista.
+export const GEMINI_MODELS_FALLBACK = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+
 export const GEMINI_PROMPT_CAJETIN = `Analiza la imagen del cajetín de este plano técnico industrial de CDI Exhibiciones. Extrae los datos y devuelve ÚNICAMENTE un objeto JSON válido con estas claves exactas:
 - origen_pedido: (string) Número ubicado en la casilla 'ORIGEN' (ej. '63918').
 - requisicion_rq: (string) Código que inicia con 'RQ' ubicado en 'ORDEN DE PRODUCCIÓN' (ej. 'RQ00215165'). Nota: Es la requisición.
@@ -82,20 +87,21 @@ export const analizarCajetinConGemini = async (imageSource, onProgress = null) =
     throw new Error("No se ha proporcionado imagen para analizar.");
   }
 
-  const geminiApiKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || 
-                       (typeof process !== 'undefined' && process.env?.VITE_GEMINI_API_KEY);
+  // Vite solo inyecta en el navegador las variables con prefijo VITE_ (process.env no existe en cliente).
+  // Vite las reemplaza en tiempo de compilación: si la variable no existía al hacer el build
+  // (por ejemplo en Vercel), el bundle queda sin clave aunque el .env local la tenga.
+  const geminiApiKey = String(import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '').trim();
 
-  if (!geminiApiKey || geminiApiKey.trim() === '') {
-    throw new Error("Falta configurar la variable VITE_GEMINI_API_KEY en el entorno (.env). Por favor, agregue su API Key de Gemini para activar el escáner con IA.");
+  if (!geminiApiKey) {
+    throw new Error("Falta configurar la variable VITE_GEMINI_API_KEY. En local: agréguela al .env y reinicie 'npm run dev'. En Vercel: agréguela en Settings → Environment Variables y vuelva a desplegar.");
   }
 
   // 1. Compresión en cliente (< 1280px, JPEG 0.8)
   if (onProgress) onProgress(20, 'Optimizando y comprimiendo imagen...');
   const { compressedDataUrl, base64Raw, mimeType } = await comprimirImagenCajetin(imageSource);
 
-  // 2. Llamada directa a Gemini 2.5 Flash REST API
-  if (onProgress) onProgress(45, 'Analizando cajetín con Gemini 2.5 Flash...');
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey.trim()}`;
+  // 2. Llamada directa a la API REST de Gemini con cascada de modelos (ver GEMINI_MODELS_FALLBACK).
+  if (onProgress) onProgress(45, 'Analizando cajetín con Gemini...');
 
   const payload = {
     contents: [
@@ -116,23 +122,44 @@ export const analizarCajetinConGemini = async (imageSource, onProgress = null) =
     }
   };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
+  // Códigos que indican "este modelo no puede atender ahora": se salta al siguiente sin esperar.
+  const SALTAR_MODELO = [404, 429, 503];
+  const RONDAS = 2; // segunda ronda corta solo si TODOS los modelos estaban saturados
+  let response = null;
+  let ultimoModelo = '';
+
+  rondas:
+  for (let ronda = 1; ronda <= RONDAS; ronda++) {
+    for (let i = 0; i < GEMINI_MODELS_FALLBACK.length; i++) {
+      ultimoModelo = GEMINI_MODELS_FALLBACK[i];
+      if (onProgress && (i > 0 || ronda > 1)) {
+        onProgress(Math.min(80, 45 + (i + 1) * 10), `Modelo ocupado, probando alternativa (${ultimoModelo})...`);
+      }
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${ultimoModelo}:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+      if (response.ok || !SALTAR_MODELO.includes(response.status)) break rondas;
+    }
+    if (ronda < RONDAS) await new Promise(r => setTimeout(r, 1200));
+  }
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => '');
-    let msg = `Error al consultar Gemini API (${response.status})`;
+    let msg = `Error al consultar Gemini API (${response.status}, ${ultimoModelo})`;
     try {
       const parsedErr = JSON.parse(errorBody);
       if (parsedErr?.error?.message) {
-        msg = `Gemini API: ${parsedErr.error.message}`;
+        msg = `Gemini API (${ultimoModelo}): ${parsedErr.error.message}`;
       }
     } catch (_) {}
+    if (SALTAR_MODELO.includes(response.status)) {
+      msg += ' — Todos los modelos de IA están saturados. Intente de nuevo en unos segundos o use la pestaña "Buscar en Base de Datos".';
+    }
     throw new Error(msg);
   }
 

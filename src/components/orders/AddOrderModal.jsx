@@ -87,7 +87,24 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
     }));
   };
 
-  // Captura y análisis con Gemini 2.5 Flash Multimodal (Tab 2)
+  // Ejecuta la consulta real a Supabase (doExcelSearch en App.jsx) desde el botón o con Enter
+  const handleDatabaseSearch = async () => {
+    if (excelSearchLoading || typeof doExcelSearch !== 'function') return;
+    const results = await doExcelSearch();
+    if (Array.isArray(results) && results.length === 1) {
+      fillFormWithResult(results[0]);
+      setExcelSearchSuccess(`✅ Extraído: ${results[0].nombre || results[0].descripcion || ''} (Pedido ${results[0].pedido || ''})`);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleDatabaseSearch();
+    }
+  };
+
+  // Captura y análisis con Gemini Multimodal (Tab 2)
   const handleFileCapture = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -229,18 +246,20 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                 <input 
                   value={excelSearchPedido || ''} 
                   onChange={e => setExcelSearchPedido(e.target.value)} 
+                  onKeyDown={handleSearchKeyDown}
                   placeholder="Nº PEDIDO" 
                   className="flex-1 p-3.5 theme-bg-card theme-text-primary rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase border theme-border" 
                 />
                 <input 
                   value={excelSearchArticulo || ''} 
                   onChange={e => setExcelSearchArticulo(e.target.value)} 
+                  onKeyDown={handleSearchKeyDown}
                   placeholder="ÚLT. DÍGITOS ARTÍCULO" 
                   className="flex-1 p-3.5 theme-bg-card theme-text-primary rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] uppercase border theme-border" 
                 />
                 <button 
                   type="button" 
-                  onClick={doExcelSearch} 
+                  onClick={handleDatabaseSearch} 
                   disabled={excelSearchLoading} 
                   className="bg-[var(--color-primary)] text-[var(--color-surface)] px-6 py-3.5 rounded-xl font-black text-sm uppercase shadow-sm transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
                 >
@@ -310,7 +329,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
             </div>
           )}
 
-          {/* PESTAÑA 2: Escaneo de Cajetín con IA Multimodal (Gemini 2.5 Flash) */}
+          {/* PESTAÑA 2: Escaneo de Cajetín con IA Multimodal (Gemini) */}
           {activeTab === 'scanner' && (
             <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] shadow-sm space-y-4 animate-in fade-in duration-150">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -320,7 +339,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                   </div>
                   <div>
                     <h3 className="text-base font-black uppercase theme-text-main tracking-wide flex items-center gap-2">
-                      <span>Escáner de Cajetines con Gemini 2.5 Flash</span>
+                      <span>Escáner de Cajetines con Gemini</span>
                       <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 px-2 py-0.5 rounded-full font-bold">Multimodal</span>
                     </h3>
                     <p className="text-xs font-medium theme-text-muted mt-0.5">
@@ -366,7 +385,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                   <Loader2 size={20} className="animate-spin shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider truncate">
-                      {scanStatusText || 'Procesando plano con Gemini 2.5 Flash...'}
+                      {scanStatusText || 'Procesando plano con Gemini...'}
                     </p>
                     {scanProgress > 0 && (
                       <div className="w-full bg-purple-200/50 dark:bg-purple-950/50 rounded-full h-1.5 mt-2 overflow-hidden">
