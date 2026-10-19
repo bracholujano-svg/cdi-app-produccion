@@ -24,14 +24,32 @@ const OrderCard = ({ group }) => {
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 && !isGroupDispatched;
   const isCumplido = (daysLeft !== null && daysLeft > 3) || isGroupDispatched;
 
-  // LOGICA DE ALERTAS SUPABASE (DYNAMIC RESERVATION)
-  const todosRequerimientos = inventoryReservations[group.pedidoNum] || [];
-  const faltantes = todosRequerimientos.filter(f => f.faltante > 0);
-  
-  const hasAlert = faltantes.length > 0 && viewFilter !== 'DESPACHADOS';
+  // LOGICA DE ALERTAS NIVEL 2: RESUMEN INTELIGENTE POR PRODUCTOS HIJOS (codpt)
+  const globalProductsForOrder = useMemo(() => {
+    const fromGlobal = (orders || []).filter(o => o && String(o.pedidoNum) === String(group.pedidoNum));
+    return fromGlobal.length > 0 ? fromGlobal : (group.products || []);
+  }, [orders, group.pedidoNum, group.products]);
+
+  const orderSummary = useMemo(() => {
+    if (inventoryReservations && typeof inventoryReservations.getOrderSummary === 'function') {
+      return inventoryReservations.getOrderSummary(group.pedidoNum, globalProductsForOrder);
+    }
+    const reqs = inventoryReservations?.[group.pedidoNum] || [];
+    const falt = reqs.filter(f => f.faltante > 0);
+    return {
+      status: reqs.length === 0 ? 'SIN_REQUERIMIENTOS' : (falt.length > 0 ? 'PENDIENTE_ENTREGA' : 'COMPLETO'),
+      label: reqs.length === 0 ? '⚠️ Sin Insumos Req.' : (falt.length > 0 ? '⚠️ Insumos Pendientes' : '✅ Insumos Completos'),
+      materials: reqs
+    };
+  }, [inventoryReservations, group.pedidoNum, globalProductsForOrder]);
+
+  const todosRequerimientos = orderSummary.materials || [];
+  const isSinStock = orderSummary.status === 'SIN_STOCK' && viewFilter !== 'DESPACHADOS';
+  const isPendienteEntrega = orderSummary.status === 'PENDIENTE_ENTREGA' && viewFilter !== 'DESPACHADOS';
+  const hasAlert = (isSinStock || isPendienteEntrega) && viewFilter !== 'DESPACHADOS';
   const isRechazado = group.products && group.products.some(p => p && p.estadoInterno && p.estadoInterno.startsWith('RECHAZADO'));
-  const isSufficient = todosRequerimientos.length > 0 && faltantes.length === 0 && viewFilter !== 'DESPACHADOS';
-  const isNoMaterials = todosRequerimientos.length === 0 && viewFilter !== 'DESPACHADOS';
+  const isSufficient = orderSummary.status === 'COMPLETO' && viewFilter !== 'DESPACHADOS';
+  const isNoMaterials = orderSummary.status === 'SIN_REQUERIMIENTOS' && viewFilter !== 'DESPACHADOS';
 
   const partialProductsCount = useMemo(() => {
       if (!group.products) return 0;
@@ -85,7 +103,7 @@ const OrderCard = ({ group }) => {
   }, [group?.fechaEntregaPrometida]);
 
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : hasAlert ? 'border-orange-500/80' : (isSufficient ? 'border-[var(--color-primary)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
+    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : isSinStock ? 'border-red-500/90' : isPendienteEntrega ? 'border-amber-500/80' : (isSufficient ? 'border-[var(--color-primary)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
       
       <div className="flex justify-between items-start mb-2 gap-2">
         <div className="flex flex-col gap-1 w-full">
@@ -93,21 +111,27 @@ const OrderCard = ({ group }) => {
             {isGroupDispatched ? `✅ DESPACHADO${formattedDate}` : (isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
           </div>
           {isNoMaterials && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-base lg:text-lg px-1.5 py-1 bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">⚠️ Sin Insumos Req.</span>
-              <FolderOpen size={"1.2em"} className="shrink-0" />
+            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
+              <span className="truncate">{orderSummary.label}</span>
+              <FolderOpen size={"1.1em"} className="shrink-0" />
             </button>
           )}
-          {hasAlert && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-base lg:text-lg px-1.5 py-1 animate-bg-pulse-orange text-orange-800 dark:text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">⚠️ Insumos Insuficientes</span>
-              <ChevronDown size={"1.2em"} className="shrink-0" />
+          {isSinStock && (
+            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 animate-bg-pulse-red bg-red-500/15 text-red-800 dark:text-red-400 border border-red-500/40 hover:bg-red-500/25 transition-colors flex items-center justify-between gap-1">
+              <span className="truncate">{orderSummary.label}</span>
+              <ChevronDown size={"1.1em"} className="shrink-0" />
+            </button>
+          )}
+          {isPendienteEntrega && (
+            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 animate-bg-pulse-orange bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/40 hover:bg-amber-500/25 transition-colors flex items-center justify-between gap-1">
+              <span className="truncate">{orderSummary.label}</span>
+              <ChevronDown size={"1.1em"} className="shrink-0" />
             </button>
           )}
           {isSufficient && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-base lg:text-lg px-1.5 py-1 bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">✅ Material Completo</span>
-              <FolderOpen size={"1.2em"} className="shrink-0" />
+            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between gap-1">
+              <span className="truncate">{orderSummary.label}</span>
+              <FolderOpen size={"1.1em"} className="shrink-0" />
             </button>
           )}
         </div>

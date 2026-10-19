@@ -36,7 +36,7 @@ export const normalizePlannerArea = (rawArea) => {
     return clean;
 };
 
-export const calculatePlantMatrix = (orders) => {
+export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
     // 1. Filtrado estricto en tiempo real: excluir pedidos inactivos, despachados, finalizados y en tránsito
     const INACTIVE_STATUSES = [
         'DESPACHADO',
@@ -127,7 +127,8 @@ export const calculatePlantMatrix = (orders) => {
                 diasRestantes: getDaysLeft(order.fechaEntregaPrometida),
                 items: [],
                 semaforo: 'green',
-                alertReasons: []
+                alertReasons: [],
+                orderMatSummary: null
             };
         }
         
@@ -156,6 +157,19 @@ export const calculatePlantMatrix = (orders) => {
                 } else if (group.diasRestantes <= 1) {
                     isRed = true;
                     reasons.push(`Despacho inminente (${group.diasRestantes}d)`);
+                }
+            }
+
+            // Condition 2: Evaluación ERP de Materias Primas por Producto (codpt) y Resumen en Pedido
+            if (inventoryReservations && typeof inventoryReservations.getOrderSummary === 'function') {
+                const matSummary = inventoryReservations.getOrderSummary(group.pedidoNum, group.items);
+                group.orderMatSummary = matSummary;
+                if (matSummary.status === 'SIN_STOCK') {
+                    isRed = true;
+                    reasons.push(matSummary.label);
+                } else if (matSummary.status === 'PENDIENTE_ENTREGA') {
+                    isYellow = true;
+                    reasons.push(matSummary.label);
                 }
             }
 

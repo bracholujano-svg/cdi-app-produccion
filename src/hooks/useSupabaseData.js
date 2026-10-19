@@ -14,7 +14,7 @@ export const useSupabaseData = () => {
             if (e.data.status === 'success') {
                 setSupabaseData(e.data.data);
                 // Guardar el resultado final procesado en el caché para carga instantánea futura
-                localforage.setItem('cdi_mrp_processed_cache', e.data.data);
+                localforage.setItem('cdi_mrp_processed_cache_v2', e.data.data);
             } else {
                 console.error("Worker error:", e.data.error);
             }
@@ -26,7 +26,7 @@ export const useSupabaseData = () => {
                 await supabase.auth.getSession();
                 
                 // 1. Mostrar caché primero para que la interfaz cargue rápido
-                const cachedData = await localforage.getItem('cdi_mrp_processed_cache');
+                const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v2');
                 if (cachedData) {
                     setSupabaseData(cachedData);
                 }

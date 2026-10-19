@@ -18,14 +18,20 @@ export const useOrders = () => {
                     dbError = error;
                 } else {
                     const sanitizedOrder = deepSanitize(orderObject);
-                    const { error } = await supabase.from('produccion_pedidos').upsert({
+                    const upsertPayload = {
                         id: sanitizedOrder.id,
                         pedido_num: sanitizedOrder.pedidoNum || '',
                         cliente: sanitizedOrder.cliente || '',
+                        codigo_item: sanitizedOrder.codArticulo || sanitizedOrder.codigo_item || null,
                         areas_compartidas: sanitizedOrder.areas_compartidas || [],
                         asignado_a: Array.isArray(sanitizedOrder.asignado_a) ? sanitizedOrder.asignado_a : (sanitizedOrder.asignado_a ? [sanitizedOrder.asignado_a] : []),
                         data_completa: sanitizedOrder
+                    };
+                    const optionalErpCols = ['dim_1', 'dim_2', 'dim_3', 'acabado_1', 'acabado_2', 'acabado_3', 'caracteristicas', 'programador', 'nombre_proyecto', 'categoria', 'notas', 'observaciones_erp', 'fecha_asigna', 'fecha_genera_ped'];
+                    optionalErpCols.forEach(col => {
+                        if (sanitizedOrder[col] !== undefined) upsertPayload[col] = sanitizedOrder[col];
                     });
+                    const { error } = await supabase.from('produccion_pedidos').upsert(upsertPayload);
                     dbError = error;
                 }
                 

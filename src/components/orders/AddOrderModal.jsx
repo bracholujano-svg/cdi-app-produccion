@@ -16,6 +16,7 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 import { analizarCajetinConGemini } from '../../services/cajetinScannerService';
+import { importRibisoftExcelFile } from '../../services/ribisoftExcelImporter';
 
 const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   const { 
@@ -39,6 +40,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   } = useAppContext();
 
   const fileInputRef = useRef(null);
+  const excelErpInputRef = useRef(null);
+  const [erpImporting, setErpImporting] = useState(false);
 
   // Sistema de Pestañas Duales (Opción por defecto: Buscar en Base de Datos)
   const [activeTab, setActiveTab] = useState('database'); // 'database' | 'scanner'
@@ -228,17 +231,59 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
           {/* PESTAÑA 1: Búsqueda y Autocompletado de Supabase / Ribisoft */}
           {activeTab === 'database' && (
             <div className="bg-[var(--color-surface)] p-5 rounded-2xl border border-[var(--color-border)] shadow-sm space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-[var(--color-primary)]/20 rounded-xl text-[var(--color-primary)]">
-                  <Search size={20} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-[var(--color-primary)]/20 rounded-xl text-[var(--color-primary)]">
+                    <Search size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase theme-text-main tracking-wide">
+                      Puente Ribisoft / Supabase (Autocompletar)
+                    </h3>
+                    <p className="text-xs font-medium theme-text-muted">
+                      Ingresa el número de pedido o artículo para traer los registros de producción existentes.
+                    </p>
+                  </div>
                 </div>
+
                 <div>
-                  <h3 className="text-base font-black uppercase theme-text-main tracking-wide">
-                    Puente Ribisoft / Supabase (Autocompletar)
-                  </h3>
-                  <p className="text-xs font-medium theme-text-muted">
-                    Ingresa el número de pedido o artículo para traer los registros de producción existentes.
-                  </p>
+                  <input
+                    ref={excelErpInputRef}
+                    type="file"
+                    accept=".xls,.xlsx"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setErpImporting(true);
+                      setExcelSearchSuccess('');
+                      try {
+                        const res = await importRibisoftExcelFile(f);
+                        if (res.type === 'requerimientos_pedido') {
+                          setExcelSearchSuccess(`✅ Material requerido importado (${res.insertedCount} registros en requerimientos_pedido y ${res.updatedInvCount} existencias sincronizadas en inventario).`);
+                        } else if (res.type === 'inventario') {
+                          setExcelSearchSuccess(`✅ Inventario actualizado (${res.importedCount} referencias sincronizadas).`);
+                        } else {
+                          setExcelSearchSuccess(`✅ Pedidos sincronizados (${res.plantaInserted} artículos nuevos en planta, ${res.skippedExisting} existentes conservados sin alterar).`);
+                        }
+                      } catch (err) {
+                        alert('Error importando Excel ERP: ' + (err.message || err));
+                      } finally {
+                        setErpImporting(false);
+                        if (excelErpInputRef.current) excelErpInputRef.current.value = '';
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={erpImporting}
+                    onClick={() => excelErpInputRef.current?.click()}
+                    className="px-3 py-2 rounded-xl text-xs font-black uppercase border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Sincronizar Excel de Ribisoft (Materiales Requeridos, Lista de Pedidos o Inventario)"
+                  >
+                    <Database size={14} />
+                    <span>{erpImporting ? 'Importando ERP...' : 'Sincronizar Excel ERP (.xls/.xlsx)'}</span>
+                  </button>
                 </div>
               </div>
 

@@ -32,7 +32,10 @@ const PlantPlannerModal = ({
         setInputManualDetalle,
         setViewFilter,
         setShowDashboardModal,
-        setOrders
+        setOrders,
+        inventoryReservations,
+        setActiveAlertMaterials,
+        setShowMaterialsAlertModal
     } = useAppContext();
 
     // Pestañas principales: 'matriz' (Matriz de Áreas) o 'coordinacion' (Coordinación Logística)
@@ -100,8 +103,8 @@ const PlantPlannerModal = ({
 
     // Matriz de planta calculada con filtros estrictos y áreas desacopladas
     const plantMatrix = useMemo(() => {
-        return calculatePlantMatrix(orders || []);
-    }, [orders]);
+        return calculatePlantMatrix(orders || [], inventoryReservations);
+    }, [orders, inventoryReservations]);
 
     const filteredMatrix = useMemo(() => {
         if (!searchTerm) return plantMatrix;
@@ -382,6 +385,25 @@ const PlantPlannerModal = ({
                                                                                         {pedido.diasRestantes !== null ? (pedido.diasRestantes < 0 ? `Venció hace ${Math.abs(pedido.diasRestantes)}d` : `Faltan ${pedido.diasRestantes}d`) : 'Sin Fecha'}
                                                                                     </span>
                                                                                 </div>
+                                                                                {pedido.orderMatSummary && pedido.orderMatSummary.status !== 'SIN_REQUERIMIENTOS' && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setActiveAlertMaterials(pedido.orderMatSummary.materials);
+                                                                                            setShowMaterialsAlertModal(true);
+                                                                                        }}
+                                                                                        className={`mt-2 w-full text-left px-2 py-1 rounded text-[10px] font-black uppercase truncate border transition-colors ${
+                                                                                            pedido.orderMatSummary.status === 'SIN_STOCK'
+                                                                                                ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-400 hover:bg-red-500/25'
+                                                                                                : pedido.orderMatSummary.status === 'PENDIENTE_ENTREGA'
+                                                                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25'
+                                                                                                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {pedido.orderMatSummary.label}
+                                                                                    </button>
+                                                                                )}
                                                                             </div>
                                                                             <div className="p-1 text-slate-400">
                                                                                 {isPedidoExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -409,7 +431,11 @@ const PlantPlannerModal = ({
                                                                                 {/* Lista de Items */}
                                                                                 <div className="space-y-3 mt-4">
                                                                                     <h5 className="text-xs font-black uppercase text-indigo-500 tracking-wider mb-2 border-b border-indigo-500/20 pb-1">Desglose de Productos en {area.areaName}</h5>
-                                                                                    {pedido.items.map(item => (
+                                                                                    {pedido.items.map(item => {
+                                                                                        const itemMat = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
+                                                                                            ? inventoryReservations.getProductMaterials(item.pedidoNum, item.codArticulo)
+                                                                                            : null;
+                                                                                        return (
                                                                                         <div key={item.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow">
                                                                                             <div className="flex items-start justify-between gap-3">
                                                                                                 <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -432,12 +458,34 @@ const PlantPlannerModal = ({
                                                                                                             <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50">
                                                                                                                 ESTADO: {item.estadoInterno}
                                                                                                             </span>
+                                                                                                            {itemMat && itemMat.status !== 'SIN_REQUERIMIENTOS' && (
+                                                                                                                <button
+                                                                                                                    type="button"
+                                                                                                                    onClick={(e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        setActiveAlertMaterials(itemMat.materials);
+                                                                                                                        setShowMaterialsAlertModal(true);
+                                                                                                                    }}
+                                                                                                                    className={`inline-flex items-center gap-1 text-[11px] font-black uppercase px-2 py-1 rounded border cursor-pointer transition-colors ${
+                                                                                                                        itemMat.status === 'SIN_STOCK'
+                                                                                                                            ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-400 hover:bg-red-500/25'
+                                                                                                                            : itemMat.status === 'PENDIENTE_ENTREGA'
+                                                                                                                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25'
+                                                                                                                            : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25'
+                                                                                                                    }`}
+                                                                                                                >
+                                                                                                                    {itemMat.status === 'SIN_STOCK' && '🚨 SIN STOCK EN ALMACÉN'}
+                                                                                                                    {itemMat.status === 'PENDIENTE_ENTREGA' && '⚠️ PENDIENTE ENTREGA ALMACÉN'}
+                                                                                                                    {itemMat.status === 'COMPLETO' && '✅ INSUMOS COMPLETOS'}
+                                                                                                                </button>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </div>
                                                                                         </div>
-                                                                                    ))}
+                                                                                        );
+                                                                                    })}
                                                                                 </div>
                                                                             </div>
                                                                         )}

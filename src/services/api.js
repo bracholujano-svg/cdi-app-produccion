@@ -15,14 +15,31 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
             const { data, error } = await query;
             if (error) throw error;
             if (data && data.length > 0) {
+                const cleanCode = (v) => {
+                    if (v === undefined || v === null || String(v).trim() === '') return '';
+                    const n = Number(v);
+                    if (!Number.isNaN(n) && Number.isFinite(n)) return String(Math.trunc(n)).trim();
+                    return String(v).replace(/\.0+$/, '').trim();
+                };
                 const mappedData = data.map(item => ({
-                    pedido: item['PedidoSIN'],
-                    articulo: item['Código Ítem'],
-                    descripcion: item['Descripción'],
-                    cliente: item['Cliente'] || item['Nombre Proyecto'] || 'CLIENTE NO REGISTRADO',
-                    nombre: item['Descripción'],
-                    proyecto: item['Nombre Proyecto'],
-                    cantidad: item['Cantidad']
+                    pedido: cleanCode(item['PedidoSIN'] ?? item['pedido_sin']),
+                    articulo: cleanCode(item['codigo_item'] ?? item['Código Ítem']),
+                    descripcion: item['Descripción'] ?? item['descripcion'] ?? '',
+                    cliente: item['Cliente'] || item['Nombre Proyecto'] || item['nombre_proyecto'] || 'CLIENTE NO REGISTRADO',
+                    nombre: item['Descripción'] ?? item['descripcion'] ?? '',
+                    proyecto: item['Nombre Proyecto'] ?? item['nombre_proyecto'] ?? '',
+                    cantidad: item['Cantidad'] ?? item['cantidad'] ?? 1,
+                    dim_1: item['dim_1'] ?? null,
+                    dim_2: item['dim_2'] ?? null,
+                    dim_3: item['dim_3'] ?? null,
+                    acabado_1: item['acabado_1'] ?? null,
+                    acabado_2: item['acabado_2'] ?? null,
+                    acabado_3: item['acabado_3'] ?? null,
+                    caracteristicas: item['caracteristicas'] ?? null,
+                    programador: item['programador'] ?? item['Programador'] ?? null,
+                    categoria: item['categoria'] ?? null,
+                    notas: item['notas'] ?? null,
+                    observaciones_erp: item['observaciones_erp'] ?? null
                 }));
                 resolve(mappedData);
             }

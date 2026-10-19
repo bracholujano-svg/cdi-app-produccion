@@ -41,7 +41,10 @@ const OrderDetailsModal = ({
     orders,
     setOrders,
     syncOrderToSupabase,
-    openDispatchModal
+    openDispatchModal,
+    inventoryReservations,
+    setActiveAlertMaterials,
+    setShowMaterialsAlertModal
   } = useAppContext();
 
   const [isTerminadoLocal, setIsTerminadoLocal] = useState(selectedOrder?.isTerminado || false);
@@ -68,6 +71,10 @@ const OrderDetailsModal = ({
   }, [selectedOrder?.id]);
 
   if (!selectedOrder) return null;
+
+  const prodMatInfo = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
+    ? inventoryReservations.getProductMaterials(selectedOrder.pedidoNum, selectedOrder.codArticulo)
+    : null;
 
   const rootId = selectedOrder?.master_id || selectedOrder?.id;
   const familyOrders = (orders || []).filter(o => o && (o.id === rootId || o.master_id === rootId));
@@ -115,6 +122,11 @@ const OrderDetailsModal = ({
               <div className="flex flex-col truncate pr-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-base font-black uppercase truncate theme-text-main">PED: {selectedOrder.pedidoNum}</h2>
+                  {selectedOrder.codArticulo && (
+                    <span className="text-sm bg-blue-500/15 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/30 font-mono font-black truncate">
+                      CÓD: {selectedOrder.codArticulo}
+                    </span>
+                  )}
                   {selectedOrder.cantidad && (
                     <span className="text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
                       <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
@@ -150,6 +162,31 @@ const OrderDetailsModal = ({
               >
                   <FileText size={"1.3em"} /> Ver Planos del Producto
               </button>
+
+              {/* ALERTA NIVEL 1: ESTADO DE MATERIAS PRIMAS DE ESTE PRODUCTO (codpt) */}
+              {prodMatInfo && prodMatInfo.status !== 'SIN_REQUERIMIENTOS' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveAlertMaterials(prodMatInfo.materials);
+                    setShowMaterialsAlertModal(true);
+                  }}
+                  className={`w-full p-3.5 rounded-2xl flex items-center justify-between gap-2 font-black text-xs sm:text-sm uppercase transition-all shadow-sm border cursor-pointer ${
+                    prodMatInfo.status === 'SIN_STOCK'
+                      ? 'animate-bg-pulse-red bg-red-500/15 text-red-800 dark:text-red-400 border-red-500/40 hover:bg-red-500/25'
+                      : prodMatInfo.status === 'PENDIENTE_ENTREGA'
+                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/25'
+                      : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25'
+                  }`}
+                >
+                  <span className="truncate">
+                    {prodMatInfo.status === 'SIN_STOCK' && `🚨 SIN STOCK EN ALMACÉN (${prodMatInfo.sinStockCount} INSUMO(S) EN 0)`}
+                    {prodMatInfo.status === 'PENDIENTE_ENTREGA' && `⚠️ PENDIENTE ENTREGA ALMACÉN (${prodMatInfo.pendienteEntregaCount} POR ENTREGAR)`}
+                    {prodMatInfo.status === 'COMPLETO' && `✅ INSUMOS COMPLETOS (${prodMatInfo.materials.length} REFERENCIAS)`}
+                  </span>
+                  <span className="text-xs underline shrink-0">Ver Insumos</span>
+                </button>
+              )}
 
               {/* BANNER DE SOLO LECTURA */}
               {(() => {

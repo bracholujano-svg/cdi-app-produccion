@@ -6,7 +6,7 @@ import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic, isListening, activeDictationTarget }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const { orders, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, areaFilter, openDispatchModal } = useAppContext();
+  const { orders, inventoryReservations, setActiveAlertMaterials, setShowMaterialsAlertModal, setShowDashboardModal, setSelectedGroupPedido, setSelectedOrder, selectedBulkOrders, setSelectedBulkOrders, setShowBulkModal, tempOperario, setTempOperario, tempShiftActivity, setTempShiftActivity, shiftNoteText, setShiftNoteText, tempPhoto, setTempPhoto, areaFilter, openDispatchModal } = useAppContext();
   const { itemSearchTerm, setItemSearchTerm } = useAppStore();
   
   useEffect(() => {
@@ -141,6 +141,12 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   const isSemaforoTerminado = p.isTerminado;
                   const isSemaforoEnProceso = !isSemaforoTerminado && enProceso;
                   const isSemaforoEnEspera = !isSemaforoTerminado && !enProceso;
+
+                  // NIVEL 1: Evaluación Individual de Materias Primas por Producto (codpt === codArticulo)
+                  const prodMatInfo = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
+                    ? inventoryReservations.getProductMaterials(p.pedidoNum, p.codArticulo)
+                    : null;
+
                   return (
                   <div key={p.id} onClick={() => setSelectedOrder(p)} className="p-4 rounded-2xl cursor-pointer transition-all active:scale-95 relative flex flex-col justify-between shadow-md hover:-translate-y-1"
                   style={{
@@ -167,6 +173,33 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                            <span title={p.codArticulo} className="inline-block max-w-full text-base lg:text-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-black truncate">CÓD: {p.codArticulo}</span>
                         </div>
                         <h4 className="font-black text-base lg:text-lg uppercase leading-tight theme-text-main">{p.nombre}</h4>
+
+                        {/* BADGE NIVEL 1: ESTADO DE MATERIAS PRIMAS POR PRODUCTO (codpt) */}
+                        {prodMatInfo && prodMatInfo.status !== 'SIN_REQUERIMIENTOS' && p.estadoInterno !== 'DESPACHADO' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveAlertMaterials(prodMatInfo.materials);
+                              setShowMaterialsAlertModal(true);
+                            }}
+                            className={`mt-2.5 w-full text-left px-2.5 py-1.5 rounded-xl font-black text-xs uppercase flex items-center justify-between gap-1.5 border shadow-sm transition-all cursor-pointer ${
+                              prodMatInfo.status === 'SIN_STOCK'
+                                ? 'animate-bg-pulse-red bg-red-500/20 text-red-800 dark:text-red-300 border-red-500/50 hover:bg-red-500/30'
+                                : prodMatInfo.status === 'PENDIENTE_ENTREGA'
+                                ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                            }`}
+                            title="Ver desglose de materias primas de este producto"
+                          >
+                            <span className="truncate flex items-center gap-1">
+                              {prodMatInfo.status === 'SIN_STOCK' && '🚨 SIN STOCK EN ALMACÉN'}
+                              {prodMatInfo.status === 'PENDIENTE_ENTREGA' && '⚠️ PENDIENTE ENTREGA ALMACÉN'}
+                              {prodMatInfo.status === 'COMPLETO' && '✅ INSUMOS COMPLETOS'}
+                            </span>
+                            <ChevronDown size={14} className="shrink-0" />
+                          </button>
+                        )}
                     </div>
 
                     <div className="mt-4 p-2 bg-[var(--color-base)] rounded-xl border border-[var(--color-border)] flex flex-col gap-1.5">
