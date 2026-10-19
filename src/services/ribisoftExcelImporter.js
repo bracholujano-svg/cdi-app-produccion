@@ -1,3 +1,4 @@
+import localforage from 'localforage';
 import { supabase } from '../supabaseClient';
 
 /**
@@ -64,10 +65,83 @@ export const extractCodigoItem = (row) => {
     return cleanErpCode(rawCode);
   }
 
-  // Intentar extraer código 3300xxxx si viene concatenado en Descripción / Producto
   const desc = String(row['Descripción'] ?? row['Descripcion'] ?? row['producto'] ?? row['Producto'] ?? '');
   const match = desc.match(/\b(33\d{6,})\b/);
   return match ? match[1] : null;
+};
+
+/**
+ * Inserta lotes en Supabase adaptándose automáticamente al esquema real de la tabla:
+ * si PostgREST reporta que una columna alias no existe en el schema cache,
+ * la descarta automáticamente y reintenta sin interrumpir la importación.
+ */
+const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 100) => {
+  if (!rows || rows.length === 0) return 0;
+
+  const excludedColumns = new Set();
+
+  // Intentar inspeccionar 1 fila existente para conocer las columnas reales de antemano
+  try {
+    const { data: sample } = await supabase.from(tableName).select('*').limit(1);
+    if (sample && sample.length > 0) {
+      const realCols = new Set(Object.keys(sample[0]));
+      const candidateCols = Object.keys(rows[0]);
+      candidateCols.forEach(c => {
+        if (!realCols.has(c)) excludedColumns.add(c);
+      });
+    }
+  } catch (_) {
+    // Continuar con detección dinámica por respuesta de PostgREST
+  }
+
+  const filterRowColumns = (row) => {
+    const clean = {};
+    for (const [k, v] of Object.entries(row)) {
+      if (!excludedColumns.has(k) && v !== undefined) {
+        clean[k] = v;
+      }
+    }
+    return clean;
+  };
+
+  const chunkSize = 400;
+  let insertedTotal = 0;
+
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const rawChunk = rows.slice(i, i + chunkSize);
+    let retries = 25;
+
+    while (retries > 0) {
+      const payload = rawChunk.map(filterRowColumns);
+      if (payload.length === 0 || Object.keys(payload[0]).length === 0) {
+        throw new Error(`Ninguna columna coincide con el esquema de la tabla ${tableName}.`);
+      }
+
+      const { error } = await supabase.from(tableName).insert(payload);
+      if (!error) {
+        insertedTotal += rawChunk.length;
+        break;
+      }
+
+      const colMatch =
+        error.message?.match(/Could not find the '([^']+)' column/i) ||
+        error.message?.match(/column "([^"]+)" of relation "[^"]+" does not exist/i);
+
+      if (colMatch && colMatch[1]) {
+        excludedColumns.add(colMatch[1]);
+        retries--;
+        continue;
+      }
+
+      throw error;
+    }
+
+    if (onProgress) {
+      onProgress(Math.round((insertedTotal / rows.length) * progressScale));
+    }
+  }
+
+  return insertedTotal;
 };
 
 /**
@@ -136,14 +210,19 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       numero_rq,
       pedido_cot,
       pedido_sin,
+      pedidosin: pedido_sin,
       codpt: codpt && codpt !== 'NaN' ? codpt : null,
       producto,
       idreferencia,
+      "Id Referencia": idreferencia,
       referencia,
+      "Descripcion": referencia,
       idunidad,
       fecha_solicitud: fecha_solicitud ? String(fecha_solicitud).trim() : null,
       pedida_reser,
+      "Cantidad": pedida_reser,
       cant_oc,
+      "Cant.OC": cant_oc,
       entregada,
       pendiente,
       existencia,
@@ -157,42 +236,60 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
     });
   }
 
-  // Insertar en lotes de 500 en requerimientos_pedido
-  const chunkSize = 500;
-  let insertedCount = 0;
-  for (let i = 0; i < mappedRows.length; i += chunkSize) {
-    const chunk = mappedRows.slice(i, i + chunkSize);
-    const { error } = await supabase.from('requerimientos_pedido').insert(chunk);
-    if (error) throw error;
-    insertedCount += chunk.length;
-    if (onProgress) onProgress(Math.round((insertedCount / mappedRows.length) * 75));
-  }
+  const insertedCount = await adaptiveBatchInsert('requerimientos_pedido', mappedRows, onProgress, 75);
 
-  // Actualizar existencia y ubicacion en inventario cuando coincida idreferencia
+  // Detectar nombres reales de columnas en `inventario` para sincronizar existencia y ubicacion
+  let invRefCol = 'Id Referencia';
+  let invExistCol = 'Saldo';
+  let invUbicCol = 'ubicacion';
+  let hasInvExistLower = false;
+
+  try {
+    const { data: invSample } = await supabase.from('inventario').select('*').limit(1);
+    if (invSample && invSample.length > 0) {
+      const cols = Object.keys(invSample[0]);
+      if (cols.includes('idreferencia')) invRefCol = 'idreferencia';
+      else if (cols.includes('Id Referencia')) invRefCol = 'Id Referencia';
+
+      if (cols.includes('existencia')) {
+        invExistCol = 'existencia';
+        hasInvExistLower = true;
+      } else if (cols.includes('Saldo')) {
+        invExistCol = 'Saldo';
+      }
+
+      if (cols.includes('ubicacion')) invUbicCol = 'ubicacion';
+      else if (cols.includes('Ubicacion')) invUbicCol = 'Ubicacion';
+      else if (cols.includes('Ubicación')) invUbicCol = 'Ubicación';
+    }
+  } catch (_) {}
+
   let updatedInvCount = 0;
   const invUpdates = Array.from(inventoryUpdatesMap.values());
   for (const upd of invUpdates) {
-    const updatePayload = { existencia: upd.existencia };
-    if (upd.ubicacion) updatePayload.ubicacion = upd.ubicacion;
+    const updatePayload = { [invExistCol]: upd.existencia };
+    if (hasInvExistLower && invExistCol !== 'Saldo') {
+      // mantener limpio
+    }
+    if (upd.ubicacion && invUbicCol) {
+      updatePayload[invUbicCol] = upd.ubicacion;
+    }
 
     const { error } = await supabase
       .from('inventario')
       .update(updatePayload)
-      .eq('idreferencia', upd.idreferencia);
+      .eq(invRefCol, upd.idreferencia);
 
     if (!error) updatedInvCount++;
   }
 
+  await localforage.removeItem('cdi_mrp_processed_cache_v2');
   if (onProgress) onProgress(100);
   return { insertedCount, updatedInvCount };
 };
 
 /**
  * B) Importar `lista de pedidos de produccion.xls` en `ribisoft_pedidos` y `produccion_pedidos`.
- * - Ignora filas donde Anulado === true o Descartado === true.
- * - Conserva codigo_item / Código Ítem (3300xxxx) para cruzar con codpt.
- * - Guarda dimensiones, acabados, caracteristicas, programador, nombre_proyecto, categoria, notas, observaciones_erp, fecha_asigna y fecha_genera_ped.
- * - En produccion_pedidos SOLO inserta artículos nuevos; NO sobrescribe el área ni el estado de los productos que ya están en planta.
  */
 export const importPedidosProduccionRows = async (rows, onProgress) => {
   const validRows = rows.filter(row => {
@@ -283,19 +380,12 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     });
   }
 
-  // 1. Insertar en ribisoft_pedidos en lotes
-  const chunkSize = 500;
-  for (let i = 0; i < ribisoftPayload.length; i += chunkSize) {
-    const chunk = ribisoftPayload.slice(i, i + chunkSize);
-    const { error } = await supabase.from('ribisoft_pedidos').insert(chunk);
-    if (error) {
-      console.warn('Aviso insertando lote en ribisoft_pedidos:', error.message);
-    }
+  try {
+    await adaptiveBatchInsert('ribisoft_pedidos', ribisoftPayload, onProgress, 50);
+  } catch (err) {
+    console.warn('Aviso insertando en ribisoft_pedidos:', err.message);
   }
 
-  if (onProgress) onProgress(50);
-
-  // 2. Consultar produccion_pedidos actuales para NO sobrescribir área ni estado de productos ya en planta
   const { data: existingPlanta, error: fetchErr } = await supabase
     .from('produccion_pedidos')
     .select('pedido_num, data_completa');
@@ -391,13 +481,9 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     });
   }
 
-  for (let i = 0; i < newPlantaRecords.length; i += chunkSize) {
-    const chunk = newPlantaRecords.slice(i, i + chunkSize);
-    const { error } = await supabase.from('produccion_pedidos').insert(chunk);
-    if (error) throw error;
-  }
-
+  await adaptiveBatchInsert('produccion_pedidos', newPlantaRecords, onProgress, 100);
   if (onProgress) onProgress(100);
+
   return {
     ribisoftInserted: ribisoftPayload.length,
     plantaInserted: newPlantaRecords.length,
@@ -461,21 +547,10 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
     });
   }
 
-  const chunkSize = 500;
-  let processed = 0;
-  for (let i = 0; i < mappedInventario.length; i += chunkSize) {
-    const chunk = mappedInventario.slice(i, i + chunkSize);
-    const { error } = await supabase.from('inventario').upsert(chunk, { onConflict: 'idreferencia' });
-    if (error) {
-      // Fallback insert si no hay constraint único en idreferencia
-      const { error: insErr } = await supabase.from('inventario').insert(chunk);
-      if (insErr) throw insErr;
-    }
-    processed += chunk.length;
-    if (onProgress) onProgress(Math.round((processed / mappedInventario.length) * 100));
-  }
+  const importedCount = await adaptiveBatchInsert('inventario', mappedInventario, onProgress, 100);
+  await localforage.removeItem('cdi_mrp_processed_cache_v2');
 
-  return { importedCount: mappedInventario.length };
+  return { importedCount };
 };
 
 /**
