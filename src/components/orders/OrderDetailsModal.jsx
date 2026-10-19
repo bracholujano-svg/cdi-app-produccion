@@ -73,7 +73,7 @@ const OrderDetailsModal = ({
   if (!selectedOrder) return null;
 
   const prodMatInfo = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
-    ? inventoryReservations.getProductMaterials(selectedOrder.pedidoNum, selectedOrder.codArticulo)
+    ? inventoryReservations.getProductMaterials(selectedOrder.pedidoNum, selectedOrder.codArticulo || selectedOrder.codigo_item, selectedOrder.nombre || selectedOrder.descripcion)
     : null;
 
   const rootId = selectedOrder?.master_id || selectedOrder?.id;

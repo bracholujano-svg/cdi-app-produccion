@@ -121,12 +121,19 @@ export const useInventoryMRP = (orders, supabaseData) => {
             }
         });
 
+        const normalizeProdName = (str) =>
+            String(str || '')
+                .trim()
+                .toUpperCase()
+                .replace(/\s+/g, ' ');
+
         /**
-         * NIVEL 1: Evaluación Individual por Producto (codpt === codigo_item dentro de pedido_sin)
+         * NIVEL 1: Evaluación Individual por Producto (codpt === codigo_item o producto === nombre dentro de pedido_sin)
          */
-        const getProductMaterials = (pedidoNum, codArticulo) => {
+        const getProductMaterials = (pedidoNum, codArticulo, nombreProducto = '') => {
             const normPNum = normalizeErpCode(pedidoNum);
             const normCodArt = normalizeErpCode(codArticulo);
+            const normProdName = normalizeProdName(nombreProducto);
             const orderReqs = reqsByPedido[normPNum] || [];
 
             if (orderReqs.length === 0) {
@@ -140,17 +147,19 @@ export const useInventoryMRP = (orders, supabaseData) => {
                 };
             }
 
-            // Buscar materiales donde coincidan pedido_sin Y codpt === codigo_item
-            const specificMaterials = normCodArt
-                ? orderReqs.filter(m => m.codpt && m.codpt === normCodArt)
-                : [];
+            // Buscar materiales donde coincidan pedido_sin Y codpt === codigo_item (o nombre de producto)
+            const specificMaterials = orderReqs.filter(m => {
+                if (normCodArt && m.codpt && m.codpt === normCodArt) return true;
+                if (normProdName && m.producto && normalizeProdName(m.producto) === normProdName) return true;
+                return false;
+            });
 
-            // Materiales genéricos del pedido con codpt nulo
-            const genericMaterials = orderReqs.filter(m => !m.codpt);
+            // Materiales genéricos del pedido con codpt nulo y sin nombre de producto específico
+            const genericMaterials = orderReqs.filter(m => !m.codpt && !m.producto);
 
-            // Si el pedido tiene desglose por codpt, cada producto se evalúa por su codpt (+ genéricos sin codpt)
-            const hasAnyCodPtInOrder = orderReqs.some(m => Boolean(m.codpt));
-            const productMaterials = hasAnyCodPtInOrder
+            // Si el pedido tiene desglose por codpt/producto, cada producto se evalúa por sus materiales propios (+ genéricos sin codpt)
+            const hasAnySpecificInOrder = orderReqs.some(m => Boolean(m.codpt) || Boolean(m.producto));
+            const productMaterials = hasAnySpecificInOrder
                 ? [...specificMaterials, ...genericMaterials]
                 : genericMaterials;
 
@@ -203,7 +212,7 @@ export const useInventoryMRP = (orders, supabaseData) => {
 
         /**
          * NIVEL 2: Resumen Inteligente en la Tarjeta Principal del Pedido
-         * Evalúa el estado real de sus productos hijos (por codpt / codArticulo).
+         * Evalúa el estado real de sus productos hijos (por codpt / codArticulo / nombre).
          */
         const getOrderSummary = (pedidoNum, groupProducts = []) => {
             const normPNum = normalizeErpCode(pedidoNum);
@@ -220,27 +229,21 @@ export const useInventoryMRP = (orders, supabaseData) => {
                 };
             }
 
-            // Obtener códigos únicos de productos hijos del pedido
-            const productCodesSet = new Set();
-            (groupProducts || []).forEach(p => {
-                if (p) {
-                    const code = normalizeErpCode(p.codArticulo || p.codigo_item);
-                    if (code) productCodesSet.add(code);
-                }
-            });
-
-            // También incluir cualquier codpt presente en requerimientos_pedido de este pedido
-            allOrderMaterials.forEach(m => {
-                if (m.codpt) productCodesSet.add(m.codpt);
-            });
-
             let sinStockProductsCount = 0;
             let pendienteProductsCount = 0;
             let completeProductsCount = 0;
 
-            if (productCodesSet.size > 0) {
-                productCodesSet.forEach(code => {
-                    const evalProd = getProductMaterials(normPNum, code);
+            if (Array.isArray(groupProducts) && groupProducts.length > 0) {
+                const evaluatedKeys = new Set();
+                groupProducts.forEach(p => {
+                    if (!p) return;
+                    const code = normalizeErpCode(p.codArticulo || p.codigo_item);
+                    const name = normalizeProdName(p.nombre || p.descripcion);
+                    const uniqueKey = `${code}__${name}`;
+                    if (evaluatedKeys.has(uniqueKey)) return;
+                    evaluatedKeys.add(uniqueKey);
+
+                    const evalProd = getProductMaterials(normPNum, code, name);
                     if (evalProd.status === 'SIN_STOCK') {
                         sinStockProductsCount++;
                     } else if (evalProd.status === 'PENDIENTE_ENTREGA') {
@@ -249,13 +252,33 @@ export const useInventoryMRP = (orders, supabaseData) => {
                         completeProductsCount++;
                     }
                 });
-            } else {
-                // Fallback si ningún requerimiento ni producto tiene codpt (materiales generales del pedido)
-                const hasSinStock = allOrderMaterials.some(m => m.estadoInsumo === 'SIN_STOCK');
-                const hasPendiente = allOrderMaterials.some(m => m.estadoInsumo === 'PENDIENTE_ENTREGA');
-                if (hasSinStock) sinStockProductsCount = 1;
-                else if (hasPendiente) pendienteProductsCount = 1;
-                else completeProductsCount = 1;
+            }
+
+            // Si no se pasaron productos en planta o ninguno coincidió con codpt, evaluar por cada codpt único del pedido en requerimientos_pedido
+            if (sinStockProductsCount === 0 && pendienteProductsCount === 0 && completeProductsCount === 0) {
+                const codptSet = new Set();
+                allOrderMaterials.forEach(m => {
+                    if (m.codpt) codptSet.add(m.codpt);
+                });
+
+                if (codptSet.size > 0) {
+                    codptSet.forEach(code => {
+                        const evalProd = getProductMaterials(normPNum, code, '');
+                        if (evalProd.status === 'SIN_STOCK') {
+                            sinStockProductsCount++;
+                        } else if (evalProd.status === 'PENDIENTE_ENTREGA') {
+                            pendienteProductsCount++;
+                        } else if (evalProd.status === 'COMPLETO') {
+                            completeProductsCount++;
+                        }
+                    });
+                } else {
+                    const hasSinStock = allOrderMaterials.some(m => m.estadoInsumo === 'SIN_STOCK');
+                    const hasPendiente = allOrderMaterials.some(m => m.estadoInsumo === 'PENDIENTE_ENTREGA');
+                    if (hasSinStock) sinStockProductsCount = 1;
+                    else if (hasPendiente) pendienteProductsCount = 1;
+                    else completeProductsCount = 1;
+                }
             }
 
             if (sinStockProductsCount > 0) {

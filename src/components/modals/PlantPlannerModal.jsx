@@ -433,7 +433,7 @@ const PlantPlannerModal = ({
                                                                                     <h5 className="text-xs font-black uppercase text-indigo-500 tracking-wider mb-2 border-b border-indigo-500/20 pb-1">Desglose de Productos en {area.areaName}</h5>
                                                                                     {pedido.items.map(item => {
                                                                                         const itemMat = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
-                                                                                            ? inventoryReservations.getProductMaterials(item.pedidoNum, item.codArticulo)
+                                                                                            ? inventoryReservations.getProductMaterials(item.pedidoNum, item.codArticulo || item.codigo_item, item.nombre || item.descripcion)
                                                                                             : null;
                                                                                         return (
                                                                                         <div key={item.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow">

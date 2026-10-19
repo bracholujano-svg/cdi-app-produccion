@@ -142,9 +142,9 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                   const isSemaforoEnProceso = !isSemaforoTerminado && enProceso;
                   const isSemaforoEnEspera = !isSemaforoTerminado && !enProceso;
 
-                  // NIVEL 1: Evaluación Individual de Materias Primas por Producto (codpt === codArticulo)
+                  // NIVEL 1: Evaluación Individual de Materias Primas por Producto (codpt === codArticulo o nombre)
                   const prodMatInfo = inventoryReservations && typeof inventoryReservations.getProductMaterials === 'function'
-                    ? inventoryReservations.getProductMaterials(p.pedidoNum, p.codArticulo)
+                    ? inventoryReservations.getProductMaterials(p.pedidoNum, p.codArticulo || p.codigo_item, p.nombre || p.descripcion)
                     : null;
 
                   return (

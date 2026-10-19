@@ -7,11 +7,12 @@ import { supabase } from '../supabaseClient';
  */
 export const cleanErpCode = (val) => {
   if (val === undefined || val === null || String(val).trim() === '') return null;
-  const num = Number(val);
+  const str = String(val).trim();
+  const num = Number(str);
   if (!Number.isNaN(num) && Number.isFinite(num)) {
     return String(Math.trunc(num)).trim();
   }
-  return String(val).replace(/\.0+$/, '').trim();
+  return str.replace(/\.0+$/, '').trim();
 };
 
 /**
@@ -37,6 +38,62 @@ export const toSafeNumber = (val) => {
 };
 
 /**
+ * Convierte fechas exportadas por Excel (números seriales como 46120.371527777774,
+ * objetos Date o textos DD/MM/YYYY / ISO) a formato ISO 8601 válido para PostgreSQL TIMESTAMPTZ,
+ * o devuelve null si el valor está vacío o fuera de rango.
+ */
+export const cleanExcelDate = (val) => {
+  if (val === undefined || val === null) return null;
+  if (val instanceof Date) {
+    return !Number.isNaN(val.getTime()) ? val.toISOString() : null;
+  }
+
+  const str = String(val).trim();
+  if (!str || str === '0' || str === '0.0' || str.startsWith('00/00') || str.startsWith('0000-00')) {
+    return null;
+  }
+
+  const num = Number(str);
+  if (!Number.isNaN(num) && Number.isFinite(num)) {
+    // Rango válido de fecha serial de Excel (entre 1954 y 2173)
+    if (num > 20000 && num < 100000) {
+      const utcMs = Math.round((num - 25569) * 86400 * 1000);
+      const d = new Date(utcMs);
+      if (!Number.isNaN(d.getTime())) return d.toISOString();
+    }
+    return null;
+  }
+
+  // Formato DD/MM/YYYY o DD-MM-YYYY opcionalmente con hora
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (dmyMatch) {
+    const [, day, month, year, hh = '00', mm = '00', ss = '00'] = dmyMatch;
+    const isoCandidate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}Z`;
+    const d = new Date(isoCandidate);
+    if (!Number.isNaN(d.getTime()) && d.getUTCFullYear() >= 1970 && d.getUTCFullYear() <= 2100) {
+      return d.toISOString();
+    }
+  }
+
+  const parsed = new Date(str);
+  if (!Number.isNaN(parsed.getTime()) && parsed.getUTCFullYear() >= 1970 && parsed.getUTCFullYear() <= 2100) {
+    return parsed.toISOString();
+  }
+
+  return null;
+};
+
+/**
+ * Normaliza el nombre de un producto para cruce exacto entre
+ * MATERIALES REQUERIDOS (columna `producto`) y LISTA DE PEDIDOS (columna `Descripción`).
+ */
+export const normalizeProductName = (str) =>
+  String(str || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ');
+
+/**
  * Evalúa si una bandera booleana de Excel (Anulado / Descartado) es verdadera.
  */
 const isTruthyExcelFlag = (val) => {
@@ -49,9 +106,10 @@ const isTruthyExcelFlag = (val) => {
 };
 
 /**
- * Extrae o limpia el código de producto terminado (3300xxxx) desde la fila de Excel.
+ * Extrae o limpia el código de producto terminado (3300xxxx) desde la fila de Excel,
+ * o lo busca en el mapa de (pedido_sin + producto) -> codpt.
  */
-export const extractCodigoItem = (row) => {
+export const extractCodigoItem = (row, prodToCodptMap = null, pedidoSin = null) => {
   const rawCode =
     row['codigo_item'] ??
     row['Código Ítem'] ??
@@ -62,37 +120,41 @@ export const extractCodigoItem = (row) => {
     row['Codigo'];
 
   if (rawCode !== undefined && rawCode !== null && String(rawCode).trim() !== '') {
-    return cleanErpCode(rawCode);
+    const cleaned = cleanErpCode(rawCode);
+    if (cleaned && cleaned !== 'NaN') return cleaned;
   }
 
   const desc = String(row['Descripción'] ?? row['Descripcion'] ?? row['producto'] ?? row['Producto'] ?? '');
-  const match = desc.match(/\b(33\d{6,})\b/);
+  if (prodToCodptMap && pedidoSin) {
+    const key = `${pedidoSin}__${normalizeProductName(desc)}`;
+    if (prodToCodptMap.has(key)) {
+      return prodToCodptMap.get(key);
+    }
+  }
+
+  const match = desc.match(/\b(33\d{6,}|34\d{6,})\b/);
   return match ? match[1] : null;
 };
 
 /**
- * Inserta lotes en Supabase adaptándose automáticamente al esquema real de la tabla:
- * si PostgREST reporta que una columna alias no existe en el schema cache,
- * la descarta automáticamente y reintenta sin interrumpir la importación.
+ * Escribe lotes en Supabase (insert o upsert) adaptándose automáticamente al esquema real
+ * de la tabla y evitando errores de columnas inexistentes o claves duplicadas.
  */
-const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 100) => {
+const adaptiveBatchWrite = async (
+  tableName,
+  rows,
+  {
+    mode = 'insert',
+    onConflict = undefined,
+    onProgress = null,
+    progressStart = 0,
+    progressEnd = 100,
+    chunkSize = 800
+  } = {}
+) => {
   if (!rows || rows.length === 0) return 0;
 
   const excludedColumns = new Set();
-
-  // Intentar inspeccionar 1 fila existente para conocer las columnas reales de antemano
-  try {
-    const { data: sample } = await supabase.from(tableName).select('*').limit(1);
-    if (sample && sample.length > 0) {
-      const realCols = new Set(Object.keys(sample[0]));
-      const candidateCols = Object.keys(rows[0]);
-      candidateCols.forEach(c => {
-        if (!realCols.has(c)) excludedColumns.add(c);
-      });
-    }
-  } catch (_) {
-    // Continuar con detección dinámica por respuesta de PostgREST
-  }
 
   const filterRowColumns = (row) => {
     const clean = {};
@@ -104,12 +166,12 @@ const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 
     return clean;
   };
 
-  const chunkSize = 400;
-  let insertedTotal = 0;
+  let processedTotal = 0;
+  let currentMode = mode;
 
   for (let i = 0; i < rows.length; i += chunkSize) {
     const rawChunk = rows.slice(i, i + chunkSize);
-    let retries = 25;
+    let retries = 20;
 
     while (retries > 0) {
       const payload = rawChunk.map(filterRowColumns);
@@ -117,12 +179,22 @@ const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 
         throw new Error(`Ninguna columna coincide con el esquema de la tabla ${tableName}.`);
       }
 
-      const { error } = await supabase.from(tableName).insert(payload);
+      let query;
+      if (currentMode === 'upsert') {
+        query = onConflict
+          ? supabase.from(tableName).upsert(payload, { onConflict })
+          : supabase.from(tableName).upsert(payload);
+      } else {
+        query = supabase.from(tableName).insert(payload);
+      }
+
+      const { error } = await query;
       if (!error) {
-        insertedTotal += rawChunk.length;
+        processedTotal += rawChunk.length;
         break;
       }
 
+      // Si PostgREST reporta una columna que no existe en el schema cache, descartarla y reintentar
       const colMatch =
         error.message?.match(/Could not find the '([^']+)' column/i) ||
         error.message?.match(/column "([^"]+)" of relation "[^"]+" does not exist/i);
@@ -133,15 +205,23 @@ const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 
         continue;
       }
 
+      // Si una inserción choca con una clave primaria o única existente, cambiar automáticamente a upsert
+      if (currentMode === 'insert' && /duplicate key value violates unique constraint/i.test(error.message || '')) {
+        currentMode = 'upsert';
+        retries--;
+        continue;
+      }
+
       throw error;
     }
 
     if (onProgress) {
-      onProgress(Math.round((insertedTotal / rows.length) * progressScale));
+      const ratio = Math.min(1, processedTotal / rows.length);
+      onProgress(Math.round(progressStart + ratio * (progressEnd - progressStart)));
     }
   }
 
-  return insertedTotal;
+  return processedTotal;
 };
 
 /**
@@ -151,6 +231,8 @@ const adaptiveBatchInsert = async (tableName, rows, onProgress, progressScale = 
 export const importMaterialesRequeridosRows = async (rows, onProgress) => {
   const mappedRows = [];
   const inventoryUpdatesMap = new Map();
+  const uniquePedidosSet = new Set();
+  const prodToCodptMap = new Map();
 
   for (const row of rows) {
     const pedidoSinRaw = row['pedido_sin'] ?? row['pedidosin'] ?? row['PedidoSIN'];
@@ -159,40 +241,55 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       : null;
 
     if (!pedido_sin) continue;
+    uniquePedidosSet.add(pedido_sin);
 
     // CRÍTICO: En Excel codpt viene como float 33000070.0 -> limpiar obligatoriamente
-    const codpt = row['codpt'] !== undefined && row['codpt'] !== null && String(row['codpt']).trim() !== ''
-      ? String(Math.trunc(Number(row['codpt']))).trim()
-      : null;
+    const rawCodPt = row['codpt'];
+    let codpt = null;
+    if (rawCodPt !== undefined && rawCodPt !== null && String(rawCodPt).trim() !== '') {
+      const numCod = Number(rawCodPt);
+      const cleaned = !Number.isNaN(numCod) && Number.isFinite(numCod)
+        ? String(Math.trunc(numCod)).trim()
+        : String(rawCodPt).replace(/\.0+$/, '').trim();
+      if (cleaned && cleaned !== 'NaN' && cleaned !== '0') {
+        codpt = cleaned;
+      }
+    }
 
     const rawIdRef = row['idreferencia'] ?? row['Id Referencia'] ?? row['id_referencia'];
     const idreferencia = rawIdRef !== undefined && rawIdRef !== null && String(rawIdRef).trim() !== ''
-      ? (Number.isNaN(Number(rawIdRef)) ? String(rawIdRef).replace(/\.0+$/, '').trim() : String(Math.trunc(Number(rawIdRef))).trim())
+      ? cleanErpCode(rawIdRef)
       : null;
 
     if (!idreferencia) continue;
 
-    const numero_rq = row['numero'] !== undefined && row['numero'] !== null
+    const numero_rq = row['numero'] !== undefined && row['numero'] !== null && String(row['numero']).trim() !== ''
       ? String(row['numero']).trim()
       : (row['numero_rq'] ? String(row['numero_rq']).trim() : null);
 
-    const pedido_cot = row['pedido'] !== undefined && row['pedido'] !== null
-      ? cleanErpCode(row['pedido'])
-      : (row['pedido_cot'] ? cleanErpCode(row['pedido_cot']) : null);
+    const pedido_cot = row['pedido'] !== undefined && row['pedido'] !== null && String(row['pedido']).trim() !== ''
+      ? String(row['pedido']).replace(/\.0+$/, '').trim()
+      : (row['pedido_cot'] ? String(row['pedido_cot']).replace(/\.0+$/, '').trim() : null);
 
-    const producto = row['producto'] !== undefined && row['producto'] !== null
+    const producto = row['producto'] !== undefined && row['producto'] !== null && String(row['producto']).trim() !== ''
       ? String(row['producto']).trim()
       : null;
 
+    if (codpt && producto) {
+      prodToCodptMap.set(`${pedido_sin}__${normalizeProductName(producto)}`, codpt);
+    }
+
     const referencia = row['referencia'] !== undefined && row['referencia'] !== null
       ? String(row['referencia']).trim()
-      : (row['Descripcion'] ? String(row['Descripcion']).trim() : null);
+      : (row['Descripcion'] ? String(row['Descripcion']).trim() : '');
 
     const idunidad = row['idunidad'] !== undefined && row['idunidad'] !== null
       ? String(row['idunidad']).trim()
       : (row['Id Unidad'] ? String(row['Id Unidad']).trim() : null);
 
-    const fecha_solicitud = row['Fecha Solicitud'] ?? row['fecha_solicitud'] ?? null;
+    // Convertir fecha serial de Excel (ej: 46120.371527777774) a ISO 8601 para TIMESTAMPTZ
+    const fecha_solicitud = cleanExcelDate(row['Fecha Solicitud'] ?? row['fecha_solicitud']);
+
     const pedida_reser = toSafeNumber(row['pedida(reser)'] ?? row['pedida_reser'] ?? row['Cantidad']);
     const cant_oc = toSafeNumber(row['cant_oc'] ?? row['Cant.OC']);
     const entregada = toSafeNumber(row['entregada']);
@@ -200,25 +297,26 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       ? toSafeNumber(row['pendiente'])
       : Math.max(0, pedida_reser - entregada);
     const existencia = toSafeNumber(row['existencia']);
-    const ubicacion = row['Ubicación'] !== undefined && row['Ubicación'] !== null
-      ? String(row['Ubicación']).trim()
-      : (row['Ubicacion'] !== undefined && row['Ubicacion'] !== null
-          ? String(row['Ubicacion']).trim()
-          : (row['ubicacion'] ? String(row['ubicacion']).trim() : null));
 
+    const rawUbic = row['Ubicación'] ?? row['Ubicacion'] ?? row['ubicacion'];
+    const ubicacion = rawUbic !== undefined && rawUbic !== null && String(rawUbic).trim() !== ''
+      ? String(rawUbic).trim()
+      : null;
+
+    // Columnas exactas verificadas en la tabla `requerimientos_pedido` de Supabase
     mappedRows.push({
       numero_rq,
       pedido_cot,
       pedido_sin,
       pedidosin: pedido_sin,
-      codpt: codpt && codpt !== 'NaN' ? codpt : null,
+      codpt,
       producto,
       idreferencia,
       "Id Referencia": idreferencia,
       referencia,
       "Descripcion": referencia,
       idunidad,
-      fecha_solicitud: fecha_solicitud ? String(fecha_solicitud).trim() : null,
+      fecha_solicitud,
       pedida_reser,
       "Cantidad": pedida_reser,
       cant_oc,
@@ -229,58 +327,113 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       ubicacion
     });
 
+    const prevInv = inventoryUpdatesMap.get(idreferencia);
     inventoryUpdatesMap.set(idreferencia, {
       idreferencia,
+      referencia: referencia || prevInv?.referencia || '',
+      idunidad: idunidad || prevInv?.idunidad || '',
       existencia,
-      ubicacion
+      ubicacion: ubicacion || prevInv?.ubicacion || ''
     });
   }
 
-  const insertedCount = await adaptiveBatchInsert('requerimientos_pedido', mappedRows, onProgress, 75);
+  if (onProgress) onProgress(5);
 
-  // Detectar nombres reales de columnas en `inventario` para sincronizar existencia y ubicacion
-  let invRefCol = 'Id Referencia';
-  let invExistCol = 'Saldo';
-  let invUbicCol = 'ubicacion';
-  let hasInvExistLower = false;
+  // Limpiar requerimientos previos de los pedidos que vienen en este archivo para evitar duplicados al re-sincronizar
+  const uniquePedidos = Array.from(uniquePedidosSet);
+  for (let i = 0; i < uniquePedidos.length; i += 200) {
+    const batchPedidos = uniquePedidos.slice(i, i + 200);
+    await supabase.from('requerimientos_pedido').delete().in('pedido_sin', batchPedidos);
+    await supabase.from('requerimientos_pedido').delete().in('pedidosin', batchPedidos);
+  }
 
-  try {
-    const { data: invSample } = await supabase.from('inventario').select('*').limit(1);
-    if (invSample && invSample.length > 0) {
-      const cols = Object.keys(invSample[0]);
-      if (cols.includes('idreferencia')) invRefCol = 'idreferencia';
-      else if (cols.includes('Id Referencia')) invRefCol = 'Id Referencia';
+  if (onProgress) onProgress(10);
 
-      if (cols.includes('existencia')) {
-        invExistCol = 'existencia';
-        hasInvExistLower = true;
-      } else if (cols.includes('Saldo')) {
-        invExistCol = 'Saldo';
-      }
+  // Insertar todas las filas en `requerimientos_pedido`
+  const insertedCount = await adaptiveBatchWrite('requerimientos_pedido', mappedRows, {
+    mode: 'insert',
+    onProgress,
+    progressStart: 10,
+    progressEnd: 80,
+    chunkSize: 800
+  });
 
-      if (cols.includes('ubicacion')) invUbicCol = 'ubicacion';
-      else if (cols.includes('Ubicacion')) invUbicCol = 'Ubicacion';
-      else if (cols.includes('Ubicación')) invUbicCol = 'Ubicación';
-    }
-  } catch (_) {}
-
-  let updatedInvCount = 0;
+  // Actualizar `existencia` y `ubicacion` en `inventario` cuando coincida `idreferencia` (en lotes rápidos)
   const invUpdates = Array.from(inventoryUpdatesMap.values());
-  for (const upd of invUpdates) {
-    const updatePayload = { [invExistCol]: upd.existencia };
-    if (hasInvExistLower && invExistCol !== 'Saldo') {
-      // mantener limpio
-    }
-    if (upd.ubicacion && invUbicCol) {
-      updatePayload[invUbicCol] = upd.ubicacion;
-    }
+  let updatedInvCount = 0;
+  const concurrency = 25;
 
-    const { error } = await supabase
-      .from('inventario')
-      .update(updatePayload)
-      .eq(invRefCol, upd.idreferencia);
+  for (let i = 0; i < invUpdates.length; i += concurrency) {
+    const slice = invUpdates.slice(i, i + concurrency);
+    const results = await Promise.all(
+      slice.map(async (upd) => {
+        const updatePayload = {
+          existencia: upd.existencia,
+          "Saldo": upd.existencia
+        };
+        if (upd.ubicacion) {
+          updatePayload.ubicacion = upd.ubicacion;
+          updatePayload["Ubicacion"] = upd.ubicacion;
+        }
+        const { error } = await supabase
+          .from('inventario')
+          .update(updatePayload)
+          .eq('Id Referencia', upd.idreferencia);
+        return !error;
+      })
+    );
+    updatedInvCount += results.filter(Boolean).length;
 
-    if (!error) updatedInvCount++;
+    if (onProgress && invUpdates.length > 0) {
+      const ratio = Math.min(1, (i + slice.length) / invUpdates.length);
+      onProgress(Math.round(80 + ratio * 15));
+    }
+  }
+
+  // Enriquecer `codigo_item` / `codArticulo` en `produccion_pedidos` si algún producto en planta no tenía su codpt (sin alterar área ni estado)
+  if (prodToCodptMap.size > 0) {
+    try {
+      const { data: existingPlanta } = await supabase
+        .from('produccion_pedidos')
+        .select('id, pedido_num, codigo_item, data_completa');
+
+      if (existingPlanta && existingPlanta.length > 0) {
+        const toEnrich = [];
+        for (const p of existingPlanta) {
+          const pSin = cleanErpCode(p?.data_completa?.pedidoNum ?? p?.pedido_num);
+          const currentCod = cleanErpCode(p?.codigo_item ?? p?.data_completa?.codArticulo ?? p?.data_completa?.codigo_item);
+          const prodName = normalizeProductName(p?.data_completa?.nombre ?? p?.data_completa?.descripcion);
+          const matchedCodpt = pSin && prodName ? prodToCodptMap.get(`${pSin}__${prodName}`) : null;
+
+          if (matchedCodpt && currentCod !== matchedCodpt) {
+            const updatedDataCompleta = {
+              ...(p.data_completa || {}),
+              codArticulo: matchedCodpt,
+              codigo_item: matchedCodpt
+            };
+            toEnrich.push({
+              id: p.id,
+              codigo_item: matchedCodpt,
+              data_completa: updatedDataCompleta
+            });
+          }
+        }
+
+        for (let i = 0; i < toEnrich.length; i += 25) {
+          const slice = toEnrich.slice(i, i + 25);
+          await Promise.all(
+            slice.map(item =>
+              supabase
+                .from('produccion_pedidos')
+                .update({ codigo_item: item.codigo_item, data_completa: item.data_completa })
+                .eq('id', item.id)
+            )
+          );
+        }
+      }
+    } catch (_) {
+      // No interrumpir si no hay registros por enriquecer
+    }
   }
 
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
@@ -298,6 +451,36 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     return !anulado && !descartado;
   });
 
+  // Consultar mapa (pedido_sin + producto) -> codpt desde `requerimientos_pedido` para cruzar los códigos 3300xxxx
+  const prodToCodptMap = new Map();
+  try {
+    let from = 0;
+    const step = 1000;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('requerimientos_pedido')
+        .select('pedido_sin, codpt, producto')
+        .not('codpt', 'is', null)
+        .range(from, from + step - 1);
+
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        for (const r of data) {
+          const pSin = cleanErpCode(r.pedido_sin);
+          const codpt = cleanErpCode(r.codpt);
+          const prod = normalizeProductName(r.producto);
+          if (pSin && codpt && prod) {
+            prodToCodptMap.set(`${pSin}__${prod}`, codpt);
+          }
+        }
+        from += step;
+        if (data.length < step) hasMore = false;
+      }
+    }
+  } catch (_) {}
+
   const ribisoftPayload = [];
   const candidatesForPlanta = [];
 
@@ -306,7 +489,7 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     const pedido_sin = cleanErpCode(rawPedido);
     if (!pedido_sin) continue;
 
-    const codigo_item = extractCodigoItem(row);
+    const codigo_item = extractCodigoItem(row, prodToCodptMap, pedido_sin);
     const descripcion = String(row['Descripción'] ?? row['Descripcion'] ?? row['descripcion'] ?? row['Producto'] ?? row['producto'] ?? '').trim();
     const cliente = String(row['Cliente'] ?? row['cliente'] ?? row['Nombre Proyecto'] ?? row['nombre_proyecto'] ?? '').trim();
     const nombre_proyecto = String(row['Nombre Proyecto'] ?? row['nombre_proyecto'] ?? row['Proyecto'] ?? '').trim();
@@ -314,22 +497,25 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     const cantidad = toSafeNumber(row['Cantidad'] ?? row['cantidad'] ?? 1) || 1;
     const estado = String(row['Estado'] ?? row['estado'] ?? '').trim();
 
-    const dim_1 = row['dim_1'] ?? row['Dim 1'] ?? row['Dim1'] ?? row['Dim_1'] ?? null;
-    const dim_2 = row['dim_2'] ?? row['Dim 2'] ?? row['Dim2'] ?? row['Dim_2'] ?? null;
-    const dim_3 = row['dim_3'] ?? row['Dim 3'] ?? row['Dim3'] ?? row['Dim_3'] ?? null;
+    const dim_1 = row['Dim.1'] ?? row['dim_1'] ?? row['Dim 1'] ?? row['Dim1'] ?? row['Dim_1'] ?? null;
+    const dim_2 = row['Dim.2'] ?? row['dim_2'] ?? row['Dim 2'] ?? row['Dim2'] ?? row['Dim_2'] ?? null;
+    const dim_3 = row['Dim.3'] ?? row['dim_3'] ?? row['Dim 3'] ?? row['Dim3'] ?? row['Dim_3'] ?? null;
 
-    const acabado_1 = row['acabado_1'] ?? row['Acabado 1'] ?? row['Acabado1'] ?? row['Acabado_1'] ?? null;
-    const acabado_2 = row['acabado_2'] ?? row['Acabado 2'] ?? row['Acabado2'] ?? row['Acabado_2'] ?? null;
-    const acabado_3 = row['acabado_3'] ?? row['Acabado 3'] ?? row['Acabado3'] ?? row['Acabado_3'] ?? null;
+    const acabado_1 = row['Acabado1'] ?? row['acabado_1'] ?? row['Acabado 1'] ?? row['Acabado_1'] ?? null;
+    const acabado_2 = row['Acabado2'] ?? row['acabado_2'] ?? row['Acabado 2'] ?? row['Acabado_2'] ?? null;
+    const acabado_3 = row['Acabado3'] ?? row['acabado_3'] ?? row['Acabado 3'] ?? row['Acabado_3'] ?? null;
 
-    const caracteristicas = row['caracteristicas'] ?? row['Características'] ?? row['Caracteristicas'] ?? null;
-    const categoria = row['categoria'] ?? row['Categoría'] ?? row['Categoria'] ?? null;
-    const notas = row['notas'] ?? row['Notas'] ?? null;
-    const observaciones_erp = row['observaciones_erp'] ?? row['Observaciones ERP'] ?? row['Observaciones'] ?? row['observaciones'] ?? null;
-    const fecha_asigna = row['fecha_asigna'] ?? row['Fecha Asigna'] ?? null;
-    const fecha_genera_ped = row['fecha_genera_ped'] ?? row['Fecha Genera Ped'] ?? row['Fecha Genera'] ?? null;
-    const fecha_entrega = row['Fecha Entrega'] ?? row['fecha_entrega'] ?? null;
+    const caracteristicas = row['Características'] ?? row['Caracteristicas'] ?? row['caracteristicas'] ?? null;
+    const categoria = row['Categoria'] ?? row['Categoría'] ?? row['categoria'] ?? null;
+    const notas = row['Notas'] ?? row['notas'] ?? null;
+    const observaciones_erp = row['Observaciones'] ?? row['observaciones_erp'] ?? row['Observaciones ERP'] ?? row['observaciones'] ?? null;
 
+    // Convertir números seriales de fecha de Excel a ISO 8601 TIMESTAMPTZ
+    const fecha_asigna = cleanExcelDate(row['Fecha asigna'] ?? row['Fecha Asigna'] ?? row['fecha_asigna']);
+    const fecha_genera_ped = cleanExcelDate(row['Fecha Genera Ped.'] ?? row['Fecha Genera Ped'] ?? row['fecha_genera_ped'] ?? row['Fecha Genera']);
+    const fecha_entrega = cleanExcelDate(row['Fecha Entrega'] ?? row['fecha_entrega']);
+
+    // Columnas exactas verificadas en `ribisoft_pedidos`
     ribisoftPayload.push({
       "PedidoSIN": pedido_sin,
       "Código Ítem": codigo_item || '',
@@ -339,21 +525,19 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       "Estado": estado,
       "Programador": programador,
       "Cantidad": cantidad,
-      codigo_item: codigo_item || null,
-      dim_1: dim_1 !== null ? String(dim_1).trim() : null,
-      dim_2: dim_2 !== null ? String(dim_2).trim() : null,
-      dim_3: dim_3 !== null ? String(dim_3).trim() : null,
-      acabado_1: acabado_1 !== null ? String(acabado_1).trim() : null,
-      acabado_2: acabado_2 !== null ? String(acabado_2).trim() : null,
-      acabado_3: acabado_3 !== null ? String(acabado_3).trim() : null,
-      caracteristicas: caracteristicas !== null ? String(caracteristicas).trim() : null,
+      dim_1: dim_1 !== null && dim_1 !== '' ? String(dim_1).trim() : null,
+      dim_2: dim_2 !== null && dim_2 !== '' ? String(dim_2).trim() : null,
+      dim_3: dim_3 !== null && dim_3 !== '' ? String(dim_3).trim() : null,
+      acabado_1: acabado_1 !== null && acabado_1 !== '' ? String(acabado_1).trim() : null,
+      acabado_2: acabado_2 !== null && acabado_2 !== '' ? String(acabado_2).trim() : null,
+      acabado_3: acabado_3 !== null && acabado_3 !== '' ? String(acabado_3).trim() : null,
+      caracteristicas: caracteristicas !== null && caracteristicas !== '' ? String(caracteristicas).trim() : null,
       programador: programador || null,
-      nombre_proyecto: nombre_proyecto || null,
-      categoria: categoria !== null ? String(categoria).trim() : null,
-      notas: notas !== null ? String(notas).trim() : null,
-      observaciones_erp: observaciones_erp !== null ? String(observaciones_erp).trim() : null,
-      fecha_asigna: fecha_asigna !== null ? String(fecha_asigna).trim() : null,
-      fecha_genera_ped: fecha_genera_ped !== null ? String(fecha_genera_ped).trim() : null
+      categoria: categoria !== null && categoria !== '' ? String(categoria).trim() : null,
+      notas: notas !== null && notas !== '' ? String(notas).trim() : null,
+      observaciones_erp: observaciones_erp !== null && observaciones_erp !== '' ? String(observaciones_erp).trim() : null,
+      fecha_asigna,
+      fecha_genera_ped
     });
 
     candidatesForPlanta.push({
@@ -364,41 +548,47 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       nombre_proyecto,
       programador,
       cantidad,
-      fecha_entrega: fecha_entrega ? String(fecha_entrega).trim() : null,
-      dim_1: dim_1 !== null ? String(dim_1).trim() : null,
-      dim_2: dim_2 !== null ? String(dim_2).trim() : null,
-      dim_3: dim_3 !== null ? String(dim_3).trim() : null,
-      acabado_1: acabado_1 !== null ? String(acabado_1).trim() : null,
-      acabado_2: acabado_2 !== null ? String(acabado_2).trim() : null,
-      acabado_3: acabado_3 !== null ? String(acabado_3).trim() : null,
-      caracteristicas: caracteristicas !== null ? String(caracteristicas).trim() : null,
-      categoria: categoria !== null ? String(categoria).trim() : null,
-      notas: notas !== null ? String(notas).trim() : null,
-      observaciones_erp: observaciones_erp !== null ? String(observaciones_erp).trim() : null,
-      fecha_asigna: fecha_asigna !== null ? String(fecha_asigna).trim() : null,
-      fecha_genera_ped: fecha_genera_ped !== null ? String(fecha_genera_ped).trim() : null
+      fecha_entrega,
+      dim_1: dim_1 !== null && dim_1 !== '' ? String(dim_1).trim() : null,
+      dim_2: dim_2 !== null && dim_2 !== '' ? String(dim_2).trim() : null,
+      dim_3: dim_3 !== null && dim_3 !== '' ? String(dim_3).trim() : null,
+      acabado_1: acabado_1 !== null && acabado_1 !== '' ? String(acabado_1).trim() : null,
+      acabado_2: acabado_2 !== null && acabado_2 !== '' ? String(acabado_2).trim() : null,
+      acabado_3: acabado_3 !== null && acabado_3 !== '' ? String(acabado_3).trim() : null,
+      caracteristicas: caracteristicas !== null && caracteristicas !== '' ? String(caracteristicas).trim() : null,
+      categoria: categoria !== null && categoria !== '' ? String(categoria).trim() : null,
+      notas: notas !== null && notas !== '' ? String(notas).trim() : null,
+      observaciones_erp: observaciones_erp !== null && observaciones_erp !== '' ? String(observaciones_erp).trim() : null,
+      fecha_asigna,
+      fecha_genera_ped
     });
   }
 
   try {
-    await adaptiveBatchInsert('ribisoft_pedidos', ribisoftPayload, onProgress, 50);
+    await adaptiveBatchWrite('ribisoft_pedidos', ribisoftPayload, {
+      mode: 'insert',
+      onProgress,
+      progressStart: 0,
+      progressEnd: 50,
+      chunkSize: 800
+    });
   } catch (err) {
     console.warn('Aviso insertando en ribisoft_pedidos:', err.message);
   }
 
   const { data: existingPlanta, error: fetchErr } = await supabase
     .from('produccion_pedidos')
-    .select('pedido_num, data_completa');
+    .select('pedido_num, codigo_item, data_completa');
 
   if (fetchErr) throw fetchErr;
 
   const existingSet = new Set();
   (existingPlanta || []).forEach(r => {
     const pNum = cleanErpCode(r?.data_completa?.pedidoNum ?? r?.pedido_num);
-    const cArt = cleanErpCode(r?.data_completa?.codArticulo ?? r?.data_completa?.codigo_item);
-    if (pNum && cArt) {
-      existingSet.add(`${pNum}_${cArt}`);
-    }
+    const cArt = cleanErpCode(r?.codigo_item ?? r?.data_completa?.codArticulo ?? r?.data_completa?.codigo_item);
+    const pName = normalizeProductName(r?.data_completa?.nombre ?? r?.data_completa?.descripcion);
+    if (pNum && cArt) existingSet.add(`${pNum}_${cArt}`);
+    if (pNum && pName) existingSet.add(`${pNum}__NAME__${pName}`);
   });
 
   const generateUUID = () =>
@@ -411,11 +601,14 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
 
   const newPlantaRecords = [];
   for (const item of candidatesForPlanta) {
-    const key = `${item.pedido_sin}_${item.codigo_item}`;
-    if (existingSet.has(key)) {
+    const codeKey = item.codigo_item ? `${item.pedido_sin}_${item.codigo_item}` : null;
+    const nameKey = item.descripcion ? `${item.pedido_sin}__NAME__${normalizeProductName(item.descripcion)}` : null;
+
+    if ((codeKey && existingSet.has(codeKey)) || (nameKey && existingSet.has(nameKey))) {
       continue; // Ya está en planta: NO sobrescribir área ni estado
     }
-    existingSet.add(key);
+    if (codeKey) existingSet.add(codeKey);
+    if (nameKey) existingSet.add(nameKey);
 
     const newId = generateUUID();
     const newOrderObj = {
@@ -458,6 +651,7 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       ]
     };
 
+    // Columnas exactas verificadas en `produccion_pedidos`
     newPlantaRecords.push({
       id: newId,
       pedido_num: item.pedido_sin,
@@ -470,8 +664,8 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       acabado_2: item.acabado_2,
       acabado_3: item.acabado_3,
       caracteristicas: item.caracteristicas,
-      programador: item.programador,
-      nombre_proyecto: item.nombre_proyecto,
+      programador: item.programador || null,
+      nombre_proyecto: item.nombre_proyecto || null,
       categoria: item.categoria,
       notas: item.notas,
       observaciones_erp: item.observaciones_erp,
@@ -481,7 +675,13 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     });
   }
 
-  await adaptiveBatchInsert('produccion_pedidos', newPlantaRecords, onProgress, 100);
+  await adaptiveBatchWrite('produccion_pedidos', newPlantaRecords, {
+    mode: 'insert',
+    onProgress,
+    progressStart: 50,
+    progressEnd: 100,
+    chunkSize: 500
+  });
   if (onProgress) onProgress(100);
 
   return {
@@ -495,9 +695,10 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
  * C) Importar `ConsultaInventario MUESTRA 3.xlsx` en `inventario`.
  * - Mapea Id Referencia (sin .0), Referencia, Grupo, Subgrupo, Linea, Ubicacion, Id Unidad, Embalaje.
  * - Mantiene el filtro por defecto para priorizar 'Materias Primas e insumos' y 'Herramientas'.
+ * - Usa UPSERT sobre "Id Referencia" para no fallar por `inventario_pkey`.
  */
 export const importConsultaInventarioRows = async (rows, onProgress, filterGroups = true) => {
-  const ALLOWED_GROUPS = ['MATERIAS PRIMAS E INSUMOS', 'HERRAMIENTAS'];
+  const ALLOWED_GROUPS = ['MATERIAS PRIMAS', 'HERRAMIENTAS'];
 
   const filteredRows = filterGroups
     ? rows.filter(row => {
@@ -507,11 +708,12 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
       })
     : rows;
 
-  const mappedInventario = [];
+  const uniqueInventarioMap = new Map();
+
   for (const row of filteredRows) {
     const rawIdRef = row['Id Referencia'] ?? row['idreferencia'] ?? row['id_referencia'];
     const idreferencia = rawIdRef !== undefined && rawIdRef !== null && String(rawIdRef).trim() !== ''
-      ? (Number.isNaN(Number(rawIdRef)) ? String(rawIdRef).replace(/\.0+$/, '').trim() : String(Math.trunc(Number(rawIdRef))).trim())
+      ? cleanErpCode(rawIdRef)
       : null;
 
     if (!idreferencia) continue;
@@ -523,32 +725,49 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
     const ubicacion = String(row['Ubicacion'] ?? row['Ubicación'] ?? row['ubicacion'] ?? '').trim();
     const idunidad = String(row['Id Unidad'] ?? row['idunidad'] ?? '').trim();
     const embalaje = String(row['Embalaje'] ?? row['embalaje'] ?? '').trim();
-    const existencia = toSafeNumber(row['Existencia'] ?? row['existencia'] ?? row['Saldo'] ?? 0);
 
-    mappedInventario.push({
+    // Columnas exactas verificadas en `inventario` de Supabase
+    const itemPayload = {
       "Id Referencia": idreferencia,
       "Referencia": referencia,
+      referencia,
       "Grupo": grupo,
+      grupo,
       "Subgrupo": subgrupo,
+      subgrupo,
       "Linea": linea,
+      linea,
       "Ubicacion": ubicacion,
+      ubicacion,
       "Id Unidad": idunidad,
       "Embalaje": embalaje,
-      "Saldo": existencia,
-      idreferencia,
-      referencia,
-      grupo,
-      subgrupo,
-      linea,
-      ubicacion,
-      idunidad,
-      embalaje,
-      existencia
-    });
+      embalaje
+    };
+
+    // Solo incluir Saldo/existencia si la fila del Excel trae explícitamente esa columna con valor
+    const rawExist = row['Existencia'] ?? row['existencia'] ?? row['Saldo'];
+    if (rawExist !== undefined && rawExist !== null && String(rawExist).trim() !== '') {
+      const existVal = toSafeNumber(rawExist);
+      itemPayload["Saldo"] = existVal;
+      itemPayload.existencia = existVal;
+    }
+
+    uniqueInventarioMap.set(idreferencia, itemPayload);
   }
 
-  const importedCount = await adaptiveBatchInsert('inventario', mappedInventario, onProgress, 100);
+  const mappedInventario = Array.from(uniqueInventarioMap.values());
+
+  const importedCount = await adaptiveBatchWrite('inventario', mappedInventario, {
+    mode: 'upsert',
+    onConflict: 'Id Referencia',
+    onProgress,
+    progressStart: 0,
+    progressEnd: 100,
+    chunkSize: 800
+  });
+
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
+  if (onProgress) onProgress(100);
 
   return { importedCount };
 };
