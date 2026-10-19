@@ -147,21 +147,25 @@ export const useInventoryMRP = (orders, supabaseData) => {
                 };
             }
 
-            // Buscar materiales donde coincidan pedido_sin Y codpt === codigo_item (o nombre de producto)
+            // Buscar materiales donde coincidan pedido_sin Y codpt === codigo_item (o nombre/código contenido en producto)
             const specificMaterials = orderReqs.filter(m => {
                 if (normCodArt && m.codpt && m.codpt === normCodArt) return true;
-                if (normProdName && m.producto && normalizeProdName(m.producto) === normProdName) return true;
+                const normMatProd = normalizeProdName(m.producto);
+                if (normProdName && normMatProd && normMatProd === normProdName) return true;
+                if (normCodArt && normCodArt.length >= 5 && normMatProd && normMatProd.includes(normCodArt)) return true;
+                if (normProdName && normProdName.length >= 6 && normMatProd && (normMatProd.includes(normProdName) || normProdName.includes(normMatProd))) return true;
                 return false;
             });
 
             // Materiales genéricos del pedido con codpt nulo y sin nombre de producto específico
             const genericMaterials = orderReqs.filter(m => !m.codpt && !m.producto);
 
-            // Si el pedido tiene desglose por codpt/producto, cada producto se evalúa por sus materiales propios (+ genéricos sin codpt)
+            // Si el producto encontró sus materiales específicos por codpt/producto, evaluarlo estrictamente con ellos;
+            // si el pedido solo tiene materiales genéricos sin codpt, usar los genéricos
             const hasAnySpecificInOrder = orderReqs.some(m => Boolean(m.codpt) || Boolean(m.producto));
-            const productMaterials = hasAnySpecificInOrder
-                ? [...specificMaterials, ...genericMaterials]
-                : genericMaterials;
+            const productMaterials = specificMaterials.length > 0
+                ? specificMaterials
+                : (hasAnySpecificInOrder ? genericMaterials : orderReqs);
 
             if (productMaterials.length === 0) {
                 return {

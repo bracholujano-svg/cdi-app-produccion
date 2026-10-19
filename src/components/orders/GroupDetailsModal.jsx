@@ -183,21 +183,40 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                               setActiveAlertMaterials(prodMatInfo.materials);
                               setShowMaterialsAlertModal(true);
                             }}
-                            className={`mt-2.5 w-full text-left px-2.5 py-1.5 rounded-xl font-black text-xs uppercase flex items-center justify-between gap-1.5 border shadow-sm transition-all cursor-pointer ${
+                            className={`mt-2.5 w-full text-left px-2.5 py-2 rounded-xl font-black text-xs uppercase flex flex-col gap-1 border shadow-sm transition-all cursor-pointer ${
                               prodMatInfo.status === 'SIN_STOCK'
-                                ? 'animate-bg-pulse-red bg-red-500/20 text-red-800 dark:text-red-300 border-red-500/50 hover:bg-red-500/30'
+                                ? 'animate-bg-pulse-red bg-red-500/20 text-red-900 dark:text-red-300 border-red-500/50 hover:bg-red-500/30'
                                 : prodMatInfo.status === 'PENDIENTE_ENTREGA'
-                                ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                                : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                                ? 'bg-amber-500/20 text-amber-900 dark:text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
                             }`}
                             title="Ver desglose de materias primas de este producto"
                           >
-                            <span className="truncate flex items-center gap-1">
-                              {prodMatInfo.status === 'SIN_STOCK' && '🚨 SIN STOCK EN ALMACÉN'}
-                              {prodMatInfo.status === 'PENDIENTE_ENTREGA' && '⚠️ PENDIENTE ENTREGA ALMACÉN'}
-                              {prodMatInfo.status === 'COMPLETO' && '✅ INSUMOS COMPLETOS'}
-                            </span>
-                            <ChevronDown size={14} className="shrink-0" />
+                            <div className="w-full flex items-center justify-between gap-1.5">
+                              <span className="truncate flex items-center gap-1">
+                                {prodMatInfo.status === 'SIN_STOCK' && '🚨 SIN STOCK EN ALMACÉN'}
+                                {prodMatInfo.status === 'PENDIENTE_ENTREGA' && '⚠️ PENDIENTE ENTREGA ALMACÉN'}
+                                {prodMatInfo.status === 'COMPLETO' && '✅ INSUMOS COMPLETOS'}
+                              </span>
+                              <ChevronDown size={14} className="shrink-0" />
+                            </div>
+                            {prodMatInfo.faltantes && prodMatInfo.faltantes.length > 0 && (
+                              <div className="w-full pt-1 border-t border-current/20 text-[11px] font-bold leading-snug break-words">
+                                <span>
+                                  INSUMO: {prodMatInfo.faltantes[0].referencia || prodMatInfo.faltantes[0].descripcion || prodMatInfo.faltantes[0].idreferencia}
+                                </span>
+                                {prodMatInfo.faltantes[0].numero_rq && prodMatInfo.faltantes[0].numero_rq !== 'S/N' && (
+                                  <span className="ml-1.5 font-mono underline">
+                                    (RQ: {prodMatInfo.faltantes[0].numero_rq})
+                                  </span>
+                                )}
+                                {prodMatInfo.faltantes.length > 1 && (
+                                  <span className="ml-1 opacity-90">
+                                    +{prodMatInfo.faltantes.length - 1} más
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </button>
                         )}
                     </div>

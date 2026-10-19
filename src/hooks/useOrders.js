@@ -86,11 +86,19 @@ export const useOrders = () => {
                 // Ensure the session is loaded from local storage before querying to prevent RLS from blocking the request
                 await supabase.auth.getSession();
                 
-                const { data: pedidosData, error: e1 } = await supabase.from('produccion_pedidos').select('data_completa');
+                const { data: pedidosData, error: e1 } = await supabase.from('produccion_pedidos').select('codigo_item, data_completa');
                 if(e1) console.error('RLS Error Pedidos:', e1);
                 if (pedidosData) {
                     setOrders(pedidosData
-                        .map(row => row.data_completa)
+                        .map(row => {
+                            if (!row?.data_completa || typeof row.data_completa !== 'object') return null;
+                            const d = { ...row.data_completa };
+                            if (row.codigo_item && !d.codArticulo) {
+                                d.codArticulo = row.codigo_item;
+                                d.codigo_item = row.codigo_item;
+                            }
+                            return d;
+                        })
                         .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum)
                     );
                 }
@@ -111,6 +119,13 @@ export const useOrders = () => {
                 fetchProduccion();
             }
         });
+
+        const handleErpSyncEvent = () => {
+            fetchProduccion();
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
+        }
 
         const handleProduccionPayload = (payload) => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -168,6 +183,9 @@ export const useOrders = () => {
             supabase.removeChannel(subPedidos);
             supabase.removeChannel(subAlertas);
             authListener?.subscription?.unsubscribe();
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
+            }
         };
     }, []);
 

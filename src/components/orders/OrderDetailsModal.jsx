@@ -171,20 +171,39 @@ const OrderDetailsModal = ({
                     setActiveAlertMaterials(prodMatInfo.materials);
                     setShowMaterialsAlertModal(true);
                   }}
-                  className={`w-full p-3.5 rounded-2xl flex items-center justify-between gap-2 font-black text-xs sm:text-sm uppercase transition-all shadow-sm border cursor-pointer ${
+                  className={`w-full p-3.5 rounded-2xl flex flex-col gap-1.5 text-left font-black text-xs sm:text-sm uppercase transition-all shadow-sm border cursor-pointer ${
                     prodMatInfo.status === 'SIN_STOCK'
-                      ? 'animate-bg-pulse-red bg-red-500/15 text-red-800 dark:text-red-400 border-red-500/40 hover:bg-red-500/25'
+                      ? 'animate-bg-pulse-red bg-red-500/15 text-red-900 dark:text-red-400 border-red-500/40 hover:bg-red-500/25'
                       : prodMatInfo.status === 'PENDIENTE_ENTREGA'
-                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/25'
-                      : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25'
+                      ? 'bg-amber-500/15 text-amber-900 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/25'
+                      : 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25'
                   }`}
                 >
-                  <span className="truncate">
-                    {prodMatInfo.status === 'SIN_STOCK' && `🚨 SIN STOCK EN ALMACÉN (${prodMatInfo.sinStockCount} INSUMO(S) EN 0)`}
-                    {prodMatInfo.status === 'PENDIENTE_ENTREGA' && `⚠️ PENDIENTE ENTREGA ALMACÉN (${prodMatInfo.pendienteEntregaCount} POR ENTREGAR)`}
-                    {prodMatInfo.status === 'COMPLETO' && `✅ INSUMOS COMPLETOS (${prodMatInfo.materials.length} REFERENCIAS)`}
-                  </span>
-                  <span className="text-xs underline shrink-0">Ver Insumos</span>
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      {prodMatInfo.status === 'SIN_STOCK' && `🚨 SIN STOCK EN ALMACÉN (${prodMatInfo.sinStockCount} INSUMO(S) EN 0)`}
+                      {prodMatInfo.status === 'PENDIENTE_ENTREGA' && `⚠️ PENDIENTE ENTREGA ALMACÉN (${prodMatInfo.pendienteEntregaCount} POR ENTREGAR)`}
+                      {prodMatInfo.status === 'COMPLETO' && `✅ INSUMOS COMPLETOS (${prodMatInfo.materials.length} REFERENCIAS)`}
+                    </span>
+                    <span className="text-xs underline shrink-0">Ver Detalle</span>
+                  </div>
+                  {prodMatInfo.faltantes && prodMatInfo.faltantes.length > 0 && (
+                    <div className="w-full pt-1.5 border-t border-current/20 flex flex-col gap-1 text-xs font-bold">
+                      {prodMatInfo.faltantes.slice(0, 3).map((mat, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2">
+                          <span className="truncate">
+                            • {mat.referencia || mat.descripcion || mat.idreferencia} (Falta: {mat.pendiente} {mat.idunidad || ''})
+                          </span>
+                          {mat.numero_rq && mat.numero_rq !== 'S/N' && (
+                            <span className="font-mono shrink-0 underline">RQ: {mat.numero_rq}</span>
+                          )}
+                        </div>
+                      ))}
+                      {prodMatInfo.faltantes.length > 3 && (
+                        <span className="text-[11px] opacity-80">+ {prodMatInfo.faltantes.length - 3} insumo(s) más...</span>
+                      )}
+                    </div>
+                  )}
                 </button>
               )}
 

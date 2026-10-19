@@ -437,6 +437,10 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
   }
 
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
+  await localforage.removeItem('cdi_mrp_processed_cache_v3');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+  }
   if (onProgress) onProgress(100);
   return { insertedCount, updatedInvCount };
 };
@@ -682,6 +686,9 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     progressEnd: 100,
     chunkSize: 500
   });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+  }
   if (onProgress) onProgress(100);
 
   return {
@@ -767,6 +774,10 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
   });
 
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
+  await localforage.removeItem('cdi_mrp_processed_cache_v3');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+  }
   if (onProgress) onProgress(100);
 
   return { importedCount };

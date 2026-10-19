@@ -14,7 +14,7 @@ export const useSupabaseData = () => {
             if (e.data.status === 'success') {
                 setSupabaseData(e.data.data);
                 // Guardar el resultado final procesado en el caché para carga instantánea futura
-                localforage.setItem('cdi_mrp_processed_cache_v2', e.data.data);
+                localforage.setItem('cdi_mrp_processed_cache_v3', e.data.data);
             } else {
                 console.error("Worker error:", e.data.error);
             }
@@ -26,7 +26,7 @@ export const useSupabaseData = () => {
                 await supabase.auth.getSession();
                 
                 // 1. Mostrar caché primero para que la interfaz cargue rápido
-                const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v2');
+                const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v3');
                 if (cachedData) {
                     setSupabaseData(cachedData);
                 }
@@ -38,9 +38,15 @@ export const useSupabaseData = () => {
                     const step = 1000;
                     let hasMore = true;
                     while (hasMore) {
-                        const { data, error } = await supabase
+                        let query = supabase
                             .from(table)
-                            .select('*')
+                            .select('*');
+                        if (table === 'requerimientos_pedido') {
+                            query = query
+                                .not('pedido_sin', 'is', null)
+                                .not('idreferencia', 'is', null);
+                        }
+                        const { data, error } = await query
                             // Ordenado por ID si existe, o limitará paginación
                             .range(from, from + step - 1);
                         if (error || !data || data.length === 0) {
@@ -74,6 +80,13 @@ export const useSupabaseData = () => {
                 loadFromCacheAndFetch();
             }
         });
+
+        const handleErpSyncEvent = () => {
+            loadFromCacheAndFetch();
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
+        }
         
         // Manejar Realtime de manera incremental (no refetch total)
         const handleRealtimeInventario = async (payload) => {
@@ -101,11 +114,17 @@ export const useSupabaseData = () => {
                 supabase.removeChannel(channels); 
                 if (workerRef.current) workerRef.current.terminate();
                 authListener?.subscription?.unsubscribe();
+                if (typeof window !== 'undefined') {
+                    window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
+                }
             };
         } catch(e) {
             return () => {
                 if (workerRef.current) workerRef.current.terminate();
                 authListener?.subscription?.unsubscribe();
+                if (typeof window !== 'undefined') {
+                    window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
+                }
             };
         }
     }, []);
