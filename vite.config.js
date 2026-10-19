@@ -1,11 +1,46 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import scanCajetinHandler from './api/scan-cajetin.js'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  if (env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY) {
+    process.env.GEMINI_API_KEY = env.GEMINI_API_KEY
+  }
+  if (env.VITE_GEMINI_API_KEY && !process.env.VITE_GEMINI_API_KEY) {
+    process.env.VITE_GEMINI_API_KEY = env.VITE_GEMINI_API_KEY
+  }
+
+  return {
   plugins: [
     react(),
+    {
+      name: 'local-api-scan-cajetin',
+      configureServer(server) {
+        server.middlewares.use('/api/scan-cajetin', (req, res) => {
+          let body = ''
+          req.on('data', chunk => { body += chunk })
+          req.on('end', async () => {
+            try {
+              req.body = body ? JSON.parse(body) : {}
+            } catch (_) {
+              req.body = {}
+            }
+            res.status = (code) => {
+              res.statusCode = code
+              return res
+            }
+            res.json = (obj) => {
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify(obj))
+            }
+            await scanCajetinHandler(req, res)
+          })
+        })
+      }
+    },
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -56,4 +91,6 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 2000
   }
+  }
 })
+
