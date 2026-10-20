@@ -75,7 +75,13 @@ WHERE id IN (
     SELECT id FROM ranked_ribisoft_code WHERE rn > 1
 );
 
--- 4. COMPLETAR codigo_item EN LOS PRODUCTOS REALES DE produccion_pedidos
+-- 4. ELIMINAR REGISTROS FANTASMA DE LA EXTINTA SECCIÓN "PROGRAMACIÓN Y DISEÑO" EN produccion_pedidos
+DELETE FROM public.produccion_pedidos
+WHERE UPPER(COALESCE(data_completa->>'areaActual', '')) LIKE '%PROGRAMACIÓN Y DISEÑO%'
+   OR UPPER(COALESCE(data_completa->>'areaActual', '')) LIKE '%PROGRAMACION Y DISENO%'
+   OR UPPER(COALESCE(data_completa->>'areaActual', '')) LIKE '%DISEÑO Y PROGRAMACIÓN%';
+
+-- 4.1 COMPLETAR codigo_item EN LOS PRODUCTOS REALES DE produccion_pedidos
 UPDATE public.produccion_pedidos p
 SET
     codigo_item = req.codpt,

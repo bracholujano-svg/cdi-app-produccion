@@ -3,12 +3,23 @@ import { supabase } from '../supabaseClient';
 import { deepSanitize } from '../utils/security';
 
 /**
- * Detecta si un registro en `produccion_pedidos` fue volcado automáticamente
- * desde el Excel de Ribisoft sin haber sido ingresado explícitamente a planta
- * por un usuario ni tener movimientos en planta.
+ * Detecta si un registro en `produccion_pedidos` pertenece a la extinta área
+ * "Programación y Diseño" o fue volcado automáticamente desde el Excel de Ribisoft
+ * sin haber sido ingresado explícitamente a planta por un usuario.
  */
 export const isUnassignedErpBulkImport = (orderObj) => {
     if (!orderObj || typeof orderObj !== 'object') return false;
+
+    const rawArea = String(orderObj.areaActual || '').trim().toUpperCase();
+    if (
+        rawArea.includes('PROGRAMACIÓN Y DISEÑO') ||
+        rawArea.includes('PROGRAMACION Y DISENO') ||
+        rawArea.includes('DISEÑO Y PROGRAMACIÓN') ||
+        rawArea.includes('DISENO Y PROGRAMACION')
+    ) {
+        return true;
+    }
+
     const hist = Array.isArray(orderObj.historial) ? orderObj.historial : [];
     const firstHist = hist[0] || {};
     const isFromErpImporter =

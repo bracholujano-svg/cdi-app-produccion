@@ -9,19 +9,14 @@ export const OFFICIAL_PLANNER_AREAS = [
 ];
 
 /**
- * Normaliza y desacopla cualquier área heredada como "PROGRAMACIÓN Y DISEÑO"
- * garantizando que solo existan tarjetas oficiales e independientes.
+ * Normaliza el nombre del área garantizando que solo existan tarjetas oficiales
+ * e independientes (sin sobrescribir la extinta "Programación y Diseño" hacia Diseño).
  */
 export const normalizePlannerArea = (rawArea) => {
     if (!rawArea) return 'Por Asignar';
     const clean = String(rawArea).trim();
     const upper = clean.toUpperCase();
 
-    // Desacoplar "PROGRAMACIÓN Y DISEÑO" unificado
-    if (upper.includes('PROGRAMACIÓN Y DISEÑO') || upper.includes('PROGRAMACION Y DISENO') ||
-        upper.includes('DISEÑO Y PROGRAMACIÓN') || upper.includes('DISENO Y PROGRAMACION')) {
-        return 'Diseño';
-    }
     if (upper === 'DISEÑO' || upper === 'DISENO') {
         return 'Diseño';
     }
@@ -67,8 +62,16 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
             return false;
         }
 
-        // Excluir si su área actual es Despachos o está marcado como terminado/finalizado
-        if (areaActual === 'DESPACHOS' || o.isTerminado === true || o.isFinalizado === true) {
+        // Excluir si su área actual es Despachos, la extinta "Programación y Diseño", o está marcado como terminado/finalizado
+        if (
+            areaActual === 'DESPACHOS' ||
+            areaActual.includes('PROGRAMACIÓN Y DISEÑO') ||
+            areaActual.includes('PROGRAMACION Y DISENO') ||
+            areaActual.includes('DISEÑO Y PROGRAMACIÓN') ||
+            areaActual.includes('DISENO Y PROGRAMACION') ||
+            o.isTerminado === true ||
+            o.isFinalizado === true
+        ) {
             return false;
         }
 
