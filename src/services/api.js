@@ -1,4 +1,7 @@
 import { supabase } from '../supabaseClient';
+import { isUnassignedErpBulkImport } from '../hooks/useOrders';
+
+export { isUnassignedErpBulkImport };
 
 export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
     return new Promise(async (resolve, reject) => {

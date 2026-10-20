@@ -9,7 +9,7 @@ import IndicatorsDrawer from '../layout/IndicatorsDrawer';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
-import { isUnassignedErpBulkImport } from '../../services/api';
+import { isUnassignedErpBulkImport } from '../../hooks/useOrders';
 
 const PlantPlannerModal = ({ 
     orders, 
