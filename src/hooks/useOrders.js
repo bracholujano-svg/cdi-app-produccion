@@ -2,6 +2,32 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { deepSanitize } from '../utils/security';
 
+/**
+ * Detecta si un registro en `produccion_pedidos` fue volcado automáticamente
+ * desde el Excel de Ribisoft sin haber sido ingresado explícitamente a planta
+ * por un usuario ni tener movimientos en planta.
+ */
+export const isUnassignedErpBulkImport = (orderObj) => {
+    if (!orderObj || typeof orderObj !== 'object') return false;
+    const hist = Array.isArray(orderObj.historial) ? orderObj.historial : [];
+    const firstHist = hist[0] || {};
+    const isFromErpImporter =
+        firstHist.entrega === 'ERP RIBISOFT' ||
+        firstHist.accion === 'Importación ERP Ribisoft (Ingreso Inicial)';
+
+    if (!isFromErpImporter) return false;
+
+    const hasPlantMoves =
+        hist.length > 1 ||
+        (Array.isArray(orderObj.bitacoraTurnos) && orderObj.bitacoraTurnos.length > 0) ||
+        (Array.isArray(orderObj.bitacoraCalidad) && orderObj.bitacoraCalidad.length > 0) ||
+        (orderObj.areaActual && orderObj.areaActual !== 'Diseño') ||
+        orderObj.estadoInterno === 'DESPACHADO' ||
+        Boolean(orderObj.isTerminado);
+
+    return !hasPlantMoves;
+};
+
 export const useOrders = () => {
     const [orders, setOrders] = useState([]);
     const [coordinationAlerts, setCoordinationAlerts] = useState([]);
@@ -86,21 +112,65 @@ export const useOrders = () => {
                 // Ensure the session is loaded from local storage before querying to prevent RLS from blocking the request
                 await supabase.auth.getSession();
                 
-                const { data: pedidosData, error: e1 } = await supabase.from('produccion_pedidos').select('codigo_item, data_completa');
-                if(e1) console.error('RLS Error Pedidos:', e1);
-                if (pedidosData) {
-                    setOrders(pedidosData
-                        .map(row => {
-                            if (!row?.data_completa || typeof row.data_completa !== 'object') return null;
-                            const d = { ...row.data_completa };
-                            if (row.codigo_item && !d.codArticulo) {
-                                d.codArticulo = row.codigo_item;
-                                d.codigo_item = row.codigo_item;
+                let allPedidosRows = [];
+                let from = 0;
+                const step = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data: batchData, error: e1 } = await supabase
+                        .from('produccion_pedidos')
+                        .select('id, codigo_item, data_completa')
+                        .range(from, from + step - 1);
+
+                    if (e1) {
+                        console.error('RLS Error Pedidos:', e1);
+                        hasMore = false;
+                    } else if (!batchData || batchData.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allPedidosRows = allPedidosRows.concat(batchData);
+                        from += step;
+                        if (batchData.length < step) hasMore = false;
+                    }
+                }
+
+                if (allPedidosRows.length > 0) {
+                    const validPlantOrders = [];
+                    const autoImportedIdsToPurge = [];
+
+                    for (const row of allPedidosRows) {
+                        if (!row?.data_completa || typeof row.data_completa !== 'object') continue;
+                        const d = { ...row.data_completa };
+                        if (row.codigo_item && !d.codArticulo) {
+                            d.codArticulo = row.codigo_item;
+                            d.codigo_item = row.codigo_item;
+                        }
+                        if (!d.id || !d.pedidoNum) continue;
+
+                        // Excluir y purgar los registros que se habían volcado automáticamente desde el Excel
+                        // sin haber sido ingresados manualmente ni por búsqueda a planta
+                        if (isUnassignedErpBulkImport(d)) {
+                            autoImportedIdsToPurge.push(row.id || d.id);
+                            continue;
+                        }
+
+                        validPlantOrders.push(d);
+                    }
+
+                    setOrders(validPlantOrders);
+
+                    // Limpiar en segundo plano de `produccion_pedidos` las filas que no fueron ingresadas a planta
+                    if (autoImportedIdsToPurge.length > 0) {
+                        (async () => {
+                            for (let i = 0; i < autoImportedIdsToPurge.length; i += 200) {
+                                const chunk = autoImportedIdsToPurge.slice(i, i + 200);
+                                await supabase.from('produccion_pedidos').delete().in('id', chunk);
                             }
-                            return d;
-                        })
-                        .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum)
-                    );
+                        })();
+                    }
+                } else {
+                    setOrders([]);
                 }
                 
                 const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
@@ -130,7 +200,7 @@ export const useOrders = () => {
         const handleProduccionPayload = (payload) => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 const newData = payload.new?.data_completa;
-                if (!newData || !newData.id) return;
+                if (!newData || !newData.id || isUnassignedErpBulkImport(newData)) return;
                 
                 setOrders(prev => {
                     const idx = prev.findIndex(o => o.id === newData.id);

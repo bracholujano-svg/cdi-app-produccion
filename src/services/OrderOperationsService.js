@@ -55,91 +55,101 @@ export const executeTransfer = (ids, {
         
         let order = newOrdersList[orderIndex];
 
-        // LOGIC FOR PARTIAL DELIVERY:
-        // If it's a partial delivery (isPartial is true) and there is ONLY ONE target area,
-        // we must CLONE the product so the original stays in the current area.
-        // If partialQty is provided, we split the quantity. Otherwise, we clone it with the same quantity (e.g. for "partes").
-        let doPartialClone = isPartial && areas.length === 1;
+        // LOGIC FOR PARTIAL DELIVERY / PARTS TO ONE OR MULTIPLE AREAS:
+        // If it's a partial delivery (isPartial is true), we CLONE the product for each target area
+        // so the original stays in the current area while parts travel simultaneously to the target areas.
+        let doPartialClone = Boolean(isPartial) && areas.length >= 1;
 
         if (doPartialClone) {
-            const cloneId = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-            const area = areas[0];
-            const isDespacho = area === 'Despachos';
-            const personalAsignado = tempAssignedPersonnel[area] || [];
-            const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
-            
             const pQty = partialQty ? parseInt(partialQty) : null;
-            const validQtySplit = pQty && pQty > 0 && pQty < (order.cantidad || 99999);
-            
+            const validQtySplit = areas.length === 1 && pQty && pQty > 0 && pQty < (order.cantidad || 99999);
             const originalQty = validQtySplit ? (order.cantidad - pQty) : order.cantidad;
             const transferQty = validQtySplit ? pQty : order.cantidad;
             const qtyText = validQtySplit ? ` (${pQty} unds)` : " (Partes)";
 
-            const newHistoryEntry = { 
-                fecha: new Date().toISOString(), 
-                supervisor: supervisorName || "S/N", 
-                accion: `Entrega Parcial a ${area}${asignadoText}${qtyText}`, 
-                entrega: entrega, 
-                recibe: recibe, 
-                nota: transferNota, 
-                foto: transferPhoto 
+            const areasSummaryText = areas.join(', ');
+            const originalHistoryEntry = {
+                fecha: new Date().toISOString(),
+                supervisor: supervisorName || "S/N",
+                accion: `Entrega Parcial a ${areasSummaryText}${qtyText}`,
+                entrega: entrega,
+                recibe: recibe,
+                nota: transferNota,
+                foto: transferPhoto
             };
 
             // Update original (stays in current area)
             const updatedOriginal = {
                 ...order,
                 cantidad: originalQty,
-                historial: [...(order.historial || []), newHistoryEntry]
+                historial: [...(order.historial || []), originalHistoryEntry]
             };
             newOrdersList[orderIndex] = updatedOriginal;
             ordersToSync.push(updatedOriginal);
 
-            // Create clone (goes to new area)
-            let targetOrder = isDespacho 
-                ? { 
-                    ...order, 
-                    id: cloneId,
-                    master_id: order.id,
-                    cantidad: transferQty,
-                    areaActual: 'Despachos', 
-                    estadoInterno: 'EN ESPERA', 
-                    fechaEntregaPrometida: date || order.fechaEntregaPrometida,
-                    asignado_a: personalAsignado,
-                    isTerminado: false, 
-                    datos_logistica: null,
-                    transferenciaPendiente: null,
-                    historial: [...(order.historial || []), newHistoryEntry] 
-                }
-                : { 
-                    ...order,
-                    id: cloneId,
-                    master_id: order.id,
-                    cantidad: transferQty,
-                    areaActual: order.areaActual,
-                    estadoInterno: `ENTREGA PARCIAL EN TRÁNSITO A ${area}`,
-                    fechaEntregaPrometida: date,
-                    asignado_a: personalAsignado,
-                    transferenciaPendiente: {
-                        haciaArea: area,
-                        entregadoPor: entrega || supervisorName || "S/N",
-                        nota: transferNota,
-                        fotoEntrega: transferPhoto,
-                        fechaEnvio: new Date().toISOString(),
-                        isPartial: true
-                    },
-                    isTerminado: false, 
-                    historial: [...(order.historial || []), newHistoryEntry] 
-                };
-            
-            newOrdersList.push(targetOrder);
-            ordersToSync.push(targetOrder);
+            // Create clone for each target area (travels simultaneously to new areas)
+            areas.forEach(area => {
+                const cloneId = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+                const isDespacho = area === 'Despachos';
+                const personalAsignado = tempAssignedPersonnel[area] || [];
+                const asignadoText = personalAsignado.length > 0 ? ` (Asignado a: ${personalAsignado.join(', ')})` : "";
 
-            const { updatedAlerts, alertsToSync } = _checkDispatchedAlert(targetOrder, newOrdersList, currentAlerts);
-            if (updatedAlerts) {
-                currentAlerts = updatedAlerts;
-                updatedAlertsObj = updatedAlerts;
-                allAlertsToSync = [...allAlertsToSync, ...alertsToSync];
-            }
+                const newHistoryEntry = { 
+                    fecha: new Date().toISOString(), 
+                    supervisor: supervisorName || "S/N", 
+                    accion: `Entrega Parcial a ${area}${asignadoText}${qtyText}`, 
+                    entrega: entrega, 
+                    recibe: recibe, 
+                    nota: transferNota, 
+                    foto: transferPhoto 
+                };
+
+                let targetOrder = isDespacho 
+                    ? { 
+                        ...order, 
+                        id: cloneId,
+                        master_id: order.master_id || order.id,
+                        cantidad: transferQty,
+                        areaActual: 'Despachos', 
+                        estadoInterno: 'EN ESPERA', 
+                        fechaEntregaPrometida: date || order.fechaEntregaPrometida,
+                        asignado_a: personalAsignado,
+                        isTerminado: false, 
+                        datos_logistica: null,
+                        transferenciaPendiente: null,
+                        historial: [...(order.historial || []), newHistoryEntry] 
+                    }
+                    : { 
+                        ...order,
+                        id: cloneId,
+                        master_id: order.master_id || order.id,
+                        cantidad: transferQty,
+                        areaActual: order.areaActual,
+                        estadoInterno: `ENTREGA PARCIAL EN TRÁNSITO A ${area}`,
+                        fechaEntregaPrometida: date,
+                        asignado_a: personalAsignado,
+                        transferenciaPendiente: {
+                            haciaArea: area,
+                            entregadoPor: entrega || supervisorName || "S/N",
+                            nota: transferNota,
+                            fotoEntrega: transferPhoto,
+                            fechaEnvio: new Date().toISOString(),
+                            isPartial: true
+                        },
+                        isTerminado: false, 
+                        historial: [...(order.historial || []), newHistoryEntry] 
+                    };
+                
+                newOrdersList.push(targetOrder);
+                ordersToSync.push(targetOrder);
+
+                const { updatedAlerts, alertsToSync } = _checkDispatchedAlert(targetOrder, newOrdersList, currentAlerts);
+                if (updatedAlerts) {
+                    currentAlerts = updatedAlerts;
+                    updatedAlertsObj = updatedAlerts;
+                    allAlertsToSync = [...allAlertsToSync, ...alertsToSync];
+                }
+            });
 
             return; // Done with this product
         }

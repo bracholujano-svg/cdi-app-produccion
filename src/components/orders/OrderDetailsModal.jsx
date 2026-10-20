@@ -420,6 +420,86 @@ const OrderDetailsModal = ({
                           return (
                             <>
                               <div className="w-full">
+                                    {(() => {
+                                        if (!inventoryReservations || typeof inventoryReservations.getProductRouting !== 'function') return null;
+                                        const autoRouting = inventoryReservations.getProductRouting(
+                                            selectedOrder.pedidoNum,
+                                            selectedOrder.codArticulo || selectedOrder.codigo_item,
+                                            selectedOrder
+                                        );
+                                        if (!autoRouting || !autoRouting.requiredAreas || autoRouting.requiredAreas.length === 0) return null;
+
+                                        const coveredAreas = new Set();
+                                        (familyOrders || []).forEach(fo => {
+                                            if (fo.areaActual) coveredAreas.add(fo.areaActual);
+                                            if (fo.transferenciaPendiente?.haciaArea) coveredAreas.add(fo.transferenciaPendiente.haciaArea);
+                                            (fo.historial || []).forEach(h => {
+                                                autoRouting.requiredAreas.forEach(ra => {
+                                                    if ((h.accion || '').toUpperCase().includes(ra.toUpperCase())) {
+                                                        coveredAreas.add(ra);
+                                                    }
+                                                });
+                                            });
+                                        });
+
+                                        const missingRequiredAreas = autoRouting.requiredAreas.filter(
+                                            ra => !coveredAreas.has(ra) && ra !== selectedOrder.areaActual
+                                        );
+
+                                        return (
+                                            <div className="mb-4 p-3.5 rounded-2xl border-2 border-indigo-500/40 bg-indigo-500/10 shadow-sm">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                    <div>
+                                                        <span className="text-xs md:text-sm font-black uppercase text-indigo-700 dark:text-indigo-300 block">
+                                                            🛡️ Ruta Detectada por Insumos RQ y Acabados (Anti-Error Humano)
+                                                        </span>
+                                                        <span className="text-[11px] font-bold theme-text-muted">
+                                                            Áreas por las que debe pasar este producto según sus materiales de almacén y ficha ERP:
+                                                        </span>
+                                                    </div>
+                                                    {missingRequiredAreas.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setTempTransferAreas(prev => {
+                                                                    const current = Array.isArray(prev) ? prev : [];
+                                                                    return Array.from(new Set([...current, ...missingRequiredAreas.filter(a => a !== 'Ensamble')]));
+                                                                });
+                                                            }}
+                                                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase shadow-sm transition-colors cursor-pointer"
+                                                        >
+                                                            ⚡ Seleccionar Áreas Paralelas ({missingRequiredAreas.filter(a => a !== 'Ensamble').length})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {autoRouting.requiredAreas.map(reqArea => {
+                                                        const isAlreadyCovered = coveredAreas.has(reqArea);
+                                                        const isSelected = (tempTransferAreas || []).includes(reqArea);
+                                                        const reasons = autoRouting.reasonsByArea?.[reqArea] || [];
+                                                        return (
+                                                            <button
+                                                                key={reqArea}
+                                                                type="button"
+                                                                title={reasons.join(' | ')}
+                                                                onClick={() => toggleAreaSelection(reqArea)}
+                                                                className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase border transition-all flex items-center gap-1 cursor-pointer ${
+                                                                    isSelected
+                                                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
+                                                                        : isAlreadyCovered
+                                                                        ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40'
+                                                                        : 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                                                                }`}
+                                                            >
+                                                                <span>{isSelected ? '✓' : isAlreadyCovered ? '✅' : '⚠️'}</span>
+                                                                <span>{reqArea}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                     <label className="theme-text-main font-black text-base lg:text-lg uppercase text-center w-full block mb-3">DESTINO(S) DE TRANSFERENCIA:</label>
                                     
                                     <div className="group border-2 border-blue-500/60 rounded-2xl overflow-hidden mb-3.5 shadow-sm">
@@ -608,8 +688,7 @@ const OrderDetailsModal = ({
                         <button type="button" onClick={()=>{
                               const en = document.getElementById('entregadoPor').value.trim().toUpperCase();
                               if(en && tempTransferDate && tempTransferAreas.length > 0) {
-                                if (tempIsPartial && tempTransferAreas.length > 1) { alert("No se puede hacer bifurcación (múltiples áreas) y entrega parcial fraccionada al mismo tiempo. Seleccione solo un área destino."); return; }
-                                if (tempIsPartial && tempPartialQty && (tempPartialQty <= 0 || tempPartialQty >= (selectedOrder.cantidad || 99999))) { alert("Para una entrega parcial, indique una cantidad válida menor al total del lote."); return; }
+                                if (tempIsPartial && tempTransferAreas.length === 1 && tempPartialQty && (tempPartialQty <= 0 || tempPartialQty >= (selectedOrder.cantidad || 99999))) { alert("Para una entrega parcial por cantidad, indique una cantidad válida menor al total del lote."); return; }
                                 updateTransfer(
                                   selectedOrder.id, 
                                   tempTransferAreas, 

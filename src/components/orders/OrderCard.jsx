@@ -143,14 +143,63 @@ const OrderCard = ({ group }) => {
       </h3>
       <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-base lg:text-lg ${!group.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
       
-      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-2 flex-wrap">
-        <span className={`px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-sm md:text-base lg:text-sm whitespace-nowrap truncate`}>
-          {isGroupDispatched ? `${group.products?.length || 0} DESPACHADOS` : `${group.products?.length || 0} EN TU ÁREA`}
-        </span>
+      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-1.5 flex-wrap items-center">
+        {isGroupDispatched ? (
+          <span className="px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-xs md:text-sm whitespace-nowrap truncate">
+            {group.products?.length || 0} DESPACHADOS
+          </span>
+        ) : (
+          (() => {
+            const isAllAreasView = areaFilter === 'Todas' || areaFilter === 'Administrador / Todos';
+            const productsToCount = isAllAreasView ? (group.products || []) : (globalProductsForOrder || group.products || []);
+            const areaCounts = {};
+            productsToCount.forEach(p => {
+              if (!p) return;
+              if (p.estadoInterno === 'DESPACHADO' || p.estado === 'ENTREGADO' || p.areaActual === 'Despachos') return;
+              const areaName = (p.areaActual || 'Por Asignar').trim();
+              areaCounts[areaName] = (areaCounts[areaName] || 0) + 1;
+            });
+
+            const entries = Object.entries(areaCounts);
+            if (entries.length === 0) {
+              return (
+                <span className="px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-xs md:text-sm whitespace-nowrap truncate">
+                  {group.products?.length || 0} EN PLANTA
+                </span>
+              );
+            }
+
+            // Ordenar para que si hay un filtro de área activo aparezca primero esa área
+            entries.sort((a, b) => {
+              if (!isAllAreasView) {
+                if (a[0] === areaFilter) return -1;
+                if (b[0] === areaFilter) return 1;
+              }
+              return b[1] - a[1];
+            });
+
+            return entries.map(([areaName, count]) => {
+              const isSelectedArea = !isAllAreasView && areaName === areaFilter;
+              return (
+                <span
+                  key={areaName}
+                  title={`${count} producto(s) ubicado(s) en ${areaName}`}
+                  className={`px-2 py-1 rounded-md font-black text-xs md:text-sm whitespace-nowrap truncate border ${
+                    isSelectedArea
+                      ? 'bg-[var(--color-primary)]/20 theme-text-primary border-[var(--color-primary)]/50 shadow-sm'
+                      : 'theme-bg-input theme-text-primary border-slate-300/60 dark:border-slate-700'
+                  }`}
+                >
+                  {count} {areaName.toUpperCase()}
+                </span>
+              );
+            });
+          })()
+        )}
         {partialProductsCount > 0 && (
             <span 
                 style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
-                className="px-2.5 py-1 rounded-md border-2 font-black text-sm md:text-base lg:text-sm whitespace-nowrap truncate flex items-center gap-1.5 shadow-sm"
+                className="px-2.5 py-1 rounded-md border-2 font-black text-xs md:text-sm whitespace-nowrap truncate flex items-center gap-1.5 shadow-sm"
             >
                 <Package size="1.2em" style={{ color: '#c2410c' }} /> {partialProductsCount} ENTREGA PARCIAL
             </span>
@@ -160,7 +209,7 @@ const OrderCard = ({ group }) => {
           const hasActiveBifurcation = globalOrderProducts.some(p => p && p.master_id);
           if (hasActiveBifurcation) {
             return (
-              <span className={`px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-sm md:text-base lg:text-sm whitespace-nowrap truncate`}>MÚLTIPLES SECCIONES</span>
+              <span className="px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-xs md:text-sm whitespace-nowrap truncate">MÚLTIPLES SECCIONES</span>
             );
           }
           return null;

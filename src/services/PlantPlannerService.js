@@ -96,8 +96,11 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
             totalItems: 0,
             totalPedidos: 0,
             pedidosVencidos: 0,
+            upcomingItemsCount: 0,
+            upcomingPedidosCount: 0,
             semaforoGeneral: 'green',
-            pedidos: {}
+            pedidos: {},
+            upcomingPedidos: {}
         };
     });
 
@@ -112,8 +115,11 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
                 totalItems: 0,
                 totalPedidos: 0,
                 pedidosVencidos: 0,
+                upcomingItemsCount: 0,
+                upcomingPedidosCount: 0,
                 semaforoGeneral: 'green',
-                pedidos: {}
+                pedidos: {},
+                upcomingPedidos: {}
             };
         }
         
@@ -135,6 +141,76 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
         matrix[area].pedidos[pNum].items.push(order);
         matrix[area].totalItems++;
     });
+
+    // 4. MOTOR ANTI-ERROR HUMANO: Detectar productos que VIENEN EN CAMINO / PROGRAMADOS A PASAR por cada área
+    // según sus materiales requeridos en almacén (RQ) y sus acabados ERP
+    if (inventoryReservations && typeof inventoryReservations.getProductRouting === 'function') {
+        const FINAL_STAGE_AREAS = ['ENSAMBLE', 'EMPAQUE', 'DESPACHOS'];
+        const evaluatedUpcomingKeysPerArea = {};
+
+        activeOrders.forEach(order => {
+            const pNum = String(order.pedidoNum || 'SIN_PEDIDO');
+            const codArt = String(order.codArticulo || order.codigo_item || '').trim();
+            const prodName = String(order.nombre || order.descripcion || '').trim();
+            const currentArea = normalizePlannerArea(order.areaActual);
+            const currentAreaUpper = currentArea.toUpperCase();
+
+            const routing = inventoryReservations.getProductRouting(pNum, codArt, order);
+            if (!routing || !Array.isArray(routing.requiredAreas) || routing.requiredAreas.length === 0) return;
+
+            // Buscar toda la familia de este producto en el pedido (original + clones bifurcados)
+            const family = activeOrders.filter(o =>
+                String(o.pedidoNum || '') === pNum &&
+                String(o.codArticulo || o.codigo_item || '').trim() === codArt &&
+                String(o.nombre || o.descripcion || '').trim() === prodName
+            );
+
+            routing.requiredAreas.forEach(targetArea => {
+                if (!matrix[targetArea]) return;
+                if (targetArea === currentArea) return;
+
+                // Si el área objetivo no es Ensamble y el producto ya está en Ensamble/Empaque/Despachos, ya superó las fases previas
+                if (targetArea !== 'Ensamble' && FINAL_STAGE_AREAS.includes(currentAreaUpper)) {
+                    return;
+                }
+
+                // Verificar si algún miembro de la familia ya está físicamente en targetArea o ya pasó por targetArea en su historial
+                const alreadyInOrPassedTarget = family.some(f => {
+                    if (normalizePlannerArea(f.areaActual) === targetArea) return true;
+                    if (f.transferenciaPendiente?.haciaArea === targetArea) return true;
+                    return (f.historial || []).some(h =>
+                        (h.accion && h.accion.toUpperCase().includes(targetArea.toUpperCase())) ||
+                        (h.entrega && h.entrega.toUpperCase() === targetArea.toUpperCase())
+                    );
+                });
+
+                if (alreadyInOrPassedTarget) return;
+
+                if (!evaluatedUpcomingKeysPerArea[targetArea]) {
+                    evaluatedUpcomingKeysPerArea[targetArea] = new Set();
+                }
+                const uniqueProdKey = `${pNum}__${codArt}__${prodName}`;
+                if (evaluatedUpcomingKeysPerArea[targetArea].has(uniqueProdKey)) return;
+                evaluatedUpcomingKeysPerArea[targetArea].add(uniqueProdKey);
+
+                if (!matrix[targetArea].upcomingPedidos[pNum]) {
+                    matrix[targetArea].upcomingPedidos[pNum] = {
+                        pedidoNum: pNum,
+                        cliente: order.cliente || 'Desconocido',
+                        fechaEntregaPrometida: order.fechaEntregaPrometida,
+                        diasRestantes: getDaysLeft(order.fechaEntregaPrometida),
+                        items: []
+                    };
+                }
+
+                matrix[targetArea].upcomingPedidos[pNum].items.push({
+                    ...order,
+                    routingReasons: routing.reasonsByArea?.[targetArea] || ['Ruta técnica detectada']
+                });
+                matrix[targetArea].upcomingItemsCount++;
+            });
+        });
+    }
 
     // 5. Evaluate Traffic Light per Pedido and Aggregate to Area
     Object.values(matrix).forEach(areaObj => {
@@ -236,6 +312,12 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
             if (val[a.semaforo] !== val[b.semaforo]) return val[a.semaforo] - val[b.semaforo];
             return (a.diasRestantes || 999) - (b.diasRestantes || 999);
         });
+
+        const upcomingArr = Object.values(areaObj.upcomingPedidos || {}).sort((a, b) => {
+            return (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999);
+        });
+        areaObj.upcomingPedidos = upcomingArr;
+        areaObj.upcomingPedidosCount = upcomingArr.length;
     });
 
     // 6. Ordenar áreas según el flujo oficial de planta (Diseño y Programación CNC de primeros)

@@ -9,6 +9,7 @@ import IndicatorsDrawer from '../layout/IndicatorsDrawer';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
+import { isUnassignedErpBulkImport } from '../../services/api';
 
 const PlantPlannerModal = ({ 
     orders, 
@@ -53,7 +54,7 @@ const PlantPlannerModal = ({
                 if (!error && data && isMounted && setOrders) {
                     const fresh = data
                         .map(r => r.data_completa)
-                        .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum);
+                        .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum && !isUnassignedErpBulkImport(o));
                     setOrders(fresh);
                 }
             } catch (err) {
@@ -332,7 +333,12 @@ const PlantPlannerModal = ({
                                                         <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
                                                         <div className="flex flex-col items-center">
                                                             <span className="theme-text-primary text-sm font-black">{area.totalItems}</span>
-                                                            <span className="text-[9px] uppercase font-bold">Productos</span>
+                                                            <span className="text-[9px] uppercase font-bold">En Área</span>
+                                                        </div>
+                                                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                                                        <div className="flex flex-col items-center" title="Productos en áreas previas que pasarán por esta área según sus materiales (RQ) y acabados">
+                                                            <span className={`${(area.upcomingItemsCount || 0) > 0 ? 'text-purple-600 dark:text-purple-400 font-black' : 'theme-text-primary font-black'} text-sm`}>{area.upcomingItemsCount || 0}</span>
+                                                            <span className="text-[9px] uppercase font-bold">Por Pasar</span>
                                                         </div>
                                                         <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
                                                         <div className="flex flex-col items-center">
@@ -492,6 +498,63 @@ const PlantPlannerModal = ({
                                                                     </div>
                                                                 );
                                                             })}
+                                                        </div>
+                                                    )}
+
+                                                    {/* SECCIÓN ANTI-ERROR HUMANO: PRODUCTOS PROGRAMADOS A PASAR / EN CAMINO */}
+                                                    {Array.isArray(area.upcomingPedidos) && area.upcomingPedidos.length > 0 && (
+                                                        <div className="mt-5 pt-4 border-t-2 border-dashed border-purple-500/30">
+                                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                                                <div>
+                                                                    <h4 className="text-xs md:text-sm font-black uppercase text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                                                                        <span>🔮 Programados a Pasar por {area.areaName} ({area.upcomingItemsCount} productos en {area.upcomingPedidos.length} pedidos)</span>
+                                                                    </h4>
+                                                                    <p className="text-[11px] font-bold theme-text-muted">
+                                                                        Detectados automáticamente por sus Materiales Requeridos (RQ) y Acabados ERP, aunque aún se encuentren en áreas previas:
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                {area.upcomingPedidos.map(upPed => (
+                                                                    <div key={`up_${area.areaName}_${upPed.pedidoNum}`} className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/30 shadow-sm flex flex-col gap-2">
+                                                                        <div className="flex items-center justify-between gap-2 border-b border-purple-500/20 pb-1.5">
+                                                                            <div className="min-w-0">
+                                                                                <span className="font-black text-xs md:text-sm text-purple-700 dark:text-purple-300 block truncate">
+                                                                                    PED: {upPed.pedidoNum}
+                                                                                </span>
+                                                                                <span className="text-[11px] font-bold theme-text-muted uppercase block truncate">
+                                                                                    {upPed.cliente}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 shrink-0">
+                                                                                {upPed.items.length} por pasar
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                                                            {upPed.items.map(upItem => (
+                                                                                <div key={`up_item_${upItem.id}`} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
+                                                                                    <p className="font-bold theme-text-primary leading-tight">
+                                                                                        {upItem.nombre || 'SIN NOMBRE'}
+                                                                                    </p>
+                                                                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                                                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono font-bold text-[10px] theme-text-secondary border theme-border">
+                                                                                            COD: {upItem.codArticulo || 'S/C'}
+                                                                                        </span>
+                                                                                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black uppercase text-[10px] border border-indigo-500/30">
+                                                                                            Hoy en: {upItem.areaActual || 'Por Asignar'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    {Array.isArray(upItem.routingReasons) && upItem.routingReasons.length > 0 && (
+                                                                                        <p className="mt-1 text-[10px] font-bold text-purple-700 dark:text-purple-400 truncate" title={upItem.routingReasons.join(' | ')}>
+                                                                                            Motivo: {upItem.routingReasons[0]}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

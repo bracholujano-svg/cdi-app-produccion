@@ -57,18 +57,18 @@ export const PERSONAL_DISENO = ["Ana Gómez", "Carlos Ruiz", "Sofía Vargas"];
 export const PERSONAL_CNC = ["Luis Martínez", "Pedro Sánchez", "Miguel Torres", "Jorge Díaz", "Raúl Castro"];
 
 export const ROUTING_MAP = {
-    "Comercial / Ventas": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio"],
+    "Comercial / Ventas": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
     "Diseño": ["Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
     "Programación CNC": ["Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
-    "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Ensamble", "Empaque"],
-    "Ebanistería": ["Pintura Líquida", "Pintura en Polvo", "Ensamble", "Empaque"],
-    "Corte y Dobles de Lámina y Tubería CNC": ["Área de Soldadura", "Área de Torno", "Pintura en Polvo", "Pintura Líquida", "Ensamble", "Empaque"],
-    "Área de Soldadura": ["Pintura en Polvo", "Pintura Líquida", "Ensamble", "Empaque"],
-    "Área de Torno": ["Área de Soldadura", "Pintura en Polvo", "Ensamble", "Empaque"],
-    "Corte y Mecanizado de Vidrio": ["Ensamble", "Empaque"],
-    "Pintura en Polvo": ["Ensamble", "Empaque"],
-    "Pintura Líquida": ["Ensamble", "Empaque"],
-    "Ensamble": ["Empaque"],
+    "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Pintura en Polvo", "Corte y Dobles de Lámina y Tubería CNC", "Área de Soldadura", "Área de Torno", "Corte y Mecanizado de Vidrio", "Ensamble", "Empaque"],
+    "Ebanistería": ["Pintura Líquida", "Pintura en Polvo", "Corte y Dobles de Lámina y Tubería CNC", "Área de Soldadura", "Área de Torno", "Corte y Mecanizado de Vidrio", "Ensamble", "Empaque"],
+    "Corte y Dobles de Lámina y Tubería CNC": ["Área de Soldadura", "Área de Torno", "Pintura en Polvo", "Pintura Líquida", "Corte y Mecanizado CNC de Madera", "Ebanistería", "Corte y Mecanizado de Vidrio", "Ensamble", "Empaque"],
+    "Área de Soldadura": ["Pintura en Polvo", "Pintura Líquida", "Área de Torno", "Ebanistería", "Corte y Mecanizado CNC de Madera", "Ensamble", "Empaque"],
+    "Área de Torno": ["Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ebanistería", "Corte y Dobles de Lámina y Tubería CNC", "Ensamble", "Empaque"],
+    "Corte y Mecanizado de Vidrio": ["Ebanistería", "Pintura Líquida", "Área de Soldadura", "Ensamble", "Empaque"],
+    "Pintura en Polvo": ["Ebanistería", "Pintura Líquida", "Área de Soldadura", "Ensamble", "Empaque"],
+    "Pintura Líquida": ["Ebanistería", "Pintura en Polvo", "Área de Soldadura", "Ensamble", "Empaque"],
+    "Ensamble": ["Pintura Líquida", "Pintura en Polvo", "Ebanistería", "Área de Soldadura", "Empaque", "Despachos"],
     "Empaque": ["Despachos"],
     "Despachos": ["Despachos"]
 };

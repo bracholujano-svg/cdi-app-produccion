@@ -287,8 +287,19 @@ const {
     for (const res of productsToLoad) {
       const pedNum = (res.pedido || "").trim().toUpperCase();
       const codArt = (res.articulo || "").trim().toUpperCase();
+      const prodNombre = (res.nombre || "").trim().toUpperCase();
       
-      const isDuplicate = orders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt && o.estadoInterno !== 'DESPACHADO') || newOrders.some(o => (o?.pedidoNum || "").toUpperCase() === pedNum && (o?.codArticulo || "").toUpperCase() === codArt);
+      const matchesExisting = (o) => {
+        if ((o?.pedidoNum || "").toUpperCase() !== pedNum) return false;
+        const oCod = (o?.codArticulo || "").trim().toUpperCase();
+        const oNom = (o?.nombre || "").trim().toUpperCase();
+        if (codArt && oCod) return oCod === codArt;
+        return Boolean(prodNombre && oNom === prodNombre);
+      };
+
+      const isDuplicate =
+        orders.some(o => matchesExisting(o) && o.estadoInterno !== 'DESPACHADO') ||
+        newOrders.some(o => matchesExisting(o));
       
       if (isDuplicate) {
         skippedCount++;

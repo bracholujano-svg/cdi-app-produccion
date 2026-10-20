@@ -16,7 +16,7 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 import { analizarCajetinConGemini } from '../../services/cajetinScannerService';
-import { importRibisoftExcelFile } from '../../services/ribisoftExcelImporter';
+import { importRibisoftExcelFile, deduplicateErpTables } from '../../services/ribisoftExcelImporter';
 
 const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   const { 
@@ -246,7 +246,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                   </div>
                 </div>
 
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     ref={excelErpInputRef}
                     type="file"
@@ -260,11 +260,17 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                       try {
                         const res = await importRibisoftExcelFile(f);
                         if (res.type === 'requerimientos_pedido') {
-                          setExcelSearchSuccess(`✅ Material requerido importado (${res.insertedCount} registros en requerimientos_pedido y ${res.updatedInvCount} existencias sincronizadas en inventario).`);
+                          setExcelSearchSuccess(
+                            `✅ Materiales sincronizados (${res.insertedCount} nuevos cargados, ${res.updatedReqCount || 0} actualizados, ${res.skippedExisting || 0} ya existentes omitidos y ${res.updatedInvCount} saldos actualizados en inventario).`
+                          );
                         } else if (res.type === 'inventario') {
-                          setExcelSearchSuccess(`✅ Inventario actualizado (${res.importedCount} referencias sincronizadas).`);
+                          setExcelSearchSuccess(
+                            `✅ Inventario sincronizado (${res.importedCount} referencias nuevas cargadas, ${res.skippedExisting || 0} ya existentes omitidas sin duplicar).`
+                          );
                         } else {
-                          setExcelSearchSuccess(`✅ Pedidos sincronizados (${res.plantaInserted} artículos nuevos en planta, ${res.skippedExisting} existentes conservados sin alterar).`);
+                          setExcelSearchSuccess(
+                            `✅ Catálogo Ribisoft actualizado (${res.ribisoftInserted} artículos nuevos listos para búsqueda, ${res.skippedExisting} ya existentes omitidos${res.plantaPurgedAutoDumps ? `, ${res.plantaPurgedAutoDumps} registros no ingresados retirados de planta` : ''}${res.ribisoftDuplicatesCleaned ? ` y ${res.ribisoftDuplicatesCleaned} duplicados antiguos eliminados` : ''}).`
+                          );
                         }
                       } catch (err) {
                         alert('Error importando Excel ERP: ' + (err.message || err));
@@ -279,10 +285,32 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
                     disabled={erpImporting}
                     onClick={() => excelErpInputRef.current?.click()}
                     className="px-3 py-2 rounded-xl text-xs font-black uppercase border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    title="Sincronizar Excel de Ribisoft (Materiales Requeridos, Lista de Pedidos o Inventario)"
+                    title="Sincronizar Excel de Ribisoft (Solo carga los registros que no estén en la BD)"
                   >
                     <Database size={14} />
-                    <span>{erpImporting ? 'Importando ERP...' : 'Sincronizar Excel ERP (.xls/.xlsx)'}</span>
+                    <span>{erpImporting ? 'Procesando ERP...' : 'Sincronizar Excel ERP (.xls/.xlsx)'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={erpImporting}
+                    onClick={async () => {
+                      setErpImporting(true);
+                      setExcelSearchSuccess('');
+                      try {
+                        const res = await deduplicateErpTables();
+                        setExcelSearchSuccess(
+                          `🧹 Depuración completada: ${res.ribisoftDuplicatesRemoved} duplicados eliminados en ribisoft_pedidos, ${res.produccionDuplicatesRemoved} en produccion_pedidos, ${res.requerimientosDuplicatesRemoved} en requerimientos_pedido y ${res.codesEnriched} códigos completados.`
+                        );
+                      } catch (err) {
+                        alert('Error depurando duplicados: ' + (err.message || err));
+                      } finally {
+                        setErpImporting(false);
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-black uppercase border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Eliminar filas duplicadas o sin código en ribisoft_pedidos, produccion_pedidos y requerimientos_pedido"
+                  >
+                    <span>🧹 Limpiar Duplicados BD</span>
                   </button>
                 </div>
               </div>

@@ -225,13 +225,335 @@ const adaptiveBatchWrite = async (
 };
 
 /**
+ * Obtiene todas las filas de una tabla de Supabase paginando de 1000 en 1000.
+ */
+const fetchAllTableRows = async (tableName, selectCols = '*') => {
+  let all = [];
+  let from = 0;
+  const step = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select(selectCols)
+      .range(from, from + step - 1);
+
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      all = all.concat(data);
+      from += step;
+      if (data.length < step) hasMore = false;
+    }
+  }
+  return all;
+};
+
+/**
+ * Elimina registros por lotes de IDs en una tabla de Supabase.
+ */
+const deleteIdsInBatches = async (tableName, ids, batchSize = 200) => {
+  if (!ids || ids.length === 0) return 0;
+  let deleted = 0;
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const chunk = ids.slice(i, i + batchSize);
+    const { error } = await supabase.from(tableName).delete().in('id', chunk);
+    if (!error) deleted += chunk.length;
+  }
+  return deleted;
+};
+
+/**
+ * Limpia y elimina todos los registros duplicados existentes en `ribisoft_pedidos`,
+ * `produccion_pedidos` y `requerimientos_pedido`, conservando siempre el registro
+ * que tiene el código de producto (`Código Ítem` / `codpt`) y los avances de planta.
+ */
+export const deduplicateErpTables = async (onProgress) => {
+  if (onProgress) onProgress(5);
+
+  // 1. Inspeccionar y depurar `requerimientos_pedido` + construir mapa (pedido_sin + producto) -> codpt
+  const prodToCodptMap = new Map();
+  let requerimientosDuplicatesRemoved = 0;
+
+  try {
+    const allReqs = await fetchAllTableRows(
+      'requerimientos_pedido',
+      'id, numero_rq, pedido_sin, pedidosin, codpt, producto, idreferencia, referencia, entregada, pendiente'
+    );
+
+    const reqGroups = new Map();
+    const reqIdsToDelete = [];
+
+    for (const r of allReqs) {
+      const pSin = cleanErpCode(r.pedido_sin ?? r.pedidosin);
+      const idRef = cleanErpCode(r.idreferencia);
+      const codpt = cleanErpCode(r.codpt);
+      const prodNorm = normalizeProductName(r.producto);
+      const rqNum = String(r.numero_rq || '').trim().toUpperCase();
+
+      if (pSin && codpt && prodNorm) {
+        prodToCodptMap.set(`${pSin}__${prodNorm}`, codpt);
+      }
+
+      // Si es una fila huérfana pre-migración sin pedido_sin o sin idreferencia, marcar para borrar
+      if (!pSin || !idRef || !r.pedido_sin || !r.idreferencia) {
+        if (r.id) reqIdsToDelete.push(r.id);
+        continue;
+      }
+
+      const key = `${pSin}__${codpt || ''}__${prodNorm}__${idRef}__${rqNum}`;
+      const existing = reqGroups.get(key);
+
+      if (!existing) {
+        reqGroups.set(key, r);
+      } else {
+        // Conservar el registro que tenga `referencia` y `codpt` más completos
+        const existingScore = (existing.codpt ? 2 : 0) + (existing.referencia ? 1 : 0);
+        const candidateScore = (r.codpt ? 2 : 0) + (r.referencia ? 1 : 0);
+        if (candidateScore > existingScore) {
+          if (existing.id) reqIdsToDelete.push(existing.id);
+          reqGroups.set(key, r);
+        } else {
+          if (r.id) reqIdsToDelete.push(r.id);
+        }
+      }
+    }
+
+    requerimientosDuplicatesRemoved = await deleteIdsInBatches('requerimientos_pedido', reqIdsToDelete);
+  } catch (err) {
+    console.warn('Aviso depurando requerimientos_pedido:', err.message);
+  }
+
+  if (onProgress) onProgress(35);
+
+  // 2. Inspeccionar y depurar `ribisoft_pedidos` (eliminar filas con Código Ítem EMPTY cuando existe la fila con código, y eliminar repetidos)
+  let ribisoftDuplicatesRemoved = 0;
+  let codesEnriched = 0;
+
+  try {
+    const allRibi = await fetchAllTableRows(
+      'ribisoft_pedidos',
+      'id, "PedidoSIN", "Código Ítem", "Descripción", "Cliente", "Cantidad"'
+    );
+
+    const ribiByPedidoDesc = new Map();
+    const ribiIdsToDelete = [];
+    const ribiToUpdateCode = [];
+
+    for (const r of allRibi) {
+      const pSin = cleanErpCode(r['PedidoSIN']);
+      const descNorm = normalizeProductName(r['Descripción']);
+      const code = cleanErpCode(r['Código Ítem']);
+
+      if (!pSin) {
+        if (r.id) ribiIdsToDelete.push(r.id);
+        continue;
+      }
+
+      const groupKey = `${pSin}__${descNorm || code || ''}`;
+      const existing = ribiByPedidoDesc.get(groupKey);
+
+      if (!existing) {
+        ribiByPedidoDesc.set(groupKey, r);
+      } else {
+        const existingCode = cleanErpCode(existing['Código Ítem']);
+        // Priorizar siempre la fila que SÍ tiene Código Ítem lleno (no EMPTY)
+        if (!existingCode && code) {
+          if (existing.id) ribiIdsToDelete.push(existing.id);
+          ribiByPedidoDesc.set(groupKey, r);
+        } else {
+          if (r.id) ribiIdsToDelete.push(r.id);
+        }
+      }
+    }
+
+    // Segunda pasada por (PedidoSIN + Código Ítem) para asegurar unicidad también por código
+    const ribiByPedidoCode = new Map();
+    for (const [groupKey, r] of ribiByPedidoDesc.entries()) {
+      const pSin = cleanErpCode(r['PedidoSIN']);
+      const descNorm = normalizeProductName(r['Descripción']);
+      let code = cleanErpCode(r['Código Ítem']);
+
+      // Si el registro sobreviviente tenía Código Ítem vacío pero existe en prodToCodptMap, enriquecerlo
+      if (!code && pSin && descNorm && prodToCodptMap.has(`${pSin}__${descNorm}`)) {
+        code = prodToCodptMap.get(`${pSin}__${descNorm}`);
+        if (r.id && code) {
+          ribiToUpdateCode.push({ id: r.id, code });
+        }
+      }
+
+      if (pSin && code) {
+        const codeKey = `${pSin}__CODE__${code}`;
+        if (ribiByPedidoCode.has(codeKey)) {
+          const prev = ribiByPedidoCode.get(codeKey);
+          if (prev.id !== r.id && r.id) {
+            ribiIdsToDelete.push(r.id);
+            ribiByPedidoDesc.delete(groupKey);
+          }
+        } else {
+          ribiByPedidoCode.set(codeKey, r);
+        }
+      }
+    }
+
+    ribisoftDuplicatesRemoved = await deleteIdsInBatches('ribisoft_pedidos', ribiIdsToDelete);
+
+    for (let i = 0; i < ribiToUpdateCode.length; i += 25) {
+      const slice = ribiToUpdateCode.slice(i, i + 25);
+      await Promise.all(
+        slice.map(item =>
+          supabase.from('ribisoft_pedidos').update({ 'Código Ítem': item.code }).eq('id', item.id)
+        )
+      );
+      codesEnriched += slice.length;
+    }
+  } catch (err) {
+    console.warn('Aviso depurando ribisoft_pedidos:', err.message);
+  }
+
+  if (onProgress) onProgress(70);
+
+  // 3. Inspeccionar y depurar `produccion_pedidos` (conservando siempre el producto con avances en planta)
+  let produccionDuplicatesRemoved = 0;
+
+  try {
+    const allPlanta = await fetchAllTableRows(
+      'produccion_pedidos',
+      'id, pedido_num, codigo_item, data_completa'
+    );
+
+    const plantaGroups = new Map();
+    const plantaIdsToDelete = [];
+    const plantaToUpdate = [];
+
+    const getPlantaProgressScore = (row) => {
+      const d = row?.data_completa || {};
+      let score = 0;
+      if (d.estadoInterno === 'DESPACHADO' || d.isTerminado) score += 100;
+      if (d.areaActual && d.areaActual !== 'Diseño') score += 50;
+      if (Array.isArray(d.bitacoraTurnos) && d.bitacoraTurnos.length > 0) score += 30 + d.bitacoraTurnos.length;
+      if (Array.isArray(d.bitacoraCalidad) && d.bitacoraCalidad.length > 0) score += 20 + d.bitacoraCalidad.length;
+      if (Array.isArray(d.historial) && d.historial.length > 1) score += 10 + d.historial.length;
+      const code = cleanErpCode(row?.codigo_item ?? d.codArticulo ?? d.codigo_item);
+      if (code) score += 5;
+      return score;
+    };
+
+    for (const r of allPlanta) {
+      const d = r?.data_completa || {};
+      const hist = Array.isArray(d.historial) ? d.historial : [];
+      const firstHist = hist[0] || {};
+      const isAutoErpDump =
+        (firstHist.entrega === 'ERP RIBISOFT' ||
+          firstHist.accion === 'Importación ERP Ribisoft (Ingreso Inicial)') &&
+        hist.length <= 1 &&
+        (!Array.isArray(d.bitacoraTurnos) || d.bitacoraTurnos.length === 0) &&
+        (!Array.isArray(d.bitacoraCalidad) || d.bitacoraCalidad.length === 0) &&
+        (!d.areaActual || d.areaActual === 'Diseño') &&
+        d.estadoInterno !== 'DESPACHADO' &&
+        !d.isTerminado;
+
+      // Si fue volcado automáticamente por el Excel sin haber sido ingresado a planta por el usuario, eliminarlo de produccion_pedidos
+      if (isAutoErpDump) {
+        if (r.id) plantaIdsToDelete.push(r.id);
+        continue;
+      }
+
+      const pSin = cleanErpCode(d.pedidoNum ?? r.pedido_num);
+      const descNorm = normalizeProductName(d.nombre ?? d.descripcion);
+      const code = cleanErpCode(r.codigo_item ?? d.codArticulo ?? d.codigo_item);
+
+      if (!pSin) continue;
+
+      const groupKey = `${pSin}__${descNorm || code || r.id}`;
+      const existing = plantaGroups.get(groupKey);
+
+      if (!existing) {
+        plantaGroups.set(groupKey, r);
+      } else {
+        const existingScore = getPlantaProgressScore(existing);
+        const candidateScore = getPlantaProgressScore(r);
+
+        if (candidateScore > existingScore) {
+          // Si el anterior tenía código y el ganador no, heredar el código
+          const prevCode = cleanErpCode(existing.codigo_item ?? existing?.data_completa?.codArticulo);
+          if (prevCode && !code) {
+            r.codigo_item = prevCode;
+            r.data_completa = { ...(r.data_completa || {}), codArticulo: prevCode, codigo_item: prevCode };
+            plantaToUpdate.push({ id: r.id, codigo_item: prevCode, data_completa: r.data_completa });
+          }
+          if (existing.id) plantaIdsToDelete.push(existing.id);
+          plantaGroups.set(groupKey, r);
+        } else {
+          // Si el candidato tenía código y el ganador existente no, heredar el código al ganador
+          const existingCode = cleanErpCode(existing.codigo_item ?? existing?.data_completa?.codArticulo);
+          if (code && !existingCode) {
+            existing.codigo_item = code;
+            existing.data_completa = { ...(existing.data_completa || {}), codArticulo: code, codigo_item: code };
+            plantaToUpdate.push({ id: existing.id, codigo_item: code, data_completa: existing.data_completa });
+          }
+          if (r.id) plantaIdsToDelete.push(r.id);
+        }
+      }
+    }
+
+    // También enriquecer desde prodToCodptMap los sobrevivientes que aún no tengan código
+    for (const r of plantaGroups.values()) {
+      const d = r?.data_completa || {};
+      const pSin = cleanErpCode(d.pedidoNum ?? r.pedido_num);
+      const descNorm = normalizeProductName(d.nombre ?? d.descripcion);
+      const currentCode = cleanErpCode(r.codigo_item ?? d.codArticulo ?? d.codigo_item);
+      const matchedCodpt = pSin && descNorm ? prodToCodptMap.get(`${pSin}__${descNorm}`) : null;
+
+      if (matchedCodpt && currentCode !== matchedCodpt) {
+        const updatedData = { ...d, codArticulo: matchedCodpt, codigo_item: matchedCodpt };
+        plantaToUpdate.push({ id: r.id, codigo_item: matchedCodpt, data_completa: updatedData });
+      }
+    }
+
+    produccionDuplicatesRemoved = await deleteIdsInBatches('produccion_pedidos', plantaIdsToDelete);
+
+    for (let i = 0; i < plantaToUpdate.length; i += 25) {
+      const slice = plantaToUpdate.slice(i, i + 25);
+      await Promise.all(
+        slice.map(item =>
+          supabase
+            .from('produccion_pedidos')
+            .update({ codigo_item: item.codigo_item, data_completa: item.data_completa })
+            .eq('id', item.id)
+        )
+      );
+      codesEnriched += slice.length;
+    }
+  } catch (err) {
+    console.warn('Aviso depurando produccion_pedidos:', err.message);
+  }
+
+  await localforage.removeItem('cdi_mrp_processed_cache_v2');
+  await localforage.removeItem('cdi_mrp_processed_cache_v3');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+  }
+  if (onProgress) onProgress(100);
+
+  return {
+    ribisoftDuplicatesRemoved,
+    produccionDuplicatesRemoved,
+    requerimientosDuplicatesRemoved,
+    codesEnriched
+  };
+};
+
+/**
  * A) Importar MATERIALES REQUERIDOS PARA PEDIDOS.xls en `requerimientos_pedido`
  * y actualizar `existencia` y `ubicacion` en `inventario` cuando coincida `idreferencia`.
+ * - SOLO inserta los requerimientos que NO estén cargados aún.
+ * - Si un requerimiento ya existe y cambió su cantidad entregada/pendiente/existencia, actualiza esa fila sin duplicar.
  */
 export const importMaterialesRequeridosRows = async (rows, onProgress) => {
-  const mappedRows = [];
+  const uniqueExcelReqsMap = new Map();
   const inventoryUpdatesMap = new Map();
-  const uniquePedidosSet = new Set();
   const prodToCodptMap = new Map();
 
   for (const row of rows) {
@@ -241,7 +563,6 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       : null;
 
     if (!pedido_sin) continue;
-    uniquePedidosSet.add(pedido_sin);
 
     // CRÍTICO: En Excel codpt viene como float 33000070.0 -> limpiar obligatoriamente
     const rawCodPt = row['codpt'];
@@ -303,8 +624,9 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
       ? String(rawUbic).trim()
       : null;
 
-    // Columnas exactas verificadas en la tabla `requerimientos_pedido` de Supabase
-    mappedRows.push({
+    const reqKey = `${pedido_sin}__${codpt || ''}__${normalizeProductName(producto)}__${idreferencia}__${String(numero_rq || '').trim().toUpperCase()}`;
+
+    uniqueExcelReqsMap.set(reqKey, {
       numero_rq,
       pedido_cot,
       pedido_sin,
@@ -337,26 +659,87 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
     });
   }
 
-  if (onProgress) onProgress(5);
-
-  // Limpiar requerimientos previos de los pedidos que vienen en este archivo para evitar duplicados al re-sincronizar
-  const uniquePedidos = Array.from(uniquePedidosSet);
-  for (let i = 0; i < uniquePedidos.length; i += 200) {
-    const batchPedidos = uniquePedidos.slice(i, i + 200);
-    await supabase.from('requerimientos_pedido').delete().in('pedido_sin', batchPedidos);
-    await supabase.from('requerimientos_pedido').delete().in('pedidosin', batchPedidos);
-  }
-
   if (onProgress) onProgress(10);
 
-  // Insertar todas las filas en `requerimientos_pedido`
-  const insertedCount = await adaptiveBatchWrite('requerimientos_pedido', mappedRows, {
+  // Consultar qué requerimientos ya existen en la BD para NO duplicarlos y solo insertar los nuevos
+  const existingReqs = await fetchAllTableRows(
+    'requerimientos_pedido',
+    'id, numero_rq, pedido_sin, pedidosin, codpt, producto, idreferencia, referencia, pedida_reser, cant_oc, entregada, pendiente, existencia, ubicacion'
+  );
+
+  const existingReqMap = new Map();
+  const duplicateReqIdsToDelete = [];
+
+  for (const r of existingReqs) {
+    const pSin = cleanErpCode(r.pedido_sin ?? r.pedidosin);
+    const idRef = cleanErpCode(r.idreferencia);
+    const codpt = cleanErpCode(r.codpt);
+    const prodNorm = normalizeProductName(r.producto);
+    const rqNum = String(r.numero_rq || '').trim().toUpperCase();
+
+    if (!pSin || !idRef || !r.pedido_sin || !r.idreferencia) {
+      if (r.id) duplicateReqIdsToDelete.push(r.id);
+      continue;
+    }
+
+    const key = `${pSin}__${codpt || ''}__${prodNorm}__${idRef}__${rqNum}`;
+    if (existingReqMap.has(key)) {
+      if (r.id) duplicateReqIdsToDelete.push(r.id);
+    } else {
+      existingReqMap.set(key, r);
+    }
+  }
+
+  if (duplicateReqIdsToDelete.length > 0) {
+    await deleteIdsInBatches('requerimientos_pedido', duplicateReqIdsToDelete);
+  }
+
+  const rowsToInsert = [];
+  const rowsToUpdate = [];
+  let skippedExisting = 0;
+
+  for (const [reqKey, newRow] of uniqueExcelReqsMap.entries()) {
+    const existing = existingReqMap.get(reqKey);
+    if (!existing) {
+      rowsToInsert.push(newRow);
+    } else {
+      // Si ya existe, NO se vuelve a insertar; solo se actualiza si cambió algún saldo o si le faltaba referencia/codpt
+      const changed =
+        toSafeNumber(existing.entregada) !== newRow.entregada ||
+        toSafeNumber(existing.pendiente) !== newRow.pendiente ||
+        toSafeNumber(existing.existencia) !== newRow.existencia ||
+        toSafeNumber(existing.cant_oc) !== newRow.cant_oc ||
+        (!existing.referencia && newRow.referencia) ||
+        (!existing.codpt && newRow.codpt);
+
+      if (changed && existing.id) {
+        rowsToUpdate.push({ id: existing.id, payload: newRow });
+      } else {
+        skippedExisting++;
+      }
+    }
+  }
+
+  if (onProgress) onProgress(20);
+
+  // Insertar únicamente las filas nuevas que no estaban en `requerimientos_pedido`
+  const insertedCount = await adaptiveBatchWrite('requerimientos_pedido', rowsToInsert, {
     mode: 'insert',
     onProgress,
-    progressStart: 10,
-    progressEnd: 80,
+    progressStart: 20,
+    progressEnd: 65,
     chunkSize: 800
   });
+
+  // Actualizar en lote las filas existentes cuyos saldos de almacén hayan cambiado
+  for (let i = 0; i < rowsToUpdate.length; i += 25) {
+    const slice = rowsToUpdate.slice(i, i + 25);
+    await Promise.all(
+      slice.map(item =>
+        supabase.from('requerimientos_pedido').update(item.payload).eq('id', item.id)
+      )
+    );
+  }
 
   // Actualizar `existencia` y `ubicacion` en `inventario` cuando coincida `idreferencia` (en lotes rápidos)
   const invUpdates = Array.from(inventoryUpdatesMap.values());
@@ -386,54 +769,13 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
 
     if (onProgress && invUpdates.length > 0) {
       const ratio = Math.min(1, (i + slice.length) / invUpdates.length);
-      onProgress(Math.round(80 + ratio * 15));
+      onProgress(Math.round(65 + ratio * 20));
     }
   }
 
-  // Enriquecer `codigo_item` / `codArticulo` en `produccion_pedidos` si algún producto en planta no tenía su codpt (sin alterar área ni estado)
+  // Enriquecer códigos y limpiar duplicados con código vacío en `ribisoft_pedidos` y `produccion_pedidos`
   if (prodToCodptMap.size > 0) {
-    try {
-      const { data: existingPlanta } = await supabase
-        .from('produccion_pedidos')
-        .select('id, pedido_num, codigo_item, data_completa');
-
-      if (existingPlanta && existingPlanta.length > 0) {
-        const toEnrich = [];
-        for (const p of existingPlanta) {
-          const pSin = cleanErpCode(p?.data_completa?.pedidoNum ?? p?.pedido_num);
-          const currentCod = cleanErpCode(p?.codigo_item ?? p?.data_completa?.codArticulo ?? p?.data_completa?.codigo_item);
-          const prodName = normalizeProductName(p?.data_completa?.nombre ?? p?.data_completa?.descripcion);
-          const matchedCodpt = pSin && prodName ? prodToCodptMap.get(`${pSin}__${prodName}`) : null;
-
-          if (matchedCodpt && currentCod !== matchedCodpt) {
-            const updatedDataCompleta = {
-              ...(p.data_completa || {}),
-              codArticulo: matchedCodpt,
-              codigo_item: matchedCodpt
-            };
-            toEnrich.push({
-              id: p.id,
-              codigo_item: matchedCodpt,
-              data_completa: updatedDataCompleta
-            });
-          }
-        }
-
-        for (let i = 0; i < toEnrich.length; i += 25) {
-          const slice = toEnrich.slice(i, i + 25);
-          await Promise.all(
-            slice.map(item =>
-              supabase
-                .from('produccion_pedidos')
-                .update({ codigo_item: item.codigo_item, data_completa: item.data_completa })
-                .eq('id', item.id)
-            )
-          );
-        }
-      }
-    } catch (_) {
-      // No interrumpir si no hay registros por enriquecer
-    }
+    await deduplicateErpTables();
   }
 
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
@@ -442,11 +784,18 @@ export const importMaterialesRequeridosRows = async (rows, onProgress) => {
     window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
   }
   if (onProgress) onProgress(100);
-  return { insertedCount, updatedInvCount };
+  return {
+    insertedCount,
+    updatedReqCount: rowsToUpdate.length,
+    skippedExisting,
+    updatedInvCount
+  };
 };
 
 /**
  * B) Importar `lista de pedidos de produccion.xls` en `ribisoft_pedidos` y `produccion_pedidos`.
+ * - Depura automáticamente cualquier duplicado existente en `ribisoft_pedidos` (ej. filas viejas con Código Ítem vacío).
+ * - SOLO inserta lo que NO esté cargado aún ni en `ribisoft_pedidos` ni en `produccion_pedidos`.
  */
 export const importPedidosProduccionRows = async (rows, onProgress) => {
   const validRows = rows.filter(row => {
@@ -458,35 +807,19 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
   // Consultar mapa (pedido_sin + producto) -> codpt desde `requerimientos_pedido` para cruzar los códigos 3300xxxx
   const prodToCodptMap = new Map();
   try {
-    let from = 0;
-    const step = 1000;
-    let hasMore = true;
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('requerimientos_pedido')
-        .select('pedido_sin, codpt, producto')
-        .not('codpt', 'is', null)
-        .range(from, from + step - 1);
-
-      if (error || !data || data.length === 0) {
-        hasMore = false;
-      } else {
-        for (const r of data) {
-          const pSin = cleanErpCode(r.pedido_sin);
-          const codpt = cleanErpCode(r.codpt);
-          const prod = normalizeProductName(r.producto);
-          if (pSin && codpt && prod) {
-            prodToCodptMap.set(`${pSin}__${prod}`, codpt);
-          }
-        }
-        from += step;
-        if (data.length < step) hasMore = false;
+    const reqsWithCode = await fetchAllTableRows('requerimientos_pedido', 'pedido_sin, codpt, producto');
+    for (const r of reqsWithCode) {
+      const pSin = cleanErpCode(r.pedido_sin);
+      const codpt = cleanErpCode(r.codpt);
+      const prod = normalizeProductName(r.producto);
+      if (pSin && codpt && prod) {
+        prodToCodptMap.set(`${pSin}__${prod}`, codpt);
       }
     }
   } catch (_) {}
 
-  const ribisoftPayload = [];
-  const candidatesForPlanta = [];
+  // Deduplicar las propias filas del archivo Excel en memoria para no procesar dos veces el mismo ítem
+  const uniqueExcelItemsMap = new Map();
 
   for (const row of validRows) {
     const rawPedido = row['PedidoSIN'] ?? row['pedido_sin'] ?? row['pedidosin'] ?? row['Pedido'];
@@ -519,148 +852,134 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     const fecha_genera_ped = cleanExcelDate(row['Fecha Genera Ped.'] ?? row['Fecha Genera Ped'] ?? row['fecha_genera_ped'] ?? row['Fecha Genera']);
     const fecha_entrega = cleanExcelDate(row['Fecha Entrega'] ?? row['fecha_entrega']);
 
-    // Columnas exactas verificadas en `ribisoft_pedidos`
-    ribisoftPayload.push({
-      "PedidoSIN": pedido_sin,
-      "Código Ítem": codigo_item || '',
-      "Descripción": descripcion,
-      "Cliente": cliente,
-      "Nombre Proyecto": nombre_proyecto,
-      "Estado": estado,
-      "Programador": programador,
-      "Cantidad": cantidad,
-      dim_1: dim_1 !== null && dim_1 !== '' ? String(dim_1).trim() : null,
-      dim_2: dim_2 !== null && dim_2 !== '' ? String(dim_2).trim() : null,
-      dim_3: dim_3 !== null && dim_3 !== '' ? String(dim_3).trim() : null,
-      acabado_1: acabado_1 !== null && acabado_1 !== '' ? String(acabado_1).trim() : null,
-      acabado_2: acabado_2 !== null && acabado_2 !== '' ? String(acabado_2).trim() : null,
-      acabado_3: acabado_3 !== null && acabado_3 !== '' ? String(acabado_3).trim() : null,
-      caracteristicas: caracteristicas !== null && caracteristicas !== '' ? String(caracteristicas).trim() : null,
-      programador: programador || null,
-      categoria: categoria !== null && categoria !== '' ? String(categoria).trim() : null,
-      notas: notas !== null && notas !== '' ? String(notas).trim() : null,
-      observaciones_erp: observaciones_erp !== null && observaciones_erp !== '' ? String(observaciones_erp).trim() : null,
-      fecha_asigna,
-      fecha_genera_ped
-    });
+    const normDesc = normalizeProductName(descripcion);
+    const dedupKey = `${pedido_sin}__${normDesc || codigo_item || ''}`;
 
-    candidatesForPlanta.push({
-      pedido_sin,
-      codigo_item: codigo_item || '',
-      descripcion,
-      cliente: cliente || nombre_proyecto || 'N/A',
-      nombre_proyecto,
-      programador,
-      cantidad,
-      fecha_entrega,
-      dim_1: dim_1 !== null && dim_1 !== '' ? String(dim_1).trim() : null,
-      dim_2: dim_2 !== null && dim_2 !== '' ? String(dim_2).trim() : null,
-      dim_3: dim_3 !== null && dim_3 !== '' ? String(dim_3).trim() : null,
-      acabado_1: acabado_1 !== null && acabado_1 !== '' ? String(acabado_1).trim() : null,
-      acabado_2: acabado_2 !== null && acabado_2 !== '' ? String(acabado_2).trim() : null,
-      acabado_3: acabado_3 !== null && acabado_3 !== '' ? String(acabado_3).trim() : null,
-      caracteristicas: caracteristicas !== null && caracteristicas !== '' ? String(caracteristicas).trim() : null,
-      categoria: categoria !== null && categoria !== '' ? String(categoria).trim() : null,
-      notas: notas !== null && notas !== '' ? String(notas).trim() : null,
-      observaciones_erp: observaciones_erp !== null && observaciones_erp !== '' ? String(observaciones_erp).trim() : null,
-      fecha_asigna,
-      fecha_genera_ped
-    });
+    if (!uniqueExcelItemsMap.has(dedupKey) || (codigo_item && !uniqueExcelItemsMap.get(dedupKey).codigo_item)) {
+      uniqueExcelItemsMap.set(dedupKey, {
+        pedido_sin,
+        codigo_item: codigo_item || '',
+        descripcion,
+        normDesc,
+        cliente: cliente || nombre_proyecto || 'N/A',
+        rawCliente: cliente,
+        nombre_proyecto,
+        programador,
+        cantidad,
+        estado,
+        fecha_entrega,
+        dim_1: dim_1 !== null && dim_1 !== '' ? String(dim_1).trim() : null,
+        dim_2: dim_2 !== null && dim_2 !== '' ? String(dim_2).trim() : null,
+        dim_3: dim_3 !== null && dim_3 !== '' ? String(dim_3).trim() : null,
+        acabado_1: acabado_1 !== null && acabado_1 !== '' ? String(acabado_1).trim() : null,
+        acabado_2: acabado_2 !== null && acabado_2 !== '' ? String(acabado_2).trim() : null,
+        acabado_3: acabado_3 !== null && acabado_3 !== '' ? String(acabado_3).trim() : null,
+        caracteristicas: caracteristicas !== null && caracteristicas !== '' ? String(caracteristicas).trim() : null,
+        categoria: categoria !== null && categoria !== '' ? String(categoria).trim() : null,
+        notas: notas !== null && notas !== '' ? String(notas).trim() : null,
+        observaciones_erp: observaciones_erp !== null && observaciones_erp !== '' ? String(observaciones_erp).trim() : null,
+        fecha_asigna,
+        fecha_genera_ped
+      });
+    }
   }
+
+  const uniqueCandidates = Array.from(uniqueExcelItemsMap.values());
+
+  // 1. Consultar qué existe actualmente en `ribisoft_pedidos`, limpiar duplicados existentes y SOLO insertar lo nuevo
+  const existingRibisoftSet = new Set();
+  const ribiToUpdateCode = [];
+  let ribisoftDuplicatesCleaned = 0;
 
   try {
-    await adaptiveBatchWrite('ribisoft_pedidos', ribisoftPayload, {
-      mode: 'insert',
-      onProgress,
-      progressStart: 0,
-      progressEnd: 50,
-      chunkSize: 800
-    });
+    const existingRibiRows = await fetchAllTableRows(
+      'ribisoft_pedidos',
+      'id, "PedidoSIN", "Código Ítem", "Descripción"'
+    );
+
+    const seenRibiByDesc = new Map();
+    const duplicateRibiIds = [];
+
+    for (const r of existingRibiRows) {
+      const pSin = cleanErpCode(r['PedidoSIN']);
+      const cArt = cleanErpCode(r['Código Ítem']);
+      const pName = normalizeProductName(r['Descripción']);
+      if (!pSin) {
+        if (r.id) duplicateRibiIds.push(r.id);
+        continue;
+      }
+
+      const descKey = `${pSin}__NAME__${pName || cArt || ''}`;
+      if (!seenRibiByDesc.has(descKey)) {
+        seenRibiByDesc.set(descKey, r);
+      } else {
+        const prev = seenRibiByDesc.get(descKey);
+        const prevCode = cleanErpCode(prev['Código Ítem']);
+        // Conservar el registro que SÍ tenga Código Ítem y borrar el que tenga EMPTY
+        if (!prevCode && cArt) {
+          if (prev.id) duplicateRibiIds.push(prev.id);
+          seenRibiByDesc.set(descKey, r);
+        } else {
+          if (r.id) duplicateRibiIds.push(r.id);
+        }
+      }
+    }
+
+    if (duplicateRibiIds.length > 0) {
+      ribisoftDuplicatesCleaned = await deleteIdsInBatches('ribisoft_pedidos', duplicateRibiIds);
+    }
+
+    for (const r of seenRibiByDesc.values()) {
+      const pSin = cleanErpCode(r['PedidoSIN']);
+      const cArt = cleanErpCode(r['Código Ítem']);
+      const pName = normalizeProductName(r['Descripción']);
+      if (pSin && cArt) existingRibisoftSet.add(`${pSin}_${cArt}`);
+      if (pSin && pName) existingRibisoftSet.add(`${pSin}__NAME__${pName}`);
+
+      // Si el registro existente en ribisoft_pedidos no tenía Código Ítem pero ahora sí lo tenemos, actualizarlo sin duplicar
+      if (!cArt && pSin && pName) {
+        const candidate = uniqueExcelItemsMap.get(`${pSin}__${pName}`);
+        const newCode = candidate?.codigo_item || prodToCodptMap.get(`${pSin}__${pName}`);
+        if (newCode && r.id) {
+          ribiToUpdateCode.push({ id: r.id, code: newCode });
+          existingRibisoftSet.add(`${pSin}_${newCode}`);
+        }
+      }
+    }
+
+    for (let i = 0; i < ribiToUpdateCode.length; i += 25) {
+      const slice = ribiToUpdateCode.slice(i, i + 25);
+      await Promise.all(
+        slice.map(item =>
+          supabase.from('ribisoft_pedidos').update({ 'Código Ítem': item.code }).eq('id', item.id)
+        )
+      );
+    }
   } catch (err) {
-    console.warn('Aviso insertando en ribisoft_pedidos:', err.message);
+    console.warn('Aviso verificando existentes en ribisoft_pedidos:', err.message);
   }
 
-  const { data: existingPlanta, error: fetchErr } = await supabase
-    .from('produccion_pedidos')
-    .select('pedido_num, codigo_item, data_completa');
-
-  if (fetchErr) throw fetchErr;
-
-  const existingSet = new Set();
-  (existingPlanta || []).forEach(r => {
-    const pNum = cleanErpCode(r?.data_completa?.pedidoNum ?? r?.pedido_num);
-    const cArt = cleanErpCode(r?.codigo_item ?? r?.data_completa?.codArticulo ?? r?.data_completa?.codigo_item);
-    const pName = normalizeProductName(r?.data_completa?.nombre ?? r?.data_completa?.descripcion);
-    if (pNum && cArt) existingSet.add(`${pNum}_${cArt}`);
-    if (pNum && pName) existingSet.add(`${pNum}__NAME__${pName}`);
-  });
-
-  const generateUUID = () =>
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = (Math.random() * 16) | 0;
-          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-        });
-
-  const newPlantaRecords = [];
-  for (const item of candidatesForPlanta) {
+  // Filtrar `newRibisoftPayload`: SOLO lo que NO esté cargado en `ribisoft_pedidos`
+  const newRibisoftPayload = [];
+  for (const item of uniqueCandidates) {
     const codeKey = item.codigo_item ? `${item.pedido_sin}_${item.codigo_item}` : null;
-    const nameKey = item.descripcion ? `${item.pedido_sin}__NAME__${normalizeProductName(item.descripcion)}` : null;
+    const nameKey = item.normDesc ? `${item.pedido_sin}__NAME__${item.normDesc}` : null;
 
-    if ((codeKey && existingSet.has(codeKey)) || (nameKey && existingSet.has(nameKey))) {
-      continue; // Ya está en planta: NO sobrescribir área ni estado
+    if ((codeKey && existingRibisoftSet.has(codeKey)) || (nameKey && existingRibisoftSet.has(nameKey))) {
+      continue; // Ya existe en ribisoft_pedidos: NO volver a insertar
     }
-    if (codeKey) existingSet.add(codeKey);
-    if (nameKey) existingSet.add(nameKey);
+    if (codeKey) existingRibisoftSet.add(codeKey);
+    if (nameKey) existingRibisoftSet.add(nameKey);
 
-    const newId = generateUUID();
-    const newOrderObj = {
-      id: newId,
-      pedidoNum: item.pedido_sin,
-      codArticulo: item.codigo_item,
-      codigo_item: item.codigo_item,
-      nombre: item.descripcion,
-      cliente: item.cliente,
-      cantidad: item.cantidad,
-      cantidadRequerida: item.cantidad,
-      fechaEntregaPrometida: item.fecha_entrega,
-      areaActual: 'Diseño',
-      estadoInterno: 'EN ESPERA',
-      prioridad: 'NORMAL',
-      dim_1: item.dim_1,
-      dim_2: item.dim_2,
-      dim_3: item.dim_3,
-      acabado_1: item.acabado_1,
-      acabado_2: item.acabado_2,
-      acabado_3: item.acabado_3,
-      caracteristicas: item.caracteristicas,
-      programador: item.programador,
-      nombre_proyecto: item.nombre_proyecto,
-      categoria: item.categoria,
-      notas: item.notas,
-      observaciones_erp: item.observaciones_erp,
-      fecha_asigna: item.fecha_asigna,
-      fecha_genera_ped: item.fecha_genera_ped,
-      creadoEn: new Date().toISOString(),
-      bitacoraTurnos: [],
-      bitacoraCalidad: [],
-      historial: [
-        {
-          fecha: new Date().toISOString(),
-          accion: 'Importación ERP Ribisoft (Ingreso Inicial)',
-          entrega: 'ERP RIBISOFT',
-          recibe: 'Diseño'
-        }
-      ]
-    };
-
-    // Columnas exactas verificadas en `produccion_pedidos`
-    newPlantaRecords.push({
-      id: newId,
-      pedido_num: item.pedido_sin,
-      cliente: item.cliente,
-      codigo_item: item.codigo_item || null,
+    newRibisoftPayload.push({
+      "PedidoSIN": item.pedido_sin,
+      "Código Ítem": item.codigo_item || '',
+      "Descripción": item.descripcion,
+      "Cliente": item.rawCliente,
+      "Nombre Proyecto": item.nombre_proyecto,
+      "Estado": item.estado,
+      "Programador": item.programador,
+      "Cantidad": item.cantidad,
       dim_1: item.dim_1,
       dim_2: item.dim_2,
       dim_3: item.dim_3,
@@ -669,32 +988,105 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       acabado_3: item.acabado_3,
       caracteristicas: item.caracteristicas,
       programador: item.programador || null,
-      nombre_proyecto: item.nombre_proyecto || null,
       categoria: item.categoria,
       notas: item.notas,
       observaciones_erp: item.observaciones_erp,
       fecha_asigna: item.fecha_asigna,
-      fecha_genera_ped: item.fecha_genera_ped,
-      data_completa: newOrderObj
+      fecha_genera_ped: item.fecha_genera_ped
     });
   }
 
-  await adaptiveBatchWrite('produccion_pedidos', newPlantaRecords, {
-    mode: 'insert',
-    onProgress,
-    progressStart: 50,
-    progressEnd: 100,
-    chunkSize: 500
+  if (newRibisoftPayload.length > 0) {
+    try {
+      await adaptiveBatchWrite('ribisoft_pedidos', newRibisoftPayload, {
+        mode: 'insert',
+        onProgress,
+        progressStart: 0,
+        progressEnd: 50,
+        chunkSize: 800
+      });
+    } catch (err) {
+      console.warn('Aviso insertando en ribisoft_pedidos:', err.message);
+    }
+  } else if (onProgress) {
+    onProgress(50);
+  }
+
+  // 2. En `produccion_pedidos` SOLO deben existir los productos ingresados explícitamente a planta por los usuarios.
+  //    NO se vuelca el Excel a planta: solo se enriquecen los códigos/metadatos de los productos que YA están en planta
+  //    y se limpian los que se hubieran volcado automáticamente sin ingreso manual.
+  const existingPlanta = await fetchAllTableRows(
+    'produccion_pedidos',
+    'id, pedido_num, codigo_item, data_completa'
+  );
+
+  const plantaToEnrich = [];
+  const autoDumpIdsToRemove = [];
+
+  (existingPlanta || []).forEach(r => {
+    const d = r?.data_completa || {};
+    const hist = Array.isArray(d.historial) ? d.historial : [];
+    const firstHist = hist[0] || {};
+    const isAutoErpDump =
+      (firstHist.entrega === 'ERP RIBISOFT' ||
+        firstHist.accion === 'Importación ERP Ribisoft (Ingreso Inicial)') &&
+      hist.length <= 1 &&
+      (!Array.isArray(d.bitacoraTurnos) || d.bitacoraTurnos.length === 0) &&
+      (!Array.isArray(d.bitacoraCalidad) || d.bitacoraCalidad.length === 0) &&
+      (!d.areaActual || d.areaActual === 'Diseño') &&
+      d.estadoInterno !== 'DESPACHADO' &&
+      !d.isTerminado;
+
+    if (isAutoErpDump) {
+      if (r.id) autoDumpIdsToRemove.push(r.id);
+      return;
+    }
+
+    const pNum = cleanErpCode(d.pedidoNum ?? r?.pedido_num);
+    const cArt = cleanErpCode(r?.codigo_item ?? d.codArticulo ?? d.codigo_item);
+    const pName = normalizeProductName(d.nombre ?? d.descripcion);
+
+    if (!cArt && pNum && pName) {
+      const candidate = uniqueExcelItemsMap.get(`${pNum}__${pName}`);
+      const newCode = candidate?.codigo_item || prodToCodptMap.get(`${pNum}__${pName}`);
+      if (newCode && r.id) {
+        const updatedDataCompleta = {
+          ...d,
+          codArticulo: newCode,
+          codigo_item: newCode
+        };
+        plantaToEnrich.push({ id: r.id, codigo_item: newCode, data_completa: updatedDataCompleta });
+      }
+    }
   });
+
+  if (autoDumpIdsToRemove.length > 0) {
+    await deleteIdsInBatches('produccion_pedidos', autoDumpIdsToRemove);
+  }
+
+  for (let i = 0; i < plantaToEnrich.length; i += 25) {
+    const slice = plantaToEnrich.slice(i, i + 25);
+    await Promise.all(
+      slice.map(item =>
+        supabase
+          .from('produccion_pedidos')
+          .update({ codigo_item: item.codigo_item, data_completa: item.data_completa })
+          .eq('id', item.id)
+      )
+    );
+  }
+
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
   }
   if (onProgress) onProgress(100);
 
   return {
-    ribisoftInserted: ribisoftPayload.length,
-    plantaInserted: newPlantaRecords.length,
-    skippedExisting: candidatesForPlanta.length - newPlantaRecords.length
+    ribisoftInserted: newRibisoftPayload.length,
+    ribisoftDuplicatesCleaned,
+    plantaEnriched: plantaToEnrich.length,
+    plantaPurgedAutoDumps: autoDumpIdsToRemove.length,
+    skippedExisting: uniqueCandidates.length - newRibisoftPayload.length
   };
 };
 
@@ -702,7 +1094,7 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
  * C) Importar `ConsultaInventario MUESTRA 3.xlsx` en `inventario`.
  * - Mapea Id Referencia (sin .0), Referencia, Grupo, Subgrupo, Linea, Ubicacion, Id Unidad, Embalaje.
  * - Mantiene el filtro por defecto para priorizar 'Materias Primas e insumos' y 'Herramientas'.
- * - Usa UPSERT sobre "Id Referencia" para no fallar por `inventario_pkey`.
+ * - Consulta las referencias existentes y SOLO inserta las referencias que NO estaban cargadas.
  */
 export const importConsultaInventarioRows = async (rows, onProgress, filterGroups = true) => {
   const ALLOWED_GROUPS = ['MATERIAS PRIMAS', 'HERRAMIENTAS'];
@@ -762,16 +1154,35 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
     uniqueInventarioMap.set(idreferencia, itemPayload);
   }
 
-  const mappedInventario = Array.from(uniqueInventarioMap.values());
+  // Consultar qué referencias ya existen en `inventario` para insertar únicamente las nuevas
+  const existingInvRows = await fetchAllTableRows('inventario', '"Id Referencia"');
+  const existingInvSet = new Set(
+    (existingInvRows || [])
+      .map(r => cleanErpCode(r['Id Referencia']))
+      .filter(Boolean)
+  );
 
-  const importedCount = await adaptiveBatchWrite('inventario', mappedInventario, {
-    mode: 'upsert',
-    onConflict: 'Id Referencia',
-    onProgress,
-    progressStart: 0,
-    progressEnd: 100,
-    chunkSize: 800
-  });
+  const newInventarioRows = [];
+  let skippedExisting = 0;
+
+  for (const [idRef, payload] of uniqueInventarioMap.entries()) {
+    if (existingInvSet.has(idRef)) {
+      skippedExisting++;
+    } else {
+      newInventarioRows.push(payload);
+    }
+  }
+
+  const importedCount = newInventarioRows.length > 0
+    ? await adaptiveBatchWrite('inventario', newInventarioRows, {
+        mode: 'upsert',
+        onConflict: 'Id Referencia',
+        onProgress,
+        progressStart: 0,
+        progressEnd: 100,
+        chunkSize: 800
+      })
+    : 0;
 
   await localforage.removeItem('cdi_mrp_processed_cache_v2');
   await localforage.removeItem('cdi_mrp_processed_cache_v3');
@@ -780,7 +1191,7 @@ export const importConsultaInventarioRows = async (rows, onProgress, filterGroup
   }
   if (onProgress) onProgress(100);
 
-  return { importedCount };
+  return { importedCount, skippedExisting };
 };
 
 /**

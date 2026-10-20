@@ -21,7 +21,7 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
                     if (!Number.isNaN(n) && Number.isFinite(n)) return String(Math.trunc(n)).trim();
                     return String(v).replace(/\.0+$/, '').trim();
                 };
-                const mappedData = data.map(item => ({
+                const rawMappedData = data.map(item => ({
                     pedido: cleanCode(item['PedidoSIN'] ?? item['pedido_sin']),
                     articulo: cleanCode(item['codigo_item'] ?? item['Código Ítem']),
                     descripcion: item['Descripción'] ?? item['descripcion'] ?? '',
@@ -41,7 +41,18 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
                     notas: item['notas'] ?? null,
                     observaciones_erp: item['observaciones_erp'] ?? null
                 }));
-                resolve(mappedData);
+
+                // Deduplicar por (pedido + descripción normalizada) priorizando la fila que SÍ tiene código de artículo
+                const dedupMap = new Map();
+                for (const row of rawMappedData) {
+                    const normDesc = String(row.descripcion || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                    const key = `${row.pedido}__${normDesc || row.articulo}`;
+                    const existing = dedupMap.get(key);
+                    if (!existing || (!existing.articulo && row.articulo)) {
+                        dedupMap.set(key, row);
+                    }
+                }
+                resolve(Array.from(dedupMap.values()));
             }
             else reject("❌ NO SE ENCONTRÓ EL ARTÍCULO O PEDIDO.");
         } catch (error) { reject("ERROR DE CONEXIÓN CON SUPABASE."); }

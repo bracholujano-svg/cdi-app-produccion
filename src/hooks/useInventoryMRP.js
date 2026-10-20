@@ -319,6 +319,129 @@ export const useInventoryMRP = (orders, supabaseData) => {
             };
         };
 
+        /**
+         * NIVEL 3: Motor Anti-Error Humano de Ruta de Fabricación por Producto (codpt + Insumos RQ + Acabados ERP)
+         * Deduce automáticamente por cuáles áreas de planta debe pasar un producto aunque el programador
+         * de diseño haya olvidado marcarlas manualmente en Ribisoft.
+         */
+        const getProductRouting = (pedidoNum, codArticulo, productObj = null) => {
+            const normPNum = normalizeErpCode(pedidoNum);
+            const normCodArt = normalizeErpCode(codArticulo || productObj?.codArticulo || productObj?.codigo_item);
+            const prodName = productObj?.nombre || productObj?.descripcion || '';
+
+            const matEval = getProductMaterials(normPNum, normCodArt, prodName);
+            const materials = matEval.materials || [];
+
+            const reasonsByArea = {};
+            const addAreaReason = (areaName, reasonText) => {
+                if (!reasonsByArea[areaName]) reasonsByArea[areaName] = [];
+                if (reasonText && !reasonsByArea[areaName].includes(reasonText) && reasonsByArea[areaName].length < 3) {
+                    reasonsByArea[areaName].push(reasonText);
+                }
+            };
+
+            // 1. Analizar cada insumo cargado en requerimientos_pedido (RQ de Almacén)
+            materials.forEach(m => {
+                const ref = String(m.referencia || m.descripcion || '').toUpperCase();
+                if (!ref) return;
+
+                // Pintura Líquida
+                if (/\b(CATALIZADOR|POLIURETANO|LACA|SELLADOR|THINNER|TINTE|BARNIZ|FONDO PU|PINTURA LIQUIDA|PINTURA LÍQUIDA|ESMALTE|ACRILICO LIQUIDO|MASILLA)\b/.test(ref)) {
+                    addAreaReason('Pintura Líquida', `Insumo RQ: ${ref}`);
+                }
+
+                // Pintura en Polvo
+                if (/\b(PINTURA EN POLVO|ELECTROSTATICA|ELECTROSTÁTICA|POLVO|GOFRADO|MICROTEXTURIZADO|EPOXICO|EPÓXICO|FOSFATIZANTE|DESENGRASANTE)\b/.test(ref)) {
+                    addAreaReason('Pintura en Polvo', `Insumo RQ: ${ref}`);
+                }
+
+                // Madera / Tableros -> Corte CNC Madera + Ebanistería
+                if (/\b(MADECOR|MDF|TRIPLEX|TABLEX|AGLOMERADO|MELAMINA|CANTO|TAPACANTO|FORMICA|FÓRMICA|CHAPA|MADERA|ROBLE|CEDRO|PINO|CORIAN|COLBON|PEGANTE)\b/.test(ref)) {
+                    addAreaReason('Corte y Mecanizado CNC de Madera', `Insumo RQ: ${ref}`);
+                    addAreaReason('Ebanistería', `Insumo RQ: ${ref}`);
+                }
+
+                // Metalmecánica / Cerrajería -> Corte y Dobles CNC + Soldadura
+                if (/\b(LAMINA|LÁMINA|TUBO|TUBERIA|TUBERÍA|COLD ROLLED|PLATINA|ANGULO|ÁNGULO|VARILLA|SOLDADURA|MIG|TIG|ELECTRODO|ACERO|HIERRO|PERFIL METALICO|PERFIL METÁLICO)\b/.test(ref)) {
+                    addAreaReason('Corte y Dobles de Lámina y Tubería CNC', `Insumo RQ: ${ref}`);
+                    addAreaReason('Área de Soldadura', `Insumo RQ: ${ref}`);
+                }
+
+                // Torno
+                if (/\b(TORNO|TORNEADO|EJE |BUJE|MACIZO|BARRA REDONDA|BARRA MACIZA|BRONCE|NYLON|TEFLON|TEFLÓN)\b/.test(ref)) {
+                    addAreaReason('Área de Torno', `Insumo RQ: ${ref}`);
+                }
+
+                // Vidrio
+                if (/\b(VIDRIO|ESPEJO|CRISTAL|TEMPLADO|LAMINADO)\b/.test(ref)) {
+                    addAreaReason('Corte y Mecanizado de Vidrio', `Insumo RQ: ${ref}`);
+                }
+            });
+
+            // 2. Analizar Acabados y Características ERP del Producto (acabado_1..3, caracteristicas, nombre)
+            const textFields = [
+                productObj?.acabado_1,
+                productObj?.acabado_2,
+                productObj?.acabado_3,
+                productObj?.caracteristicas,
+                productObj?.observaciones_erp,
+                productObj?.notas,
+                productObj?.categoria,
+                prodName
+            ]
+                .filter(Boolean)
+                .map(s => String(s).toUpperCase())
+                .join(' | ');
+
+            if (textFields) {
+                if (/\b(POLIURETANO|LACA|PINTURA LIQUIDA|PINTURA LÍQUIDA|CATALIZADOR|TINTE|BARNIZ|SELLADOR|CRUDO PINTADO|MDF PINTADO)\b/.test(textFields)) {
+                    addAreaReason('Pintura Líquida', 'Ficha/Acabado ERP (Poliuretano/Pintura Líquida)');
+                }
+                if (/\b(ELECTROSTATICA|ELECTROSTÁTICA|PINTURA EN POLVO|PINTURA POLVO|GOFRADO|MICROTEXTURIZADO|EPOXICA|EPÓXICA)\b/.test(textFields)) {
+                    addAreaReason('Pintura en Polvo', 'Ficha/Acabado ERP (Pintura Electrostática/Polvo)');
+                }
+                if (/\b(MADECOR|MDF|MELAMINA|ENCHAPE|FORMICA|FÓRMICA|MADERA|EBANISTERIA|EBANISTERÍA|CORIAN|CANTO)\b/.test(textFields)) {
+                    addAreaReason('Corte y Mecanizado CNC de Madera', 'Ficha/Acabado ERP (Madera/Tablero)');
+                    addAreaReason('Ebanistería', 'Ficha/Acabado ERP (Ebanistería/Enchape)');
+                }
+                if (/\b(CERRAJERIA|CERRAJERÍA|SOLDADURA|METAL|METÁLICO|METALICO|TUBO|TUBERÍA|TUBERIA|LAMINA|LÁMINA|ACERO|HIERRO)\b/.test(textFields)) {
+                    addAreaReason('Corte y Dobles de Lámina y Tubería CNC', 'Ficha/Acabado ERP (Lámina/Tubería)');
+                    addAreaReason('Área de Soldadura', 'Ficha/Acabado ERP (Cerrajería/Soldadura)');
+                }
+                if (/\b(TORNO|TORNEADO|PIEZA TORNEADA|BUJE|EJE TORNEADO)\b/.test(textFields)) {
+                    addAreaReason('Área de Torno', 'Ficha/Acabado ERP (Torno)');
+                }
+                if (/\b(VIDRIO|ESPEJO|CRISTAL)\b/.test(textFields)) {
+                    addAreaReason('Corte y Mecanizado de Vidrio', 'Ficha/Acabado ERP (Vidrio/Espejo)');
+                }
+            }
+
+            // Si tiene múltiples procesos de transformación o al menos 1 área detectada, converge en Ensamble
+            const detectedAreasList = Object.keys(reasonsByArea);
+            if (detectedAreasList.length > 0) {
+                addAreaReason('Ensamble', 'Reunión y armado final de componentes');
+            }
+
+            const ORDERED_FLOW = [
+                'Corte y Mecanizado CNC de Madera',
+                'Corte y Dobles de Lámina y Tubería CNC',
+                'Área de Torno',
+                'Corte y Mecanizado de Vidrio',
+                'Ebanistería',
+                'Área de Soldadura',
+                'Pintura Líquida',
+                'Pintura en Polvo',
+                'Ensamble'
+            ];
+
+            const requiredAreas = ORDERED_FLOW.filter(a => Boolean(reasonsByArea[a]));
+
+            return {
+                requiredAreas,
+                reasonsByArea
+            };
+        };
+
         Object.defineProperty(orderMaterialStatus, 'getProductMaterials', {
             value: getProductMaterials,
             enumerable: false
@@ -326,6 +449,11 @@ export const useInventoryMRP = (orders, supabaseData) => {
 
         Object.defineProperty(orderMaterialStatus, 'getOrderSummary', {
             value: getOrderSummary,
+            enumerable: false
+        });
+
+        Object.defineProperty(orderMaterialStatus, 'getProductRouting', {
+            value: getProductRouting,
             enumerable: false
         });
 
