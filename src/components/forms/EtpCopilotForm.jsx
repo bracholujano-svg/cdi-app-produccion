@@ -1,29 +1,118 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { 
+import {
   ArrowLeft,
-  Bell, Clock, CheckCircle2, ChevronRight, Inbox, PaintBucket, 
-  Palette, Layers, SprayCan, CheckSquare, Search, 
-  Save, AlertTriangle, FlaskConical, Droplet, Gauge, 
-  Crosshair, Ban, BookmarkPlus, AlertCircle, FileText, Check,
-  Lock, Unlock, Printer, XCircle, Share2, Cloud, Download, MessageCircle, MoreVertical, X, Camera
+  Clock,
+  CheckCircle2,
+  Palette,
+  Layers,
+  SprayCan,
+  CheckSquare,
+  Search,
+  Save,
+  AlertTriangle,
+  FlaskConical,
+  Droplet,
+  Gauge,
+  Crosshair,
+  BookmarkPlus,
+  AlertCircle,
+  Lock,
+  Unlock,
+  Printer,
+  XCircle,
+  Share2,
+  Cloud,
+  Download,
+  MessageCircle,
+  MoreVertical,
+  X,
+  Camera,
+  QrCode,
+  UserCheck,
+  Calendar,
+  Sparkles,
+  Eye,
+  Plus,
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import {
+  ColorQRCodeSVG,
+  buildColorQRPayload,
+  printColorSampleBackLabel
+} from '../../utils/colorQrHelper';
 
-export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onCancel, isSupervisorView = false, initialData = {} }) {
-  // Identificación del Color
+export default function EtpCopilotForm({
+  colorId,
+  supervisorProfile,
+  onSave,
+  onCancel,
+  isSupervisorView = false,
+  initialData = {}
+}) {
+  const procInit =
+    typeof initialData?.procedimiento_preparacion === 'object' &&
+    initialData?.procedimiento_preparacion !== null
+      ? initialData.procedimiento_preparacion
+      : {};
+
+  // 1. Campos Consolidados de Identificación y Validación del Supervisor
   const [colorSystem, setColorSystem] = useState(initialData?.sistema_color || 'RAL');
-  const [cliente, setCliente] = useState(initialData?.procedimiento_preparacion?.cliente || initialData?.cliente || '');
-  const [colorRef, setColorRef] = useState(initialData?.codigo_objetivo || '');
-  const [glossLevel, setGlossLevel] = useState(initialData?.procedimiento_preparacion?.brillo || '40');
+  const [cliente, setCliente] = useState(procInit.cliente || initialData?.cliente || '');
+  const [colorRef, setColorRef] = useState(
+    procInit.codigo_color || initialData?.codigo_objetivo || ''
+  );
+  const [sistemaPintura, setSistemaPintura] = useState(
+    procInit.sistema_pintura || 'Poliuretano (PU)'
+  );
+  const [sustratoBase, setSustratoBase] = useState(
+    procInit.sustrato_base || initialData?.sustrato_muestra || 'MDF RH'
+  );
+  const [acabadoProduccion, setAcabadoProduccion] = useState(
+    procInit.acabado_produccion || 'Satinado'
+  );
+  const [glossLevel, setGlossLevel] = useState(procInit.brillo || '40');
+  const [acabadoMuestraFisica] = useState(
+    procInit.acabado_muestra_fisica ||
+      'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)'
+  );
+
+  // Coordenadas Colorimétricas CIELAB + Delta E
+  const [coordL, setCoordL] = useState(procInit.coordenadas_color?.L || '');
+  const [coordA, setCoordA] = useState(procInit.coordenadas_color?.a || '');
+  const [coordB, setCoordB] = useState(procInit.coordenadas_color?.b || '');
+
+  // Datos de Aprobación del Supervisor
+  const [aprobadoPor, setAprobadoPor] = useState(
+    procInit.aprobado_por ||
+      supervisorProfile?.nombre ||
+      supervisorProfile?.name ||
+      'SUPERVISOR DE COLORIMETRÍA'
+  );
+  const [fechaAprobacion, setFechaAprobacion] = useState(() => {
+    if (procInit.fecha_aprobacion) {
+      return String(procInit.fecha_aprobacion).split('T')[0];
+    }
+    return new Date().toISOString().split('T')[0];
+  });
+
   const [isConfirmed, setIsConfirmed] = useState(false);
-  
-  // Estado de aprobación y bloqueo (Solo Lectura por defecto si ya está aprobado)
-  const [estadoAprobacion, setEstadoAprobacion] = useState(initialData?.estado_aprobacion || 'borrador');
-  const [isLocked, setIsLocked] = useState(initialData?.estado_aprobacion === 'aprobado_produccion');
+
+  // Estado de aprobación y bloqueo
+  const [estadoAprobacion, setEstadoAprobacion] = useState(
+    initialData?.estado_aprobacion || 'borrador'
+  );
+  const [isLocked, setIsLocked] = useState(
+    initialData?.estado_aprobacion === 'aprobado_produccion'
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  // Modal de Consulta de Hoja Técnica Oficial / Lector QR
+  const [showOfficialQrSheetModal, setShowOfficialQrSheetModal] = useState(false);
 
   // Estados para Modal PIN y Lightbox
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -34,45 +123,119 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
   const componentRef = useRef(null);
   const [ingredientes, setIngredientes] = useState([]);
-  const [pesoTotal, setPesoTotal] = useState(0);
+  const [newPastaCode, setNewPastaCode] = useState('');
+  const [newPastaName, setNewPastaName] = useState('');
+  const [newPastaGramos, setNewPastaGramos] = useState('');
 
   useEffect(() => {
     let unmounted = false;
     const loadRecipe = async () => {
+      if (
+        Array.isArray(procInit.formulacion_pastas) &&
+        procInit.formulacion_pastas.length > 0
+      ) {
+        if (!unmounted) {
+          setIngredientes(procInit.formulacion_pastas);
+        }
+        return;
+      }
+
       if (initialData?.ingredientes && initialData.ingredientes.length > 0) {
-         const parsed = Array.isArray(initialData.ingredientes) ? initialData.ingredientes : JSON.parse(initialData.ingredientes || '[]');
-         if (!unmounted) {
-           setIngredientes(parsed);
-           setPesoTotal(initialData.peso_total_g || parsed.reduce((a,c) => a + (parseFloat(c.peso_g || c.peso || c.porcentaje_final) || 0), 0));
-         }
+        const parsed = Array.isArray(initialData.ingredientes)
+          ? initialData.ingredientes
+          : JSON.parse(initialData.ingredientes || '[]');
+        if (!unmounted) {
+          setIngredientes(parsed);
+        }
       } else if (colorId) {
-         const { data, error } = await supabase.from('recetas_detalle').select('*').eq('id_color', colorId);
-         if (!error && data && !unmounted) {
-            setIngredientes(data);
-            setPesoTotal(data.reduce((a,c) => a + (parseFloat(c.porcentaje_final) || 0), 0));
-         }
+        const { data, error } = await supabase
+          .from('recetas_detalle')
+          .select('*')
+          .eq('id_color', colorId);
+        if (!error && data && !unmounted) {
+          setIngredientes(data);
+        }
       }
     };
     loadRecipe();
-    return () => { unmounted = true; };
+    return () => {
+      unmounted = true;
+    };
   }, [initialData, colorId]);
+
+  // Normalizar ingredientes con gramos y % en tiempo real
+  const normalizedPastas = useMemo(() => {
+    const rawList = (ingredientes || []).map((item, idx) => {
+      const gramos =
+        parseFloat(item.gramos ?? item.peso_g ?? item.porcentaje_final ?? 0) || 0;
+      return {
+        id: item.id || `pasta_${idx}`,
+        codigo:
+          item.codigo || item.id_referencia_ppg || item.id_referencia || `PASTA-${idx + 1}`,
+        nombre: item.nombre || item.nombre_base || item.descripcion || 'BASE / TINTA PPG',
+        gramos
+      };
+    });
+
+    const sumGramos = rawList.reduce((acc, it) => acc + it.gramos, 0);
+    return rawList.map((it) => ({
+      ...it,
+      porcentaje: sumGramos > 0 ? Number(((it.gramos / sumGramos) * 100).toFixed(2)) : 0
+    }));
+  }, [ingredientes]);
+
+  const pesoTotal = useMemo(() => {
+    return normalizedPastas.reduce((acc, it) => acc + it.gramos, 0);
+  }, [normalizedPastas]);
 
   const [savedProcedures, setSavedProcedures] = useState({
     preparacion: [
-      { id: 1, title: 'Estándar MDF (Grano 220)', text: 'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.' },
-      { id: 2, title: 'Madera Sólida (Grano 180->220)', text: 'Lijado mecánico con grano 180 y afinado con 220. Sellar poro abierto antes del fondo.' }
+      {
+        id: 1,
+        title: 'Estándar MDF (Grano 220)',
+        text: 'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.'
+      },
+      {
+        id: 2,
+        title: 'Madera Sólida (Grano 180->220)',
+        text: 'Lijado mecánico con grano 180 y afinado con 220. Sellar poro abierto antes del fondo.'
+      }
     ],
     fondo: [
-      { id: 1, title: 'Poliuretano Blanco Alta Cubriente', text: 'Aplicar 1 mano húmeda de Poliuretano Blanco Brillante. Dejar secar mínimo 4 horas. NO LIJAR antes de aplicar el color.' },
-      { id: 2, title: 'Primer Gris Oscuro', text: 'Aplicar 1 mano de Primer Gris Oscuro para saturación rápida de tonos profundos.' }
+      {
+        id: 1,
+        title: 'Poliuretano Blanco Alta Cubriente',
+        text: 'Aplicar 1 mano húmeda de Poliuretano Blanco Brillante. Dejar secar mínimo 4 horas. NO LIJAR antes de aplicar el color.'
+      },
+      {
+        id: 2,
+        title: 'Primer Gris Oscuro',
+        text: 'Aplicar 1 mano de Primer Gris Oscuro para saturación rápida de tonos profundos.'
+      }
     ],
     color: [
-      { id: 1, title: '2 Manos Cruzadas Estándar', text: 'Aplicar 2 manos cruzadas de entonador a presión estándar. Tiempo de oreo 10-15 min.' },
-      { id: 2, title: '3 Manos (Baja Opacidad)', text: 'Aplicar 3 manos a presión de 28 PSI. Evitar sobrecarga en bordes.' }
+      {
+        id: 1,
+        title: '2 Manos Cruzadas Estándar',
+        text: 'Aplicar 2 manos cruzadas de entonador a presión estándar. Tiempo de oreo 10-15 min.'
+      },
+      {
+        id: 2,
+        title: '3 Manos (Baja Opacidad)',
+        text: 'Aplicar 3 manos a presión de 28 PSI. Evitar sobrecarga en bordes.'
+      }
     ],
     acabado: [
-      { id: 1, title: 'Satinado 40% Brillo', text: 'Aplicar 1 mano de Barniz Poliuretano Satinado (40% Brillo).' },
-      { id: 2, title: 'Alto Brillo 90%', text: 'Aplicar 2 manos de Barniz Poliuretano Alto Brillo (90%). Pulir y lustrar a las 24h.' }
+      {
+        id: 1,
+        title: 'Satinado 40% Brillo',
+        text: 'Aplicar 1 mano de Barniz Poliuretano Satinado (40% Brillo).'
+      },
+      {
+        id: 2,
+        title: 'Alto Brillo 90%',
+        text: 'Aplicar 2 manos de Barniz Poliuretano Alto Brillo (90%). Pulir y lustrar a las 24h.'
+      }
     ]
   });
 
@@ -91,41 +254,138 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
   ]);
 
   const [formData, setFormData] = useState({
-    nombreComercial: initialData?.codigo_objetivo || '',
-    codigoInterno: '',
+    nombreComercial:
+      procInit.nombre_color || initialData?.codigo_objetivo || '',
+    codigoInterno: procInit.codigo_color || initialData?.codigo_objetivo || '',
     deltaE: initialData?.tolerancia_delta_e || 'ΔE < 0.8',
-    fondoRequired: initialData?.sustrato_muestra || 'Sustrato estándar de madera/MDF',
+    fondoRequired:
+      procInit.fondoObligatorio ||
+      initialData?.sustrato_muestra ||
+      'Primer PU Blanco sobre MDF RH',
     catalizador: initialData?.catalizador_tipo || '50% (Ref: CAT-50)',
     disolvente: initialData?.disolvente_tipo || '10% - 15% (PU)',
-    boquilla: '1.3 mm',
-    manos: '2 Manos Cruzadas',
-    viscosidad: '18-20 seg',
-    presion: '25 - 30 PSI',
-    textoPreparacion: 'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.',
+    boquilla: procInit.boquilla || '1.3 mm',
+    manos: procInit.manos || '2 Manos Cruzadas',
+    viscosidad: procInit.viscosidad || '18-20 seg',
+    presion: procInit.presion || '25 - 30 PSI',
+    textoPreparacion:
+      procInit.preparacion ||
+      'Lijado del sustrato (MDF) con grano 220. Aplicar 2 manos de Base Blanca. Lijar con grano 320/400.',
     textoFondo: (() => {
-      let fondoText = initialData?.sustrato_muestra ? `Sustrato: ${initialData.sustrato_muestra}` : '';
-      if (initialData?.procedimiento_preparacion?.fondo && typeof initialData.procedimiento_preparacion.fondo === 'object') {
-         const f = initialData.procedimiento_preparacion.fondo;
-         fondoText += `\nBase: ${f.tipo} (${f.color}). Manos: ${f.manos}.`;
-         fondoText += `\nMezcla Base: Cat ${f.catalizador} / Disolv ${f.disolvente}`;
-      } else if (typeof initialData?.procedimiento_preparacion?.fondo === 'string') {
-         fondoText += initialData.procedimiento_preparacion.fondo;
+      let fondoText = initialData?.sustrato_muestra
+        ? `Sustrato: ${initialData.sustrato_muestra}`
+        : '';
+      if (procInit.fondo && typeof procInit.fondo === 'object') {
+        const f = procInit.fondo;
+        fondoText += `\nBase: ${f.tipo} (${f.color}). Manos: ${f.manos}.`;
+        fondoText += `\nMezcla Base: Cat ${f.catalizador} / Disolv ${f.disolvente}`;
+      } else if (typeof procInit.fondo === 'string') {
+        fondoText = procInit.fondo;
       }
-      return fondoText;
+      return (
+        fondoText ||
+        'Aplicar 1 mano húmeda de Poliuretano Blanco. Dejar secar mínimo 4 horas.'
+      );
     })(),
-    textoColor: typeof initialData?.procedimiento_preparacion?.color === 'string' ? initialData.procedimiento_preparacion.color : 'Aplicar 2 manos cruzadas de entonador a presión estándar.',
-    textoAcabado: typeof initialData?.procedimiento_preparacion?.acabado === 'string' ? initialData.procedimiento_preparacion.acabado : 'Aplicar 1 mano de Barniz Poliuretano (40% Brillo).'
+    textoColor:
+      typeof procInit.color === 'string' && procInit.color
+        ? procInit.color
+        : 'Aplicar 2 manos cruzadas de entonador a presión estándar.',
+    textoAcabado:
+      typeof procInit.acabado === 'string' && procInit.acabado
+        ? procInit.acabado
+        : 'Aplicar 1 mano de Barniz Poliuretano según Acabado de Producción.'
   });
 
-  const [imagenMuestra, setImagenMuestra] = useState(initialData?.procedimiento_preparacion?.imagen_muestra || initialData?.imagen_muestra || null);
+  const [imagenMuestra, setImagenMuestra] = useState(
+    procInit.imagen_muestra || initialData?.imagen_muestra || null
+  );
+
+  // Construir objeto consolidado para el QR y la Etiqueta Imprimible de Respaldo
+  const consolidatedColorData = useMemo(
+    () => ({
+      codigoColor: colorRef || formData.nombreComercial || 'S/C',
+      nombreColor: formData.nombreComercial || colorRef || 'COLOR OFICIAL',
+      sistemaCatalogo: colorSystem,
+      cliente: cliente || 'ESTÁNDAR CDI',
+      sistemaPintura,
+      sustratoBase,
+      acabadoProduccion,
+      glossLevel,
+      acabadoMuestraFisica,
+      coordenadasColor: {
+        L: coordL,
+        a: coordA,
+        b: coordB,
+        deltaE: formData.deltaE
+      },
+      aprobadoPor: aprobadoPor || 'SUPERVISOR',
+      fechaAprobacion,
+      formulacionPastas: normalizedPastas,
+      catalizador: formData.catalizador,
+      disolvente: formData.disolvente
+    }),
+    [
+      colorRef,
+      formData.nombreComercial,
+      formData.deltaE,
+      formData.catalizador,
+      formData.disolvente,
+      colorSystem,
+      cliente,
+      sistemaPintura,
+      sustratoBase,
+      acabadoProduccion,
+      glossLevel,
+      acabadoMuestraFisica,
+      coordL,
+      coordA,
+      coordB,
+      aprobadoPor,
+      fechaAprobacion,
+      normalizedPastas
+    ]
+  );
+
+  const qrPayload = useMemo(
+    () => buildColorQRPayload(consolidatedColorData),
+    [consolidatedColorData]
+  );
+
+  const handleAddManualPasta = () => {
+    if (isLocked) return;
+    const gr = parseFloat(newPastaGramos);
+    if (!newPastaName.trim() || isNaN(gr) || gr <= 0) {
+      alert('Ingresa el nombre/código de la pasta y una cantidad en gramos mayor a 0.');
+      return;
+    }
+    const newItem = {
+      id: `manual_${Date.now()}`,
+      codigo: newPastaCode.trim().toUpperCase() || 'PASTA-PPG',
+      nombre: newPastaName.trim().toUpperCase(),
+      gramos: gr
+    };
+    setIngredientes((prev) => [...prev, newItem]);
+    setNewPastaCode('');
+    setNewPastaName('');
+    setNewPastaGramos('');
+  };
+
+  const handleRemovePasta = (idxToRemove) => {
+    if (isLocked) return;
+    setIngredientes((prev) => prev.filter((_, idx) => idx !== idxToRemove));
+  };
 
   const handleSaveTemplate = (category, textValue) => {
     if (!textValue.trim()) return;
-    const titleName = prompt("Ingrese un nombre corto para identificar esta plantilla de procedimiento:", "Procedimiento Personalizado");
+    const titleName = prompt(
+      'Ingrese un nombre corto para identificar esta plantilla de procedimiento:',
+      'Procedimiento Personalizado'
+    );
     if (!titleName) return;
 
     const newTemplate = { id: Date.now(), title: titleName, text: textValue };
-    setSavedProcedures(prev => ({
+    setSavedProcedures((prev) => ({
       ...prev,
       [category]: [...prev[category], newTemplate]
     }));
@@ -145,7 +405,9 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     try {
       let emailToAuth = supervisorProfile?.email;
       if (!emailToAuth) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         emailToAuth = session?.user?.email;
       }
 
@@ -158,7 +420,12 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         if (!error && data?.user) isAuthenticated = true;
       }
 
-      if (!isAuthenticated && (pinInput.trim() === '1234' || pinInput.trim() === 'admin123' || pinInput.trim().length >= 4)) {
+      if (
+        !isAuthenticated &&
+        (pinInput.trim() === '1234' ||
+          pinInput.trim() === 'admin123' ||
+          pinInput.trim().length >= 4)
+      ) {
         isAuthenticated = true;
       }
 
@@ -196,49 +463,39 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     setIsSubmitting(true);
     setIsGeneratingPDF(true);
 
-    // Breve pausa para asegurar que React actualice el DOM con vistas estáticas
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     const elemento = componentRef.current;
-    // TAREA 1: Guardar estilos originales para su restauración posterior
     const originalHeight = elemento.style.height;
     const originalOverflow = elemento.style.overflow;
     const originalMaxHeight = elemento.style.maxHeight;
     const originalMinHeight = elemento.style.minHeight;
 
     try {
-      // TAREA 1: Forzar estilos temporales en el contenedor para evitar recortes de viewport
       elemento.style.setProperty('height', 'max-content', 'important');
       elemento.style.setProperty('overflow', 'visible', 'important');
       elemento.style.setProperty('max-height', 'none', 'important');
       elemento.style.setProperty('min-height', 'auto', 'important');
 
-      // TAREA 2: Captura con html2canvas en escala 2 y ancho/alto completo
       const canvas = await html2canvas(elemento, {
-        scale: 2, // Calidad alta
+        scale: 2,
         useCORS: true,
         logging: false,
-        scrollY: -window.scrollY, // Evitar desfases si el usuario scrolleó
+        scrollY: -window.scrollY,
         windowWidth: elemento.scrollWidth,
         windowHeight: elemento.scrollHeight,
         onclone: (clonedDoc) => {
-          // 1. Inyección de CSS estricto solo para el PDF
           const style = clonedDoc.createElement('style');
           style.innerHTML = `
-            /* Forzar fuente Arial y tamaño estricto de 12pt en absolutamente todo el texto */
             * {
               font-family: 'Arial', sans-serif !important;
               font-size: 12pt !important;
               line-height: 1.5 !important;
             }
-            
-            /* Forzar fuente Arial Black para todos los Títulos, Cabeceras y Negritas */
             h1, h2, h3, h4, h5, h6, th, strong, b, .font-bold, .font-black {
               font-family: 'Arial Black', sans-serif !important;
               font-weight: 900 !important;
             }
-            
-            /* Ajustes críticos para que la nueva fuente más grande no rompa los contenedores */
             .truncate {
               white-space: normal !important;
               overflow: visible !important;
@@ -249,31 +506,26 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             }
           `;
           clonedDoc.head.appendChild(style);
-          
-          // 2. Expandir inputs y textareas para asegurar que el texto 12pt no quede oculto
+
           const textareas = clonedDoc.querySelectorAll('textarea');
-          textareas.forEach(ta => {
+          textareas.forEach((ta) => {
             ta.style.height = ta.scrollHeight + 'px';
           });
         }
       });
 
-      // TAREA 2: Paginación Real con jsPDF (Algoritmo Matemático Exacto)
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      // Calcular dimensiones proporcionales
       const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Primera página
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pdfHeight;
 
-      // Páginas subsiguientes si excede el tamaño de 1 hoja
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
@@ -281,14 +533,18 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         heightLeft -= pdfHeight;
       }
 
-      const nombreColor = (formData.nombreComercial || colorRef || 'Ficha_Tecnica').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const nombreColor = (formData.nombreComercial || colorRef || 'Ficha_Tecnica').replace(
+        /[^a-zA-Z0-9_-]/g,
+        '_'
+      );
       pdf.save(`ETP_${nombreColor || 'Ficha_Tecnica'}.pdf`);
     } catch (err) {
       console.error('Error al generar PDF:', err);
-      alert('Hubo un error al generar el PDF mediante el motor gráfico. Abriendo diálogo de impresión estándar.');
+      alert(
+        'Hubo un error al generar el PDF mediante el motor gráfico. Abriendo diálogo de impresión estándar.'
+      );
       window.print();
     } finally {
-      // Restaurar estilos y estado de interfaz inmediatamente
       elemento.style.height = originalHeight;
       elemento.style.overflow = originalOverflow;
       elemento.style.maxHeight = originalMaxHeight;
@@ -298,40 +554,82 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  // Tarea 1: Aprobación de ETP
+  // Construir el payload de base de datos con todos los nuevos campos consolidados y el QR
+  const buildDatabasePayload = (targetStatus = 'aprobado_produccion') => {
+    const finalQrString = buildColorQRPayload(consolidatedColorData);
+    return {
+      sustrato_muestra: sustratoBase || formData.fondoRequired || formData.textoPreparacion,
+      tolerancia_delta_e: formData.deltaE,
+      catalizador_tipo: formData.catalizador,
+      disolvente_tipo: formData.disolvente,
+      procedimiento_preparacion: {
+        ...procInit,
+        cliente: cliente.trim() || 'ESTÁNDAR CDI',
+        codigo_color: (colorRef || formData.nombreComercial || '').trim().toUpperCase(),
+        nombre_color: (formData.nombreComercial || colorRef || '').trim().toUpperCase(),
+        sistema_pintura: sistemaPintura,
+        sustrato_base: sustratoBase,
+        acabado_produccion: acabadoProduccion,
+        brillo: glossLevel,
+        acabado_muestra_fisica: acabadoMuestraFisica,
+        coordenadas_color: {
+          L: coordL,
+          a: coordA,
+          b: coordB,
+          deltaE: formData.deltaE
+        },
+        formulacion_pastas: normalizedPastas,
+        qr_payload: finalQrString,
+        preparacion: formData.textoPreparacion,
+        fondo: formData.textoFondo,
+        color: formData.textoColor,
+        acabado: formData.textoAcabado,
+        viscosidad: formData.viscosidad,
+        presion: formData.presion,
+        boquilla: formData.boquilla,
+        manos: formData.manos,
+        fondoObligatorio: formData.fondoRequired,
+        imagen_muestra: imagenMuestra,
+        fecha_aprobacion: fechaAprobacion || new Date().toISOString(),
+        aprobado_por:
+          aprobadoPor ||
+          supervisorProfile?.nombre ||
+          supervisorProfile?.name ||
+          'Supervisor'
+      },
+      sistema_color: colorSystem,
+      codigo_objetivo: (colorRef || formData.nombreComercial || '').trim().toUpperCase(),
+      aprobado_por_id: supervisorProfile?.id || null,
+      estado_aprobacion: targetStatus
+    };
+  };
+
+  // Aprobación Oficial de ETP por Supervisor y Generación Automática de QR
   const handleAprobar = async () => {
+    if (!cliente.trim()) {
+      alert('⚠️ Campo obligatorio: Por favor ingresa el Cliente o Proyecto para el cual se entonó el color.');
+      return;
+    }
+    if (!colorRef.trim() && !formData.nombreComercial.trim()) {
+      alert('⚠️ Campo obligatorio: Por favor ingresa el Código y/o Nombre del Color.');
+      return;
+    }
+    if (!sustratoBase.trim()) {
+      alert('⚠️ Campo obligatorio: Indica el Sustrato Base de la muestra.');
+      return;
+    }
+    if (!aprobadoPor.trim()) {
+      alert('⚠️ Campo obligatorio: Indica el Nombre del Supervisor que valida y aprueba la ficha.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const payload = {
-        sustrato_muestra: formData.fondoRequired || formData.textoPreparacion,
-        tolerancia_delta_e: formData.deltaE,
-        catalizador_tipo: formData.catalizador,
-        disolvente_tipo: formData.disolvente,
-        procedimiento_preparacion: {
-          ...(typeof initialData?.procedimiento_preparacion === 'object' ? initialData.procedimiento_preparacion : {}),
-          cliente: cliente,
-          preparacion: formData.textoPreparacion,
-          fondo: formData.textoFondo,
-          color: formData.textoColor,
-          acabado: formData.textoAcabado,
-          viscosidad: formData.viscosidad,
-          presion: formData.presion,
-          boquilla: formData.boquilla,
-          manos: formData.manos,
-          brillo: glossLevel,
-          fondoObligatorio: formData.fondoRequired,
-          imagen_muestra: imagenMuestra,
-          fecha_aprobacion: new Date().toISOString(),
-          aprobado_por: supervisorProfile?.name || 'Supervisor'
-        },
-        sistema_color: colorSystem,
-        codigo_objetivo: colorRef || formData.nombreComercial,
-        aprobado_por_id: supervisorProfile?.id || null,
-        estado_aprobacion: 'aprobado_produccion'
-      };
+      const payload = buildDatabasePayload('aprobado_produccion');
 
       if (colorId) {
-        const { error } = await supabase.from('colores_aprobados')
+        const { error } = await supabase
+          .from('colores_aprobados')
           .update(payload)
           .eq('id', colorId);
         if (error) throw error;
@@ -339,7 +637,9 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
       setEstadoAprobacion('aprobado_produccion');
       setIsLocked(true);
-      alert('✅ ¡ETP Aprobada y liberada para producción exitosamente!');
+      alert(
+        '✅ ¡Ficha Técnica Oficial de Color APROBADA! Se ha habilitado el Código QR único y la Etiqueta Imprimible para el respaldo de la muestra física.'
+      );
       if (onSave) onSave(payload, 'aprobado');
     } catch (err) {
       console.error(err);
@@ -349,9 +649,11 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  // Tarea 1: Rechazo y Devolución al Operario
+  // Rechazo y Devolución al Operario
   const handleRechazar = async () => {
-    const motivo = prompt('Ingrese el motivo técnico de rechazo o corrección para el operario/entonador:');
+    const motivo = prompt(
+      'Ingrese el motivo técnico de rechazo o corrección para el operario/entonador:'
+    );
     if (!motivo || !motivo.trim()) {
       alert('Debe ingresar un motivo de rechazo para devolver la muestra.');
       return;
@@ -362,15 +664,20 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       const payload = {
         estado_aprobacion: 'rechazado',
         procedimiento_preparacion: {
-          ...(typeof initialData?.procedimiento_preparacion === 'object' ? initialData.procedimiento_preparacion : {}),
+          ...procInit,
           motivo_rechazo: motivo.trim(),
           fecha_rechazo: new Date().toISOString(),
-          rechazado_por: supervisorProfile?.name || 'Supervisor'
+          rechazado_por:
+            aprobadoPor ||
+            supervisorProfile?.nombre ||
+            supervisorProfile?.name ||
+            'Supervisor'
         }
       };
 
       if (colorId) {
-        const { error } = await supabase.from('colores_aprobados')
+        const { error } = await supabase
+          .from('colores_aprobados')
           .update(payload)
           .eq('id', colorId);
         if (error) throw error;
@@ -388,45 +695,28 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
     }
   };
 
-  // Tarea 2: Guardar modificaciones cuando la ficha aprobada fue desbloqueada
+  // Guardar modificaciones cuando la ficha aprobada fue desbloqueada
   const handleGuardarModificaciones = async () => {
     setIsSubmitting(true);
     try {
-      const payload = {
-        sustrato_muestra: formData.fondoRequired || formData.textoPreparacion,
-        tolerancia_delta_e: formData.deltaE,
-        catalizador_tipo: formData.catalizador,
-        disolvente_tipo: formData.disolvente,
-        procedimiento_preparacion: {
-          ...(typeof initialData?.procedimiento_preparacion === 'object' ? initialData.procedimiento_preparacion : {}),
-          cliente: cliente,
-          preparacion: formData.textoPreparacion,
-          fondo: formData.textoFondo,
-          color: formData.textoColor,
-          acabado: formData.textoAcabado,
-          viscosidad: formData.viscosidad,
-          presion: formData.presion,
-          boquilla: formData.boquilla,
-          manos: formData.manos,
-          brillo: glossLevel,
-          fondoObligatorio: formData.fondoRequired,
-          imagen_muestra: imagenMuestra || initialData?.procedimiento_preparacion?.imagen_muestra,
-          ultima_modificacion: new Date().toISOString(),
-          modificado_por: supervisorProfile?.name || 'Supervisor'
-        },
-        sistema_color: colorSystem,
-        codigo_objetivo: colorRef || formData.nombreComercial
-      };
+      const payload = buildDatabasePayload(estadoAprobacion || 'aprobado_produccion');
+      payload.procedimiento_preparacion.ultima_modificacion = new Date().toISOString();
+      payload.procedimiento_preparacion.modificado_por =
+        aprobadoPor ||
+        supervisorProfile?.nombre ||
+        supervisorProfile?.name ||
+        'Supervisor';
 
       if (colorId) {
-        const { error } = await supabase.from('colores_aprobados')
+        const { error } = await supabase
+          .from('colores_aprobados')
           .update(payload)
           .eq('id', colorId);
         if (error) throw error;
       }
 
       setIsLocked(true);
-      alert('💾 Modificaciones guardadas exitosamente.');
+      alert('💾 Modificaciones y Código QR actualizados exitosamente en Supabase.');
       if (onSave) onSave(payload, 'modificado');
     } catch (err) {
       console.error(err);
@@ -447,11 +737,9 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           url: window.location.href
         });
       } catch (_) {}
-    } else {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(window.location.href);
-        alert('📋 Enlace copiado al portapapeles.');
-      }
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      alert('📋 Enlace copiado al portapapeles.');
     }
   };
 
@@ -473,16 +761,29 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
   const handleWhatsApp = () => {
     setIsLightboxMenuOpen(false);
-    const msg = `*MUESTRA DE COLORIMETRÍA (CDI)*\nColor: ${formData.nombreComercial || colorRef}\nSistema: ${colorSystem}\nDelta E: ${formData.deltaE}\nFondo: ${formData.fondoRequired || 'Estándar'}\nVerificado para Producción.`;
+    const msg = `*FICHA TÉCNICA DE COLORIMETRÍA (CDI)*\nColor: ${formData.nombreComercial || colorRef}\nCliente: ${cliente || 'Estándar'}\nSistema: ${sistemaPintura} (${colorSystem})\nSustrato: ${sustratoBase}\nAcabado Producción: ${acabadoProduccion} (${glossLevel}%)\nDelta E: ${formData.deltaE}\nAprobado por: ${aprobadoPor}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const pastaBarColors = [
+    'bg-amber-500',
+    'bg-blue-600',
+    'bg-emerald-500',
+    'bg-rose-500',
+    'bg-purple-600',
+    'bg-cyan-500',
+    'bg-orange-500'
+  ];
+
   return (
-    <div className={`w-full bg-white transition-all ${isGeneratingPDF ? 'rounded-none shadow-none border-none min-h-0 overflow-visible' : 'rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[750px]'} print:shadow-none print:border-none print:w-full print:block`}>
-      
-      {/* Contenedor Principal de la Ficha Técnica (A4 Printable) */}
+    <div
+      className={`w-full bg-stone-50 transition-all ${
+        isGeneratingPDF
+          ? 'rounded-none shadow-none border-none min-h-0 overflow-visible'
+          : 'rounded-2xl shadow-xl border border-stone-200 overflow-hidden min-h-[750px]'
+      } print:shadow-none print:border-none print:w-full print:block`}
+    >
       <style>{`
-        /* Forzar tipografía Arial 12pt y Arial Black durante exportación a PDF */
         .etp-exporting-pdf,
         .etp-exporting-pdf * {
           font-family: Arial, sans-serif !important;
@@ -498,7 +799,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
         }
 
         @media print {
-          /* Forzar fuente Arial y tamaño 12pt para el texto general */
           .etp-print-container, 
           .etp-print-container p, 
           .etp-print-container span, 
@@ -509,8 +809,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             font-size: 12pt !important;
             line-height: 1.5 !important;
           }
-          
-          /* Forzar fuente Arial Black para todos los encabezados y títulos */
           .etp-print-container h1, 
           .etp-print-container h2, 
           .etp-print-container h3, 
@@ -520,8 +818,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             font-family: 'Arial Black', Arial, sans-serif !important;
             font-weight: 900 !important;
           }
-
-          /* Reglas estrictas contra cortes en saltos de página */
           .etp-print-container tr,
           .etp-print-container .break-inside-avoid,
           .etp-print-container .print\\:break-inside-avoid {
@@ -530,660 +826,1354 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           }
         }
       `}</style>
-      <div 
-        ref={componentRef} 
-        style={{ backgroundColor: "#ffffff", color: "#0f172a" }} 
-        className={`etp-print-container w-full flex flex-col bg-white text-slate-900 relative ${isGeneratingPDF ? 'min-h-0 h-auto overflow-visible shadow-none rounded-none etp-exporting-pdf p-8' : 'min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8'}`}
+
+      <div
+        ref={componentRef}
+        style={{ backgroundColor: '#fafaf9', color: '#0f172a' }}
+        className={`etp-print-container w-full flex flex-col bg-stone-50 text-slate-900 relative ${
+          isGeneratingPDF
+            ? 'min-h-0 h-auto overflow-visible shadow-none rounded-none etp-exporting-pdf p-8'
+            : 'min-h-[750px] overflow-y-auto custom-scroll print:h-auto print:overflow-visible print:bg-white print:text-black print:p-8'
+        }`}
       >
-        
         {/* Cabecera Formal Institucional (Visible en Exportación PDF e Impresión Física A4) */}
-        <div className={`${isGeneratingPDF ? 'block' : 'hidden print:block'} mb-4 border-b-2 border-slate-900 pb-3`}>
+        <div
+          className={`${
+            isGeneratingPDF ? 'block' : 'hidden print:block'
+          } mb-4 border-b-2 border-slate-900 pb-3`}
+        >
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Arial Black', Arial, sans-serif" }}>CDI EXHIBICIONES S.A.S.</h1>
-              <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider" style={{ fontFamily: "Arial, sans-serif" }}>FICHA TÉCNICA DE PRODUCCIÓN Y COLORIMETRÍA (ETP)</h2>
+              <h1
+                className="text-2xl font-black text-slate-900 tracking-tight"
+                style={{ fontFamily: "'Arial Black', Arial, sans-serif" }}
+              >
+                CDI EXHIBICIONES S.A.S. — LABORATORIO DE COLORIMETRÍA
+              </h1>
+              <h2
+                className="text-sm font-bold text-slate-600 uppercase tracking-wider"
+                style={{ fontFamily: 'Arial, sans-serif' }}
+              >
+                FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y VALIDACIÓN DE COLOR (SC COLOR)
+              </h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-mono block text-slate-500">FECHA DE EMISIÓN: {new Date().toLocaleDateString()}</span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-300 inline-block uppercase mt-1">ESTADO: {estadoAprobacion.replace('_', ' ')}</span>
+              <span className="text-xs font-mono block text-slate-500">
+                FECHA APROBACIÓN: {fechaAprobacion}
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-300 inline-block uppercase mt-1">
+                ESTADO: {estadoAprobacion === 'aprobado_produccion' ? 'APROBADO OFICIAL' : estadoAprobacion}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Banner de Rechazo (Si aplica) */}
         {estadoAprobacion === 'rechazado' && (
-          <div className={`mx-6 mt-6 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl flex items-start gap-3 ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
+          <div
+            className={`mx-6 mt-6 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl flex items-start gap-3 ${
+              isGeneratingPDF ? 'hidden' : 'print:hidden'
+            }`}
+          >
             <AlertCircle className="text-rose-600 flex-shrink-0 mt-0.5" size={20} />
             <div>
-              <h4 className="text-sm font-bold text-rose-800 uppercase">Muestra Devuelta para Corrección</h4>
+              <h4 className="text-sm font-bold text-rose-800 uppercase">
+                Muestra Devuelta para Corrección
+              </h4>
               <p className="text-xs text-rose-700 mt-1 font-medium">
-                <strong>Motivo del Supervisor:</strong> {initialData?.procedimiento_preparacion?.motivo_rechazo || 'Se requieren ajustes en la muestra antes de aprobar para producción.'}
+                <strong>Motivo del Supervisor:</strong>{' '}
+                {procInit.motivo_rechazo ||
+                  'Se requieren ajustes en la muestra antes de aprobar para producción.'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Cabecera del Formulario en Pantalla */}
-        <header className={`bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isGeneratingPDF ? 'p-2 border-b border-slate-300 shadow-none static' : 'p-5 border-b border-slate-200 sticky top-0 z-20 shadow-sm print:static print:border-none print:shadow-none print:p-0'}`}>
-          
-          <div className="flex items-center gap-4 w-full md:w-auto">
+        {/* CABECERA MODERNA TIPO LABORATORIO DE COLORIMETRÍA */}
+        <header
+          className={`bg-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 ${
+            isGeneratingPDF
+              ? 'p-2 border-b border-slate-300 shadow-none static'
+              : 'p-5 border-b border-stone-200 sticky top-0 z-20 shadow-sm print:static print:border-none print:shadow-none print:p-0'
+          }`}
+        >
+          <div className="flex items-center gap-4 w-full lg:w-auto">
             {onCancel && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={onCancel}
-                className={`p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5 text-xs font-black shadow-sm ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
+                className={`p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-700 hover:text-slate-950 transition-colors flex items-center gap-1.5 text-xs font-black shadow-sm ${
+                  isGeneratingPDF ? 'hidden' : 'print:hidden'
+                }`}
                 title="Volver a la pantalla anterior"
               >
                 <ArrowLeft size={16} />
                 <span className="hidden sm:inline">Volver</span>
               </button>
             )}
-            <div className="w-14 h-14 rounded-xl shadow-inner border border-slate-200 flex-shrink-0" style={{backgroundColor: ingredientes.length > 0 ? (colorRef.includes('1') ? '#facc15' : '#1e3a8a') : '#e2e8f0'}}></div>
+
+            <div
+              className="w-14 h-14 rounded-2xl shadow-md border-2 border-white ring-1 ring-stone-200 flex-shrink-0 flex items-center justify-center"
+              style={{
+                backgroundColor:
+                  initialData?.color_hexadecimal && initialData.color_hexadecimal !== '#cccccc'
+                    ? initialData.color_hexadecimal
+                    : '#f59e0b'
+              }}
+            >
+              <Palette className="text-white/90 drop-shadow" size={24} />
+            </div>
+
             <div className="flex-grow">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2.5 py-0.5 rounded border border-slate-200 uppercase tracking-wider">Ficha Técnica ETP</span>
-                
-                {/* Insignia de Estado */}
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className="bg-amber-50 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-amber-200 uppercase tracking-wider">
+                  Laboratorio de Colorimetría • SC Color
+                </span>
+
+                {/* Indicador de Estado de Ficha */}
                 {estadoAprobacion === 'aprobado_produccion' ? (
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1 uppercase">
-                    <CheckCircle2 size={12}/> Ficha Aprobada (Planta)
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-emerald-300 flex items-center gap-1 uppercase shadow-sm">
+                    <CheckCircle2 size={12} /> Aprobado Oficial (Planta)
                   </span>
                 ) : estadoAprobacion === 'pendiente_revision' ? (
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded border border-amber-200 flex items-center gap-1 uppercase">
-                    <Clock size={12}/> Pendiente Auditoría
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1 uppercase">
+                    <Clock size={12} /> En Ajuste / Pendiente Revisión
                   </span>
                 ) : (
-                  <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                  <span className="bg-stone-200 text-stone-700 text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase">
                     Borrador
                   </span>
                 )}
 
                 {/* Botón Candado / Desbloquear PIN */}
                 {isLocked ? (
-                  <button 
-                    type="button" 
-                    onClick={() => setIsPinModalOpen(true)} 
-                    className={`bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-black px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 transition-colors shadow-sm ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
+                  <button
+                    type="button"
+                    onClick={() => setIsPinModalOpen(true)}
+                    className={`bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-black px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 transition-colors shadow-sm ${
+                      isGeneratingPDF ? 'hidden' : 'print:hidden'
+                    }`}
                   >
-                    <Lock size={12}/> Desbloquear (Requiere Clave)
+                    <Lock size={12} /> Desbloquear Edición
                   </button>
                 ) : (
                   estadoAprobacion === 'aprobado_produccion' && (
-                    <button 
-                      type="button" 
-                      onClick={() => setIsLocked(true)} 
-                      className={`bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-300 flex items-center gap-1 transition-colors ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
+                    <button
+                      type="button"
+                      onClick={() => setIsLocked(true)}
+                      className={`bg-stone-100 text-slate-700 hover:bg-stone-200 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-stone-300 flex items-center gap-1 transition-colors ${
+                        isGeneratingPDF ? 'hidden' : 'print:hidden'
+                      }`}
                     >
-                      <Unlock size={12}/> Bloquear Ficha
+                      <Unlock size={12} /> Bloquear Ficha
                     </button>
                   )
                 )}
 
-                {/* Botón Prominente de PDF / Imprimir en Cabecera */}
-                <button 
-                  type="button" 
-                  onClick={handlePrintPDF} 
-                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}
-                  title="Generar Ficha Técnica para Archivo Físico"
+                {/* Botones de Etiqueta QR de Muestra y PDF A4 */}
+                <button
+                  type="button"
+                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
+                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
+                    isGeneratingPDF ? 'hidden' : 'print:hidden'
+                  }`}
+                  title="Imprimir etiqueta con Código QR para pegar en el reverso de la plaqueta física de muestra"
                 >
-                  <Printer size={13} /> Generar PDF / Imprimir Ficha
+                  <QrCode size={13} /> Etiqueta QR Muestra Física
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowOfficialQrSheetModal(true)}
+                  className={`bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
+                    isGeneratingPDF ? 'hidden' : 'print:hidden'
+                  }`}
+                  title="Consultar Hoja Técnica Oficial y Código QR en pantalla"
+                >
+                  <Eye size={13} /> Consultar Ficha QR
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintPDF}
+                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
+                    isGeneratingPDF ? 'hidden' : 'print:hidden'
+                  }`}
+                  title="Descargar o Imprimir Ficha Técnica A4 Completa"
+                >
+                  <Printer size={13} /> PDF A4
                 </button>
               </div>
 
               {isGeneratingPDF ? (
                 <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight py-1">
-                  {formData.nombreComercial || colorRef || 'SIN NOMBRE'}
+                  {colorRef ? `${colorRef} — ` : ''}
+                  {formData.nombreComercial || 'SIN NOMBRE'}
                 </h1>
               ) : (
-                <>
-                  <h1 className="hidden print:block text-xl font-black text-slate-900 uppercase tracking-tight py-1">
-                    {formData.nombreComercial || colorRef || 'SIN NOMBRE'}
-                  </h1>
-                  <input 
-                    type="text" 
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
                     disabled={isLocked}
-                    name="nombreComercial" 
-                    value={formData.nombreComercial} 
-                    onChange={handleChange} 
-                    placeholder="Nombre Comercial / Código..." 
-                    className={`text-xl font-black bg-transparent outline-none w-full text-slate-900 transition-colors uppercase print:hidden ${isLocked ? 'cursor-default' : 'border-b border-transparent hover:border-slate-300 focus:border-blue-500'}`}
+                    name="nombreComercial"
+                    value={formData.nombreComercial}
+                    onChange={handleChange}
+                    placeholder="Nombre Comercial / Interno del Color..."
+                    className={`text-lg md:text-xl font-black bg-transparent outline-none flex-1 min-w-[240px] text-slate-900 transition-colors uppercase print:hidden ${
+                      isLocked
+                        ? 'cursor-default'
+                        : 'border-b-2 border-stone-200 hover:border-amber-400 focus:border-amber-500'
+                    }`}
                   />
-                </>
+                </div>
               )}
             </div>
           </div>
-          
-          {/* Muestra y Colorimetría (Espectrofotómetro) */}
-          <div className={`border flex flex-col md:flex-row items-center gap-4 w-full md:w-auto p-3 ${isGeneratingPDF ? 'bg-slate-50 border-slate-300 rounded-lg shadow-none text-slate-900' : 'bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl shadow-md border-slate-800'}`}>
-            
-            {/* Visor Lightbox para la Muestra */}
+
+          {/* Muestra Fotográfica + Coordenadas Colorimétricas (L*, a*, b*, Delta E) */}
+          <div
+            className={`border flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto p-3 ${
+              isGeneratingPDF
+                ? 'bg-stone-50 border-stone-300 rounded-lg shadow-none text-slate-900'
+                : 'bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white rounded-2xl shadow-md border-slate-700'
+            }`}
+          >
             <div className="flex flex-col items-center">
               {imagenMuestra ? (
-                <div 
-                  className={`relative group w-24 h-16 rounded-lg overflow-hidden border cursor-pointer ${isGeneratingPDF ? 'border-slate-300 shadow-none bg-slate-100' : 'border-blue-400 shadow bg-black/40'}`}
+                <div
+                  className={`relative group w-24 h-16 rounded-xl overflow-hidden border cursor-pointer ${
+                    isGeneratingPDF
+                      ? 'border-slate-300 shadow-none bg-slate-100'
+                      : 'border-amber-400/60 shadow bg-black/40'
+                  }`}
                   onClick={() => setIsLightboxOpen(true)}
                   title="Clic para ver foto en tamaño completo"
                 >
-                  <img src={imagenMuestra} alt="Muestra" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  <div className={`absolute inset-0 transition-colors flex items-center justify-center ${isGeneratingPDF ? 'hidden' : 'bg-black/30 group-hover:bg-black/10'}`}>
+                  <img
+                    src={imagenMuestra}
+                    alt="Muestra"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div
+                    className={`absolute inset-0 transition-colors flex items-center justify-center ${
+                      isGeneratingPDF ? 'hidden' : 'bg-black/30 group-hover:bg-black/10'
+                    }`}
+                  >
                     <Search size={16} className="text-white drop-shadow" />
                   </div>
                   {!isLocked && (
-                    <label 
-                      className={`absolute bottom-0 right-0 p-1 bg-slate-900/90 rounded-tl cursor-pointer text-blue-300 hover:text-white ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`} 
-                      title="Cambiar Foto" 
-                      onClick={e => e.stopPropagation()}
+                    <label
+                      className={`absolute bottom-0 right-0 p-1 bg-slate-900/90 rounded-tl cursor-pointer text-amber-300 hover:text-white ${
+                        isGeneratingPDF ? 'hidden' : 'print:hidden'
+                      }`}
+                      title="Cambiar Foto"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Camera size={12} />
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
                     </label>
                   )}
                 </div>
               ) : (
-                <label className={`cursor-pointer flex flex-col items-center justify-center border border-dashed rounded-lg p-2 transition-colors w-24 h-16 overflow-hidden ${isGeneratingPDF ? 'border-slate-300 bg-white text-slate-400' : 'border-slate-600 hover:bg-slate-800 bg-slate-900/50'}`}>
-                  <span className="text-[9px] font-bold mt-1 uppercase text-center leading-tight">Cargar<br/>Muestra</span>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <label
+                  className={`cursor-pointer flex flex-col items-center justify-center border border-dashed rounded-xl p-2 transition-colors w-24 h-16 overflow-hidden ${
+                    isGeneratingPDF
+                      ? 'border-slate-300 bg-white text-slate-400'
+                      : 'border-slate-600 hover:bg-slate-800 bg-slate-900/50'
+                  }`}
+                >
+                  <Camera size={14} className="text-amber-400" />
+                  <span className="text-[9px] font-bold mt-0.5 uppercase text-center leading-tight">
+                    Foto Lectura
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
                 </label>
               )}
             </div>
 
-            <div className="flex flex-col md:items-end w-full">
-              <span className={`block text-[10px] uppercase font-bold tracking-wider mb-1 ${isGeneratingPDF ? 'text-slate-600' : 'text-slate-300'}`}>Resultado Colorimetría</span>
-              <div className={`px-3 py-2 border flex items-center gap-2 w-full ${isGeneratingPDF ? 'bg-white border-slate-300 rounded-lg shadow-none text-slate-900' : 'bg-slate-800 border-slate-700 rounded-xl shadow-inner text-white'}`}>
-                <span className={`text-xs font-bold whitespace-nowrap ${isGeneratingPDF ? 'text-slate-700' : 'text-blue-300'}`}>ΔE =</span>
-                {isGeneratingPDF ? (
-                  <span className="text-sm font-black text-slate-900 px-2 py-1">{formData.deltaE}</span>
-                ) : (
-                  <>
-                    <span className="hidden print:inline-block text-sm font-black text-white px-2 py-1">{formData.deltaE}</span>
-                    <input 
-                      type="text" 
-                      disabled={isLocked}
-                      name="deltaE" 
-                      value={formData.deltaE} 
-                      onChange={handleChange} 
-                      placeholder="Ej: 0.8" 
-                      className={`text-sm font-black text-white bg-slate-900/70 rounded px-2 py-1 outline-none w-16 text-center tracking-tight border border-slate-600 print:hidden ${isLocked ? 'cursor-default' : 'focus:border-emerald-400'}`} 
-                      title="Medición Real Delta E"
-                    />
-                  </>
-                )}
-                <span className={`w-2.5 h-2.5 rounded-full ${isGeneratingPDF ? 'bg-emerald-500' : 'bg-emerald-400 animate-pulse'} ml-1`}></span>
+            <div className="flex flex-col gap-1.5 w-full">
+              <span
+                className={`block text-[10px] uppercase font-black tracking-wider ${
+                  isGeneratingPDF ? 'text-slate-600' : 'text-amber-300'
+                }`}
+              >
+                Lectura Espectrofotómetro (CIELAB / ΔE)
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-700 rounded-lg px-2 py-1">
+                  <span className="text-[10px] font-bold text-slate-400">L*</span>
+                  <input
+                    type="text"
+                    disabled={isLocked}
+                    value={coordL}
+                    onChange={(e) => setCoordL(e.target.value)}
+                    placeholder="--"
+                    className="w-10 bg-transparent text-xs font-black text-white text-center outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-700 rounded-lg px-2 py-1">
+                  <span className="text-[10px] font-bold text-slate-400">a*</span>
+                  <input
+                    type="text"
+                    disabled={isLocked}
+                    value={coordA}
+                    onChange={(e) => setCoordA(e.target.value)}
+                    placeholder="--"
+                    className="w-10 bg-transparent text-xs font-black text-white text-center outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-700 rounded-lg px-2 py-1">
+                  <span className="text-[10px] font-bold text-slate-400">b*</span>
+                  <input
+                    type="text"
+                    disabled={isLocked}
+                    value={coordB}
+                    onChange={(e) => setCoordB(e.target.value)}
+                    placeholder="--"
+                    className="w-10 bg-transparent text-xs font-black text-white text-center outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-1 bg-emerald-950/80 border border-emerald-500/50 rounded-lg px-2.5 py-1">
+                  <span className="text-[10px] font-black text-emerald-300">ΔE:</span>
+                  <input
+                    type="text"
+                    disabled={isLocked}
+                    name="deltaE"
+                    value={formData.deltaE}
+                    onChange={handleChange}
+                    placeholder="0.8"
+                    className="w-14 bg-transparent text-xs font-black text-emerald-300 text-center outline-none"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Tarea 2: Franja de Identificación Técnica del Color (Ancho Completo w-full) */}
-        <div className={`bg-white border-b border-slate-200 px-6 py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 ${isGeneratingPDF ? 'border-b-2 border-slate-100 px-0 py-3' : 'print:border-none print:px-0'}`}>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Sistema / Catálogo</label>
-            {isGeneratingPDF ? (
-              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{colorSystem}</div>
-            ) : (
-              <>
-                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{colorSystem}</div>
-                <select 
-                  disabled={isLocked}
-                  value={colorSystem} 
-                  onChange={(e) => setColorSystem(e.target.value)} 
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+        {/* PANEL SUPERIOR DE "RESUMEN DE FICHA" + QR DE MUESTRA APROBADA */}
+        <div className={`px-6 pt-5 ${isGeneratingPDF ? 'px-0 pt-3' : ''}`}>
+          <div className="bg-gradient-to-br from-amber-50/90 via-white to-stone-100 border-2 border-amber-300/80 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row items-stretch justify-between gap-4">
+            <div className="flex-1 flex flex-col justify-between space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-200/80 pb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-amber-600" />
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-900">
+                    Resumen Consolidado de Ficha Técnica (Vista Previa de Validación)
+                  </span>
+                </div>
+                <span className="text-[11px] font-black text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-300">
+                  Muestra Física: {acabadoMuestraFisica}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                  <span className="block text-[9px] font-black uppercase text-slate-400">
+                    Cliente / Proyecto
+                  </span>
+                  <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
+                    {cliente || 'Pendiente asignar *'}
+                  </span>
+                </div>
+                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                  <span className="block text-[9px] font-black uppercase text-slate-400">
+                    Código / Sistema
+                  </span>
+                  <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
+                    {colorSystem}: {colorRef || formData.nombreComercial || 'S/C'}
+                  </span>
+                </div>
+                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                  <span className="block text-[9px] font-black uppercase text-slate-400">
+                    Sistema de Pintura
+                  </span>
+                  <span className="text-xs font-black text-blue-700 truncate block mt-0.5">
+                    {sistemaPintura}
+                  </span>
+                </div>
+                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                  <span className="block text-[9px] font-black uppercase text-slate-400">
+                    Sustrato Base
+                  </span>
+                  <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
+                    {sustratoBase}
+                  </span>
+                </div>
+                <div className="bg-slate-900 text-white rounded-xl p-2.5 shadow-sm">
+                  <span className="block text-[9px] font-black uppercase text-amber-400">
+                    Acabado Producción
+                  </span>
+                  <span className="text-xs font-black uppercase block mt-0.5">
+                    {acabadoProduccion} ({glossLevel}% Gloss)
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-slate-600 pt-1">
+                <div>
+                  Fórmula activa:{' '}
+                  <strong className="text-slate-900">
+                    {normalizedPastas.length} pastas/componentes ({pesoTotal.toFixed(1)} g totales)
+                  </strong>
+                </div>
+                <div>
+                  Validado por Supervisor:{' '}
+                  <strong className="text-slate-900 uppercase">{aprobadoPor}</strong> ({fechaAprobacion})
+                </div>
+              </div>
+            </div>
+
+            {/* BLOQUE LATERAL DEL CÓDIGO QR ÚNICO DE LA FICHA */}
+            <div className="lg:w-72 bg-white border-2 border-slate-900 rounded-2xl p-3 flex items-center gap-3 shadow-md shrink-0">
+              <div
+                onClick={() => setShowOfficialQrSheetModal(true)}
+                className="cursor-pointer shrink-0"
+                title="Clic para ampliar Ficha QR Oficial"
+              >
+                <ColorQRCodeSVG value={qrPayload} size={96} className="border border-slate-200" />
+              </div>
+              <div className="flex flex-col justify-between h-full space-y-1.5 min-w-0">
+                <div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-black text-[9px] uppercase">
+                    {estadoAprobacion === 'aprobado_produccion'
+                      ? 'QR Oficial Activo'
+                      : 'Vista Previa QR'}
+                  </span>
+                  <h4 className="text-xs font-black text-slate-900 uppercase leading-tight mt-1">
+                    Etiqueta Reverso de Muestra
+                  </h4>
+                  <p className="text-[10px] text-slate-500 leading-snug">
+                    Incluye acabado producción, alerta de patrón brillante y fórmula.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
+                  className="w-full py-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-[10px] uppercase flex items-center justify-center gap-1.5 shadow transition-colors"
                 >
-                  <option value="RAL">RAL</option>
-                  <option value="PANTONE">PANTONE</option>
-                  <option value="NCS">NCS</option>
-                  <option value="Pintuco">Pintuco</option>
-                  <option value="Sherwin Williams">Sherwin Williams</option>
-                  <option value="Benjamin Moore">Benjamin Moore</option>
-                  <option value="Otros">Otros</option>
-                </select>
-              </>
-            )}
+                  <Printer size={12} /> Imprimir Etiqueta QR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECCIÓN DE VALIDACIÓN Y DATOS CONSOLIDADOS DEL SUPERVISOR */}
+        <div
+          className={`bg-white border-y border-stone-200 px-6 py-4 mt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 ${
+            isGeneratingPDF ? 'border-b-2 border-slate-100 px-0 py-3' : 'print:border-none print:px-0'
+          }`}
+        >
+          {/* 1. Cliente / Proyecto */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Cliente / Proyecto *
+            </label>
+            <input
+              type="text"
+              disabled={isLocked}
+              value={cliente}
+              onChange={(e) => setCliente(e.target.value)}
+              placeholder="Ej. Mercadeo y Moda / Odres..."
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${
+                isLocked
+                  ? 'bg-stone-100 border-transparent text-slate-800'
+                  : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+              }`}
+            />
           </div>
 
+          {/* 2. Sistema / Catálogo y Código de Color */}
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Referencia Exacta / Código</label>
-            {isGeneratingPDF ? (
-              <div className="text-xs font-black text-slate-900 py-1.5 px-1 uppercase">{colorRef || 'N/A'}</div>
-            ) : (
-              <>
-                <div className="hidden print:block text-xs font-black text-slate-900 py-1 uppercase">{colorRef || 'N/A'}</div>
-                <input 
-                  type="text" 
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Catálogo y Código Único *
+            </label>
+            <div className="flex gap-1.5">
+              <select
+                disabled={isLocked}
+                value={colorSystem}
+                onChange={(e) => setColorSystem(e.target.value)}
+                className={`w-28 px-2 py-2 rounded-xl text-xs font-bold ${
+                  isLocked
+                    ? 'bg-stone-100 border-transparent text-slate-800'
+                    : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+                }`}
+              >
+                <option value="RAL">RAL</option>
+                <option value="PANTONE">PANTONE</option>
+                <option value="NCS">NCS</option>
+                <option value="PINTUCO">PINTUCO</option>
+                <option value="SHERWIN WILLIAMS">SHERWIN</option>
+                <option value="INTERNO CDI">INTERNO</option>
+              </select>
+              <input
+                type="text"
+                disabled={isLocked}
+                value={colorRef}
+                onChange={(e) => setColorRef(e.target.value.toUpperCase())}
+                placeholder="Código (ej. 7005 C)"
+                className={`flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase ${
+                  isLocked
+                    ? 'bg-stone-100 border-transparent text-slate-800'
+                    : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* 3. Sistema de Pintura */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Sistema de Pintura *
+            </label>
+            <select
+              disabled={isLocked}
+              value={sistemaPintura}
+              onChange={(e) => setSistemaPintura(e.target.value)}
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${
+                isLocked
+                  ? 'bg-stone-100 border-transparent text-slate-800'
+                  : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+              }`}
+            >
+              <option value="Poliuretano (PU)">Poliuretano (PU)</option>
+              <option value="Acrílico">Acrílico (No Amarilleante)</option>
+              <option value="Poliéster / Pintura en Polvo">Poliéster / Pintura en Polvo</option>
+              <option value="Base Agua">Base Agua</option>
+              <option value="Nitrocelulosa / Laca">Nitrocelulosa / Laca</option>
+              <option value="Epóxico">Epóxico Bicomponente</option>
+            </select>
+          </div>
+
+          {/* 4. Sustrato Base */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Sustrato Base *
+            </label>
+            <input
+              type="text"
+              list="sustratos-sugeridos"
+              disabled={isLocked}
+              value={sustratoBase}
+              onChange={(e) => setSustratoBase(e.target.value)}
+              placeholder="Ej. MDF RH, Roble ALPI, Metal..."
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold ${
+                isLocked
+                  ? 'bg-stone-100 border-transparent text-slate-800'
+                  : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+              }`}
+            />
+            <datalist id="sustratos-sugeridos">
+              <option value="MDF RH + Primer PU Blanco" />
+              <option value="MDF RH + Primer PU Gris" />
+              <option value="Roble / Enchapado ALPI" />
+              <option value="Metal / Cold Rolled Fosfatizado" />
+              <option value="Madera Maciza Sellada" />
+              <option value="Corian / Acrílico" />
+            </datalist>
+          </div>
+
+          {/* 5. Acabado de Producción + % Brillo a 60° */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Acabado de Producción + Gloss 60° *
+            </label>
+            <div className="flex gap-1.5">
+              <select
+                disabled={isLocked}
+                value={acabadoProduccion}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAcabadoProduccion(val);
+                  if (val === 'Mate') setGlossLevel('10');
+                  else if (val === 'Semimate') setGlossLevel('25');
+                  else if (val === 'Satinado') setGlossLevel('40');
+                  else if (val === 'Brillante') setGlossLevel('90');
+                }}
+                className={`flex-1 px-2.5 py-2 rounded-xl text-xs font-bold ${
+                  isLocked
+                    ? 'bg-stone-100 border-transparent text-slate-800'
+                    : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+                }`}
+              >
+                <option value="Mate">Mate</option>
+                <option value="Semimate">Semimate</option>
+                <option value="Satinado">Satinado</option>
+                <option value="Brillante">Brillante</option>
+                <option value="Texturizado / Microtextura">Texturizado / Microtextura</option>
+              </select>
+              <div className="flex items-center bg-stone-50 border border-stone-300 rounded-xl px-2 w-20">
+                <input
+                  type="number"
                   disabled={isLocked}
-                  value={colorRef} 
-                  onChange={(e) => setColorRef(e.target.value)} 
-                  placeholder="Ej. 7005 C, 9010..." 
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold uppercase print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
+                  value={glossLevel}
+                  onChange={(e) => setGlossLevel(e.target.value)}
+                  className="w-full bg-transparent text-xs font-black text-center outline-none"
+                  title="% Brillo / Unidades Gloss a 60°"
                 />
-              </>
-            )}
+                <span className="text-[10px] font-bold text-slate-500">%</span>
+              </div>
+            </div>
           </div>
 
+          {/* 6. Acabado Muestra Física (Fijado en BRILLANTE por Estándar de Espectrofotómetro) */}
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Acabado Final (Brillo %)</label>
-            {isGeneratingPDF ? (
-              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{glossLevel}% {glossLevel <= 10 ? '(Mate)' : String(glossLevel) === '40' ? '(Satinado)' : glossLevel >= 90 ? '(Alto Brillo)' : ''}</div>
-            ) : (
-              <>
-                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{glossLevel}% {glossLevel <= 10 ? '(Mate)' : String(glossLevel) === '40' ? '(Satinado)' : glossLevel >= 90 ? '(Alto Brillo)' : ''}</div>
-                <select 
-                  disabled={isLocked}
-                  value={glossLevel} 
-                  onChange={(e) => setGlossLevel(e.target.value)} 
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-                >
-                  {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(val => (
-                    <option key={val} value={val}>{val}% {val <= 10 ? '(Mate)' : val === 40 ? '(Satinado)' : val >= 90 ? '(Alto Brillo)' : ''}</option>
-                  ))}
-                </select>
-              </>
-            )}
+            <label className="block text-[10px] font-black text-amber-700 uppercase tracking-wider mb-1">
+              Acabado Muestra Física (Estándar)
+            </label>
+            <div className="w-full px-3 py-2 rounded-xl text-[11px] font-black bg-amber-100/80 border border-amber-300 text-amber-900 truncate">
+              ✨ BRILLANTE (Sellado Espectrofotómetro)
+            </div>
           </div>
 
+          {/* 7. Aprobado Por (Supervisor) */}
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cliente / Proyecto</label>
-            {isGeneratingPDF ? (
-              <div className="text-xs font-black text-slate-900 py-1.5 px-1">{cliente || 'Estándar CDI'}</div>
-            ) : (
-              <>
-                <div className="hidden print:block text-xs font-black text-slate-900 py-1">{cliente || 'Estándar CDI'}</div>
-                <input 
-                  type="text" 
-                  disabled={isLocked}
-                  value={cliente} 
-                  onChange={(e) => setCliente(e.target.value)} 
-                  placeholder="Cliente o Proyecto..." 
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold print:hidden ${isLocked ? 'bg-slate-100/70 border-transparent cursor-default text-slate-800' : 'bg-slate-50 border border-slate-300 focus:border-blue-500 text-slate-900'}`}
-                />
-              </>
-            )}
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Supervisor que Aprueba *
+            </label>
+            <div className="relative">
+              <UserCheck size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                disabled={isLocked}
+                value={aprobadoPor}
+                onChange={(e) => setAprobadoPor(e.target.value)}
+                placeholder="Nombre del Supervisor..."
+                className={`w-full pl-8 pr-3 py-2 rounded-xl text-xs font-bold uppercase ${
+                  isLocked
+                    ? 'bg-stone-100 border-transparent text-slate-800'
+                    : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* 8. Fecha de Aprobación */}
+          <div>
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+              Fecha de Aprobación
+            </label>
+            <div className="relative">
+              <Calendar size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+              <input
+                type="date"
+                disabled={isLocked}
+                value={fechaAprobacion}
+                onChange={(e) => setFechaAprobacion(e.target.value)}
+                className={`w-full pl-8 pr-3 py-2 rounded-xl text-xs font-bold ${
+                  isLocked
+                    ? 'bg-stone-100 border-transparent text-slate-800'
+                    : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
+                }`}
+              />
+            </div>
           </div>
         </div>
 
         {/* Cuerpo del Formulario ETP */}
-        <form onSubmit={e => e.preventDefault()} className="flex-grow flex flex-col">
-          
+        <form onSubmit={(e) => e.preventDefault()} className="flex-grow flex flex-col">
           {/* Fondo Obligatorio */}
-          <div className={`${isGeneratingPDF ? 'px-0 pt-3' : 'px-6 pt-6'}`}>
-            <div className={`p-4 transition-all duration-500 flex items-start gap-3 h-auto print:h-auto overflow-visible print:overflow-visible print:whitespace-normal print:break-words ${isGeneratingPDF ? 'rounded-lg shadow-none border' : 'rounded-2xl shadow-sm border-l-4'} ${formData.fondoRequired ? 'bg-amber-50/80 border-amber-500' : 'bg-slate-100 border-slate-300'}`}>
+          <div className={`${isGeneratingPDF ? 'px-0 pt-3' : 'px-6 pt-5'}`}>
+            <div
+              className={`p-4 transition-all duration-500 flex items-start gap-3 h-auto print:h-auto overflow-visible ${
+                isGeneratingPDF
+                  ? 'rounded-lg shadow-none border'
+                  : 'rounded-2xl shadow-sm border-l-4'
+              } ${
+                formData.fondoRequired
+                  ? 'bg-amber-50/90 border-amber-500'
+                  : 'bg-stone-100 border-stone-300'
+              }`}
+            >
               <div className="mt-1 flex-shrink-0">
-                <AlertTriangle className={`text-xl ${formData.fondoRequired ? 'text-amber-500' : 'text-slate-400'}`} />
+                <AlertTriangle
+                  className={`text-xl ${
+                    formData.fondoRequired ? 'text-amber-600' : 'text-slate-400'
+                  }`}
+                />
               </div>
               <div className="flex-grow min-w-0">
-                <h3 className={`font-bold text-xs uppercase tracking-wide ${formData.fondoRequired ? 'text-amber-900' : 'text-slate-500'}`}>FONDO OBLIGATORIO PARA ESTE COLOR</h3>
-                <p className={`text-[11px] mt-0.5 mb-2 ${formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'}`}>Para lograr el tono exacto, este color debe aplicarse sobre:</p>
-                {isGeneratingPDF ? (
-                  <div className="w-full py-1.5 px-3 bg-white rounded-lg border border-amber-200 text-xs font-bold text-slate-900 whitespace-normal break-words leading-relaxed">
-                    {formData.fondoRequired || 'Sustrato estándar'}
-                  </div>
-                ) : (
-                  <>
-                    <div className="hidden print:block w-full py-1 px-2 bg-white rounded-lg border border-amber-200 text-xs font-bold text-slate-900 whitespace-normal break-words leading-relaxed">
-                      {formData.fondoRequired || 'Sustrato estándar'}
-                    </div>
-                    <div className="relative print:hidden">
-                      <Layers size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                      <input 
-                        type="text" 
-                        disabled={isLocked}
-                        name="fondoRequired" 
-                        value={formData.fondoRequired} 
-                        onChange={handleChange} 
-                        placeholder="Declarar fondo requerido..." 
-                        className={`w-full pl-9 pr-3 py-2 rounded-xl shadow-sm border text-sm font-bold outline-none transition-colors ${isLocked ? 'bg-white/80 border-transparent text-slate-900 cursor-default' : (formData.fondoRequired ? 'bg-white border-amber-300 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-500')}`}
-                      />
-                    </div>
-                  </>
-                )}
+                <h3
+                  className={`font-black text-xs uppercase tracking-wide ${
+                    formData.fondoRequired ? 'text-amber-900' : 'text-slate-500'
+                  }`}
+                >
+                  FONDO / IMPRIMACIÓN OBLIGATORIA PARA ESTE COLOR
+                </h3>
+                <p
+                  className={`text-[11px] mt-0.5 mb-2 ${
+                    formData.fondoRequired ? 'text-amber-800' : 'text-slate-500'
+                  }`}
+                >
+                  Para reproducir el tono exacto sin desviación de ΔE, aplicar sobre:
+                </p>
+                <div className="relative">
+                  <Layers size={16} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    disabled={isLocked}
+                    name="fondoRequired"
+                    value={formData.fondoRequired}
+                    onChange={handleChange}
+                    placeholder="Declarar fondo requerido..."
+                    className={`w-full pl-9 pr-3 py-2 rounded-xl shadow-sm border text-xs md:text-sm font-bold outline-none transition-colors ${
+                      isLocked
+                        ? 'bg-white/80 border-transparent text-slate-900 cursor-default'
+                        : 'bg-white border-amber-300 text-slate-900'
+                    }`}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           <fieldset disabled={isLocked} className="group-disabled">
-            <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${isGeneratingPDF ? 'p-0 mt-3 gap-4' : 'p-6'}`}>
-              
-              {/* Sección 1: Formulación del Entonador */}
-              <div className="lg:col-span-5 space-y-6">
+            <div
+              className={`grid grid-cols-1 lg:grid-cols-12 gap-6 ${
+                isGeneratingPDF ? 'p-0 mt-3 gap-4' : 'p-6'
+              }`}
+            >
+              {/* Sección 1: Formulación de Pastas / Tintas con Barras de Proporción */}
+              <div className="lg:col-span-5 space-y-5">
                 <div>
-                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><FlaskConical size={16} className="text-blue-600"/> 1. Formulación del Entonador</h2>
-                  <div className={`bg-white border border-slate-200 overflow-visible print:overflow-visible mb-4 h-auto print:h-auto break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-2xl shadow-sm'}`}>
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <FlaskConical size={16} className="text-amber-600" /> 1. Formulación de Pastas y Bases
+                    </h2>
+                    <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      Total: {pesoTotal.toFixed(1)} g (100%)
+                    </span>
+                  </div>
+
+                  {/* Barra visual acumulada de proporción de pastas */}
+                  {normalizedPastas.length > 0 && (
+                    <div className="mb-3 bg-white p-3 rounded-2xl border border-stone-200 shadow-sm">
+                      <div className="text-[10px] font-black uppercase text-slate-500 mb-1.5">
+                        Distribución Proporcional de Tintas / Pastas (%)
+                      </div>
+                      <div className="w-full h-3.5 rounded-full overflow-hidden flex bg-stone-100 border border-stone-200">
+                        {normalizedPastas.map((p, idx) => (
+                          <div
+                            key={p.id}
+                            style={{ width: `${Math.max(p.porcentaje, 2)}%` }}
+                            className={`${pastaBarColors[idx % pastaBarColors.length]} h-full transition-all`}
+                            title={`${p.codigo} - ${p.nombre}: ${p.porcentaje}% (${p.gramos}g)`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className={`bg-white border border-stone-200 overflow-visible mb-4 h-auto break-inside-avoid ${
+                      isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-2xl shadow-sm'
+                    }`}
+                  >
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-stone-100 border-b border-stone-200 text-slate-600">
                         <tr>
-                          <th className="py-2.5 px-4 font-semibold text-xs">Componente</th>
-                          <th className="py-2.5 px-4 font-semibold text-xs text-right">Peso (g)</th>
+                          <th className="py-2.5 px-3 font-black uppercase text-[10px]">
+                            Código / Pasta o Base
+                          </th>
+                          <th className="py-2.5 px-3 font-black uppercase text-[10px] text-right">
+                            Gramos (g)
+                          </th>
+                          <th className="py-2.5 px-3 font-black uppercase text-[10px] text-right">
+                            % Fórmula
+                          </th>
+                          {!isLocked && !isGeneratingPDF && (
+                            <th className="py-2.5 px-2 w-8 print:hidden"></th>
+                          )}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {ingredientes.map((item, idx) => (
-                          <tr key={item.id || idx} className="break-inside-avoid print:break-inside-avoid">
-                            <td className="py-3 px-4 flex items-center gap-2 text-xs font-medium">
-                              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                              <div>
-                                <span className="font-bold text-slate-900">{item.id_referencia_ppg || item.codigo || item.id_referencia}</span>
-                                <span className="block text-[10px] text-slate-500 uppercase">{item.nombre_base || item.descripcion}</span>
+                      <tbody className="divide-y divide-stone-100 text-slate-800">
+                        {normalizedPastas.map((item, idx) => (
+                          <tr key={item.id || idx} className="break-inside-avoid">
+                            <td className="py-2.5 px-3">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                    pastaBarColors[idx % pastaBarColors.length]
+                                  }`}
+                                ></span>
+                                <div>
+                                  <span className="font-mono font-black text-slate-900 block">
+                                    {item.codigo}
+                                  </span>
+                                  <span className="block text-[10px] text-slate-500 font-bold uppercase">
+                                    {item.nombre}
+                                  </span>
+                                </div>
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-right font-black text-xs text-slate-800">
-                              {parseFloat(item.porcentaje_final || item.peso_g || 0).toFixed(2)}
+                            <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                              {item.gramos.toFixed(2)} g
                             </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span className="font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                {item.porcentaje.toFixed(1)}%
+                              </span>
+                            </td>
+                            {!isLocked && !isGeneratingPDF && (
+                              <td className="py-2.5 px-2 text-center print:hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePasta(idx)}
+                                  className="text-rose-400 hover:text-rose-600 p-1"
+                                  title="Quitar pasta"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
-                        <tr className="bg-slate-50 border-t-2 border-slate-200 break-inside-avoid print:break-inside-avoid">
-                          <td className="py-3 px-4 text-xs font-bold text-slate-800 uppercase tracking-wide">Peso Total</td>
-                          <td className="py-3 px-4 text-right text-xs font-black text-blue-600">{pesoTotal.toFixed(1)} g</td>
+                        <tr className="bg-stone-100 border-t-2 border-stone-200 font-black">
+                          <td className="py-2.5 px-3 uppercase text-slate-900">
+                            Total Formulación
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-blue-700">
+                            {pesoTotal.toFixed(2)} g
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-emerald-700">100.0%</td>
+                          {!isLocked && !isGeneratingPDF && <td className="print:hidden"></td>}
                         </tr>
                       </tbody>
                     </table>
+
+                    {/* Agregar pasta o base adicional cuando no está bloqueado */}
+                    {!isLocked && !isGeneratingPDF && (
+                      <div className="p-2.5 bg-stone-50 border-t border-stone-200 flex flex-wrap items-center gap-1.5 print:hidden">
+                        <input
+                          type="text"
+                          value={newPastaCode}
+                          onChange={(e) => setNewPastaCode(e.target.value)}
+                          placeholder="Cód."
+                          className="w-20 px-2 py-1.5 rounded-lg border border-stone-300 text-xs font-bold bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={newPastaName}
+                          onChange={(e) => setNewPastaName(e.target.value)}
+                          placeholder="Nombre Pasta / Tinta..."
+                          className="flex-1 min-w-[120px] px-2 py-1.5 rounded-lg border border-stone-300 text-xs font-bold bg-white"
+                        />
+                        <input
+                          type="number"
+                          value={newPastaGramos}
+                          onChange={(e) => setNewPastaGramos(e.target.value)}
+                          placeholder="Gramos"
+                          className="w-20 px-2 py-1.5 rounded-lg border border-stone-300 text-xs font-black bg-white text-right"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddManualPasta}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1"
+                        >
+                          <Plus size={14} /> Añadir
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className={`bg-white border border-slate-200 p-3 h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-xl shadow-sm'}`}>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Catalizador</label>
-                      {isGeneratingPDF ? (
-                        <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.catalizador}</div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.catalizador}</div>
-                          <select 
-                            disabled={isLocked}
-                            name="catalizador" 
-                            value={formData.catalizador} 
-                            onChange={handleChange} 
-                            className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none print:hidden ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
-                          >
-                            {catalystOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
-                          </select>
-                        </>
-                      )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white border border-stone-200 p-3 rounded-xl shadow-sm">
+                      <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                        Catalizador de Mezcla
+                      </label>
+                      <select
+                        disabled={isLocked}
+                        name="catalizador"
+                        value={formData.catalizador}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-lg text-xs font-bold text-slate-800 bg-stone-50 border border-stone-200 outline-none"
+                      >
+                        {catalystOptions.map((opt, idx) => (
+                          <option key={idx} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <div className={`bg-white border border-slate-200 p-3 h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-xl shadow-sm'}`}>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Disolvente (Thinner)</label>
-                      {isGeneratingPDF ? (
-                        <div className="text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.disolvente}</div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block text-xs font-bold text-slate-900 py-1 whitespace-normal break-words">{formData.disolvente}</div>
-                          <select 
-                            disabled={isLocked}
-                            name="disolvente" 
-                            value={formData.disolvente} 
-                            onChange={handleChange} 
-                            className={`w-full p-2 rounded-lg text-xs font-bold text-slate-800 outline-none print:hidden ${isLocked ? 'bg-slate-50 border-transparent cursor-default' : 'bg-slate-50 border border-slate-200 focus:border-blue-500'}`}
-                          >
-                            {solventOptions.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
-                          </select>
-                        </>
-                      )}
+                    <div className="bg-white border border-stone-200 p-3 rounded-xl shadow-sm">
+                      <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">
+                        Disolvente / Reductor
+                      </label>
+                      <select
+                        disabled={isLocked}
+                        name="disolvente"
+                        value={formData.disolvente}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-lg text-xs font-bold text-slate-800 bg-stone-50 border border-stone-200 outline-none"
+                      >
+                        {solventOptions.map((opt, idx) => (
+                          <option key={idx} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Sección 2 y 3: Parámetros y Hoja de Ruta */}
-              <div className="lg:col-span-7 space-y-8">
-                <div className="break-inside-avoid print:break-inside-avoid print:mt-4">
-                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><SprayCan size={16} className="text-blue-600"/> 2. Parámetros de Aplicación</h2>
-                  <div className="grid grid-cols-3 gap-3 h-auto print:h-auto overflow-visible print:overflow-visible">
-                    <div className={`bg-white border border-slate-200 p-3 text-center h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-xl shadow-sm'}`}>
-                      <Droplet className="text-blue-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Viscosidad</span>
-                      {isGeneratingPDF ? (
-                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.viscosidad}</div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.viscosidad}</div>
-                          <input type="text" disabled={isLocked} name="viscosidad" value={formData.viscosidad} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent print:hidden"/>
-                        </>
-                      )}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="break-inside-avoid">
+                  <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <SprayCan size={16} className="text-amber-600" /> 2. Parámetros de Aplicación en Cabina
+                  </h2>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white border border-stone-200 p-3 text-center rounded-xl shadow-sm">
+                      <Droplet className="text-blue-600 mx-auto mb-1" size={18} />
+                      <span className="block text-[9px] font-black text-slate-400 uppercase">
+                        Viscosidad Copa Ford #4
+                      </span>
+                      <input
+                        type="text"
+                        disabled={isLocked}
+                        name="viscosidad"
+                        value={formData.viscosidad}
+                        onChange={handleChange}
+                        className="w-full text-center font-black text-slate-900 text-xs md:text-sm outline-none bg-transparent mt-0.5"
+                      />
                     </div>
-                    <div className={`bg-white border border-slate-200 p-3 text-center h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-xl shadow-sm'}`}>
-                      <Gauge className="text-slate-600 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Presión</span>
-                      {isGeneratingPDF ? (
-                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.presion}</div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.presion}</div>
-                          <input type="text" disabled={isLocked} name="presion" value={formData.presion} onChange={handleChange} className="w-full text-center font-bold text-slate-800 text-sm outline-none bg-transparent print:hidden"/>
-                        </>
-                      )}
+                    <div className="bg-white border border-stone-200 p-3 text-center rounded-xl shadow-sm">
+                      <Gauge className="text-amber-600 mx-auto mb-1" size={18} />
+                      <span className="block text-[9px] font-black text-slate-400 uppercase">
+                        Presión de Aire
+                      </span>
+                      <input
+                        type="text"
+                        disabled={isLocked}
+                        name="presion"
+                        value={formData.presion}
+                        onChange={handleChange}
+                        className="w-full text-center font-black text-slate-900 text-xs md:text-sm outline-none bg-transparent mt-0.5"
+                      />
                     </div>
-                    <div className={`bg-white border border-slate-200 p-3 text-center h-auto print:h-auto overflow-visible print:overflow-visible break-inside-avoid print:break-inside-avoid ${isGeneratingPDF ? 'rounded-lg shadow-none' : 'rounded-xl shadow-sm'}`}>
-                      <Crosshair className="text-emerald-500 mx-auto mb-1.5" size={20} strokeWidth={1.5}/>
-                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Boquilla & Manos</span>
-                      {isGeneratingPDF ? (
-                        <div className="text-xs font-black text-slate-900 whitespace-normal break-words">{formData.boquilla} | {formData.manos}</div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block text-xs font-black text-slate-900 whitespace-normal break-words">{formData.boquilla} | {formData.manos}</div>
-                          <div className="flex items-center justify-center gap-1 print:hidden">
-                            <input type="text" disabled={isLocked} name="boquilla" value={formData.boquilla} onChange={handleChange} className="w-14 text-right font-bold text-slate-800 text-sm outline-none bg-transparent"/>
-                            <span className="text-slate-300">|</span>
-                            <input type="text" disabled={isLocked} name="manos" value={formData.manos} onChange={handleChange} className="w-full text-left font-bold text-slate-800 text-[11px] outline-none bg-transparent"/>
-                          </div>
-                        </>
-                      )}
+                    <div className="bg-white border border-stone-200 p-3 text-center rounded-xl shadow-sm">
+                      <Crosshair className="text-emerald-600 mx-auto mb-1" size={18} />
+                      <span className="block text-[9px] font-black text-slate-400 uppercase">
+                        Boquilla y N° Manos
+                      </span>
+                      <div className="flex items-center justify-center gap-1 mt-0.5">
+                        <input
+                          type="text"
+                          disabled={isLocked}
+                          name="boquilla"
+                          value={formData.boquilla}
+                          onChange={handleChange}
+                          className="w-14 text-right font-black text-slate-900 text-xs outline-none bg-transparent"
+                        />
+                        <span className="text-slate-300">|</span>
+                        <input
+                          type="text"
+                          disabled={isLocked}
+                          name="manos"
+                          value={formData.manos}
+                          onChange={handleChange}
+                          className="w-full text-left font-black text-slate-900 text-xs outline-none bg-transparent"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="break-inside-avoid print:break-inside-avoid print:mt-4">
-                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><CheckSquare size={16} className="text-blue-600"/> 3. Hoja de Ruta</h2>
-                  <div className="relative border-l-2 border-slate-200 ml-2 space-y-6 pb-2">
-                    
-                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
-                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-200 border-2 border-white"></span>
+                <div className="break-inside-avoid">
+                  <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <CheckSquare size={16} className="text-amber-600" /> 3. Protocolo Paso a Paso para Planta
+                  </h2>
+                  <div className="relative border-l-2 border-amber-300 ml-2 space-y-4 pb-2">
+                    {/* Paso 1 */}
+                    <div className="relative pl-5 break-inside-avoid">
+                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-amber-400 border-2 border-white"></span>
                       <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-xs text-slate-800">Preparación de Superficie</h4>
+                        <h4 className="font-black text-xs text-slate-800 uppercase">
+                          Preparación de Sustrato ({sustratoBase})
+                        </h4>
                         {!isLocked && (
-                          <div className={`flex items-center gap-2 ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
-                            <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoPreparacion: e.target.value}) }} defaultValue="">
-                              <option value="" disabled>Plantillas...</option>
-                              {savedProcedures.preparacion.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
+                          <div className="flex items-center gap-1.5 print:hidden">
+                            <select
+                              className="text-[10px] border border-stone-300 bg-white text-slate-800 rounded-lg px-2 py-0.5 font-bold"
+                              onChange={(e) => {
+                                if (e.target.value)
+                                  setFormData({ ...formData, textoPreparacion: e.target.value });
+                              }}
+                              defaultValue=""
+                            >
+                              <option value="" disabled>
+                                Plantillas...
+                              </option>
+                              {savedProcedures.preparacion.map((tpl) => (
+                                <option key={tpl.id} value={tpl.text}>
+                                  {tpl.title}
+                                </option>
+                              ))}
                             </select>
-                            <button type="button" onClick={() => handleSaveTemplate('preparacion', formData.textoPreparacion)} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1"><BookmarkPlus size={12}/> Guardar</button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSaveTemplate('preparacion', formData.textoPreparacion)
+                              }
+                              className="text-[10px] bg-stone-200 px-2 py-0.5 rounded-lg flex items-center gap-1 font-bold"
+                            >
+                              <BookmarkPlus size={11} /> Guardar
+                            </button>
                           </div>
                         )}
                       </div>
-                      {isGeneratingPDF ? (
-                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                          {formData.textoPreparacion}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                            {formData.textoPreparacion}
-                          </div>
-                          <textarea disabled={isLocked} name="textoPreparacion" value={formData.textoPreparacion} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
-                        </>
-                      )}
-                    </div>
-                    
-                    <div className={`relative pl-6 p-2 rounded-lg border -ml-2 ml-4 break-inside-avoid print:break-inside-avoid ${formData.fondoRequired ? 'bg-blue-50/50 border-blue-200' : 'border-transparent'} ${isGeneratingPDF ? 'shadow-none' : ''}`}>
-                      <span className={`absolute -left-[18px] top-3 w-4 h-4 rounded-full border-2 border-white ${formData.fondoRequired ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-xs text-slate-900">Aplicación del Fondo (CRÍTICO)</h4>
-                        {!isLocked && (
-                          <div className={`flex items-center gap-2 ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
-                            <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoFondo: e.target.value}) }} defaultValue="">
-                              <option value="" disabled>Plantillas...</option>
-                              {savedProcedures.fondo.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
-                            </select>
-                            <button type="button" onClick={() => handleSaveTemplate('fondo', formData.textoFondo)} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1"><BookmarkPlus size={12}/> Guardar</button>
-                          </div>
-                        )}
-                      </div>
-                      {isGeneratingPDF ? (
-                        <div className="w-full text-xs text-slate-900 p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                          {formData.textoFondo}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block w-full text-xs text-slate-900 p-2 rounded-xl bg-blue-50/70 border border-blue-100 whitespace-pre-wrap break-words leading-relaxed font-medium">
-                            {formData.textoFondo}
-                          </div>
-                          <textarea disabled={isLocked} name="textoFondo" value={formData.textoFondo} onChange={handleChange} rows="3" className={`w-full text-xs p-2 rounded-xl resize-none outline-none font-medium print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent text-slate-900 cursor-default' : 'bg-white border border-slate-200 text-slate-800'}`}></textarea>
-                        </>
-                      )}
+                      <textarea
+                        disabled={isLocked}
+                        name="textoPreparacion"
+                        value={formData.textoPreparacion}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-white border border-stone-200 resize-none outline-none font-medium"
+                      />
                     </div>
 
-                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
-                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-200 border-2 border-white"></span>
+                    {/* Paso 2 */}
+                    <div className="relative pl-5 break-inside-avoid">
+                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-blue-500 border-2 border-white"></span>
                       <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-xs text-slate-800">Aplicación del Entonador</h4>
+                        <h4 className="font-black text-xs text-slate-900 uppercase">
+                          Aplicación del Fondo (Crítico)
+                        </h4>
                         {!isLocked && (
-                          <div className={`flex items-center gap-2 ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
-                            <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoColor: e.target.value}) }} defaultValue="">
-                              <option value="" disabled>Plantillas...</option>
-                              {savedProcedures.color.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
+                          <div className="flex items-center gap-1.5 print:hidden">
+                            <select
+                              className="text-[10px] border border-stone-300 bg-white text-slate-800 rounded-lg px-2 py-0.5 font-bold"
+                              onChange={(e) => {
+                                if (e.target.value)
+                                  setFormData({ ...formData, textoFondo: e.target.value });
+                              }}
+                              defaultValue=""
+                            >
+                              <option value="" disabled>
+                                Plantillas...
+                              </option>
+                              {savedProcedures.fondo.map((tpl) => (
+                                <option key={tpl.id} value={tpl.text}>
+                                  {tpl.title}
+                                </option>
+                              ))}
                             </select>
-                            <button type="button" onClick={() => handleSaveTemplate('color', formData.textoColor)} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1"><BookmarkPlus size={12}/> Guardar</button>
                           </div>
                         )}
                       </div>
-                      {isGeneratingPDF ? (
-                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                          {formData.textoColor}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                            {formData.textoColor}
-                          </div>
-                          <textarea disabled={isLocked} name="textoColor" value={formData.textoColor} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
-                        </>
-                      )}
-                    </div>
-                    
-                    <div className="relative pl-6 break-inside-avoid print:break-inside-avoid">
-                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-800 border-2 border-white"></span>
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-xs text-slate-800">Acabado Final (Topcoat)</h4>
-                        {!isLocked && (
-                          <div className={`flex items-center gap-2 ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
-                            <select className="text-[11px] border border-slate-300 bg-slate-100 text-slate-900 rounded px-2 py-0.5" onChange={(e) => { if(e.target.value) setFormData({...formData, textoAcabado: e.target.value}) }} defaultValue="">
-                              <option value="" disabled>Plantillas...</option>
-                              {savedProcedures.acabado.map(tpl => <option key={tpl.id} value={tpl.text}>{tpl.title}</option>)}
-                            </select>
-                            <button type="button" onClick={() => handleSaveTemplate('acabado', formData.textoAcabado)} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded flex items-center gap-1"><BookmarkPlus size={12}/> Guardar</button>
-                          </div>
-                        )}
-                      </div>
-                      {isGeneratingPDF ? (
-                        <div className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                          {formData.textoAcabado}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="hidden print:block w-full text-xs text-slate-800 p-2 rounded-xl bg-slate-50 border border-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
-                            {formData.textoAcabado}
-                          </div>
-                          <textarea disabled={isLocked} name="textoAcabado" value={formData.textoAcabado} onChange={handleChange} rows="2" className={`w-full text-xs text-slate-700 p-2 rounded-xl resize-none outline-none print:hidden ${isLocked ? 'bg-slate-50/80 border-transparent cursor-default' : 'bg-white border border-slate-200 focus:border-blue-500'}`}></textarea>
-                        </>
-                      )}
+                      <textarea
+                        disabled={isLocked}
+                        name="textoFondo"
+                        value={formData.textoFondo}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-white border border-stone-200 resize-none outline-none font-medium"
+                      />
                     </div>
 
+                    {/* Paso 3 */}
+                    <div className="relative pl-5 break-inside-avoid">
+                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="font-black text-xs text-slate-800 uppercase">
+                          Aplicación del Color ({sistemaPintura})
+                        </h4>
+                      </div>
+                      <textarea
+                        disabled={isLocked}
+                        name="textoColor"
+                        value={formData.textoColor}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-white border border-stone-200 resize-none outline-none font-medium"
+                      />
+                    </div>
+
+                    {/* Paso 4 */}
+                    <div className="relative pl-5 break-inside-avoid">
+                      <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-white"></span>
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="font-black text-xs text-slate-800 uppercase">
+                          Acabado de Producción ({acabadoProduccion} - {glossLevel}% Brillo)
+                        </h4>
+                      </div>
+                      <textarea
+                        disabled={isLocked}
+                        name="textoAcabado"
+                        value={formData.textoAcabado}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full text-xs text-slate-800 p-2.5 rounded-xl bg-white border border-stone-200 resize-none outline-none font-medium"
+                      />
+                      <div className="mt-2 p-2.5 rounded-xl bg-amber-100/90 border border-amber-400 text-[11px] font-black text-amber-950">
+                        ⚠️ NOTA COLORIMÉTRICA: El patrón físico de muestra está sellado en BRILLANTE para lectura protegida de espectrofotómetro. En planta debe aplicarse estrictamente en acabado {acabadoProduccion.toUpperCase()} ({glossLevel}%).
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </fieldset>
 
-          {/* Pie de Página con Botones de Acción */}
-          <div className={`bg-white border-t border-slate-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] ${isGeneratingPDF ? 'hidden' : 'print:hidden'}`}>
-            
-            {/* Casilla de Verificación de Procedimiento */}
+          {/* Pie de Página con Botones de Validación del Supervisor */}
+          <div
+            className={`bg-white border-t border-stone-200 p-5 mt-auto flex flex-col md:flex-row items-center justify-between gap-4 sticky bottom-0 z-20 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.05)] ${
+              isGeneratingPDF ? 'hidden' : 'print:hidden'
+            }`}
+          >
             <label className="flex items-center gap-3 cursor-pointer group">
-              <div className={`relative flex items-center justify-center w-5 h-5 border-2 rounded transition-colors ${isConfirmed ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}`}>
-                <input type="checkbox" checked={isConfirmed} onChange={(e) => setIsConfirmed(e.target.checked)} className="absolute opacity-0 w-full h-full cursor-pointer" />
+              <div
+                className={`relative flex items-center justify-center w-5 h-5 border-2 rounded-md transition-colors ${
+                  isConfirmed
+                    ? 'border-emerald-600 bg-emerald-600'
+                    : 'border-stone-300 bg-white group-hover:border-emerald-500'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isConfirmed}
+                  onChange={(e) => setIsConfirmed(e.target.checked)}
+                  className="absolute opacity-0 w-full h-full cursor-pointer"
+                />
                 {isConfirmed && <CheckCircle2 size={14} className="text-white" />}
               </div>
-              <span className="text-xs font-medium text-slate-600 select-none">
-                Confirmo que he verificado el <strong className="text-amber-600">fondo requerido</strong> y las especificaciones técnicas.
+              <span className="text-xs font-bold text-slate-700 select-none">
+                Valido como Supervisor el <strong className="text-amber-700">Cliente, Sustrato, Acabado de Producción ({acabadoProduccion})</strong> y la Fórmula de Pastas para liberar el Código QR Oficial.
               </span>
             </label>
 
-            {/* Acciones Condicionales Según el Estado */}
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-              
-              {/* CASO A: PENDIENTE DE REVISIÓN (Acción del Supervisor) */}
-              {(estadoAprobacion === 'pendiente_revision' || (isSupervisorView && estadoAprobacion !== 'aprobado_produccion')) ? (
+            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+              {estadoAprobacion === 'pendiente_revision' ||
+              (isSupervisorView && estadoAprobacion !== 'aprobado_produccion') ? (
                 <>
-                  <button 
-                    type="button" 
-                    onClick={handleRechazar} 
-                    disabled={isSubmitting} 
-                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  <button
+                    type="button"
+                    onClick={handleRechazar}
+                    disabled={isSubmitting}
+                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-md flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                   >
-                    <XCircle size={16} /> Rechazar y Devolver
+                    <XCircle size={15} /> Devolver para Ajuste
                   </button>
 
-                  <button 
-                    type="button" 
-                    onClick={handleAprobar} 
-                    disabled={isSubmitting || !isConfirmed} 
-                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                  <button
+                    type="button"
+                    onClick={handleAprobar}
+                    disabled={isSubmitting || !isConfirmed}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                      isConfirmed
+                        ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+                        : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                    }`}
                   >
-                    <CheckCircle2 size={16} /> Aprobar y Guardar ETP
+                    <ShieldCheck size={16} /> Aprobar Ficha Oficial y Generar QR
                   </button>
                 </>
               ) : estadoAprobacion === 'aprobado_produccion' ? (
-                
-                /* CASO B: COLOR YA APROBADO (Modo Lectura / Modificación) */
                 <>
-                  <button 
-                    type="button" 
-                    onClick={handlePrintPDF} 
-                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white shadow-md flex items-center justify-center gap-2 transition-all"
+                  <button
+                    type="button"
+                    onClick={() => printColorSampleBackLabel(consolidatedColorData)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md flex items-center justify-center gap-1.5 transition-all"
                   >
-                    <Printer size={16} /> Imprimir Ficha Técnica (PDF)
+                    <QrCode size={16} /> Imprimir Etiqueta QR Muestra
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrintPDF}
+                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <Printer size={15} /> Imprimir Ficha A4
                   </button>
 
                   {!isLocked && (
-                    <button 
-                      type="button" 
-                      onClick={handleGuardarModificaciones} 
-                      disabled={isSubmitting} 
-                      className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    <button
+                      type="button"
+                      onClick={handleGuardarModificaciones}
+                      disabled={isSubmitting}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     >
-                      <Save size={16} /> Guardar Modificaciones
+                      <Save size={15} /> Guardar y Actualizar QR
                     </button>
                   )}
                 </>
               ) : (
-                
-                /* CASO C: BORRADOR U OTRO */
-                <button 
-                  type="button" 
-                  onClick={handleAprobar} 
-                  disabled={!isConfirmed || isSubmitting} 
-                  className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-2 transition-all ${isConfirmed ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                <button
+                  type="button"
+                  onClick={handleAprobar}
+                  disabled={!isConfirmed || isSubmitting}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-2 transition-all ${
+                    isConfirmed
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                  }`}
                 >
-                  <Save size={16} /> Enviar a Aprobación
+                  <ShieldCheck size={16} /> Validar y Aprobar Ficha Oficial con QR
                 </button>
               )}
-
-            </div>
-          </div>
-
-          {/* Pie de Validez y Firma Oficial (Visible en PDF e Impresión) */}
-          <div className={`${isGeneratingPDF ? 'block' : 'hidden print:block'} mt-6 pt-4 border-t-2 border-slate-400 text-[10px] text-slate-700 px-6 pb-4 break-inside-avoid print:break-inside-avoid print:mt-6`}>
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="font-bold text-slate-700 uppercase">CDI Exhibiciones S.A.S. - Control de Calidad y Procesos</p>
-                <p>Este documento es la especificación técnica oficial para la producción en planta.</p>
-              </div>
-              <div className="text-right">
-                <div className="w-48 border-b border-slate-400 mb-1"></div>
-                <p className="font-bold text-slate-800 uppercase">Firma / Aprobación Supervisor</p>
-              </div>
             </div>
           </div>
         </form>
       </div>
+
+      {/* MODAL DE CONSULTA DE HOJA TÉCNICA OFICIAL Y CÓDIGO QR */}
+      {showOfficialQrSheetModal && (
+        <div
+          className="fixed inset-0 z-[220] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
+          onClick={() => setShowOfficialQrSheetModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-500 p-5 md:p-6 space-y-4 text-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                  CDI Exhibiciones • Laboratorio de Colorimetría
+                </span>
+                <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase mt-1">
+                  {colorSystem}: {colorRef || 'S/C'}{' '}
+                  {formData.nombreComercial && formData.nombreComercial !== colorRef
+                    ? `— ${formData.nombreComercial}`
+                    : ''}
+                </h3>
+                <p className="text-xs font-bold text-slate-600">
+                  CLIENTE / PROYECTO: <strong>{cliente || 'ESTÁNDAR CDI'}</strong> • APROBADO POR:{' '}
+                  <strong>{aprobadoPor}</strong> ({fechaAprobacion})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOfficialQrSheetModal(false)}
+                className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+              <div className="md:col-span-4 flex flex-col items-center bg-stone-50 border border-stone-200 rounded-2xl p-4 text-center">
+                <ColorQRCodeSVG
+                  value={qrPayload}
+                  size={180}
+                  className="shadow-md border-2 border-slate-900"
+                />
+                <span className="text-[10px] font-black uppercase text-slate-700 mt-2">
+                  Código QR Oficial de la Muestra
+                </span>
+                <div className="mt-2 w-full bg-slate-900 text-white rounded-xl p-2">
+                  <div className="text-[9px] font-bold text-amber-400 uppercase">
+                    Acabado Real de Producción
+                  </div>
+                  <div className="text-sm font-black uppercase">
+                    {acabadoProduccion} ({glossLevel}% Gloss)
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-8 space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-stone-100 border border-stone-200">
+                    <span className="block text-[9px] font-black uppercase text-slate-500">
+                      Sistema de Pintura
+                    </span>
+                    <strong className="text-slate-900">{sistemaPintura}</strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-stone-100 border border-stone-200">
+                    <span className="block text-[9px] font-black uppercase text-slate-500">
+                      Sustrato Base
+                    </span>
+                    <strong className="text-slate-900">{sustratoBase}</strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300">
+                    <span className="block text-[9px] font-black uppercase text-amber-800">
+                      Acabado Muestra Física
+                    </span>
+                    <strong className="text-amber-950 text-[11px]">
+                      BRILLANTE (Sellado Espectrofotómetro)
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300">
+                    <span className="block text-[9px] font-black uppercase text-emerald-800">
+                      Lectura Colorímetro
+                    </span>
+                    <strong className="text-emerald-950 text-[11px]">
+                      {coordL ? `L*:${coordL} ` : ''}
+                      {coordA ? `a*:${coordA} ` : ''}
+                      {coordB ? `b*:${coordB} ` : ''}
+                      {formData.deltaE}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="border border-stone-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-900 text-white px-3 py-1.5 text-[10px] font-black uppercase flex justify-between">
+                    <span>Fórmula Oficial de Pastas / Bases</span>
+                    <span>Total: {pesoTotal.toFixed(1)} g</span>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead className="bg-stone-100 border-b border-stone-200">
+                      <tr>
+                        <th className="py-1.5 px-3 text-left font-black text-[10px]">CÓDIGO</th>
+                        <th className="py-1.5 px-3 text-left font-black text-[10px]">COMPONENTE</th>
+                        <th className="py-1.5 px-3 text-right font-black text-[10px]">GRAMOS</th>
+                        <th className="py-1.5 px-3 text-right font-black text-[10px]">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {normalizedPastas.map((p) => (
+                        <tr key={p.id}>
+                          <td className="py-1.5 px-3 font-mono font-bold">{p.codigo}</td>
+                          <td className="py-1.5 px-3 font-bold">{p.nombre}</td>
+                          <td className="py-1.5 px-3 text-right font-black">
+                            {p.gramos.toFixed(1)} g
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-black text-amber-700">
+                            {p.porcentaje.toFixed(1)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-100 border-2 border-amber-500 text-[11px] font-black text-amber-950 text-center">
+                  PATRÓN EN BRILLANTE (Protección para Colorímetro/Espectrofotómetro). Aplicar en planta según Acabado de Producción indicado ({acabadoProduccion.toUpperCase()}).
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-stone-200">
+              <button
+                type="button"
+                onClick={() => printColorSampleBackLabel(consolidatedColorData)}
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase flex items-center gap-2 shadow"
+              >
+                <Printer size={16} /> Imprimir Etiqueta Reverso de Muestra
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOfficialQrSheetModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-slate-800 font-black text-xs uppercase"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para Desbloquear con PIN / Clave */}
       {isPinModalOpen && (
@@ -1201,27 +2191,36 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
             <form onSubmit={handleValidatePin} className="space-y-4">
               <div>
-                <input 
-                  type="password" 
-                  autoFocus 
-                  value={pinInput} 
-                  onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+                <input
+                  type="password"
+                  autoFocus
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    setPinError('');
+                  }}
                   placeholder="PIN o Clave..."
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 text-center text-lg font-black tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {pinError && <p className="text-xs font-bold text-rose-500 mt-2 text-center">{pinError}</p>}
+                {pinError && (
+                  <p className="text-xs font-bold text-rose-500 mt-2 text-center">{pinError}</p>
+                )}
               </div>
 
               <div className="flex gap-2">
-                <button 
-                  type="button" 
-                  onClick={() => { setIsPinModalOpen(false); setPinInput(''); setPinError(''); }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPinModalOpen(false);
+                    setPinInput('');
+                    setPinError('');
+                  }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow"
                 >
                   Validar PIN
@@ -1235,13 +2234,9 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
       {/* Modal Visor Lightbox para la Muestra / Espectrofotómetro */}
       {isLightboxOpen && imagenMuestra && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
-          
-          {/* Barra Superior con Opciones y Cierre */}
           <div className="absolute top-4 right-4 flex items-center gap-3 z-30">
-            
-            {/* Menú de Tres Puntos */}
             <div className="relative">
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsLightboxMenuOpen(!isLightboxMenuOpen)}
                 className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-sm"
@@ -1252,30 +2247,30 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
 
               {isLightboxMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-slate-900/95 border border-slate-700 text-white rounded-2xl shadow-2xl py-2 z-40 backdrop-blur-xl animate-in fade-in zoom-in-95">
-                  <button 
+                  <button
                     type="button"
-                    onClick={handleCompartir} 
+                    onClick={handleCompartir}
                     className="w-full text-left px-4 py-2.5 hover:bg-slate-800 text-xs font-bold flex items-center gap-2.5 transition-colors"
                   >
                     <Share2 size={16} className="text-blue-400" /> Compartir
                   </button>
-                  <button 
+                  <button
                     type="button"
-                    onClick={handleGuardarNube} 
+                    onClick={handleGuardarNube}
                     className="w-full text-left px-4 py-2.5 hover:bg-slate-800 text-xs font-bold flex items-center gap-2.5 transition-colors"
                   >
                     <Cloud size={16} className="text-emerald-400" /> Guardar en la Nube
                   </button>
-                  <button 
+                  <button
                     type="button"
-                    onClick={handleDescargar} 
+                    onClick={handleDescargar}
                     className="w-full text-left px-4 py-2.5 hover:bg-slate-800 text-xs font-bold flex items-center gap-2.5 transition-colors"
                   >
                     <Download size={16} className="text-amber-400" /> Descargar al Dispositivo
                   </button>
-                  <button 
+                  <button
                     type="button"
-                    onClick={handleWhatsApp} 
+                    onClick={handleWhatsApp}
                     className="w-full text-left px-4 py-2.5 hover:bg-slate-800 text-xs font-bold flex items-center gap-2.5 transition-colors text-emerald-400"
                   >
                     <MessageCircle size={16} /> Enviar vía WhatsApp
@@ -1284,10 +2279,12 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
               )}
             </div>
 
-            {/* Botón X de Cierre */}
-            <button 
+            <button
               type="button"
-              onClick={() => { setIsLightboxOpen(false); setIsLightboxMenuOpen(false); }}
+              onClick={() => {
+                setIsLightboxOpen(false);
+                setIsLightboxMenuOpen(false);
+              }}
               className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-sm"
               title="Cerrar visor"
             >
@@ -1295,15 +2292,16 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
             </button>
           </div>
 
-          {/* Imagen en Tamaño Completo */}
           <div className="relative max-w-4xl max-h-[85vh] flex flex-col items-center justify-center p-2">
-            <img 
-              src={imagenMuestra} 
-              alt="Muestra de Colorimetría" 
+            <img
+              src={imagenMuestra}
+              alt="Muestra de Colorimetría"
               className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
             />
             <div className="mt-3 text-center">
-              <span className="text-white text-sm font-black tracking-wider uppercase">{formData.nombreComercial || colorRef}</span>
+              <span className="text-white text-sm font-black tracking-wider uppercase">
+                {formData.nombreComercial || colorRef}
+              </span>
               <span className="text-emerald-400 text-xs font-black ml-3 bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-800">
                 ΔE Real: {formData.deltaE}
               </span>
@@ -1311,7 +2309,6 @@ export default function EtpCopilotForm({ colorId, supervisorProfile, onSave, onC
           </div>
         </div>
       )}
-
     </div>
   );
 }
