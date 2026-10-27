@@ -3,7 +3,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* New Dynamic Theming Engine (CSS Variables) */
+/* New Dynamic Theming Engine (CSS Variables) - WCAG High Contrast Defaults */
+:root {
+    --color-base: #f8fafc;
+    --color-surface: #ffffff;
+    --color-primary: #0f172a;
+    --color-primary-glow: rgba(15, 23, 42, 0.2);
+    --color-text-main: #0f172a;
+    --color-text-muted: #334155;
+    --color-border: #cbd5e1;
+}
+:root.dark {
+    --color-base: #0b1118;
+    --color-surface: #131c26;
+    --color-primary: #38bdf8;
+    --color-primary-glow: rgba(56, 189, 248, 0.25);
+    --color-text-main: #f8fafc;
+    --color-text-muted: #cbd5e1;
+    --color-border: #334155;
+}
 
 /* Tema 1: Santuario (Digital Sanctuary) */
 :root[data-theme="santuario"]:not(.dark) {
@@ -109,9 +127,9 @@
     box-shadow: 0 0 0 1px var(--color-primary), 0 0 15px var(--color-primary-glow);
 }
 .theme-border { border-color: var(--color-border); }
-.theme-text-muted { color: var(--color-text-muted, var(--text-muted, #444841)) !important; }
-.theme-text-primary { color: var(--color-primary, var(--primary, #55624d)) !important; }
-.theme-text-main { color: var(--color-text-main, var(--text-main, #191c18)) !important; }
+.theme-text-muted { color: var(--color-text-muted, var(--text-muted, #334155)); }
+.theme-text-primary { color: var(--color-primary, var(--primary, #0f172a)); }
+.theme-text-main { color: var(--color-text-main, var(--text-main, #0f172a)); }
 
 /* Typography - Strict hierarchy */
 body, input, button, select, textarea { font-family: 'Outfit', sans-serif !important; }

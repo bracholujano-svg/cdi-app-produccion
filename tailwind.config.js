@@ -8,13 +8,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: 'var(--color-base)',
         surface: 'var(--color-surface)',
         primary: 'var(--color-primary)',
         'primary-glow': 'var(--color-primary-glow)',
         textMain: 'var(--color-text-main)',
         textMuted: 'var(--color-text-muted)',
         border: 'var(--color-border)',
+      },
+      backgroundColor: {
+        base: 'var(--color-base)',
       },
       keyframes: {
         'border-pulse-orange': {

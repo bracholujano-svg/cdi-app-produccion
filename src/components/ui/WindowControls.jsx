@@ -32,16 +32,16 @@ export const WindowControls = ({
 }) => {
   return (
     <div
-      className={`flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-300/70 dark:border-slate-700/80 shadow-inner shrink-0 ${className}`}
+      className={`flex items-center gap-1.5 bg-slate-200 dark:bg-slate-800 p-1.5 rounded-xl border-2 border-slate-400/80 dark:border-slate-600 shadow-sm shrink-0 ${className}`}
     >
       {onMinimize && (
         <button
           type="button"
           onClick={onMinimize}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-amber-500/20 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/80 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-400 transition-colors cursor-pointer"
           title="Minimizar ventana (Seguir trabajando en el tablero)"
         >
-          <Minus className="w-4 h-4" strokeWidth={2.6} />
+          <Minus className="w-4 h-4" strokeWidth={2.8} />
         </button>
       )}
 
@@ -49,7 +49,7 @@ export const WindowControls = ({
         <button
           type="button"
           onClick={onToggleMaximize}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/80 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-400 transition-colors cursor-pointer"
           title={
             isMaximized
               ? 'Restaurar tamaño de ventana (90% x 85%)'
@@ -57,9 +57,9 @@ export const WindowControls = ({
           }
         >
           {isMaximized ? (
-            <Minimize2 className="w-4 h-4" strokeWidth={2.4} />
+            <Minimize2 className="w-4 h-4" strokeWidth={2.6} />
           ) : (
-            <Maximize2 className="w-4 h-4" strokeWidth={2.4} />
+            <Maximize2 className="w-4 h-4" strokeWidth={2.6} />
           )}
         </button>
       )}
@@ -68,10 +68,10 @@ export const WindowControls = ({
         <button
           type="button"
           onClick={onClose}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/80 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-red-600 hover:text-white hover:border-red-400 transition-colors cursor-pointer"
           title="Cerrar ventana"
         >
-          <X className="w-4 h-4" strokeWidth={2.6} />
+          <X className="w-4 h-4" strokeWidth={2.8} />
         </button>
       )}
     </div>
