@@ -945,23 +945,45 @@ export default function EtpCopilotForm({
                   </span>
                 )}
 
-                {/* Botón Candado / Desbloquear PIN */}
+                {/* BOTONERA ÚNICA Y LIMPIA (3 ACCIONES PRINCIPALES) */}
+                <button
+                  type="button"
+                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
+                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase ${
+                    isGeneratingPDF ? 'hidden' : 'print:hidden'
+                  }`}
+                  title="Imprimir etiqueta pequeña con Código QR para el reverso de la muestra física"
+                >
+                  <Printer size={13} /> Imprimir Etiqueta de Muestra
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintPDF}
+                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase ${
+                    isGeneratingPDF ? 'hidden' : 'print:hidden'
+                  }`}
+                  title="Imprimir Ficha Técnica Completa en formato Carta / A4"
+                >
+                  <Printer size={13} /> Imprimir Ficha Técnica
+                </button>
+
                 {isLocked ? (
                   <button
                     type="button"
                     onClick={() => setIsPinModalOpen(true)}
-                    className={`bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-black px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 transition-colors shadow-sm ${
+                    className={`bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-black px-3 py-1.5 rounded-lg border border-amber-300 flex items-center gap-1.5 transition-colors shadow-sm uppercase ${
                       isGeneratingPDF ? 'hidden' : 'print:hidden'
                     }`}
                   >
-                    <Lock size={12} /> Desbloquear Edición
+                    <Lock size={12} /> Modificar Fórmula
                   </button>
                 ) : (
                   estadoAprobacion === 'aprobado_produccion' && (
                     <button
                       type="button"
                       onClick={() => setIsLocked(true)}
-                      className={`bg-stone-100 text-slate-700 hover:bg-stone-200 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-stone-300 flex items-center gap-1 transition-colors ${
+                      className={`bg-stone-100 text-slate-700 hover:bg-stone-200 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-stone-300 flex items-center gap-1.5 transition-colors uppercase ${
                         isGeneratingPDF ? 'hidden' : 'print:hidden'
                       }`}
                     >
@@ -969,40 +991,6 @@ export default function EtpCopilotForm({
                     </button>
                   )
                 )}
-
-                {/* Botones de Etiqueta QR de Muestra y PDF A4 */}
-                <button
-                  type="button"
-                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
-                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
-                    isGeneratingPDF ? 'hidden' : 'print:hidden'
-                  }`}
-                  title="Imprimir etiqueta con Código QR para pegar en el reverso de la plaqueta física de muestra"
-                >
-                  <QrCode size={13} /> Etiqueta QR Muestra Física
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowOfficialQrSheetModal(true)}
-                  className={`bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
-                    isGeneratingPDF ? 'hidden' : 'print:hidden'
-                  }`}
-                  title="Consultar Hoja Técnica Oficial y Código QR en pantalla"
-                >
-                  <Eye size={13} /> Consultar Ficha QR
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePrintPDF}
-                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${
-                    isGeneratingPDF ? 'hidden' : 'print:hidden'
-                  }`}
-                  title="Descargar o Imprimir Ficha Técnica A4 Completa"
-                >
-                  <Printer size={13} /> PDF A4
-                </button>
               </div>
 
               {isGeneratingPDF ? (
@@ -1160,110 +1148,72 @@ export default function EtpCopilotForm({
           </div>
         </header>
 
-        {/* PANEL SUPERIOR DE "RESUMEN DE FICHA" + QR DE MUESTRA APROBADA */}
-        <div className={`px-6 pt-5 ${isGeneratingPDF ? 'px-0 pt-3' : ''}`}>
-          <div className="bg-gradient-to-br from-amber-50/90 via-white to-stone-100 border-2 border-amber-300/80 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row items-stretch justify-between gap-4">
-            <div className="flex-1 flex flex-col justify-between space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-200/80 pb-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-amber-600" />
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-900">
-                    Resumen Consolidado de Ficha Técnica (Vista Previa de Validación)
-                  </span>
-                </div>
-                <span className="text-[11px] font-black text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-300">
-                  Muestra Física: {acabadoMuestraFisica}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+        {/* PANEL SUPERIOR DE "RESUMEN CONSOLIDADO" (6 TARJETAS EN UN RENGLÓN + BANNER SUTIL + QR COMPACTO) */}
+        <div className={`px-6 pt-4 ${isGeneratingPDF ? 'px-0 pt-2' : ''}`}>
+          <div className="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs space-y-2.5">
+            <div className="flex flex-col lg:flex-row items-center gap-3">
+              <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
                   <span className="block text-[9px] font-black uppercase text-slate-400">
-                    Cliente / Proyecto
+                    Cliente
                   </span>
                   <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
                     {cliente || 'Pendiente asignar *'}
                   </span>
                 </div>
-                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
                   <span className="block text-[9px] font-black uppercase text-slate-400">
-                    Código / Sistema
-                  </span>
-                  <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
-                    {colorSystem}: {colorRef || formData.nombreComercial || 'S/C'}
-                  </span>
-                </div>
-                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
-                  <span className="block text-[9px] font-black uppercase text-slate-400">
-                    Sistema de Pintura
+                    Sistema
                   </span>
                   <span className="text-xs font-black text-blue-700 truncate block mt-0.5">
                     {sistemaPintura}
                   </span>
                 </div>
-                <div className="bg-white/90 border border-stone-200 rounded-xl p-2.5 shadow-sm">
+                <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
                   <span className="block text-[9px] font-black uppercase text-slate-400">
-                    Sustrato Base
+                    Sustrato
                   </span>
                   <span className="text-xs font-black text-slate-900 truncate block mt-0.5">
                     {sustratoBase}
                   </span>
                 </div>
-                <div className="bg-slate-900 text-white rounded-xl p-2.5 shadow-sm">
-                  <span className="block text-[9px] font-black uppercase text-amber-400">
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5">
+                  <span className="block text-[9px] font-black uppercase text-amber-800">
                     Acabado Producción
                   </span>
-                  <span className="text-xs font-black uppercase block mt-0.5">
-                    {acabadoProduccion} ({glossLevel}% Gloss)
+                  <span className="text-xs font-black text-amber-950 uppercase truncate block mt-0.5">
+                    {acabadoProduccion} ({glossLevel}%)
+                  </span>
+                </div>
+                <div className="bg-sky-50 border border-sky-200 rounded-xl p-2.5">
+                  <span className="block text-[9px] font-black uppercase text-sky-700">
+                    Muestra Física
+                  </span>
+                  <span className="text-xs font-black text-sky-950 truncate block mt-0.5">
+                    ✨ BRILLANTE
+                  </span>
+                </div>
+                <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-2.5">
+                  <span className="block text-[9px] font-black uppercase text-slate-400">
+                    Validación
+                  </span>
+                  <span className="text-xs font-black text-emerald-700 truncate block mt-0.5">
+                    {aprobadoPor}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-slate-600 pt-1">
-                <div>
-                  Fórmula activa:{' '}
-                  <strong className="text-slate-900">
-                    {normalizedPastas.length} pastas/componentes ({pesoTotal.toFixed(1)} g totales)
-                  </strong>
-                </div>
-                <div>
-                  Validado por Supervisor:{' '}
-                  <strong className="text-slate-900 uppercase">{aprobadoPor}</strong> ({fechaAprobacion})
-                </div>
+              {/* QR Compacto y directo sin textos ni botones redundantes */}
+              <div className="shrink-0 bg-white border border-stone-200 rounded-xl p-1.5 flex items-center justify-center">
+                <ColorQRCodeSVG value={qrPayload} size={76} />
               </div>
             </div>
 
-            {/* BLOQUE LATERAL DEL CÓDIGO QR ÚNICO DE LA FICHA */}
-            <div className="lg:w-72 bg-white border-2 border-slate-900 rounded-2xl p-3 flex items-center gap-3 shadow-md shrink-0">
-              <div
-                onClick={() => setShowOfficialQrSheetModal(true)}
-                className="cursor-pointer shrink-0"
-                title="Clic para ampliar Ficha QR Oficial"
-              >
-                <ColorQRCodeSVG value={qrPayload} size={96} className="border border-slate-200" />
-              </div>
-              <div className="flex flex-col justify-between h-full space-y-1.5 min-w-0">
-                <div>
-                  <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-black text-[9px] uppercase">
-                    {estadoAprobacion === 'aprobado_produccion'
-                      ? 'QR Oficial Activo'
-                      : 'Vista Previa QR'}
-                  </span>
-                  <h4 className="text-xs font-black text-slate-900 uppercase leading-tight mt-1">
-                    Etiqueta Reverso de Muestra
-                  </h4>
-                  <p className="text-[10px] text-slate-500 leading-snug">
-                    Incluye acabado producción, alerta de patrón brillante y fórmula.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
-                  className="w-full py-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-[10px] uppercase flex items-center justify-center gap-1.5 shadow transition-colors"
-                >
-                  <Printer size={12} /> Imprimir Etiqueta QR
-                </button>
-              </div>
+            <div className="px-3 py-1.5 rounded-lg bg-amber-50/80 border border-amber-200 text-[11px] font-bold text-amber-900 flex items-center gap-2">
+              <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+              <span>
+                <strong>NORMA DE LABORATORIO CDI:</strong> Muestra física sellada en <strong>BRILLANTE</strong> para protección de Espectrofotómetro. Aplicar en planta según <strong>Acabado de Producción ({acabadoProduccion} - {glossLevel}%)</strong>.
+              </span>
             </div>
           </div>
         </div>
@@ -1982,22 +1932,6 @@ export default function EtpCopilotForm({
                 </>
               ) : estadoAprobacion === 'aprobado_produccion' ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => printColorSampleBackLabel(consolidatedColorData)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <QrCode size={16} /> Imprimir Etiqueta QR Muestra
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handlePrintPDF}
-                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white shadow-md flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <Printer size={15} /> Imprimir Ficha A4
-                  </button>
-
                   {!isLocked && (
                     <button
                       type="button"
@@ -2005,7 +1939,7 @@ export default function EtpCopilotForm({
                       disabled={isSubmitting}
                       className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     >
-                      <Save size={15} /> Guardar y Actualizar QR
+                      <Save size={15} /> Guardar Modificaciones
                     </button>
                   )}
                 </>
@@ -2027,153 +1961,6 @@ export default function EtpCopilotForm({
           </div>
         </form>
       </div>
-
-      {/* MODAL DE CONSULTA DE HOJA TÉCNICA OFICIAL Y CÓDIGO QR */}
-      {showOfficialQrSheetModal && (
-        <div
-          className="fixed inset-0 z-[220] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
-          onClick={() => setShowOfficialQrSheetModal(false)}
-        >
-          <div
-            className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-500 p-5 md:p-6 space-y-4 text-slate-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
-                  CDI Exhibiciones • Laboratorio de Colorimetría
-                </span>
-                <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase mt-1">
-                  {colorSystem}: {colorRef || 'S/C'}{' '}
-                  {formData.nombreComercial && formData.nombreComercial !== colorRef
-                    ? `— ${formData.nombreComercial}`
-                    : ''}
-                </h3>
-                <p className="text-xs font-bold text-slate-600">
-                  CLIENTE / PROYECTO: <strong>{cliente || 'ESTÁNDAR CDI'}</strong> • APROBADO POR:{' '}
-                  <strong>{aprobadoPor}</strong> ({fechaAprobacion})
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOfficialQrSheetModal(false)}
-                className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-              <div className="md:col-span-4 flex flex-col items-center bg-stone-50 border border-stone-200 rounded-2xl p-4 text-center">
-                <ColorQRCodeSVG
-                  value={qrPayload}
-                  size={180}
-                  className="shadow-md border-2 border-slate-900"
-                />
-                <span className="text-[10px] font-black uppercase text-slate-700 mt-2">
-                  Código QR Oficial de la Muestra
-                </span>
-                <div className="mt-2 w-full bg-slate-900 text-white rounded-xl p-2">
-                  <div className="text-[9px] font-bold text-amber-400 uppercase">
-                    Acabado Real de Producción
-                  </div>
-                  <div className="text-sm font-black uppercase">
-                    {acabadoProduccion} ({glossLevel}% Gloss)
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-8 space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-stone-100 border border-stone-200">
-                    <span className="block text-[9px] font-black uppercase text-slate-500">
-                      Sistema de Pintura
-                    </span>
-                    <strong className="text-slate-900">{sistemaPintura}</strong>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-stone-100 border border-stone-200">
-                    <span className="block text-[9px] font-black uppercase text-slate-500">
-                      Sustrato Base
-                    </span>
-                    <strong className="text-slate-900">{sustratoBase}</strong>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300">
-                    <span className="block text-[9px] font-black uppercase text-amber-800">
-                      Acabado Muestra Física
-                    </span>
-                    <strong className="text-amber-950 text-[11px]">
-                      BRILLANTE (Sellado Espectrofotómetro)
-                    </strong>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300">
-                    <span className="block text-[9px] font-black uppercase text-emerald-800">
-                      Lectura Colorímetro
-                    </span>
-                    <strong className="text-emerald-950 text-[11px]">
-                      {coordL ? `L*:${coordL} ` : ''}
-                      {coordA ? `a*:${coordA} ` : ''}
-                      {coordB ? `b*:${coordB} ` : ''}
-                      {formData.deltaE}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="border border-stone-200 rounded-xl overflow-hidden">
-                  <div className="bg-slate-900 text-white px-3 py-1.5 text-[10px] font-black uppercase flex justify-between">
-                    <span>Fórmula Oficial de Pastas / Bases</span>
-                    <span>Total: {pesoTotal.toFixed(1)} g</span>
-                  </div>
-                  <table className="w-full text-xs">
-                    <thead className="bg-stone-100 border-b border-stone-200">
-                      <tr>
-                        <th className="py-1.5 px-3 text-left font-black text-[10px]">CÓDIGO</th>
-                        <th className="py-1.5 px-3 text-left font-black text-[10px]">COMPONENTE</th>
-                        <th className="py-1.5 px-3 text-right font-black text-[10px]">GRAMOS</th>
-                        <th className="py-1.5 px-3 text-right font-black text-[10px]">%</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                      {normalizedPastas.map((p) => (
-                        <tr key={p.id}>
-                          <td className="py-1.5 px-3 font-mono font-bold">{p.codigo}</td>
-                          <td className="py-1.5 px-3 font-bold">{p.nombre}</td>
-                          <td className="py-1.5 px-3 text-right font-black">
-                            {p.gramos.toFixed(1)} g
-                          </td>
-                          <td className="py-1.5 px-3 text-right font-black text-amber-700">
-                            {p.porcentaje.toFixed(1)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-amber-100 border-2 border-amber-500 text-[11px] font-black text-amber-950 text-center">
-                  PATRÓN EN BRILLANTE (Protección para Colorímetro/Espectrofotómetro). Aplicar en planta según Acabado de Producción indicado ({acabadoProduccion.toUpperCase()}).
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-stone-200">
-              <button
-                type="button"
-                onClick={() => printColorSampleBackLabel(consolidatedColorData)}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase flex items-center gap-2 shadow"
-              >
-                <Printer size={16} /> Imprimir Etiqueta Reverso de Muestra
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowOfficialQrSheetModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-slate-800 font-black text-xs uppercase"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal para Desbloquear con PIN / Clave */}
       {isPinModalOpen && (

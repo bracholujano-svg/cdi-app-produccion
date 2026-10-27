@@ -4,15 +4,16 @@ import { generateQRMatrix } from './qrGenerator';
 /**
  * Componente SVG vectorial de alta nitidez para el Código QR de Laboratorio de Colorimetría
  */
-export const ColorQRCodeSVG = ({ value, size = 132, className = '' }) => {
+export const ColorQRCodeSVG = ({ value, payload, size = 116, className = '' }) => {
+  const qrText = value || payload || 'CDI-SC-COLOR';
   const matrix = useMemo(() => {
     try {
-      return generateQRMatrix(value || 'CDI-SC-COLOR');
+      return generateQRMatrix(qrText);
     } catch (e) {
       console.error('Error generando QR de color:', e);
       return [[true]];
     }
-  }, [value]);
+  }, [qrText]);
 
   const moduleCount = matrix.length;
   const quietZone = 2;
@@ -46,23 +47,60 @@ export const ColorQRCodeSVG = ({ value, size = 132, className = '' }) => {
 };
 
 /**
+ * Normaliza los datos de la ficha técnica independientemente de si vienen en camelCase o snake_case
+ */
+const normalizeColorSheetData = (raw = {}) => {
+  const proc = raw.procedimiento_preparacion || {};
+  return {
+    codigoColor: raw.codigoColor || raw.codigo_color || raw.codigo_objetivo || proc.codigo_color || '',
+    nombreColor: raw.nombreColor || raw.nombre_color || raw.nombre_comercial || proc.nombre_color || raw.codigo_objetivo || '',
+    sistemaCatalogo: raw.sistemaCatalogo || raw.sistema_color || 'RAL',
+    cliente: raw.cliente || proc.cliente || 'USO GENERAL PLANTA',
+    sistemaPintura: raw.sistemaPintura || raw.sistema_pintura || proc.sistema_pintura || proc.tipo_recubrimiento || 'Poliuretano (PU)',
+    sustratoBase: raw.sustratoBase || raw.sustrato_base || proc.sustrato_base || raw.sustrato_muestra || 'MDF RH',
+    acabadoProduccion: raw.acabadoProduccion || raw.acabado_produccion || proc.acabado_produccion || 'Satinado',
+    glossLevel: raw.glossLevel || raw.brillo || proc.brillo || raw.nivel_brillo || '40',
+    acabadoMuestraFisica:
+      raw.acabadoMuestraFisica ||
+      raw.acabado_muestra_fisica ||
+      proc.acabado_muestra_fisica ||
+      'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)',
+    coordenadasColor: raw.coordenadasColor || raw.coordenadas_color || proc.coordenadas_color || {},
+    aprobadoPor: raw.aprobadoPor || raw.aprobado_por || proc.aprobado_por || 'Supervisor de Planta',
+    fechaAprobacion: raw.fechaAprobacion || raw.fecha_aprobacion || proc.fecha_aprobacion || new Date().toISOString(),
+    formulacionPastas: raw.formulacionPastas || raw.formulacion_pastas || proc.formulacion_pastas || [],
+    catalizador: raw.catalizador || raw.catalizador_tipo || proc.catalizador || 'Estándar según Sistema',
+    disolvente: raw.disolvente || raw.disolvente_tipo || proc.disolvente || '10% - 15% (PU)',
+    viscosidad: raw.viscosidad || proc.viscosidad || '18 - 22 seg (Copa Ford #4)',
+    presion: raw.presion || proc.presion || '28 - 32 PSI',
+    boquilla: raw.boquilla || proc.boquilla || '1.3 mm - 1.4 mm',
+    manos: raw.manos || proc.manos || '2 manos cruzadas',
+    preparacion: raw.preparacion || proc.preparacion || 'Lijado del sustrato con grano 220/320 y limpieza libre de polvo.',
+    fondo: raw.fondo || proc.fondo || 'Aplicar fondo poliuretano de alto cubrimiento según tono base.',
+    color: raw.color || proc.color || 'Aplicar 2 manos cruzadas homogéneas respetando tiempo de oreo de 10-15 min.',
+    acabado: raw.acabado || proc.acabado || 'Aplicar barniz poliuretano ajustado al porcentaje de brillo de producción.'
+  };
+};
+
+/**
  * Construye el payload estructurado del Código QR para una Ficha Técnica de Color Aprobada
  */
-export const buildColorQRPayload = ({
-  codigoColor = '',
-  nombreColor = '',
-  sistemaCatalogo = '',
-  cliente = '',
-  sistemaPintura = '',
-  sustratoBase = '',
-  acabadoProduccion = '',
-  glossLevel = '',
-  acabadoMuestraFisica = 'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)',
-  coordenadasColor = {},
-  aprobadoPor = '',
-  fechaAprobacion = '',
-  formulacionPastas = []
-}) => {
+export const buildColorQRPayload = (rawInput = {}) => {
+  const {
+    codigoColor,
+    nombreColor,
+    sistemaCatalogo,
+    cliente,
+    sistemaPintura,
+    sustratoBase,
+    acabadoProduccion,
+    glossLevel,
+    coordenadasColor,
+    aprobadoPor,
+    fechaAprobacion,
+    formulacionPastas
+  } = normalizeColorSheetData(rawInput);
+
   const cod = String(codigoColor || nombreColor || 'S/C').trim().toUpperCase();
   const nom = String(nombreColor || codigoColor || 'COLOR OFICIAL').trim().toUpperCase();
   const cli = String(cliente || 'ESTÁNDAR CDI').trim().toUpperCase();
@@ -119,27 +157,9 @@ export const buildColorQRPayload = ({
 };
 
 /**
- * Genera e imprime la Etiqueta Técnica Oficial para pegar en el reverso de la plaqueta física de muestra
+ * Genera el SVG en texto plano para incrustar en ventanas de impresión
  */
-export const printColorSampleBackLabel = (labelData) => {
-  const {
-    codigoColor = '',
-    nombreColor = '',
-    sistemaCatalogo = 'RAL',
-    cliente = 'ESTÁNDAR CDI',
-    sistemaPintura = 'Poliuretano (PU)',
-    sustratoBase = 'MDF RH',
-    acabadoProduccion = 'Satinado',
-    glossLevel = '40',
-    coordenadasColor = {},
-    aprobadoPor = 'Supervisor',
-    fechaAprobacion = new Date().toISOString(),
-    formulacionPastas = [],
-    catalizador = '',
-    disolvente = ''
-  } = labelData || {};
-
-  const qrPayload = buildColorQRPayload(labelData || {});
+const buildQRSvgMarkup = (qrPayload, pixelSize = 140) => {
   const matrix = generateQRMatrix(qrPayload);
   const mCount = matrix.length;
   const qz = 2;
@@ -152,7 +172,32 @@ export const printColorSampleBackLabel = (labelData) => {
       }
     }
   }
-  const qrSvgMarkup = `<svg viewBox="0 0 ${tot} ${tot}" width="150" height="150" shape-rendering="crispEdges">${rects}</svg>`;
+  return `<svg viewBox="0 0 ${tot} ${tot}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges">${rects}</svg>`;
+};
+
+/**
+ * Genera e imprime la Etiqueta Técnica Oficial compacta para pegar en el reverso de la plaqueta física de muestra
+ */
+export const printColorSampleBackLabel = (rawData) => {
+  const data = normalizeColorSheetData(rawData);
+  const {
+    codigoColor,
+    nombreColor,
+    sistemaCatalogo,
+    cliente,
+    sistemaPintura,
+    sustratoBase,
+    acabadoProduccion,
+    glossLevel,
+    coordenadasColor,
+    aprobadoPor,
+    fechaAprobacion,
+    formulacionPastas,
+    catalizador
+  } = data;
+
+  const qrPayload = buildColorQRPayload(data);
+  const qrSvgMarkup = buildQRSvgMarkup(qrPayload, 145);
 
   const totalGramos = (formulacionPastas || []).reduce(
     (acc, it) => acc + (Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0),
@@ -265,7 +310,7 @@ export const printColorSampleBackLabel = (labelData) => {
           }
           .qr-col {
             flex-shrink: 0;
-            width: 162px;
+            width: 158px;
             border: 1.5px solid #94a3b8;
             border-radius: 10px;
             padding: 6px;
@@ -394,6 +439,317 @@ export const printColorSampleBackLabel = (labelData) => {
             <span>FECHA APROBACIÓN: <strong>${fechaFmt}</strong></span>
           </div>
         </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
+/**
+ * Imprime la FICHA TÉCNICA COMPLETA DE PRODUCCIÓN (Formato Carta / A4) con fuente Arial 12pt y saltos de página limpios
+ */
+export const printFullTechnicalSheetA4 = (rawData) => {
+  const data = normalizeColorSheetData(rawData);
+  const {
+    codigoColor,
+    nombreColor,
+    sistemaCatalogo,
+    cliente,
+    sistemaPintura,
+    sustratoBase,
+    acabadoProduccion,
+    glossLevel,
+    acabadoMuestraFisica,
+    coordenadasColor,
+    aprobadoPor,
+    fechaAprobacion,
+    formulacionPastas,
+    catalizador,
+    disolvente,
+    viscosidad,
+    presion,
+    boquilla,
+    manos,
+    preparacion,
+    fondo,
+    color,
+    acabado
+  } = data;
+
+  const qrPayload = buildColorQRPayload(data);
+  const qrSvgMarkup = buildQRSvgMarkup(qrPayload, 118);
+
+  const totalGramos = (formulacionPastas || []).reduce(
+    (acc, it) => acc + (Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0),
+    0
+  );
+
+  const pastasRowsHtml = (formulacionPastas || [])
+    .map((it) => {
+      const ref = it.codigo || it.id_referencia_ppg || it.id_referencia || 'BASE';
+      const desc = it.nombre || it.nombre_base || it.descripcion || '';
+      const gr = Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0;
+      const pct =
+        it.porcentaje !== undefined
+          ? Number(it.porcentaje).toFixed(2)
+          : totalGramos > 0
+          ? ((gr / totalGramos) * 100).toFixed(2)
+          : '0.00';
+
+      return `
+        <tr>
+          <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 900;">${ref}</td>
+          <td style="padding: 8px 10px; border: 1px solid #cbd5e1;">${desc}</td>
+          <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right; font-weight: 900;">${gr.toFixed(1)} g</td>
+          <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right; font-weight: 900;">${pct}%</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  const fechaFmt = fechaAprobacion
+    ? new Date(fechaAprobacion).toLocaleDateString('es-CO')
+    : new Date().toLocaleDateString('es-CO');
+
+  const coordsText = [
+    coordenadasColor?.L ? `L*: ${coordenadasColor.L}` : null,
+    coordenadasColor?.a ? `a*: ${coordenadasColor.a}` : null,
+    coordenadasColor?.b ? `b*: ${coordenadasColor.b}` : null,
+    coordenadasColor?.deltaE ? `Tolerancia: ${coordenadasColor.deltaE}` : 'Tolerancia: ΔE ≤ 1.0'
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
+  const printWindow = window.open('', '_blank', 'width=1024,height=860');
+  if (!printWindow) {
+    alert('Por favor permite las ventanas emergentes para imprimir la Ficha Técnica Completa.');
+    return;
+  }
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Ficha Técnica Completa ETP - ${codigoColor || nombreColor}</title>
+        <style>
+          @page {
+            size: letter portrait;
+            margin: 12mm;
+          }
+          * {
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif !important;
+            font-size: 12pt !important;
+            line-height: 1.45 !important;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            color: #0f172a;
+            background: #ffffff;
+          }
+          h1, h2, h3, h4, th, strong, b, .title-black {
+            font-family: 'Arial Black', Arial, sans-serif !important;
+            font-weight: 900 !important;
+          }
+          .section-block, tr, .spec-card, .step-box {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .header-sheet {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+          }
+          .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+          .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+          .spec-card {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #f8fafc;
+          }
+          .spec-card.highlight {
+            border: 2px solid #d97706;
+            background: #fffbeb;
+          }
+          .label-sm {
+            color: #475569;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 2px;
+          }
+          .norma-banner {
+            border: 2px solid #f59e0b;
+            background: #fef3c7;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+          }
+          th {
+            background: #e2e8f0;
+            padding: 8px 10px;
+            border: 1px solid #94a3b8;
+            text-align: left;
+          }
+          .step-box {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            background: #ffffff;
+          }
+          .footer-signatures {
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 2px solid #0f172a;
+            display: flex;
+            justify-content: space-between;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-sheet section-block">
+          <div>
+            <div class="title-black">CDI EXHIBICIONES S.A.S.</div>
+            <div>FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y COLORIMETRÍA (SC COLOR / ETP)</div>
+            <div><strong>COLOR:</strong> ${sistemaCatalogo} — ${codigoColor || 'S/C'} ${nombreColor && nombreColor !== codigoColor ? `(${nombreColor})` : ''}</div>
+            <div><strong>CLIENTE / PROYECTO:</strong> ${cliente || 'USO GENERAL PLANTA'}</div>
+          </div>
+          <div style="text-align: center; border: 1.5px solid #0f172a; padding: 6px; border-radius: 8px;">
+            ${qrSvgMarkup}
+          </div>
+        </div>
+
+        <div class="grid-3 section-block">
+          <div class="spec-card">
+            <span class="label-sm"><strong>Sistema de Pintura</strong></span>
+            <div>${sistemaPintura}</div>
+          </div>
+          <div class="spec-card">
+            <span class="label-sm"><strong>Sustrato Base</strong></span>
+            <div>${sustratoBase}</div>
+          </div>
+          <div class="spec-card highlight">
+            <span class="label-sm"><strong>Acabado Real de Producción</strong></span>
+            <div><strong>${acabadoProduccion} (${glossLevel}% Brillo 60°)</strong></div>
+          </div>
+          <div class="spec-card">
+            <span class="label-sm"><strong>Acabado Muestra Física</strong></span>
+            <div>${acabadoMuestraFisica}</div>
+          </div>
+          <div class="spec-card">
+            <span class="label-sm"><strong>Coordenadas / Tolerancia</strong></span>
+            <div>${coordsText}</div>
+          </div>
+          <div class="spec-card">
+            <span class="label-sm"><strong>Validación Supervisor</strong></span>
+            <div>${aprobadoPor} (${fechaFmt})</div>
+          </div>
+        </div>
+
+        <div class="norma-banner section-block">
+          <strong>NORMA DE LABORATORIO CDI:</strong> La muestra física de archivo está sellada en <strong>ACABADO BRILLANTE</strong> para protección del pigmento y lectura en Espectrofotómetro. En planta aplicar estrictamente según el <strong>Acabado de Producción (${acabadoProduccion} - ${glossLevel}%)</strong>.
+        </div>
+
+        <div class="section-block">
+          <div class="title-black" style="margin-bottom: 6px; text-transform: uppercase;">
+            1. FORMULACIÓN GRAVIMÉTRICA DE PASTAS / TINTAS / BASES (TOTAL MUESTRA: ${totalGramos.toFixed(1)} g)
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>CÓDIGO REFERENCIA</th>
+                <th>DESCRIPCIÓN DE PASTA / BASE PPG</th>
+                <th style="text-align: right;">GRAMOS MUESTRA</th>
+                <th style="text-align: right;">% FÓRMULA</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pastasRowsHtml || '<tr><td colspan="4" style="padding: 10px; border: 1px solid #cbd5e1; text-align: center;">Sin pastas registradas</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-block">
+          <div class="title-black" style="margin-bottom: 6px; text-transform: uppercase;">
+            2. PARÁMETROS TÉCNICOS DE MEZCLA Y CABINA DE APLICACIÓN
+          </div>
+          <div class="grid-3">
+            <div class="spec-card">
+              <span class="label-sm"><strong>Relación Catalizador</strong></span>
+              <div>${catalizador}</div>
+            </div>
+            <div class="spec-card">
+              <span class="label-sm"><strong>Dilución / Disolvente</strong></span>
+              <div>${disolvente}</div>
+            </div>
+            <div class="spec-card">
+              <span class="label-sm"><strong>Viscosidad de Aplicación</strong></span>
+              <div>${viscosidad}</div>
+            </div>
+            <div class="spec-card">
+              <span class="label-sm"><strong>Presión de Aire</strong></span>
+              <div>${presion}</div>
+            </div>
+            <div class="spec-card">
+              <span class="label-sm"><strong>Boquilla / Pico</strong></span>
+              <div>${boquilla}</div>
+            </div>
+            <div class="spec-card">
+              <span class="label-sm"><strong>Número de Manos</strong></span>
+              <div>${manos}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="title-black" style="margin-bottom: 6px; text-transform: uppercase;">
+            3. PROCEDIMIENTO OPERATIVO ESTÁNDAR DE APLICACIÓN EN PLANTA
+          </div>
+          <div class="step-box">
+            <strong>Paso 1 — Preparación del Sustrato (${sustratoBase}):</strong>
+            <div>${preparacion}</div>
+          </div>
+          <div class="step-box">
+            <strong>Paso 2 — Aplicación de Fondo / Primer:</strong>
+            <div>${fondo}</div>
+          </div>
+          <div class="step-box">
+            <strong>Paso 3 — Aplicación del Color / Entonación (${sistemaPintura}):</strong>
+            <div>${color}</div>
+          </div>
+          <div class="step-box">
+            <strong>Paso 4 — Barniz / Acabado Final de Producción (${acabadoProduccion} - ${glossLevel}%):</strong>
+            <div>${acabado}</div>
+          </div>
+        </div>
+
+        <div class="footer-signatures section-block">
+          <div><strong>APROBADO POR SUPERVISOR:</strong> ${aprobadoPor}</div>
+          <div><strong>FECHA DE EMISIÓN / VALIDACIÓN:</strong> ${fechaFmt}</div>
+        </div>
+
         <script>
           window.onload = function() { window.print(); };
         </script>
