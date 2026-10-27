@@ -172,6 +172,11 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
                 if (!matrix[targetArea]) return;
                 if (targetArea === currentArea) return;
 
+                // Si el producto ya está en Empaque o Despachos, ya superó todas las fases productivas (incluido Ensamble)
+                if (['EMPAQUE', 'DESPACHOS'].includes(currentAreaUpper)) {
+                    return;
+                }
+
                 // Si el área objetivo no es Ensamble y el producto ya está en Ensamble/Empaque/Despachos, ya superó las fases previas
                 if (targetArea !== 'Ensamble' && FINAL_STAGE_AREAS.includes(currentAreaUpper)) {
                     return;
@@ -336,4 +341,207 @@ export const calculatePlantMatrix = (orders, inventoryReservations = null) => {
         return a.areaName.localeCompare(b.areaName);
     });
     return sortedAreas;
+};
+
+/**
+ * Calcula los pedidos y productos cargados desde el Excel en Supabase (`ribisoft_pedidos`)
+ * a partir de un número de pedido mínimo (por defecto >= 64000) que AÚN NO HAN SIDO TOCADOS
+ * ni tienen movimiento en ninguna área de la aplicación (`produccion_pedidos`), permaneciendo
+ * en el Área Administrativa / Comercial.
+ */
+export const calculateUnstartedErpOrders = (
+    ribisoftRows = [],
+    allPlantOrders = [],
+    minPedidoNum = 64000,
+    inventoryReservations = null
+) => {
+    const cleanCode = (v) => {
+        if (v === undefined || v === null || String(v).trim() === '') return '';
+        const n = Number(v);
+        if (!Number.isNaN(n) && Number.isFinite(n)) return String(Math.trunc(n)).trim();
+        return String(v).replace(/\.0+$/, '').trim();
+    };
+
+    const normalizeText = (s) =>
+        String(s || '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+    const minNum = Number(minPedidoNum) || 64000;
+
+    // 1. Indexar todo lo que ya tiene movimiento/registro en planta (incluyendo Diseño, Programación CNC, Planta y Despachados)
+    const plantByPedido = new Map();
+    (allPlantOrders || []).forEach((ord) => {
+        if (!ord || !ord.pedidoNum) return;
+        const pNum = cleanCode(ord.pedidoNum).toUpperCase();
+        if (!pNum) return;
+        if (!plantByPedido.has(pNum)) {
+            plantByPedido.set(pNum, []);
+        }
+        plantByPedido.get(pNum).push({
+            codArticulo: cleanCode(ord.codArticulo || ord.codigo_item).toUpperCase(),
+            nombre: normalizeText(ord.nombre || ord.descripcion),
+            areaActual: ord.areaActual || 'En Planta',
+            estadoInterno: ord.estadoInterno || ''
+        });
+    });
+
+    // 2. Deduplicar las filas de `ribisoft_pedidos` cuyo número de pedido sea >= minNum
+    const dedupErpMap = new Map();
+    (ribisoftRows || []).forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        const rawPed = cleanCode(item['PedidoSIN'] ?? item['pedido_sin'] ?? item['pedido'] ?? '');
+        if (!rawPed) return;
+
+        // Extraer valor numérico del pedido para comparar con minNum (ej. 64000)
+        const numericMatch = rawPed.match(/\d+/);
+        const pedNumberVal = numericMatch ? Number(numericMatch[0]) : NaN;
+        if (Number.isNaN(pedNumberVal) || pedNumberVal < minNum) return;
+
+        const codArt = cleanCode(item['codigo_item'] ?? item['Código Ítem'] ?? item['articulo'] ?? '').toUpperCase();
+        const desc = normalizeText(item['Descripción'] ?? item['descripcion'] ?? item['nombre'] ?? '');
+        if (!codArt && !desc) return;
+
+        const cliente = normalizeText(
+            item['Cliente'] || item['cliente'] || item['Nombre Proyecto'] || item['nombre_proyecto'] || 'CLIENTE NO REGISTRADO'
+        );
+        const proyecto = normalizeText(item['Nombre Proyecto'] ?? item['nombre_proyecto'] ?? item['proyecto'] ?? '');
+        const programador = normalizeText(item['programador'] ?? item['Programador'] ?? '');
+        const cantidad = Number(item['Cantidad'] ?? item['cantidad']) || 1;
+        const fechaGenera = item['fecha_genera_ped'] ?? item['fecha_asigna'] ?? null;
+
+        const dedupKey = `${rawPed}__${desc || codArt}`;
+        const existing = dedupErpMap.get(dedupKey);
+        if (!existing || (!existing.codArticulo && codArt)) {
+            dedupErpMap.set(dedupKey, {
+                pedidoNum: rawPed,
+                pedidoNumeric: pedNumberVal,
+                codArticulo: codArt || 'S/C',
+                nombre: desc || 'PRODUCTO SIN DESCRIPCIÓN',
+                cliente,
+                proyecto,
+                programador,
+                cantidad,
+                fechaGenera,
+                acabado_1: item['acabado_1'] ?? null,
+                acabado_2: item['acabado_2'] ?? null,
+                acabado_3: item['acabado_3'] ?? null,
+                caracteristicas: item['caracteristicas'] ?? null,
+                observaciones_erp: item['observaciones_erp'] ?? null
+            });
+        }
+    });
+
+    // 3. Agrupar por Pedido y separar ítems que NO tienen movimiento en planta vs los que ya iniciaron
+    const pedidosErpGroups = new Map();
+
+    dedupErpMap.forEach((erpItem) => {
+        const pNum = erpItem.pedidoNum;
+        if (!pedidosErpGroups.has(pNum)) {
+            pedidosErpGroups.set(pNum, {
+                pedidoNum: pNum,
+                pedidoNumeric: erpItem.pedidoNumeric,
+                cliente: erpItem.cliente,
+                proyecto: erpItem.proyecto,
+                programador: erpItem.programador,
+                fechaGenera: erpItem.fechaGenera,
+                totalErpItemsCount: 0,
+                startedItemsCount: 0,
+                unstartedItems: [],
+                startedAreasSet: new Set()
+            });
+        }
+
+        const group = pedidosErpGroups.get(pNum);
+        group.totalErpItemsCount += 1;
+
+        const plantItemsForOrder = plantByPedido.get(pNum) || [];
+        const matchedPlantItem = plantItemsForOrder.find((pItem) => {
+            if (erpItem.codArticulo && erpItem.codArticulo !== 'S/C' && pItem.codArticulo) {
+                if (erpItem.codArticulo === pItem.codArticulo) return true;
+            }
+            if (erpItem.nombre && pItem.nombre && erpItem.nombre === pItem.nombre) {
+                return true;
+            }
+            return false;
+        });
+
+        if (matchedPlantItem) {
+            group.startedItemsCount += 1;
+            if (matchedPlantItem.areaActual) {
+                group.startedAreasSet.add(matchedPlantItem.areaActual);
+            }
+        } else {
+            group.unstartedItems.push(erpItem);
+        }
+    });
+
+    // 4. Construir listado final de pedidos con productos pendientes por ingresar desde Área Administrativa
+    const unstartedPedidosList = [];
+    let totalPedidosCompletamenteSinTocar = 0;
+    let totalPedidosParcialmenteIniciados = 0;
+    let totalItemsSinMovimiento = 0;
+    let pedidosConSinStock = 0;
+
+    pedidosErpGroups.forEach((group) => {
+        if (group.unstartedItems.length === 0) return;
+
+        const isCompletelyUntouched = group.startedItemsCount === 0;
+        if (isCompletelyUntouched) {
+            totalPedidosCompletamenteSinTocar += 1;
+        } else {
+            totalPedidosParcialmenteIniciados += 1;
+        }
+
+        totalItemsSinMovimiento += group.unstartedItems.length;
+
+        let orderMatSummary = null;
+        let semaforo = isCompletelyUntouched ? 'yellow' : 'green';
+
+        if (inventoryReservations && typeof inventoryReservations.getOrderSummary === 'function') {
+            orderMatSummary = inventoryReservations.getOrderSummary(group.pedidoNum, group.unstartedItems);
+            if (orderMatSummary?.status === 'SIN_STOCK') {
+                semaforo = 'red';
+                pedidosConSinStock += 1;
+            } else if (orderMatSummary?.status === 'PENDIENTE_ENTREGA') {
+                semaforo = 'yellow';
+            }
+        }
+
+        unstartedPedidosList.push({
+            pedidoNum: group.pedidoNum,
+            pedidoNumeric: group.pedidoNumeric,
+            cliente: group.cliente,
+            proyecto: group.proyecto,
+            programador: group.programador,
+            fechaGenera: group.fechaGenera,
+            totalErpItemsCount: group.totalErpItemsCount,
+            startedItemsCount: group.startedItemsCount,
+            unstartedItemsCount: group.unstartedItems.length,
+            isCompletelyUntouched,
+            startedAreas: Array.from(group.startedAreasSet),
+            items: group.unstartedItems,
+            orderMatSummary,
+            semaforo
+        });
+    });
+
+    // Ordenar: primero los 100% sin tocar y por número de pedido ascendente (los más antiguos >= 64000 primero para darles prioridad)
+    unstartedPedidosList.sort((a, b) => {
+        if (a.isCompletelyUntouched !== b.isCompletelyUntouched) {
+            return a.isCompletelyUntouched ? -1 : 1;
+        }
+        return a.pedidoNumeric - b.pedidoNumeric;
+    });
+
+    return {
+        minPedidoNum: minNum,
+        totalPedidosSinMovimiento: unstartedPedidosList.length,
+        totalPedidosCompletamenteSinTocar,
+        totalPedidosParcialmenteIniciados,
+        totalItemsSinMovimiento,
+        pedidosConSinStock,
+        pedidos: unstartedPedidosList
+    };
 };

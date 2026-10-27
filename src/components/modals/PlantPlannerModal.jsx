@@ -4,7 +4,7 @@ import {
     Package, LayoutGrid, AlertCircle, Info, BarChart2, Megaphone, Trash2, 
     Plus, Search, Calendar, ArrowUpDown 
 } from 'lucide-react';
-import { calculatePlantMatrix } from '../../services/PlantPlannerService';
+import { calculatePlantMatrix, calculateUnstartedErpOrders } from '../../services/PlantPlannerService';
 import IndicatorsDrawer from '../layout/IndicatorsDrawer';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
@@ -44,11 +44,21 @@ const PlantPlannerModal = ({
 
     // Estado para el Drawer lateral de Indicadores
     const [showIndicadores, setShowIndicadores] = useState(false);
+
+    // Estado para Pedidos en Área Administrativa / Sin Movimiento en Planta (Desde #64000)
+    const [erpRibisoftRows, setErpRibisoftRows] = useState([]);
+    const [loadingErpRows, setLoadingErpRows] = useState(false);
+    const [minErpPedido, setMinErpPedido] = useState(64000);
+    const [adminFilterType, setAdminFilterType] = useState('TODOS'); // 'TODOS' | 'SIN_TOCAR' | 'PARCIALES'
+    const [isAdminCardExpanded, setIsAdminCardExpanded] = useState(false);
+    const [expandedAdminPedidos, setExpandedAdminPedidos] = useState({});
+
     // Sincronización en tiempo real y limpieza de caché al abrir el Planificador
     useEffect(() => {
         let isMounted = true;
         const refreshPlannerOrders = async () => {
             try {
+                setLoadingErpRows(true);
                 await supabase.auth.getSession();
                 const { data, error } = await supabase.from('produccion_pedidos').select('data_completa');
                 if (!error && data && isMounted && setOrders) {
@@ -57,8 +67,32 @@ const PlantPlannerModal = ({
                         .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum && !isUnassignedErpBulkImport(o));
                     setOrders(fresh);
                 }
+
+                // Cargar pedidos de la carpeta Ribisoft (`ribisoft_pedidos`) en lotes para evaluar los >= 64000 sin movimiento
+                let allRibisoft = [];
+                let from = 0;
+                const step = 1000;
+                let hasMore = true;
+                while (hasMore && isMounted) {
+                    const { data: rBatch, error: rErr } = await supabase
+                        .from('ribisoft_pedidos')
+                        .select('*')
+                        .range(from, from + step - 1);
+                    if (rErr || !rBatch || rBatch.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allRibisoft = allRibisoft.concat(rBatch);
+                        from += step;
+                        if (rBatch.length < step) hasMore = false;
+                    }
+                }
+                if (isMounted) {
+                    setErpRibisoftRows(allRibisoft);
+                }
             } catch (err) {
                 console.error("Error al refrescar órdenes en Planificador:", err);
+            } finally {
+                if (isMounted) setLoadingErpRows(false);
             }
         };
         refreshPlannerOrders();
@@ -106,6 +140,39 @@ const PlantPlannerModal = ({
     const plantMatrix = useMemo(() => {
         return calculatePlantMatrix(orders || [], inventoryReservations);
     }, [orders, inventoryReservations]);
+
+    // Cálculo de Pedidos en Área Administrativa / Sin Movimiento en Planta (Desde #minErpPedido, por defecto 64000)
+    const unstartedErpSummary = useMemo(() => {
+        return calculateUnstartedErpOrders(
+            erpRibisoftRows,
+            orders || [],
+            minErpPedido,
+            inventoryReservations
+        );
+    }, [erpRibisoftRows, orders, minErpPedido, inventoryReservations]);
+
+    const filteredUnstartedPedidos = useMemo(() => {
+        let list = unstartedErpSummary.pedidos || [];
+        if (adminFilterType === 'SIN_TOCAR') {
+            list = list.filter(p => p.isCompletelyUntouched);
+        } else if (adminFilterType === 'PARCIALES') {
+            list = list.filter(p => !p.isCompletelyUntouched);
+        }
+        if (searchTerm.trim()) {
+            const q = searchTerm.trim().toLowerCase();
+            list = list.filter(p =>
+                p.pedidoNum.toLowerCase().includes(q) ||
+                (p.cliente && p.cliente.toLowerCase().includes(q)) ||
+                (p.proyecto && p.proyecto.toLowerCase().includes(q)) ||
+                (p.programador && p.programador.toLowerCase().includes(q))
+            );
+        }
+        return list;
+    }, [unstartedErpSummary, adminFilterType, searchTerm]);
+
+    const toggleAdminPedido = (pedidoNum) => {
+        setExpandedAdminPedidos(prev => ({ ...prev, [pedidoNum]: !prev[pedidoNum] }));
+    };
 
     const filteredMatrix = useMemo(() => {
         if (!searchTerm) return plantMatrix;
@@ -297,6 +364,298 @@ const PlantPlannerModal = ({
                     <div className="flex-1 overflow-y-auto p-3 md:p-5 bg-slate-100/50 dark:bg-[#0f172a] custom-scrollbar relative pl-8 sm:pl-10">
                         {/* Background Pattern */}
                         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)', backgroundSize: '20px 20px', backgroundPosition: '0 0, 10px 10px' }}></div>
+
+                        {/* TARJETA EJECUTIVA GERENCIAL: PEDIDOS EN ÁREA ADMINISTRATIVA / SIN MOVIMIENTO EN PLANTA (DESDE #64000) */}
+                        <div className="mb-4 relative z-10">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-500/60 shadow-lg overflow-hidden transition-all">
+                                <div
+                                    onClick={() => setIsAdminCardExpanded(!isAdminCardExpanded)}
+                                    className="p-3.5 md:p-4 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse"></div>
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="font-black text-sm md:text-base uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                                                    🏢 Área Administrativa / Sin Movimiento en Planta
+                                                </h3>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                                                    Vista Gerencial • Pedidos ≥ #{minErpPedido}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">
+                                                Pedidos montados en Supabase (Excel Ribisoft) que aún no están en Diseño, ni en Programación CNC, ni en ninguna sección de planta.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3 md:gap-5">
+                                        {/* Control de corte de pedido (por defecto 64000) */}
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex items-center gap-1.5 bg-white/90 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-amber-500/40 shadow-sm"
+                                            title="Filtrar pedidos de Ribisoft a partir de este número de pedido"
+                                        >
+                                            <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400">
+                                                Desde Pedido #:
+                                            </span>
+                                            <input
+                                                type="number"
+                                                value={minErpPedido}
+                                                onChange={(e) => setMinErpPedido(Number(e.target.value) || 0)}
+                                                className="w-20 bg-transparent text-xs font-black theme-text-primary text-center focus:outline-none border-b border-amber-500/50"
+                                            />
+                                        </div>
+
+                                        {/* Métricas Ejecutivas */}
+                                        <div className="flex items-center gap-3 sm:gap-4 text-xs font-bold">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-amber-600 dark:text-amber-400 text-sm md:text-base font-black">
+                                                    {loadingErpRows ? '...' : unstartedErpSummary.totalPedidosCompletamenteSinTocar}
+                                                </span>
+                                                <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                                                    100% Sin Tocar
+                                                </span>
+                                            </div>
+                                            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-indigo-600 dark:text-indigo-400 text-sm md:text-base font-black">
+                                                    {loadingErpRows ? '...' : unstartedErpSummary.totalPedidosParcialmenteIniciados}
+                                                </span>
+                                                <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                                                    Parciales
+                                                </span>
+                                            </div>
+                                            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="theme-text-primary text-sm md:text-base font-black">
+                                                    {loadingErpRows ? '...' : unstartedErpSummary.totalItemsSinMovimiento}
+                                                </span>
+                                                <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                                                    Productos Sin Iniciar
+                                                </span>
+                                            </div>
+                                            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+                                            <div className="flex flex-col items-center">
+                                                <span className={`${unstartedErpSummary.pedidosConSinStock > 0 ? 'text-red-500' : 'text-emerald-500'} text-sm md:text-base font-black`}>
+                                                    {loadingErpRows ? '...' : unstartedErpSummary.pedidosConSinStock}
+                                                </span>
+                                                <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                                                    Sin Stock RQ
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                                            {isAdminCardExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {isAdminCardExpanded && (
+                                    <div className="p-3 md:p-4 border-t border-amber-500/30 bg-slate-50/70 dark:bg-slate-950/40">
+                                        {/* Barra de sub-filtros de Área Administrativa */}
+                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAdminFilterType('TODOS')}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition-all ${
+                                                        adminFilterType === 'TODOS'
+                                                            ? 'bg-amber-500 text-slate-950 shadow'
+                                                            : 'bg-slate-200 dark:bg-slate-800 theme-text-secondary'
+                                                    }`}
+                                                >
+                                                    Todos ({unstartedErpSummary.totalPedidosSinMovimiento})
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAdminFilterType('SIN_TOCAR')}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition-all ${
+                                                        adminFilterType === 'SIN_TOCAR'
+                                                            ? 'bg-amber-500 text-slate-950 shadow'
+                                                            : 'bg-slate-200 dark:bg-slate-800 theme-text-secondary'
+                                                    }`}
+                                                >
+                                                    100% En Administración / Sin Tocar ({unstartedErpSummary.totalPedidosCompletamenteSinTocar})
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAdminFilterType('PARCIALES')}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition-all ${
+                                                        adminFilterType === 'PARCIALES'
+                                                            ? 'bg-amber-500 text-slate-950 shadow'
+                                                            : 'bg-slate-200 dark:bg-slate-800 theme-text-secondary'
+                                                    }`}
+                                                >
+                                                    Parcialmente en Planta ({unstartedErpSummary.totalPedidosParcialmenteIniciados})
+                                                </button>
+                                            </div>
+                                            <span className="text-[11px] font-bold theme-text-muted">
+                                                Haz clic en cualquier pedido para ver los productos que faltan por ingresar a producción
+                                            </span>
+                                        </div>
+
+                                        {loadingErpRows ? (
+                                            <div className="py-8 text-center text-xs font-bold uppercase text-amber-500">
+                                                Consultando pedidos en Supabase (Carpeta Ribisoft)...
+                                            </div>
+                                        ) : filteredUnstartedPedidos.length === 0 ? (
+                                            <div className="py-6 text-center text-slate-400 text-xs font-bold uppercase">
+                                                No hay pedidos sin movimiento desde el número #{minErpPedido}.
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[55vh] overflow-y-auto pr-1 custom-scrollbar">
+                                                {filteredUnstartedPedidos.map((ped) => {
+                                                    const isPedExpanded = expandedAdminPedidos[ped.pedidoNum];
+                                                    return (
+                                                        <div
+                                                            key={`admin_ped_${ped.pedidoNum}`}
+                                                            className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm transition-all ${
+                                                                ped.isCompletelyUntouched
+                                                                    ? 'border-amber-500/50'
+                                                                    : 'border-indigo-500/40'
+                                                            } ${isPedExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4' : 'hover:border-amber-500'}`}
+                                                        >
+                                                            <div
+                                                                onClick={() => toggleAdminPedido(ped.pedidoNum)}
+                                                                className="p-3 flex items-start justify-between cursor-pointer select-none"
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                                        <span className="font-black text-sm text-amber-600 dark:text-amber-400">
+                                                                            PED: #{ped.pedidoNum}
+                                                                        </span>
+                                                                        {ped.isCompletelyUntouched ? (
+                                                                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                                                                                100% En Administración
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40">
+                                                                                {ped.startedItemsCount} en Planta / {ped.unstartedItemsCount} Sin Iniciar
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-[11px] font-bold theme-text-primary uppercase truncate">
+                                                                        {ped.cliente}
+                                                                    </p>
+                                                                    {ped.proyecto && (
+                                                                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase truncate">
+                                                                            Proy: {ped.proyecto}
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                        <span className="text-[10px] font-black uppercase bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                                                                            {ped.unstartedItemsCount} de {ped.totalErpItemsCount} prod. sin tocar
+                                                                        </span>
+                                                                        {ped.programador && (
+                                                                            <span className="text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700 theme-text-secondary px-1.5 py-0.5 rounded border theme-border truncate max-w-[150px]">
+                                                                                Prog: {ped.programador}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {ped.orderMatSummary && ped.orderMatSummary.status !== 'SIN_REQUERIMIENTOS' && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setActiveAlertMaterials(ped.orderMatSummary.materials);
+                                                                                setShowMaterialsAlertModal(true);
+                                                                            }}
+                                                                            className={`mt-2 w-full text-left px-2 py-1 rounded text-[10px] font-black uppercase truncate border transition-colors ${
+                                                                                ped.orderMatSummary.status === 'SIN_STOCK'
+                                                                                    ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-400 hover:bg-red-500/25'
+                                                                                    : ped.orderMatSummary.status === 'PENDIENTE_ENTREGA'
+                                                                                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/25'
+                                                                                    : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25'
+                                                                            }`}
+                                                                        >
+                                                                            {ped.orderMatSummary.label}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                                <div className="p-1 text-slate-400">
+                                                                    {isPedExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                                </div>
+                                                            </div>
+
+                                                            {isPedExpanded && (
+                                                                <div className="p-3 border-t theme-border bg-slate-50 dark:bg-slate-900/60 space-y-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h5 className="text-xs font-black uppercase text-amber-600 dark:text-amber-400">
+                                                                            Productos del Pedido #{ped.pedidoNum} Aún Sin Movimiento en Planta ({ped.items.length})
+                                                                        </h5>
+                                                                        {ped.startedAreas.length > 0 && (
+                                                                            <span className="text-[10px] font-bold text-indigo-500">
+                                                                                Otros ítems de este pedido ya están en: {ped.startedAreas.join(', ')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                        {ped.items.map((it, idx) => {
+                                                                            const itemMat =
+                                                                                inventoryReservations &&
+                                                                                typeof inventoryReservations.getProductMaterials === 'function'
+                                                                                    ? inventoryReservations.getProductMaterials(
+                                                                                          it.pedidoNum,
+                                                                                          it.codArticulo,
+                                                                                          it.nombre
+                                                                                      )
+                                                                                    : null;
+                                                                            return (
+                                                                                <div
+                                                                                    key={`unstarted_${ped.pedidoNum}_${idx}`}
+                                                                                    className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col gap-1.5"
+                                                                                >
+                                                                                    <p className="text-xs md:text-sm font-bold theme-text-primary">
+                                                                                        {it.nombre}
+                                                                                    </p>
+                                                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                                                        <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border theme-border">
+                                                                                            COD: {it.codArticulo}
+                                                                                        </span>
+                                                                                        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/30">
+                                                                                            CANT: {it.cantidad}
+                                                                                        </span>
+                                                                                        <span className="text-[10px] font-black uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                                                                                            SIN INGRESAR A PLANTA
+                                                                                        </span>
+                                                                                        {itemMat && itemMat.status !== 'SIN_REQUERIMIENTOS' && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    setActiveAlertMaterials(itemMat.materials);
+                                                                                                    setShowMaterialsAlertModal(true);
+                                                                                                }}
+                                                                                                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${
+                                                                                                    itemMat.status === 'SIN_STOCK'
+                                                                                                        ? 'bg-red-500/15 border-red-500/40 text-red-600 dark:text-red-400'
+                                                                                                        : itemMat.status === 'PENDIENTE_ENTREGA'
+                                                                                                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                                                                                                        : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                                                                                }`}
+                                                                                            >
+                                                                                                {itemMat.badgeText}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         
                         {filteredMatrix.length === 0 ? (
                             <div className="flex flex-col items-center justify-center w-full h-full opacity-50 relative z-10 py-20">
@@ -336,9 +695,9 @@ const PlantPlannerModal = ({
                                                             <span className="text-[9px] uppercase font-bold">En Área</span>
                                                         </div>
                                                         <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
-                                                        <div className="flex flex-col items-center" title="Productos en áreas previas que pasarán por esta área según sus materiales (RQ) y acabados">
+                                                        <div className="flex flex-col items-center" title="Productos que están hoy en secciones anteriores y vienen en camino a esta área según sus materiales (RQ) y acabados">
                                                             <span className={`${(area.upcomingItemsCount || 0) > 0 ? 'text-purple-600 dark:text-purple-400 font-black' : 'theme-text-primary font-black'} text-sm`}>{area.upcomingItemsCount || 0}</span>
-                                                            <span className="text-[9px] uppercase font-bold">Por Pasar</span>
+                                                            <span className="text-[9px] uppercase font-bold">En Camino</span>
                                                         </div>
                                                         <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
                                                         <div className="flex flex-col items-center">
