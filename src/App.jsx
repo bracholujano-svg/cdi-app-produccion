@@ -24,6 +24,7 @@ import MaterialsAlertModal from './components/modals/MaterialsAlertModal';
 import CoordViewModal from './components/modals/CoordViewModal';
 import ReportConfigModal from './components/modals/ReportConfigModal';
 import PlantPlannerModal from './components/modals/PlantPlannerModal';
+import PackingListsModal from './components/modals/PackingListsModal';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -80,6 +81,7 @@ const {
     showReportConfigModal, setShowReportConfigModal,
     showReportPreviewModal, setShowReportPreviewModal,
     showPlantPlannerModal, setShowPlantPlannerModal,
+    showPackingListsModal, setShowPackingListsModal,
     isRegistering, setIsRegistering,
     authError, setAuthError,
     appTheme, setAppTheme,
@@ -829,6 +831,10 @@ const {
           saveBatchCoordination={saveBatchCoordination}
           deleteAlert={deleteAlert}
         />
+      )}
+
+      {showPackingListsModal && (
+        <PackingListsModal />
       )}
 
       {showEtpSupervisorModal && (

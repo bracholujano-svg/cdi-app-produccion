@@ -11,7 +11,7 @@ const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
   const { supabaseData } = useSupabaseData();
-  const { orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase } = useOrders();
+  const { orders, setOrders, coordinationAlerts, setCoordinationAlerts, packingLists, setPackingLists, syncOrderToSupabase, syncAlertToSupabase, syncPackingListToSupabase } = useOrders();
   const inventoryReservations = useInventoryMRP(orders, supabaseData);
 
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
@@ -83,6 +83,7 @@ export const AppContextProvider = ({ children }) => {
   const [showReceptionModal, setShowReceptionModal] = useState(false);
   const [showDossierModal, setShowDossierModal] = useState(false);
   const [showPlantPlannerModal, setShowPlantPlannerModal] = useState(false);
+  const [showPackingListsModal, setShowPackingListsModal] = useState(false);
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [dispatchOrders, setDispatchOrders] = useState([]);
@@ -190,7 +191,7 @@ export const AppContextProvider = ({ children }) => {
   const contextValue = {
     supabase,
     supabaseData,
-    orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase,
+    orders, setOrders, coordinationAlerts, setCoordinationAlerts, packingLists, setPackingLists, syncOrderToSupabase, syncAlertToSupabase, syncPackingListToSupabase,
     inventoryReservations,
     showMaterialsAlertModal, setShowMaterialsAlertModal,
     activeAlertMaterials, setActiveAlertMaterials,
@@ -215,6 +216,7 @@ export const AppContextProvider = ({ children }) => {
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
     showPlantPlannerModal, setShowPlantPlannerModal,
+    showPackingListsModal, setShowPackingListsModal,
     showQualityModal, setShowQualityModal,
     dashboardTab, setDashboardTab,
     showReportConfigModal, setShowReportConfigModal,

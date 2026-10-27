@@ -155,8 +155,8 @@ const OrderCard = ({ group }) => {
             const areaCounts = {};
             productsToCount.forEach(p => {
               if (!p) return;
-              if (p.estadoInterno === 'DESPACHADO' || p.estado === 'ENTREGADO' || p.areaActual === 'Despachos') return;
-              const areaName = (p.areaActual || 'Por Asignar').trim();
+              if (p.estadoInterno === 'DESPACHADO' || p.estado === 'ENTREGADO') return;
+              const areaName = (p.areaActual || 'Despachos').trim();
               const areaUpper = areaName.toUpperCase();
               if (areaUpper.includes('PROGRAMACIÓN Y DISEÑO') || areaUpper.includes('PROGRAMACION Y DISENO') || areaUpper.includes('DISEÑO Y PROGRAMACIÓN')) return;
               areaCounts[areaName] = (areaCounts[areaName] || 0) + 1;
@@ -166,7 +166,7 @@ const OrderCard = ({ group }) => {
             if (entries.length === 0) {
               return (
                 <span className="px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-xs md:text-sm whitespace-nowrap truncate">
-                  {group.products?.length || 0} EN PLANTA
+                  {group.products?.length || 0} DESPACHOS
                 </span>
               );
             }

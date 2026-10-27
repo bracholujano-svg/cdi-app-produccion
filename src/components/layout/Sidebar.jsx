@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Map, X, BarChart2, ShieldCheck, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette, AlertCircle } from 'lucide-react';
+import { Menu, Map, X, BarChart2, ShieldCheck, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette, AlertCircle, Package } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -21,6 +21,7 @@ const Sidebar = () => {
     setShowReportConfigModal,
     setShowDossierModal,
     setShowPlantPlannerModal,
+    setShowPackingListsModal,
     setSupervisorProfile,
     setAreaFilter,
     appTheme, setAppTheme
@@ -95,6 +96,9 @@ const Sidebar = () => {
 
             <button title="Planificador" type="button" onClick={() => { setIsSidebarOpen(false); setShowPlantPlannerModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-500 border border-indigo-500/30 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">
               <Map size={"1.8em"} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Planificador</span>
+            </button>
+            <button title="Listas de Empaque y QR" type="button" onClick={() => { setIsSidebarOpen(false); setShowPackingListsModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-amber-500 border border-amber-500/30 transition-colors duration-200 hover:text-white hover:bg-amber-600 hover:border-amber-600 hover:-translate-y-1">
+              <Package size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Empaque</span>
             </button>
             <button title="Calidad" type="button" onClick={() => { setIsSidebarOpen(false); setShowQualityModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-colors duration-200 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 hover:-translate-y-1">
               <ShieldCheck size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Calidad</span>

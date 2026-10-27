@@ -42,6 +42,23 @@ export const isUnassignedErpBulkImport = (orderObj) => {
 export const useOrders = () => {
     const [orders, setOrders] = useState([]);
     const [coordinationAlerts, setCoordinationAlerts] = useState([]);
+    const [packingLists, setPackingLists] = useState(() => {
+        try {
+            const raw = localStorage.getItem('cdi_packing_lists_v1');
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('cdi_packing_lists_v1', JSON.stringify(packingLists));
+        } catch (e) {
+            // Ignorar errores de cuota local
+        }
+    }, [packingLists]);
 
     const syncOrderToSupabase = async (orderObject, isDelete = false) => {
         if (!orderObject || !orderObject.id) return;
@@ -117,6 +134,26 @@ export const useOrders = () => {
         } catch (e) { console.error("Error al sincronizar alerta", e); }
     };
 
+    const syncPackingListToSupabase = async (packingListObject, isDelete = false) => {
+        if (!packingListObject || !packingListObject.id) return;
+        try {
+            if (isDelete) {
+                await supabase.from('coordinacion_alertas').delete().eq('id', packingListObject.id);
+            } else {
+                const sanitizedPayload = deepSanitize({
+                    ...packingListObject,
+                    tipoRegistro: 'PACKING_LIST'
+                });
+                await supabase.from('coordinacion_alertas').upsert({
+                    id: sanitizedPayload.id,
+                    data_completa: sanitizedPayload
+                });
+            }
+        } catch (e) {
+            console.error("Error al sincronizar lista de empaque:", e);
+        }
+    };
+
     useEffect(() => {
         const fetchProduccion = async () => {
             try {
@@ -186,10 +223,22 @@ export const useOrders = () => {
                 
                 const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
                 if (alertasData) {
-                    setCoordinationAlerts(alertasData
+                    const allRows = alertasData
                         .map(row => row.data_completa)
-                        .filter(a => a && typeof a === 'object' && a.id && a.pedidoNum)
-                    );
+                        .filter(a => a && typeof a === 'object' && a.id);
+
+                    const remoteAlerts = allRows.filter(a => a.tipoRegistro !== 'PACKING_LIST' && a.pedidoNum);
+                    const remotePackingLists = allRows.filter(a => a.tipoRegistro === 'PACKING_LIST' && a.pedidoNum);
+
+                    setCoordinationAlerts(remoteAlerts);
+                    if (remotePackingLists.length > 0) {
+                        setPackingLists(prev => {
+                            const mergedMap = new Map();
+                            prev.forEach(item => { if (item?.id) mergedMap.set(item.id, item); });
+                            remotePackingLists.forEach(item => { if (item?.id) mergedMap.set(item.id, item); });
+                            return Array.from(mergedMap.values());
+                        });
+                    }
                 }
             } catch (err) { console.error('Error fetching produccion:', err); alert('Error de permisos (RLS): ' + (err?.message || err)); }
         };
@@ -235,6 +284,19 @@ export const useOrders = () => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 const newData = payload.new?.data_completa;
                 if (!newData || !newData.id) return;
+
+                if (newData.tipoRegistro === 'PACKING_LIST') {
+                    setPackingLists(prev => {
+                        const idx = prev.findIndex(p => p.id === newData.id);
+                        if (idx >= 0) {
+                            const newArr = [...prev];
+                            newArr[idx] = newData;
+                            return newArr;
+                        }
+                        return [...prev, newData];
+                    });
+                    return;
+                }
                 
                 setCoordinationAlerts(prev => {
                     const idx = prev.findIndex(a => a.id === newData.id);
@@ -250,6 +312,7 @@ export const useOrders = () => {
                 const oldId = payload.old?.id;
                 if (oldId) {
                     setCoordinationAlerts(prev => prev.filter(a => a.id !== oldId));
+                    setPackingLists(prev => prev.filter(p => p.id !== oldId));
                 }
             }
         };
@@ -275,7 +338,10 @@ export const useOrders = () => {
         setOrders,
         coordinationAlerts,
         setCoordinationAlerts,
+        packingLists,
+        setPackingLists,
         syncOrderToSupabase,
-        syncAlertToSupabase
+        syncAlertToSupabase,
+        syncPackingListToSupabase
     };
 };
