@@ -191,11 +191,14 @@ const PackingListsModal = () => {
   // Vista principal del módulo: 'ACTIVAS' (Mesa de Empaque) vs 'HISTORIAL' (Listas Creadas y Terminadas)
   const [mainViewTab, setMainViewTab] = useState('ACTIVAS');
 
-  // Pestaña activa de lista de empaque
+  // Pestaña activa de lista de empaque (solo listas activas por defecto)
   const [activeListId, setActiveListId] = useState(() => {
     const firstActive = (packingLists || []).find((l) => l.estadoLista !== 'TERMINADA');
-    return firstActive ? firstActive.id : packingLists?.[0]?.id || null;
+    return firstActive ? firstActive.id : null;
   });
+
+  // Estado temporal cuando el usuario consulta desde el Historial una lista que ya está cerrada/terminada sin meterla a las pestañas de la Mesa de Trabajo
+  const [consultingClosedListId, setConsultingClosedListId] = useState(null);
 
   // Estado de Ventana Multitarea (Pantalla Completa por defecto y Minimizable)
   const [isMaximized, setIsMaximized] = useState(true);
@@ -232,13 +235,17 @@ const PackingListsModal = () => {
     return (packingLists || []).filter((l) => l.estadoLista !== 'TERMINADA');
   }, [packingLists]);
 
-  // Lista de empaque activa seleccionada en la mesa de trabajo
+  // Lista de empaque activa seleccionada en la mesa de trabajo (excluye terminadas salvo consulta puntual desde el Historial)
   const activePackingList = useMemo(() => {
     if (!packingLists || packingLists.length === 0) return null;
-    const found = packingLists.find((l) => l.id === activeListId);
-    if (found) return found;
-    return activeWorkingLists[0] || packingLists[0];
-  }, [packingLists, activeListId, activeWorkingLists]);
+    if (consultingClosedListId) {
+      const closedFound = packingLists.find((l) => l.id === consultingClosedListId);
+      if (closedFound) return closedFound;
+    }
+    const foundActive = activeWorkingLists.find((l) => l.id === activeListId);
+    if (foundActive) return foundActive;
+    return activeWorkingLists[0] || null;
+  }, [packingLists, activeListId, activeWorkingLists, consultingClosedListId]);
 
   // Cargar líneas de `ribisoft_pedidos` del pedido activo para detectar también ítems que aún estén en Administración/ERP
   useEffect(() => {
@@ -719,8 +726,32 @@ const PackingListsModal = () => {
       (l) => String(l.pedidoNum || '').trim().toUpperCase() === pedNum
     );
     if (existing) {
-      setActiveListId(existing.id);
-      setMainViewTab('ACTIVAS');
+      if (existing.estadoLista === 'TERMINADA') {
+        const hasMoreInEmpaque = eligibleEmpaqueOrdersSummary.some(
+          (s) => s.pedidoNum === pedNum
+        );
+        if (hasMoreInEmpaque) {
+          const reopened = {
+            ...existing,
+            estadoLista: 'ACTIVA',
+            actualizadoEn: new Date().toISOString()
+          };
+          setPackingLists((prev) =>
+            prev.map((l) => (l.id === reopened.id ? reopened : l))
+          );
+          syncPackingListToSupabase(reopened);
+          setConsultingClosedListId(null);
+          setActiveListId(reopened.id);
+          setMainViewTab('ACTIVAS');
+        } else {
+          setConsultingClosedListId(existing.id);
+          setMainViewTab('ACTIVAS');
+        }
+      } else {
+        setConsultingClosedListId(null);
+        setActiveListId(existing.id);
+        setMainViewTab('ACTIVAS');
+      }
       setSearchPedidoInput('');
       setShowNewListDropdown(false);
       return;
@@ -753,6 +784,7 @@ const PackingListsModal = () => {
     const updated = [newList, ...(packingLists || [])];
     setPackingLists(updated);
     syncPackingListToSupabase(newList);
+    setConsultingClosedListId(null);
     setActiveListId(newList.id);
     setMainViewTab('ACTIVAS');
     setSearchPedidoInput('');
@@ -817,13 +849,17 @@ const PackingListsModal = () => {
       actualizadoEn: new Date().toISOString()
     };
 
+    const nextActive = activeWorkingLists.find((l) => l.id !== finishedList.id);
+
     setPackingLists((prev) =>
       prev.map((l) => (l.id === finishedList.id ? finishedList : l))
     );
     syncPackingListToSupabase(finishedList);
+    setConsultingClosedListId(null);
+    setActiveListId(nextActive ? nextActive.id : null);
 
     alert(
-      `✅ Lista de Empaque del Pedido #${finishedList.pedidoNum} finalizada al 100% y almacenada en el Historial de Listas de Empaque.`
+      `✅ Lista de Empaque del Pedido #${finishedList.pedidoNum} finalizada al 100%, retirada de la Mesa de Trabajo activa y almacenada en el Historial de Listas de Empaque.`
     );
     setMainViewTab('HISTORIAL');
   };
@@ -837,8 +873,42 @@ const PackingListsModal = () => {
     };
     setPackingLists((prev) => prev.map((l) => (l.id === reopened.id ? reopened : l)));
     syncPackingListToSupabase(reopened);
+    setConsultingClosedListId(null);
     setActiveListId(reopened.id);
     setMainViewTab('ACTIVAS');
+  };
+
+  /**
+   * Abrir o consultar una lista desde el Historial:
+   * - Si la lista está activa: la selecciona en la Mesa de Trabajo.
+   * - Si la lista está TERMINADA:
+   *   * Si el pedido tiene productos pendientes por empacar en EMPAQUE, la reactiva como ACTIVA para seguir empacando.
+   *   * Si ya no tiene productos por empacar (quedó cerrado), se abre solo en modo consulta sin aparecer como pestaña activa en la Mesa de Trabajo.
+   */
+  const handleOpenOrConsultFromHistory = (listObj) => {
+    if (!listObj) return;
+    if (listObj.estadoLista !== 'TERMINADA') {
+      setConsultingClosedListId(null);
+      setActiveListId(listObj.id);
+      setMainViewTab('ACTIVAS');
+      return;
+    }
+
+    const pedNum = String(listObj.pedidoNum || '').trim().toUpperCase();
+    const hasPendingInEmpaque = (orders || []).some(
+      (o) =>
+        o &&
+        String(o.pedidoNum || '').trim().toUpperCase() === pedNum &&
+        isOrderStrictlyInEmpaque(o) &&
+        !o.packingListCompletada
+    );
+
+    if (hasPendingInEmpaque) {
+      handleReopenPackingList(listObj);
+    } else {
+      setConsultingClosedListId(listObj.id);
+      setMainViewTab('ACTIVAS');
+    }
   };
 
   const handleDeletePackingList = (listObj, e) => {
@@ -852,10 +922,14 @@ const PackingListsModal = () => {
       return;
     }
     const remaining = (packingLists || []).filter((l) => l.id !== listObj.id);
+    const remainingActive = remaining.filter((l) => l.estadoLista !== 'TERMINADA');
     setPackingLists(remaining);
     syncPackingListToSupabase(listObj, true);
+    if (consultingClosedListId === listObj.id) {
+      setConsultingClosedListId(null);
+    }
     if (activeListId === listObj.id) {
-      setActiveListId(remaining[0]?.id || null);
+      setActiveListId(remainingActive[0]?.id || null);
     }
   };
 
@@ -1594,160 +1668,173 @@ const PackingListsModal = () => {
               : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'
           }`}
         >
-          {/* CABECERA PRINCIPAL CON LETRA MÁS VISIBLE Y SELECTOR DE VISTAS */}
-          <div className="bg-[var(--color-surface)] border-b-2 border-[var(--color-border)] px-4 md:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner">
-                <Package size={26} strokeWidth={2.4} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight theme-text-main">
-                    Módulo de Lista de Empaque y Fraccionamiento de Bultos / QR
-                  </h2>
-                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                    Trazabilidad de Pedido Completo + QR
-                  </span>
+          {/* CABECERA PRINCIPAL: CONTROLES DE VENTANA FIJOS EN LA ESQUINA SUPERIOR DERECHA DE LA VENTANA */}
+          <div className="bg-[var(--color-surface)] border-b-2 border-[var(--color-border)] px-4 md:px-6 py-3.5 flex flex-col gap-3 shrink-0">
+            {/* FILA SUPERIOR: TÍTULO A LA IZQUIERDA + PESTAÑAS Y CONTROLES DE VENTANA EN ESQUINA SUPERIOR DERECHA */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner shrink-0">
+                  <Package size={26} strokeWidth={2.4} />
                 </div>
-                <p className="text-xs md:text-sm theme-text-muted font-bold mt-0.5">
-                  Organiza bultos en EMPAQUE, divide productos grandes en subpaquetes o cantidades en lotes y consulta el historial.
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight theme-text-main">
+                      Módulo de Lista de Empaque y Fraccionamiento de Bultos / QR
+                    </h2>
+                    <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                      Trazabilidad de Pedido Completo + QR
+                    </span>
+                  </div>
+                  <p className="text-xs md:text-sm theme-text-muted font-bold mt-0.5">
+                    Organiza bultos en EMPAQUE, divide productos grandes en subpaquetes o cantidades en lotes y consulta el historial.
+                  </p>
+                </div>
+              </div>
+
+              {/* ESQUINA SUPERIOR DERECHA DE LA VENTANA: SELECTOR DE VISTA + BARRA DE MINIMIZAR / AMPLIAR / CERRAR */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 bg-[var(--color-base)] p-1.5 rounded-2xl border-2 border-[var(--color-border)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConsultingClosedListId(null);
+                      setMainViewTab('ACTIVAS');
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                      mainViewTab === 'ACTIVAS'
+                        ? 'bg-amber-500 text-slate-950 shadow-md'
+                        : 'theme-text-muted hover:text-white'
+                    }`}
+                  >
+                    <Package size={17} />
+                    <span>Mesa de Empaque ({activeWorkingLists.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConsultingClosedListId(null);
+                      setMainViewTab('HISTORIAL');
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                      mainViewTab === 'HISTORIAL'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'theme-text-muted hover:text-white'
+                    }`}
+                  >
+                    <History size={17} />
+                    <span>Historial de Listas ({(packingLists || []).length})</span>
+                  </button>
+                </div>
+
+                <WindowControls
+                  isMaximized={isMaximized}
+                  onToggleMaximize={() => setIsMaximized((prev) => !prev)}
+                  onMinimize={() => setIsMinimized(true)}
+                  onClose={() => setShowPackingListsModal(false)}
+                />
               </div>
             </div>
 
-            {/* PESTAÑAS PRINCIPALES CON BOTONES Y TEXTO MÁS GRANDE */}
-            <div className="flex items-center gap-2 bg-[var(--color-base)] p-1.5 rounded-2xl border-2 border-[var(--color-border)]">
-              <button
-                type="button"
-                onClick={() => setMainViewTab('ACTIVAS')}
-                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
-                  mainViewTab === 'ACTIVAS'
-                    ? 'bg-amber-500 text-slate-950 shadow-md'
-                    : 'theme-text-muted hover:text-white'
-                }`}
-              >
-                <Package size={17} />
-                <span>Mesa de Empaque ({activeWorkingLists.length})</span>
-              </button>
+            {/* FILA INFERIOR DE CABECERA: BUSCADOR DE PEDIDOS EN EMPAQUE */}
+            <div className="flex items-center justify-between gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2.5 relative">
+                <div className="relative">
+                  <div className="flex items-center bg-[var(--color-base)] border-2 border-amber-500/60 rounded-xl px-3.5 py-2 focus-within:border-amber-400">
+                    <Search size={18} className="text-amber-500 mr-2 shrink-0" />
+                    <input
+                      type="text"
+                      value={searchPedidoInput}
+                      onFocus={() => setShowNewListDropdown(true)}
+                      onChange={(e) => {
+                        setSearchPedidoInput(e.target.value);
+                        setShowNewListDropdown(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchPedidoInput.trim()) {
+                          handleCreateOrOpenPackingList(searchPedidoInput);
+                        }
+                      }}
+                      placeholder="Pedido en Empaque (ej. 63577)..."
+                      className="bg-transparent text-sm md:text-base font-bold theme-text-main focus:outline-none w-48 md:w-60"
+                    />
+                    {searchPedidoInput && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchPedidoInput('')}
+                        className="theme-text-muted hover:text-white ml-1"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setMainViewTab('HISTORIAL')}
-                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
-                  mainViewTab === 'HISTORIAL'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'theme-text-muted hover:text-white'
-                }`}
-              >
-                <History size={17} />
-                <span>Historial de Listas ({(packingLists || []).length})</span>
-              </button>
-            </div>
+                  {showNewListDropdown && (
+                    <div className="absolute left-0 mt-2 w-88 md:w-[420px] max-h-96 overflow-y-auto bg-[var(--color-surface)] border-2 border-amber-500/50 rounded-2xl shadow-2xl z-50 p-3">
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--color-border)] mb-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                          Pedidos con productos en Área EMPAQUE ({filteredOrderSuggestions.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowNewListDropdown(false)}
+                          className="text-xs md:text-sm font-bold theme-text-muted hover:text-white"
+                        >
+                          Cerrar
+                        </button>
+                      </div>
 
-            {/* BUSCADOR DE PEDIDOS CON PRODUCTOS EN 'EMPAQUE' + CONTROLES DE VENTANA */}
-            <div className="flex items-center gap-2.5 relative">
-              <div className="relative">
-                <div className="flex items-center bg-[var(--color-base)] border-2 border-amber-500/60 rounded-xl px-3.5 py-2 focus-within:border-amber-400">
-                  <Search size={18} className="text-amber-500 mr-2 shrink-0" />
-                  <input
-                    type="text"
-                    value={searchPedidoInput}
-                    onFocus={() => setShowNewListDropdown(true)}
-                    onChange={(e) => {
-                      setSearchPedidoInput(e.target.value);
-                      setShowNewListDropdown(true);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && searchPedidoInput.trim()) {
-                        handleCreateOrOpenPackingList(searchPedidoInput);
-                      }
-                    }}
-                    placeholder="Pedido en Empaque (ej. 63577)..."
-                    className="bg-transparent text-sm md:text-base font-bold theme-text-main focus:outline-none w-48 md:w-60"
-                  />
-                  {searchPedidoInput && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchPedidoInput('')}
-                      className="theme-text-muted hover:text-white ml-1"
-                    >
-                      <X size={16} />
-                    </button>
+                      {filteredOrderSuggestions.length === 0 ? (
+                        <div className="p-4 text-sm font-bold theme-text-muted text-center">
+                          No hay pedidos con productos actualmente en el área de <strong>EMPAQUE</strong>.
+                        </div>
+                      ) : (
+                        filteredOrderSuggestions.map((sug) => {
+                          const alreadyOpen = activeWorkingLists.some(
+                            (l) => l.pedidoNum === sug.pedidoNum
+                          );
+                          return (
+                            <button
+                              key={sug.pedidoNum}
+                              type="button"
+                              onClick={() =>
+                                handleCreateOrOpenPackingList(sug.pedidoNum, sug.cliente)
+                              }
+                              className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-2 border-b border-[var(--color-border)]/40 last:border-b-0"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-black text-base text-amber-400">
+                                    #{sug.pedidoNum}
+                                  </span>
+                                  <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                                    {sug.empaqueItemsCount} de {sug.totalOrderItemsInPlant} prod en EMPAQUE
+                                  </span>
+                                </div>
+                                <div className="text-xs md:text-sm font-bold theme-text-main truncate mt-0.5">
+                                  {sug.cliente}
+                                </div>
+                              </div>
+                              <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] theme-text-main shrink-0">
+                                {alreadyOpen ? 'Abrir' : '+ Iniciar'}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {showNewListDropdown && (
-                  <div className="absolute right-0 mt-2 w-88 md:w-[420px] max-h-96 overflow-y-auto bg-[var(--color-surface)] border-2 border-amber-500/50 rounded-2xl shadow-2xl z-50 p-3">
-                    <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--color-border)] mb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-                        Pedidos con productos en Área EMPAQUE ({filteredOrderSuggestions.length})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowNewListDropdown(false)}
-                        className="text-xs md:text-sm font-bold theme-text-muted hover:text-white"
-                      >
-                        Cerrar
-                      </button>
-                    </div>
-
-                    {filteredOrderSuggestions.length === 0 ? (
-                      <div className="p-4 text-sm font-bold theme-text-muted text-center">
-                        No hay pedidos con productos actualmente en el área de <strong>EMPAQUE</strong>.
-                      </div>
-                    ) : (
-                      filteredOrderSuggestions.map((sug) => {
-                        const alreadyOpen = (packingLists || []).some(
-                          (l) => l.pedidoNum === sug.pedidoNum
-                        );
-                        return (
-                          <button
-                            key={sug.pedidoNum}
-                            type="button"
-                            onClick={() =>
-                              handleCreateOrOpenPackingList(sug.pedidoNum, sug.cliente)
-                            }
-                            className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-2 border-b border-[var(--color-border)]/40 last:border-b-0"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-black text-base text-amber-400">
-                                  #{sug.pedidoNum}
-                                </span>
-                                <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                                  {sug.empaqueItemsCount} de {sug.totalOrderItemsInPlant} prod en EMPAQUE
-                                </span>
-                              </div>
-                              <div className="text-xs md:text-sm font-bold theme-text-main truncate mt-0.5">
-                                {sug.cliente}
-                              </div>
-                            </div>
-                            <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] theme-text-main shrink-0">
-                              {alreadyOpen ? 'Abrir' : '+ Iniciar'}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowNewListDropdown((prev) => !prev)}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-1.5 shadow-lg border-2 border-amber-400 transition-all cursor-pointer"
+                >
+                  <Plus size={17} strokeWidth={2.8} />
+                  <span>Pedidos en Empaque</span>
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowNewListDropdown((prev) => !prev)}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-1.5 shadow-lg border-2 border-amber-400 transition-all cursor-pointer"
-              >
-                <Plus size={17} strokeWidth={2.8} />
-                <span className="hidden xl:inline">Pedidos en Empaque</span>
-              </button>
-
-              <WindowControls
-                isMaximized={isMaximized}
-                onToggleMaximize={() => setIsMaximized((prev) => !prev)}
-                onMinimize={() => setIsMinimized(true)}
-                onClose={() => setShowPackingListsModal(false)}
-              />
             </div>
           </div>
 
@@ -1904,10 +1991,7 @@ const PackingListsModal = () => {
                         <div className="pt-3 border-t border-[var(--color-border)] flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              setActiveListId(list.id);
-                              setMainViewTab('ACTIVAS');
-                            }}
+                            onClick={() => handleOpenOrConsultFromHistory(list)}
                             className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow"
                           >
                             <Eye size={16} />
@@ -1966,13 +2050,16 @@ const PackingListsModal = () => {
                   >
                     <FolderOpen size={17} className="text-amber-500" />
                     <span>
-                      Listas de Empaque en Mesa de Trabajo ({(packingLists || []).length})
+                      Listas de Empaque en Mesa de Trabajo ({activeWorkingLists.length})
                     </span>
                     {isTabsExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMainViewTab('HISTORIAL')}
+                    onClick={() => {
+                      setConsultingClosedListId(null);
+                      setMainViewTab('HISTORIAL');
+                    }}
                     className="text-xs md:text-sm font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 cursor-pointer"
                   >
                     <History size={16} />
@@ -1982,14 +2069,16 @@ const PackingListsModal = () => {
 
                 {isTabsExpanded && (
                   <div className="flex items-center gap-2.5 overflow-x-auto pb-1 custom-scrollbar">
-                    {(packingLists || []).length === 0 ? (
+                    {activeWorkingLists.length === 0 ? (
                       <div className="text-sm font-bold theme-text-muted py-2 px-4 rounded-xl border-2 border-dashed border-[var(--color-border)]">
-                        Selecciona arriba un pedido que tenga productos en el área de{' '}
-                        <strong>EMPAQUE</strong> para iniciar su fraccionamiento de bultos y códigos QR.
+                        No hay listas de empaque activas abiertas en este momento. Selecciona arriba un pedido con productos en{' '}
+                        <strong>EMPAQUE</strong> o consulta listas cerradas en el{' '}
+                        <strong>Historial de Listas</strong>.
                       </div>
                     ) : (
-                      (packingLists || []).map((list) => {
-                        const isActive = activePackingList?.id === list.id;
+                      activeWorkingLists.map((list) => {
+                        const isActive =
+                          !consultingClosedListId && activePackingList?.id === list.id;
                         const pkgCount = Array.isArray(list.packages) ? list.packages.length : 0;
                         const totalPackedUnits = (list.packages || []).reduce(
                           (acc, p) =>
@@ -2008,7 +2097,10 @@ const PackingListsModal = () => {
                         return (
                           <div
                             key={list.id}
-                            onClick={() => setActiveListId(list.id)}
+                            onClick={() => {
+                              setConsultingClosedListId(null);
+                              setActiveListId(list.id);
+                            }}
                             className={`group cursor-pointer rounded-2xl px-4 py-2.5 border-2 transition-all flex items-center gap-3.5 shrink-0 ${
                               isActive
                                 ? 'bg-amber-500/15 border-amber-500 text-white shadow-md'
@@ -2023,11 +2115,6 @@ const PackingListsModal = () => {
                                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-800 text-amber-300 border border-amber-500/40">
                                   {pkgCount} {pkgCount === 1 ? 'Bulto QR' : 'Bultos QR'}
                                 </span>
-                                {list.estadoLista === 'TERMINADA' && (
-                                  <span className="px-2 py-0.5 rounded text-xs font-black uppercase bg-emerald-500/20 text-emerald-400">
-                                    Terminada
-                                  </span>
-                                )}
                               </div>
                               <div className="text-xs md:text-sm font-bold truncate max-w-[200px] theme-text-main mt-0.5">
                                 {list.cliente}
@@ -2096,6 +2183,27 @@ const PackingListsModal = () => {
                 </div>
               ) : (
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+                  {consultingClosedListId && activePackingList.estadoLista === 'TERMINADA' && (
+                    <div className="bg-indigo-950/40 border-2 border-indigo-500/60 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 text-xs md:text-sm font-black uppercase text-indigo-200">
+                        <Eye size={18} className="text-indigo-400 shrink-0" />
+                        <span>
+                          Consultando Lista de Empaque Cerrada del Historial (Pedido #{activePackingList.pedidoNum}) — No permanece abierta en la Mesa de Trabajo
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConsultingClosedListId(null);
+                          setMainViewTab('HISTORIAL');
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase cursor-pointer"
+                      >
+                        ← Volver al Historial de Listas
+                      </button>
+                    </div>
+                  )}
+
                   {/* BARRA DE RESUMEN DEL PEDIDO COMPLETO Y BOTONES DE ACCIÓN GRANDES Y VISIBLES */}
                   <div className="bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-2xl p-5 shadow-lg space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
