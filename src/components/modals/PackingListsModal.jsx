@@ -25,7 +25,8 @@ import {
   Clock,
   CheckCircle2,
   RotateCcw,
-  AlertOctagon
+  AlertOctagon,
+  Boxes
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
@@ -56,7 +57,6 @@ export const isOrderStrictlyInEmpaque = (orderObj) => {
   const estadoGlobal = normalizeArea(orderObj.estadoGlobal);
   const status = normalizeArea(orderObj.status);
 
-  // Exclusión explícita de productos despachados o entregados
   if (
     area === 'DESPACHADO' ||
     area === 'DESPACHADOS' ||
@@ -70,7 +70,6 @@ export const isOrderStrictlyInEmpaque = (orderObj) => {
     return false;
   }
 
-  // Condición obligatoria: área actual estrictamente 'EMPAQUE'
   return area === 'EMPAQUE';
 };
 
@@ -160,10 +159,14 @@ export const buildPackageQRText = (packingList, pkg, pkgIndex, totalPackages) =>
   items.forEach((it, idx) => {
     const cod = String(it.codArticulo || 'S/C').trim();
     const nom = String(it.nombre || 'PRODUCTO').trim().slice(0, 34);
-    const cantBulto = Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 1;
+    const cantBulto = Number(it.cantidadMostradaBulto ?? it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 1;
     const cantTotalItem = Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
     lines.push(`${idx + 1}. [${cod}] ${nom}`);
-    lines.push(`   Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds`);
+    if (it.subpaqueteLabel) {
+      lines.push(`   Contenido: ${cantBulto} de ${cantTotalItem} unds (${it.subpaqueteLabel})`);
+    } else {
+      lines.push(`   Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds`);
+    }
   });
 
   if (pkg?.observaciones) {
@@ -212,12 +215,13 @@ const PackingListsModal = () => {
 
   // Estados para la Vista de Historial de Listas de Empaque
   const [historySearchTerm, setHistorySearchTerm] = useState('');
-  const [historyStatusFilter, setHistoryStatusFilter] = useState('TODAS'); // 'TODAS' | 'TERMINADAS' | 'ACTIVAS'
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('TODAS');
 
   // Estado del Modal Rojo Grande de Notificación cuando faltan productos por empacar/despachar al intentar cerrar
   const [incompleteCloseWarningModal, setIncompleteCloseWarningModal] = useState(null);
 
   // Estado de la Calculadora de Fraccionamiento y Agrupación por ítem
+  // { openPanel: null | 'LOTES_IGUALES' | 'SUBPAQUETES' | 'AGRUPACION_MANUAL', tipoEmpaque: 'Paquete', numBultos: 1, undsPorBulto: 1, numSubpaquetes: 2, manualQty: 1, targetPkgId: 'NUEVO', observaciones: '' }
   const [itemCalculators, setItemCalculators] = useState({});
 
   // Modal de vista ampliada de Código QR
@@ -271,7 +275,6 @@ const PackingListsModal = () => {
   const eligibleEmpaqueOrdersSummary = useMemo(() => {
     const map = new Map();
 
-    // Primero agrupamos cuántos productos totales tiene cada pedido en planta
     const totalByPedidoMap = new Map();
     (orders || []).forEach((o) => {
       if (!o || !o.pedidoNum) return;
@@ -317,10 +320,7 @@ const PackingListsModal = () => {
   }, [eligibleEmpaqueOrdersSummary, searchPedidoInput]);
 
   /**
-   * PANORAMA COMPLETO DEL PEDIDO ACTIVO:
-   * - ¿Cuántos productos tiene el pedido en total (ej. 58 productos)?
-   * - ¿Cuántos están en Empaque / Empacados / Despachos (ej. 20 productos)?
-   * - ¿Cuántos FALTAN por llegar a Empaque (ej. 38 productos) y en qué área de la planta están ubicados?
+   * PANORAMA COMPLETO DEL PEDIDO ACTIVO
    */
   const orderPanorama = useMemo(() => {
     if (!activePackingList?.pedidoNum) {
@@ -368,7 +368,6 @@ const PackingListsModal = () => {
           estadoInterno: o.estadoInterno || 'En Despachos'
         });
       } else {
-        // Producto del pedido que AÚN NO HA LLEGADO A EMPAQUE (está en Ensamble, Pintura, Ebanistería, CNC, Diseño, etc.)
         const areaDisplay = String(o.areaActual || 'En Planta').trim();
         const transitoHacia = o.transferenciaPendiente?.haciaArea
           ? `En Tránsito hacia ${o.transferenciaPendiente.haciaArea}`
@@ -386,7 +385,6 @@ const PackingListsModal = () => {
       }
     });
 
-    // Verificar si en `ribisoft_pedidos` (ERP) existen líneas adicionales de este pedido que aún no han bajado a planta
     const seenErpKeys = new Set();
     (erpOrderRows || []).forEach((erpRow, idx) => {
       const codErp = String(erpRow.codigo_item ?? erpRow.articulo ?? '').trim().toUpperCase();
@@ -418,7 +416,6 @@ const PackingListsModal = () => {
       }
     });
 
-    // Agrupar productos pendientes por llegar según su Área Actual
     const byAreaMap = new Map();
     pendingInOtherPlantAreasArr.forEach((item) => {
       const areaKey = item.areaActual || 'En Planta';
@@ -438,7 +435,6 @@ const PackingListsModal = () => {
       (a, b) => b.itemsCount - a.itemsCount
     );
 
-    // Si hay bultos generados cuyos ítems no estaban en plantOrdersForPed (ej. pedidos antiguos), considerarlos en el conteo
     const uniquePackedOrderIds = new Set(packedOrDispatchedArr.map((x) => x.id));
     (activePackingList?.packages || []).forEach((pkg) => {
       (pkg.items || []).forEach((it) => {
@@ -460,7 +456,11 @@ const PackingListsModal = () => {
       (acc, p) =>
         acc +
         (p.items || []).reduce(
-          (s, it) => s + (Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
+          (s, it) =>
+            s +
+            (it.esSubpaqueteAdicional
+              ? 0
+              : Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
           0
         ),
       0
@@ -485,7 +485,6 @@ const PackingListsModal = () => {
     };
   }, [activePackingList, orders, erpOrderRows]);
 
-  // Filtrado de la tabla de productos que faltan por llegar a Empaque
   const filteredPendingArrivalItems = useMemo(() => {
     const q = pendingArrivalSearch.trim().toUpperCase();
     return (orderPanorama.pendingArrivalItems || []).filter((item) => {
@@ -543,7 +542,9 @@ const PackingListsModal = () => {
     packages.forEach((pkg) => {
       (pkg.items || []).forEach((it) => {
         const k = it.itemKey;
-        const qty = Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0;
+        const qty = it.esSubpaqueteAdicional
+          ? 0
+          : Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0;
         if (k) {
           packedUnitsByKey.set(k, (packedUnitsByKey.get(k) || 0) + qty);
           bultosCountByKey.set(k, (bultosCountByKey.get(k) || 0) + 1);
@@ -569,7 +570,7 @@ const PackingListsModal = () => {
     });
   }, [activePackingList, orders]);
 
-  // Inicializar valores por defecto de la calculadora para cada ítem pendiente en Empaque
+  // Inicializar valores por defecto de la calculadora para cada ítem pendiente en Empaque (Sin abrir paneles avanzados por defecto para no sobrecargar)
   useEffect(() => {
     setItemCalculators((prev) => {
       const next = { ...prev };
@@ -581,10 +582,13 @@ const PackingListsModal = () => {
         if (!curr) {
           changed = true;
           next[item.itemKey] = {
+            openPanel: null, // null (Vista limpia con botones directos) | 'LOTES_IGUALES' | 'SUBPAQUETES' | 'AGRUPACION_MANUAL'
             mode: 'LOTES_IGUALES',
             tipoEmpaque: 'Paquete',
-            numBultos: item.cantidadPendiente <= 10 ? item.cantidadPendiente : 1,
-            undsPorBulto: item.cantidadPendiente <= 10 ? 1 : item.cantidadPendiente,
+            numBultos: 1,
+            undsPorBulto: item.cantidadPendiente,
+            numSubpaquetes: 2,
+            unidadesParaSubpaquetes: 1,
             manualQty: item.cantidadPendiente,
             targetPkgId: 'NUEVO',
             observaciones: ''
@@ -612,10 +616,13 @@ const PackingListsModal = () => {
       ...prev,
       [itemKey]: {
         ...(prev[itemKey] || {
+          openPanel: null,
           mode: 'LOTES_IGUALES',
           tipoEmpaque: 'Paquete',
           numBultos: 1,
           undsPorBulto: 1,
+          numSubpaquetes: 2,
+          unidadesParaSubpaquetes: 1,
           manualQty: 1,
           targetPkgId: 'NUEVO',
           observaciones: ''
@@ -641,7 +648,6 @@ const PackingListsModal = () => {
     return orderProductsInEmpaque.filter((item) => item.isFullyPacked);
   }, [orderProductsInEmpaque]);
 
-  // Estadísticas globales de empaque del pedido activo (incluyendo unidades ya en bultos transferidos)
   const packingStats = useMemo(() => {
     const totalReferenciasEnEmpaque = orderProductsInEmpaque.length;
     const referenciasCompletas = completedEmpaqueProductsReadyForDispatch.length;
@@ -651,7 +657,11 @@ const PackingListsModal = () => {
       (acc, p) =>
         acc +
         (p.items || []).reduce(
-          (s, it) => s + (Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
+          (s, it) =>
+            s +
+            (it.esSubpaqueteAdicional
+              ? 0
+              : Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
           0
         ),
       0
@@ -701,7 +711,6 @@ const PackingListsModal = () => {
     orderPanorama
   ]);
 
-  // Crear o abrir una Lista de Empaque
   const handleCreateOrOpenPackingList = (pedidoNumRaw, clienteRaw = '') => {
     const pedNum = String(pedidoNumRaw || '').trim().toUpperCase();
     if (!pedNum) return;
@@ -733,7 +742,7 @@ const PackingListsModal = () => {
       pedidoNum: pedNum,
       cliente: clienteRaw || eligibleSummary.cliente || 'CLIENTE GENERAL',
       proyecto: eligibleSummary.proyecto || '',
-      estadoLista: 'ACTIVA', // 'ACTIVA' | 'ACTIVA_PARCIAL' | 'TERMINADA'
+      estadoLista: 'ACTIVA',
       creadoEn: new Date().toISOString(),
       actualizadoEn: new Date().toISOString(),
       creadoPor: supervisorProfile?.nombre || supervisorProfile?.name || 'PLANTA / EMPAQUE',
@@ -751,13 +760,7 @@ const PackingListsModal = () => {
   };
 
   /**
-   * FLUJO DE CIERRE / FINALIZACIÓN DE LISTA DE EMPAQUE CON NOTIFICACIÓN ROJA GRANDE:
-   * - Si aún faltan productos del pedido por llegar a Empaque (en otras áreas), por empacar en bultos o por transferir a Despachos:
-   *   Muestra una NOTIFICACIÓN ROJA, GRANDE Y VISIBLE con botón "ACEPTAR".
-   *   Y AUNQUE SE LE DÉ A ACEPTAR, LA LISTA DE EMPAQUE NO SE DA POR CERRADA/TERMINADA, SINO QUE QUEDA ACTIVA
-   *   (guardada en el historial como ACTIVA / DESPACHO PARCIAL para poder despachar hoy los productos listos y mañana el resto).
-   * - Si el 100% de los productos del pedido ya están empacados y en Despachos/Despachados:
-   *   Se guarda como TERMINADA en el Historial de Listas de Empaque.
+   * CIERRE / FINALIZACIÓN DE LISTA DE EMPAQUE CON NOTIFICACIÓN ROJA GRANDE PREVENTIVA
    */
   const handleAttemptClosePackingList = () => {
     if (!activePackingList) return;
@@ -769,7 +772,6 @@ const PackingListsModal = () => {
       faltanPorLlegarCount + faltanPorEmpacarCount + faltanPorPasarADespachosCount;
 
     if (totalFaltantes > 0) {
-      // Guardar avance parcial en Supabase pero MANTENER LA LISTA ACTIVA (NO CERRARLA COMO TERMINADA)
       const updatedActiveList = {
         ...activePackingList,
         estadoLista: 'ACTIVA_PARCIAL',
@@ -787,7 +789,6 @@ const PackingListsModal = () => {
       );
       syncPackingListToSupabase(updatedActiveList);
 
-      // Abrir la Notificación Roja Grande y Visible que pide darle a ACEPTAR manteniendo la lista activa
       setIncompleteCloseWarningModal({
         pedidoNum: activePackingList.pedidoNum,
         cliente: activePackingList.cliente,
@@ -808,7 +809,6 @@ const PackingListsModal = () => {
       return;
     }
 
-    // Si todos los productos del pedido están 100% empacados y en Despachos, se marca como TERMINADA y se archiva en Historial
     const finishedList = {
       ...activePackingList,
       estadoLista: 'TERMINADA',
@@ -828,7 +828,6 @@ const PackingListsModal = () => {
     setMainViewTab('HISTORIAL');
   };
 
-  // Reactivar una lista de empaque desde el Historial para seguir trabajando en ella
   const handleReopenPackingList = (listObj) => {
     if (!listObj) return;
     const reopened = {
@@ -842,7 +841,6 @@ const PackingListsModal = () => {
     setMainViewTab('ACTIVAS');
   };
 
-  // Eliminar una lista de empaque
   const handleDeletePackingList = (listObj, e) => {
     if (e) e.stopPropagation();
     if (!listObj) return;
@@ -877,17 +875,30 @@ const PackingListsModal = () => {
     });
   };
 
-  const handleGenerateBultosForItem = (prod) => {
+  /**
+   * GENERACIÓN DE BULTOS RÁPIDA O AVANZADA:
+   * Soporta:
+   * 1) Acción Rápida Directa (`quickOverride`: ej. Todo en 1 paquete o 1 paquete por unidad)
+   * 2) División de Cantidad en Lotes (`LOTES_IGUALES`: ej. 500 flautas -> 10 paquetes de 50 unds)
+   * 3) Separación de un Producto Grande en Subpaquetes / Partes (`SUBPAQUETES`: ej. 1 mueble grande -> 3 subpaquetes con QR individual)
+   * 4) Agrupación Manual en Caja / Guacal Mixto (`AGRUPACION_MANUAL`)
+   */
+  const handleGenerateBultosForItem = (prod, quickOverride = null) => {
     if (!activePackingList || !prod) return;
-    const calc = itemCalculators[prod.itemKey] || {
+    const baseCalc = itemCalculators[prod.itemKey] || {
+      openPanel: null,
       mode: 'LOTES_IGUALES',
       tipoEmpaque: 'Paquete',
       numBultos: 1,
       undsPorBulto: prod.cantidadPendiente,
+      numSubpaquetes: 2,
+      unidadesParaSubpaquetes: 1,
       manualQty: prod.cantidadPendiente,
       targetPkgId: 'NUEVO',
       observaciones: ''
     };
+
+    const calc = quickOverride ? { ...baseCalc, ...quickOverride } : baseCalc;
 
     const currentPackages = Array.isArray(activePackingList.packages)
       ? [...activePackingList.packages]
@@ -896,19 +907,80 @@ const PackingListsModal = () => {
     const tipoUpper = String(calc.tipoEmpaque || 'Paquete').trim().toUpperCase();
     const obsClean = String(calc.observaciones || '').trim().toUpperCase();
 
-    if (calc.mode === 'LOTES_IGUALES') {
+    if (calc.mode === 'SUBPAQUETES') {
+      // MODO ESPECIAL: DIVIDIR 1 PRODUCTO GRANDE EN MÚLTIPLES SUBPAQUETES / PARTES (Ej. 1 mueble en 3 subpaquetes)
+      const numSubpaquetes = Math.floor(Number(calc.numSubpaquetes) || 0);
+      const unidadesProducto = Math.max(
+        1,
+        Math.min(
+          prod.cantidadPendiente,
+          Math.floor(Number(calc.unidadesParaSubpaquetes) || 1)
+        )
+      );
+
+      if (numSubpaquetes < 2) {
+        alert('⚠️ Para separar un producto grande en subpaquetes, indica al menos 2 subpaquetes.');
+        return;
+      }
+
+      if (unidadesProducto > prod.cantidadPendiente) {
+        alert(
+          `❌ Solo tienes ${prod.cantidadPendiente} unidad(es) pendiente(s) de este producto.`
+        );
+        return;
+      }
+
+      const subGroupId = `SUBGRP_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+      for (let i = 0; i < numSubpaquetes; i++) {
+        const nextNum = currentPackages.length + 1;
+        const numPadded = String(nextNum).padStart(2, '0');
+        const subLabel = `SUBPAQUETE ${i + 1} DE ${numSubpaquetes}`;
+
+        currentPackages.push({
+          id: `PKG_${activePackingList.pedidoNum}_${Date.now()}_SUB_${i}_${Math.random().toString(36).slice(2, 7)}`,
+          consecutivo: nextNum,
+          codigoPaquete: `${tipoUpper} #${numPadded}`,
+          tipoEmpaque: tipoUpper,
+          observaciones: obsClean ? `${subLabel} - ${obsClean}` : subLabel,
+          fechaEmpaque: new Date().toISOString(),
+          empacadoPor: supervisorProfile?.nombre || 'EMPAQUE',
+          subpaqueteGroupId: subGroupId,
+          loteFraccionadoInfo: subLabel,
+          items: [
+            {
+              itemKey: prod.itemKey,
+              orderId: prod.orderId,
+              codArticulo: prod.codArticulo,
+              nombre: prod.nombre,
+              // Solo el primer subpaquete descuenta las unidades del saldo matemático para no duplicar el conteo de inventario
+              cantidadEnEsteBulto: i === 0 ? unidadesProducto : 0,
+              cantidadEmpacada: i === 0 ? unidadesProducto : 0,
+              cantidadMostradaBulto: unidadesProducto,
+              esSubpaqueteAdicional: i > 0,
+              subpaqueteGroupId: subGroupId,
+              subpaqueteLabel: subLabel,
+              cantidadTotalItem: prod.cantidadTotalPedido,
+              cantidadTotalPedido: prod.cantidadTotalPedido,
+              textoContenidoBulto: `${unidadesProducto} de ${prod.cantidadTotalPedido} unds (${subLabel})`,
+              areaOrigen: 'Empaque'
+            }
+          ]
+        });
+      }
+    } else if (calc.mode === 'LOTES_IGUALES') {
       const numBultos = Math.floor(Number(calc.numBultos) || 0);
       const undsPorBulto = Math.floor(Number(calc.undsPorBulto) || 0);
       const totalUnidadesAGenerar = numBultos * undsPorBulto;
 
       if (numBultos <= 0 || undsPorBulto <= 0) {
-        alert('⚠️ La cantidad de bultos y las unidades por bulto deben ser mayores a 0.');
+        alert('⚠️ La cantidad de paquetes y las unidades por paquete deben ser mayores a 0.');
         return;
       }
 
       if (totalUnidadesAGenerar > prod.cantidadPendiente) {
         alert(
-          `❌ Error de Saldo Matemático:\nIntentas distribuir ${numBultos} bultos × ${undsPorBulto} unds = ${totalUnidadesAGenerar} unidades, pero el producto [${prod.codArticulo}] solo tiene ${prod.cantidadPendiente} unidades disponibles por empacar (Total del pedido: ${prod.cantidadTotalPedido} unds).`
+          `❌ Error de Saldo Matemático:\nIntentas distribuir ${numBultos} paquetes × ${undsPorBulto} unds = ${totalUnidadesAGenerar} unidades, pero el producto [${prod.codArticulo}] solo tiene ${prod.cantidadPendiente} unidades disponibles por empacar (Total del pedido: ${prod.cantidadTotalPedido} unds).`
         );
         return;
       }
@@ -933,6 +1005,7 @@ const PackingListsModal = () => {
               nombre: prod.nombre,
               cantidadEnEsteBulto: undsPorBulto,
               cantidadEmpacada: undsPorBulto,
+              cantidadMostradaBulto: undsPorBulto,
               cantidadTotalItem: prod.cantidadTotalPedido,
               cantidadTotalPedido: prod.cantidadTotalPedido,
               textoContenidoBulto: `${undsPorBulto} de ${prod.cantidadTotalPedido} unds`,
@@ -942,6 +1015,7 @@ const PackingListsModal = () => {
         });
       }
     } else {
+      // MODO B: AGRUPACIÓN MANUAL / CAJA MIXTA
       const manualQty = Math.floor(Number(calc.manualQty) || 0);
       if (manualQty <= 0) {
         alert('⚠️ Ingresa una cantidad de unidades válida mayor a 0.');
@@ -961,6 +1035,7 @@ const PackingListsModal = () => {
         nombre: prod.nombre,
         cantidadEnEsteBulto: manualQty,
         cantidadEmpacada: manualQty,
+        cantidadMostradaBulto: manualQty,
         cantidadTotalItem: prod.cantidadTotalPedido,
         cantidadTotalPedido: prod.cantidadTotalPedido,
         textoContenidoBulto: `${manualQty} de ${prod.cantidadTotalPedido} unds`,
@@ -979,12 +1054,15 @@ const PackingListsModal = () => {
 
         if (sameItemIdx >= 0) {
           const updatedQtyInBulto =
-            (Number(existingItems[sameItemIdx].cantidadEnEsteBulto ?? existingItems[sameItemIdx].cantidadEmpacada) || 0) +
-            manualQty;
+            (Number(
+              existingItems[sameItemIdx].cantidadEnEsteBulto ??
+                existingItems[sameItemIdx].cantidadEmpacada
+            ) || 0) + manualQty;
           existingItems[sameItemIdx] = {
             ...existingItems[sameItemIdx],
             cantidadEnEsteBulto: updatedQtyInBulto,
             cantidadEmpacada: updatedQtyInBulto,
+            cantidadMostradaBulto: updatedQtyInBulto,
             textoContenidoBulto: `${updatedQtyInBulto} de ${prod.cantidadTotalPedido} unds`
           };
         } else {
@@ -1022,19 +1100,20 @@ const PackingListsModal = () => {
     syncPackingListToSupabase(updatedList);
 
     const usedUnits =
-      calc.mode === 'LOTES_IGUALES'
+      calc.mode === 'SUBPAQUETES'
+        ? Math.max(1, Math.floor(Number(calc.unidadesParaSubpaquetes) || 1))
+        : calc.mode === 'LOTES_IGUALES'
         ? (Number(calc.numBultos) || 1) * (Number(calc.undsPorBulto) || 1)
         : Number(calc.manualQty) || 1;
     const remainingAfter = Math.max(0, prod.cantidadPendiente - usedUnits);
 
-    if (remainingAfter > 0) {
-      updateItemCalc(prod.itemKey, {
-        numBultos: 1,
-        undsPorBulto: remainingAfter,
-        manualQty: remainingAfter,
-        observaciones: ''
-      });
-    }
+    updateItemCalc(prod.itemKey, {
+      openPanel: remainingAfter > 0 ? calc.openPanel : null,
+      numBultos: 1,
+      undsPorBulto: Math.max(1, remainingAfter),
+      manualQty: Math.max(1, remainingAfter),
+      observaciones: ''
+    });
   };
 
   const handleTransferToDespachos = async (itemsToTransfer) => {
@@ -1153,14 +1232,24 @@ const PackingListsModal = () => {
 
   const handleDeletePackage = (pkgId) => {
     if (!activePackingList) return;
+    const targetPkg = (activePackingList.packages || []).find((p) => p.id === pkgId);
+    const isSubpkgGroup = Boolean(targetPkg?.subpaqueteGroupId);
+
     if (
       !window.confirm(
-        '¿Deseas eliminar este bulto de la lista? Las unidades regresarán al saldo pendiente por empacar.'
+        isSubpkgGroup
+          ? 'Este bulto forma parte de un producto dividido en subpaquetes. ¿Deseas eliminar todos los subpaquetes de este producto para que regrese al saldo pendiente?'
+          : '¿Deseas eliminar este bulto de la lista? Las unidades regresarán al saldo pendiente por empacar.'
       )
     ) {
       return;
     }
-    const filtered = (activePackingList.packages || []).filter((p) => p.id !== pkgId);
+
+    const filtered = (activePackingList.packages || []).filter((p) =>
+      isSubpkgGroup
+        ? p.subpaqueteGroupId !== targetPkg.subpaqueteGroupId
+        : p.id !== pkgId
+    );
     const reindexed = reindexPackagesList(filtered, activePackingList.pedidoNum);
 
     const updatedList = {
@@ -1174,7 +1263,6 @@ const PackingListsModal = () => {
     syncPackingListToSupabase(updatedList);
   };
 
-  // Impresión de Etiquetas QR o Lista de Empaque Oficial (admite pasar una lista específica desde el Historial)
   const handlePrint = (mode = 'LISTA_COMPLETA', singlePkg = null, customListObj = null) => {
     const targetList = customListObj || activePackingList;
     if (!targetList) return;
@@ -1222,16 +1310,23 @@ const PackingListsModal = () => {
 
           const itemsRows = (pkg.items || [])
             .map((it) => {
-              const cantBulto = Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 1;
-              const cantTotalItem = Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
+              const cantBulto =
+                Number(it.cantidadMostradaBulto ?? it.cantidadEnEsteBulto ?? it.cantidadEmpacada) ||
+                1;
+              const cantTotalItem =
+                Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
               return `
                 <div style="border-bottom: 1px dashed #cbd5e1; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                  <div style="font-size: 12px; font-weight: 800; color: #0f172a;">
-                    <span style="background: #0f172a; color: #fff; padding: 1px 6px; border-radius: 4px; font-family: monospace; margin-right: 5px;">${it.codArticulo || 'S/C'}</span>
+                  <div style="font-size: 13px; font-weight: 800; color: #0f172a;">
+                    <span style="background: #0f172a; color: #fff; padding: 2px 7px; border-radius: 4px; font-family: monospace; margin-right: 5px;">${it.codArticulo || 'S/C'}</span>
                     ${it.nombre || ''}
                   </div>
                   <div style="font-size: 13px; font-weight: 900; background: #fef3c7; border: 1.5px solid #f59e0b; color: #92400e; padding: 3px 8px; border-radius: 6px; white-space: nowrap;">
-                    Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds
+                    ${
+                      it.subpaqueteLabel
+                        ? `${cantBulto} de ${cantTotalItem} unds (${it.subpaqueteLabel})`
+                        : `Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds`
+                    }
                   </div>
                 </div>
               `;
@@ -1257,13 +1352,13 @@ const PackingListsModal = () => {
                   <div style="font-size: 9px; font-weight: 900; font-family: monospace; margin-top: 2px;">${targetList.pedidoNum}-B${numPadded}</div>
                 </div>
                 <div style="flex: 1;">
-                  <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #334155; margin-bottom: 4px;">
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; color: #334155; margin-bottom: 4px;">
                     Contenido Exacto de este Bulto Físico:
                   </div>
                   ${itemsRows}
                   ${
                     pkg.observaciones
-                      ? `<div style="margin-top: 6px; font-size: 11px; font-weight: 800; color: #b45309;">OBSERVACIÓN: ${pkg.observaciones}</div>`
+                      ? `<div style="margin-top: 6px; font-size: 12px; font-weight: 800; color: #b45309;">OBSERVACIÓN: ${pkg.observaciones}</div>`
                       : ''
                   }
                 </div>
@@ -1302,7 +1397,6 @@ const PackingListsModal = () => {
       return;
     }
 
-    // MODO LISTA DE EMPAQUE OFICIAL COMPLETA
     const tableRowsHtml = allPackages
       .map((pkg, pkgIdx) => {
         const items = pkg.items || [];
@@ -1315,8 +1409,11 @@ const PackingListsModal = () => {
           .map((it, itemIdx) => {
             const isFirstRow = itemIdx === 0;
             const rowSpan = items.length;
-            const cantBulto = Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 1;
-            const cantTotalItem = Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
+            const cantBulto =
+              Number(it.cantidadMostradaBulto ?? it.cantidadEnEsteBulto ?? it.cantidadEmpacada) ||
+              1;
+            const cantTotalItem =
+              Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
 
             return `
               <tr>
@@ -1333,6 +1430,7 @@ const PackingListsModal = () => {
                 <td style="border: 1px solid #94a3b8; padding: 8px; font-weight: 700; font-size: 12px;">${it.nombre || ''}</td>
                 <td style="border: 1px solid #94a3b8; padding: 8px; text-align: center; font-weight: 900; font-size: 12px; background: #fefce8;">
                   ${cantBulto} de ${cantTotalItem} unds
+                  ${it.subpaqueteLabel ? `<div style="font-size: 10px; color: #7c3aed; margin-top: 2px;">${it.subpaqueteLabel}</div>` : ''}
                 </td>
                 ${
                   isFirstRow
@@ -1410,7 +1508,6 @@ const PackingListsModal = () => {
     printWindow.document.close();
   };
 
-  // Enriquecer todas las listas de empaque para la vista de Historial
   const enrichedHistoryLists = useMemo(() => {
     const q = historySearchTerm.trim().toUpperCase();
     return (packingLists || [])
@@ -1433,7 +1530,11 @@ const PackingListsModal = () => {
           (acc, p) =>
             acc +
             (p.items || []).reduce(
-              (s, it) => s + (Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
+              (s, it) =>
+                s +
+                (it.esSubpaqueteAdicional
+                  ? 0
+                  : Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
               0
             ),
           0
@@ -1487,67 +1588,67 @@ const PackingListsModal = () => {
         } ${isMaximized ? 'p-0' : 'p-2 md:p-5'}`}
       >
         <div
-          className={`bg-[var(--color-base)] border border-[var(--color-border)] flex flex-col overflow-hidden transition-all duration-200 ${
+          className={`bg-[var(--color-base)] border-2 border-[var(--color-border)] flex flex-col overflow-hidden transition-all duration-200 ${
             isMaximized
               ? 'w-screen h-screen rounded-none'
               : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'
           }`}
         >
-          {/* CABECERA PRINCIPAL CON SELECTOR DE LAS 2 VISTAS (MESA DE EMPAQUE ACTIVA vs HISTORIAL DE LISTAS) */}
-          <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-500 shadow-inner">
-                <Package size={24} strokeWidth={2.3} />
+          {/* CABECERA PRINCIPAL CON LETRA MÁS VISIBLE Y SELECTOR DE VISTAS */}
+          <div className="bg-[var(--color-surface)] border-b-2 border-[var(--color-border)] px-4 md:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner">
+                <Package size={26} strokeWidth={2.4} />
               </div>
               <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg md:text-xl font-black uppercase tracking-tight theme-text-main">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight theme-text-main">
                     Módulo de Lista de Empaque y Fraccionamiento de Bultos / QR
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                     Trazabilidad de Pedido Completo + QR
                   </span>
                 </div>
-                <p className="text-xs theme-text-muted font-medium">
-                  Fracciona en bultos los productos en EMPAQUE, consulta qué productos faltan por llegar desde planta y revisa el historial de listas.
+                <p className="text-xs md:text-sm theme-text-muted font-bold mt-0.5">
+                  Organiza bultos en EMPAQUE, divide productos grandes en subpaquetes o cantidades en lotes y consulta el historial.
                 </p>
               </div>
             </div>
 
-            {/* PESTAÑAS PRINCIPALES: 1) MESA DE EMPAQUE ACTIVA | 2) HISTORIAL DE LISTAS DE EMPAQUE */}
-            <div className="flex items-center gap-1.5 bg-[var(--color-base)] p-1 rounded-2xl border border-[var(--color-border)]">
+            {/* PESTAÑAS PRINCIPALES CON BOTONES Y TEXTO MÁS GRANDE */}
+            <div className="flex items-center gap-2 bg-[var(--color-base)] p-1.5 rounded-2xl border-2 border-[var(--color-border)]">
               <button
                 type="button"
                 onClick={() => setMainViewTab('ACTIVAS')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   mainViewTab === 'ACTIVAS'
                     ? 'bg-amber-500 text-slate-950 shadow-md'
                     : 'theme-text-muted hover:text-white'
                 }`}
               >
-                <Package size={15} />
+                <Package size={17} />
                 <span>Mesa de Empaque ({activeWorkingLists.length})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setMainViewTab('HISTORIAL')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   mainViewTab === 'HISTORIAL'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'theme-text-muted hover:text-white'
                 }`}
               >
-                <History size={15} />
+                <History size={17} />
                 <span>Historial de Listas ({(packingLists || []).length})</span>
               </button>
             </div>
 
             {/* BUSCADOR DE PEDIDOS CON PRODUCTOS EN 'EMPAQUE' + CONTROLES DE VENTANA */}
-            <div className="flex items-center gap-2 relative">
+            <div className="flex items-center gap-2.5 relative">
               <div className="relative">
-                <div className="flex items-center bg-[var(--color-base)] border-2 border-amber-500/50 rounded-xl px-3 py-1.5 focus-within:border-amber-500">
-                  <Search size={16} className="text-amber-500 mr-2 shrink-0" />
+                <div className="flex items-center bg-[var(--color-base)] border-2 border-amber-500/60 rounded-xl px-3.5 py-2 focus-within:border-amber-400">
+                  <Search size={18} className="text-amber-500 mr-2 shrink-0" />
                   <input
                     type="text"
                     value={searchPedidoInput}
@@ -1562,7 +1663,7 @@ const PackingListsModal = () => {
                       }
                     }}
                     placeholder="Pedido en Empaque (ej. 63577)..."
-                    className="bg-transparent text-xs md:text-sm font-bold theme-text-main focus:outline-none w-44 md:w-56"
+                    className="bg-transparent text-sm md:text-base font-bold theme-text-main focus:outline-none w-48 md:w-60"
                   />
                   {searchPedidoInput && (
                     <button
@@ -1570,28 +1671,28 @@ const PackingListsModal = () => {
                       onClick={() => setSearchPedidoInput('')}
                       className="theme-text-muted hover:text-white ml-1"
                     >
-                      <X size={14} />
+                      <X size={16} />
                     </button>
                   )}
                 </div>
 
                 {showNewListDropdown && (
-                  <div className="absolute right-0 mt-1.5 w-80 md:w-96 max-h-80 overflow-y-auto bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 p-2">
-                    <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--color-border)] mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                  <div className="absolute right-0 mt-2 w-88 md:w-[420px] max-h-96 overflow-y-auto bg-[var(--color-surface)] border-2 border-amber-500/50 rounded-2xl shadow-2xl z-50 p-3">
+                    <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--color-border)] mb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-400">
                         Pedidos con productos en Área EMPAQUE ({filteredOrderSuggestions.length})
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowNewListDropdown(false)}
-                        className="text-xs theme-text-muted hover:text-white"
+                        className="text-xs md:text-sm font-bold theme-text-muted hover:text-white"
                       >
                         Cerrar
                       </button>
                     </div>
 
                     {filteredOrderSuggestions.length === 0 ? (
-                      <div className="p-3 text-xs theme-text-muted text-center">
+                      <div className="p-4 text-sm font-bold theme-text-muted text-center">
                         No hay pedidos con productos actualmente en el área de <strong>EMPAQUE</strong>.
                       </div>
                     ) : (
@@ -1606,22 +1707,22 @@ const PackingListsModal = () => {
                             onClick={() =>
                               handleCreateOrOpenPackingList(sug.pedidoNum, sug.cliente)
                             }
-                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-2 border-b border-[var(--color-border)]/40 last:border-b-0"
+                            className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-2 border-b border-[var(--color-border)]/40 last:border-b-0"
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-black text-sm text-amber-400">
+                                <span className="font-black text-base text-amber-400">
                                   #{sug.pedidoNum}
                                 </span>
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                                <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
                                   {sug.empaqueItemsCount} de {sug.totalOrderItemsInPlant} prod en EMPAQUE
                                 </span>
                               </div>
-                              <div className="text-[11px] font-bold theme-text-main truncate">
+                              <div className="text-xs md:text-sm font-bold theme-text-main truncate mt-0.5">
                                 {sug.cliente}
                               </div>
                             </div>
-                            <span className="text-[10px] font-extrabold px-2 py-1 rounded-lg bg-[var(--color-base)] border border-[var(--color-border)] theme-text-muted shrink-0">
+                            <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] theme-text-main shrink-0">
                               {alreadyOpen ? 'Abrir' : '+ Iniciar'}
                             </span>
                           </button>
@@ -1635,9 +1736,9 @@ const PackingListsModal = () => {
               <button
                 type="button"
                 onClick={() => setShowNewListDropdown((prev) => !prev)}
-                className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-1.5 shadow-lg border-2 border-amber-400 transition-all cursor-pointer"
               >
-                <Plus size={15} strokeWidth={2.8} />
+                <Plus size={17} strokeWidth={2.8} />
                 <span className="hidden xl:inline">Pedidos en Empaque</span>
               </button>
 
@@ -1655,31 +1756,31 @@ const PackingListsModal = () => {
           {/* ==================================================================================== */}
           {mainViewTab === 'HISTORIAL' ? (
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 custom-scrollbar">
-              <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 md:p-5 shadow-lg">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-2xl p-5 shadow-lg">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                   <div>
-                    <h3 className="text-lg font-black uppercase theme-text-main flex items-center gap-2">
-                      <History className="text-indigo-400" size={22} />
+                    <h3 className="text-xl font-black uppercase theme-text-main flex items-center gap-2.5">
+                      <History className="text-indigo-400" size={24} />
                       <span>Archivo e Historial de Listas de Empaque Creadas y Terminadas</span>
                     </h3>
-                    <p className="text-xs theme-text-muted mt-0.5">
+                    <p className="text-sm font-bold theme-text-muted mt-1">
                       Consulta todas las listas de empaque elaboradas, verifica cuántos productos se han empacado o faltan por llegar, reimprime documentos o reabre una lista activa.
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-3 py-1.5">
-                      <Search size={15} className="text-slate-400 mr-2" />
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="flex items-center bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3.5 py-2">
+                      <Search size={17} className="text-slate-400 mr-2" />
                       <input
                         type="text"
                         value={historySearchTerm}
                         onChange={(e) => setHistorySearchTerm(e.target.value)}
                         placeholder="Buscar # pedido o cliente..."
-                        className="bg-transparent text-xs font-bold theme-text-main focus:outline-none w-48"
+                        className="bg-transparent text-sm font-bold theme-text-main focus:outline-none w-52"
                       />
                     </div>
 
-                    <div className="flex items-center gap-1 bg-[var(--color-base)] p-1 rounded-xl border border-[var(--color-border)]">
+                    <div className="flex items-center gap-1.5 bg-[var(--color-base)] p-1.5 rounded-xl border-2 border-[var(--color-border)]">
                       {[
                         { id: 'TODAS', label: `Todas (${(packingLists || []).length})` },
                         {
@@ -1698,7 +1799,7 @@ const PackingListsModal = () => {
                           key={tab.id}
                           type="button"
                           onClick={() => setHistoryStatusFilter(tab.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${
+                          className={`px-3.5 py-2 rounded-lg text-xs md:text-sm font-black uppercase transition-all cursor-pointer ${
                             historyStatusFilter === tab.id
                               ? 'bg-indigo-600 text-white shadow'
                               : 'theme-text-muted hover:text-white'
@@ -1712,9 +1813,9 @@ const PackingListsModal = () => {
                 </div>
 
                 {enrichedHistoryLists.length === 0 ? (
-                  <div className="p-10 text-center rounded-2xl bg-[var(--color-base)] border border-[var(--color-border)]">
-                    <History size={38} className="mx-auto mb-2 text-slate-500" />
-                    <div className="text-sm font-black uppercase theme-text-main">
+                  <div className="p-10 text-center rounded-2xl bg-[var(--color-base)] border-2 border-[var(--color-border)]">
+                    <History size={42} className="mx-auto mb-2.5 text-slate-500" />
+                    <div className="text-base font-black uppercase theme-text-main">
                       No se encontraron listas de empaque en el historial con este filtro
                     </div>
                   </div>
@@ -1723,63 +1824,62 @@ const PackingListsModal = () => {
                     {enrichedHistoryLists.map((list) => (
                       <div
                         key={list.id}
-                        className={`rounded-2xl border p-4 flex flex-col justify-between gap-3 transition-all shadow-md ${
+                        className={`rounded-2xl border-2 p-5 flex flex-col justify-between gap-4 transition-all shadow-md ${
                           list.isTerminada
-                            ? 'bg-emerald-950/15 border-emerald-500/40'
-                            : 'bg-[var(--color-base)] border-amber-500/40'
+                            ? 'bg-emerald-950/15 border-emerald-500/50'
+                            : 'bg-[var(--color-base)] border-amber-500/50'
                         }`}
                       >
-                        <div className="space-y-2.5">
+                        <div className="space-y-3">
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-lg font-black text-amber-400">
+                                <span className="text-xl font-black text-amber-400">
                                   PEDIDO #{list.pedidoNum}
                                 </span>
                                 {list.isTerminada ? (
-                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                                     ✓ Lista Terminada
                                   </span>
                                 ) : (
-                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
                                     ⏳ Activa / En Curso
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs font-extrabold theme-text-main mt-0.5">
+                              <div className="text-sm font-extrabold theme-text-main mt-1">
                                 {list.cliente}
                               </div>
                             </div>
 
-                            <span className="px-2.5 py-1 rounded-xl bg-slate-800 text-amber-300 font-black text-xs border border-amber-500/30 shrink-0">
+                            <span className="px-3 py-1.5 rounded-xl bg-slate-800 text-amber-300 font-black text-xs md:text-sm border border-amber-500/40 shrink-0">
                               {list.pkgCount} {list.pkgCount === 1 ? 'Bulto QR' : 'Bultos QR'}
                             </span>
                           </div>
 
-                          {/* Panorama rápido del pedido dentro de la tarjeta de historial */}
-                          <div className="grid grid-cols-3 gap-2 bg-[var(--color-surface)] p-2.5 rounded-xl border border-[var(--color-border)] text-center">
+                          <div className="grid grid-cols-3 gap-2 bg-[var(--color-surface)] p-3 rounded-xl border border-[var(--color-border)] text-center">
                             <div>
-                              <div className="text-[10px] font-bold theme-text-muted uppercase">
+                              <div className="text-xs font-bold theme-text-muted uppercase">
                                 Unds en Bultos
                               </div>
-                              <div className="text-sm font-black text-emerald-400">
+                              <div className="text-base font-black text-emerald-400 mt-0.5">
                                 {list.totalPackedUnits} unds
                               </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold theme-text-muted uppercase">
+                              <div className="text-xs font-bold theme-text-muted uppercase">
                                 En Empaque Hoy
                               </div>
-                              <div className="text-sm font-black text-amber-400">
+                              <div className="text-base font-black text-amber-400 mt-0.5">
                                 {list.inEmpaqueNowCount} prod
                               </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold theme-text-muted uppercase">
+                              <div className="text-xs font-bold theme-text-muted uppercase">
                                 Faltan por Llegar
                               </div>
                               <div
-                                className={`text-sm font-black ${
+                                className={`text-base font-black mt-0.5 ${
                                   list.pendingOtherAreasCount > 0
                                     ? 'text-rose-400'
                                     : 'text-emerald-400'
@@ -1790,7 +1890,7 @@ const PackingListsModal = () => {
                             </div>
                           </div>
 
-                          <div className="text-[11px] theme-text-muted flex items-center justify-between">
+                          <div className="text-xs font-bold theme-text-muted flex items-center justify-between">
                             <span>
                               Actualizado:{' '}
                               {list.actualizadoEn
@@ -1801,17 +1901,16 @@ const PackingListsModal = () => {
                           </div>
                         </div>
 
-                        {/* Botonera de la tarjeta de Historial */}
-                        <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center gap-1.5">
+                        <div className="pt-3 border-t border-[var(--color-border)] flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={() => {
                               setActiveListId(list.id);
                               setMainViewTab('ACTIVAS');
                             }}
-                            className="flex-1 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="flex-1 py-2.5 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow"
                           >
-                            <Eye size={14} />
+                            <Eye size={16} />
                             <span>
                               {list.isTerminada ? 'Consultar / Abrir' : 'Continuar Empaque'}
                             </span>
@@ -1821,10 +1920,10 @@ const PackingListsModal = () => {
                             <button
                               type="button"
                               onClick={() => handleReopenPackingList(list)}
-                              className="py-2 px-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 font-black text-xs uppercase flex items-center gap-1 cursor-pointer"
+                              className="py-2.5 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border-2 border-indigo-500/40 font-black text-xs md:text-sm uppercase flex items-center gap-1.5 cursor-pointer"
                               title="Reactivar lista de empaque como Activa"
                             >
-                              <RotateCcw size={14} />
+                              <RotateCcw size={15} />
                               <span>Reactivar</span>
                             </button>
                           )}
@@ -1832,19 +1931,19 @@ const PackingListsModal = () => {
                           <button
                             type="button"
                             onClick={() => handlePrint('LISTA_COMPLETA', null, list)}
-                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 cursor-pointer"
+                            className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-600 cursor-pointer"
                             title="Imprimir Lista de Empaque Oficial"
                           >
-                            <Printer size={15} />
+                            <Printer size={17} />
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handlePrint('ROTULOS_QR', null, list)}
-                            className="p-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 border border-indigo-500/40 cursor-pointer"
+                            className="p-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 border-2 border-indigo-500/40 cursor-pointer"
                             title="Imprimir Etiquetas QR de esta Lista"
                           >
-                            <QrCode size={15} />
+                            <QrCode size={17} />
                           </button>
                         </div>
                       </div>
@@ -1858,34 +1957,33 @@ const PackingListsModal = () => {
             /* VISTA 1: MESA DE TRABAJO DE LISTAS DE EMPAQUE ACTIVAS                                */
             /* ==================================================================================== */
             <>
-              {/* BARRA DE PESTAÑAS DE LISTAS DE EMPAQUE ACTIVAS */}
-              <div className="bg-[var(--color-surface)]/70 border-b border-[var(--color-border)] px-4 md:px-6 py-2.5 shrink-0">
-                <div className="flex items-center justify-between mb-1.5">
+              <div className="bg-[var(--color-surface)]/70 border-b-2 border-[var(--color-border)] px-4 md:px-6 py-3 shrink-0">
+                <div className="flex items-center justify-between mb-2">
                   <button
                     type="button"
                     onClick={() => setIsTabsExpanded(!isTabsExpanded)}
-                    className="flex items-center gap-2 text-xs font-black uppercase tracking-wider theme-text-muted hover:text-white cursor-pointer"
+                    className="flex items-center gap-2 text-xs md:text-sm font-black uppercase tracking-wider theme-text-main hover:text-amber-400 cursor-pointer"
                   >
-                    <FolderOpen size={15} className="text-amber-500" />
+                    <FolderOpen size={17} className="text-amber-500" />
                     <span>
                       Listas de Empaque en Mesa de Trabajo ({(packingLists || []).length})
                     </span>
-                    {isTabsExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    {isTabsExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
                   </button>
                   <button
                     type="button"
                     onClick={() => setMainViewTab('HISTORIAL')}
-                    className="text-xs font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                    className="text-xs md:text-sm font-black uppercase text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <History size={14} />
+                    <History size={16} />
                     <span>Ver Historial Completo de Listas ({(packingLists || []).length})</span>
                   </button>
                 </div>
 
                 {isTabsExpanded && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                  <div className="flex items-center gap-2.5 overflow-x-auto pb-1 custom-scrollbar">
                     {(packingLists || []).length === 0 ? (
-                      <div className="text-xs theme-text-muted py-1.5 px-3 rounded-xl border border-dashed border-[var(--color-border)]">
+                      <div className="text-sm font-bold theme-text-muted py-2 px-4 rounded-xl border-2 border-dashed border-[var(--color-border)]">
                         Selecciona arriba un pedido que tenga productos en el área de{' '}
                         <strong>EMPAQUE</strong> para iniciar su fraccionamiento de bultos y códigos QR.
                       </div>
@@ -1899,7 +1997,9 @@ const PackingListsModal = () => {
                             (p.items || []).reduce(
                               (s, it) =>
                                 s +
-                                (Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
+                                (it.esSubpaqueteAdicional
+                                  ? 0
+                                  : Number(it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 0),
                               0
                             ),
                           0
@@ -1909,30 +2009,30 @@ const PackingListsModal = () => {
                           <div
                             key={list.id}
                             onClick={() => setActiveListId(list.id)}
-                            className={`group cursor-pointer rounded-2xl px-3.5 py-2 border transition-all flex items-center gap-3 shrink-0 ${
+                            className={`group cursor-pointer rounded-2xl px-4 py-2.5 border-2 transition-all flex items-center gap-3.5 shrink-0 ${
                               isActive
                                 ? 'bg-amber-500/15 border-amber-500 text-white shadow-md'
-                                : 'bg-[var(--color-base)] border-[var(--color-border)] theme-text-muted hover:border-amber-500/40 hover:text-white'
+                                : 'bg-[var(--color-base)] border-[var(--color-border)] theme-text-muted hover:border-amber-500/50 hover:text-white'
                             }`}
                           >
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-black text-sm text-amber-400">
+                                <span className="font-black text-base text-amber-400">
                                   PEDIDO #{list.pedidoNum}
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-800 text-amber-300 border border-amber-500/30">
+                                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-800 text-amber-300 border border-amber-500/40">
                                   {pkgCount} {pkgCount === 1 ? 'Bulto QR' : 'Bultos QR'}
                                 </span>
                                 {list.estadoLista === 'TERMINADA' && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400">
+                                  <span className="px-2 py-0.5 rounded text-xs font-black uppercase bg-emerald-500/20 text-emerald-400">
                                     Terminada
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11px] font-bold truncate max-w-[180px] theme-text-main">
+                              <div className="text-xs md:text-sm font-bold truncate max-w-[200px] theme-text-main mt-0.5">
                                 {list.cliente}
                               </div>
-                              <div className="text-[10px] theme-text-muted font-semibold">
+                              <div className="text-xs theme-text-muted font-bold">
                                 {totalPackedUnits} unds en bultos
                               </div>
                             </div>
@@ -1940,9 +2040,9 @@ const PackingListsModal = () => {
                               type="button"
                               onClick={(e) => handleDeletePackingList(list, e)}
                               title="Eliminar esta lista de empaque"
-                              className="opacity-60 hover:opacity-100 hover:text-red-400 p-1 rounded-lg transition-opacity"
+                              className="opacity-70 hover:opacity-100 hover:text-red-400 p-1.5 rounded-lg transition-opacity"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         );
@@ -1952,26 +2052,25 @@ const PackingListsModal = () => {
                 )}
               </div>
 
-              {/* CUERPO PRINCIPAL DE LA LISTA DE EMPAQUE ACTIVA */}
               {!activePackingList ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                  <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-4">
-                    <Package size={42} />
+                  <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-500 mb-4">
+                    <Package size={44} />
                   </div>
-                  <h3 className="text-xl font-black uppercase theme-text-main mb-2">
+                  <h3 className="text-2xl font-black uppercase theme-text-main mb-2">
                     Pedidos Disponibles en el Área de EMPAQUE
                   </h3>
-                  <p className="text-sm theme-text-muted max-w-xl mb-6">
+                  <p className="text-base font-bold theme-text-muted max-w-xl mb-6">
                     Selecciona un pedido para empacar sus productos en <strong>EMPAQUE</strong> y visualizar al mismo tiempo cuántos productos de ese pedido faltan por llegar desde otras áreas de la planta.
                   </p>
                   {eligibleEmpaqueOrdersSummary.length === 0 ? (
-                    <div className="px-5 py-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] text-xs theme-text-muted max-w-md">
+                    <div className="px-6 py-5 rounded-2xl bg-[var(--color-surface)] border-2 border-[var(--color-border)] text-sm font-bold theme-text-muted max-w-md">
                       Actualmente no hay ningún producto ubicado en el área de{' '}
                       <strong>EMPAQUE</strong>. Puedes consultar listas anteriores en la pestaña{' '}
                       <strong>Historial de Listas</strong> arriba.
                     </div>
                   ) : (
-                    <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl">
+                    <div className="flex flex-wrap justify-center gap-3 max-w-3xl">
                       {eligibleEmpaqueOrdersSummary.map((sug) => (
                         <button
                           key={sug.pedidoNum}
@@ -1979,15 +2078,15 @@ const PackingListsModal = () => {
                           onClick={() =>
                             handleCreateOrOpenPackingList(sug.pedidoNum, sug.cliente)
                           }
-                          className="px-4 py-3 rounded-2xl bg-[var(--color-surface)] hover:bg-amber-500/15 border border-[var(--color-border)] hover:border-amber-500/50 transition-all text-left shadow cursor-pointer"
+                          className="px-5 py-3.5 rounded-2xl bg-[var(--color-surface)] hover:bg-amber-500/15 border-2 border-[var(--color-border)] hover:border-amber-500/60 transition-all text-left shadow cursor-pointer"
                         >
-                          <div className="font-black text-sm text-amber-400">
+                          <div className="font-black text-base text-amber-400">
                             Pedido #{sug.pedidoNum}
                           </div>
-                          <div className="text-xs font-bold theme-text-main truncate max-w-[200px]">
+                          <div className="text-sm font-bold theme-text-main truncate max-w-[220px]">
                             {sug.cliente}
                           </div>
-                          <div className="text-[10px] font-extrabold text-emerald-400 mt-1">
+                          <div className="text-xs font-extrabold text-emerald-400 mt-1">
                             {sug.empaqueItemsCount} de {sug.totalOrderItemsInPlant} prod en EMPAQUE ({sug.empaqueTotalUnits} unds)
                           </div>
                         </button>
@@ -1996,29 +2095,29 @@ const PackingListsModal = () => {
                   )}
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 custom-scrollbar">
-                  {/* BARRA DE RESUMEN DEL PEDIDO COMPLETO Y BOTONES DE ACCIÓN / CIERRE */}
-                  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-lg space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+                  {/* BARRA DE RESUMEN DEL PEDIDO COMPLETO Y BOTONES DE ACCIÓN GRANDES Y VISIBLES */}
+                  <div className="bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-2xl p-5 shadow-lg space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="text-2xl font-black text-amber-400">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-2xl md:text-3xl font-black text-amber-400">
                             PEDIDO #{activePackingList.pedidoNum}
                           </span>
-                          <span className="text-sm md:text-base font-extrabold theme-text-main uppercase">
+                          <span className="text-base md:text-lg font-black theme-text-main uppercase">
                             • {activePackingList.cliente}
                           </span>
                           {activePackingList.estadoLista === 'TERMINADA' ? (
-                            <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                            <span className="px-3.5 py-1 rounded-full text-xs md:text-sm font-black uppercase bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/40">
                               ✓ Lista de Empaque Terminada
                             </span>
                           ) : (
-                            <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <span className="px-3.5 py-1 rounded-full text-xs md:text-sm font-black uppercase bg-amber-500/15 text-amber-300 border-2 border-amber-500/40">
                               ⏳ Lista de Empaque Activa
                             </span>
                           )}
                         </div>
-                        <p className="text-xs theme-text-muted mt-1">
+                        <p className="text-sm font-bold theme-text-muted mt-1">
                           Bultos físicos generados con QR individual:{' '}
                           <strong className="text-amber-400">
                             {(activePackingList.packages || []).length} bultos (
@@ -2027,8 +2126,7 @@ const PackingListsModal = () => {
                         </p>
                       </div>
 
-                      {/* ACCIONES GLOBALES: TRANSFERIR A DESPACHOS, IMPRIMIR Y CERRAR LISTA DE EMPAQUE */}
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         {completedEmpaqueProductsReadyForDispatch.length > 0 && (
                           <button
                             type="button"
@@ -2037,9 +2135,9 @@ const PackingListsModal = () => {
                                 completedEmpaqueProductsReadyForDispatch
                               )
                             }
-                            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all animate-pulse cursor-pointer"
+                            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg border-2 border-emerald-300 transition-all animate-pulse cursor-pointer"
                           >
-                            <Truck size={16} />
+                            <Truck size={18} />
                             <span>
                               Transferir {completedEmpaqueProductsReadyForDispatch.length}{' '}
                               Producto(s) a DESPACHOS
@@ -2050,9 +2148,9 @@ const PackingListsModal = () => {
                         <button
                           type="button"
                           onClick={() => handlePrint('ROTULOS_QR')}
-                          className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                          className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-md border-2 border-indigo-400/50 transition-all cursor-pointer"
                         >
-                          <QrCode size={16} />
+                          <QrCode size={18} />
                           <span>
                             Imprimir {(activePackingList.packages || []).length} Etiquetas QR
                           </span>
@@ -2061,9 +2159,9 @@ const PackingListsModal = () => {
                         <button
                           type="button"
                           onClick={() => handlePrint('LISTA_COMPLETA')}
-                          className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                          className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-md border-2 border-slate-500 transition-all cursor-pointer"
                         >
-                          <Printer size={16} />
+                          <Printer size={18} />
                           <span>Imprimir Lista de Empaque</span>
                         </button>
 
@@ -2071,87 +2169,87 @@ const PackingListsModal = () => {
                           <button
                             type="button"
                             onClick={() => handleReopenPackingList(activePackingList)}
-                            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-md border-2 border-amber-300 transition-all cursor-pointer"
                           >
-                            <RotateCcw size={16} />
+                            <RotateCcw size={18} />
                             <span>Reactivar Lista</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={handleAttemptClosePackingList}
-                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer border border-emerald-400/40"
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer border-2 border-emerald-400"
                             title="Verifica si el pedido está completo o si aún faltan productos por despachar"
                           >
-                            <CheckCircle2 size={16} />
+                            <CheckCircle2 size={18} />
                             <span>Cerrar / Finalizar Lista de Empaque</span>
                           </button>
                         )}
                       </div>
                     </div>
 
-                    {/* 4 TARJETAS DE PANORAMA DEL PEDIDO COMPLETO (TOTAL vs RECIBIDOS EN EMPAQUE vs FALTAN POR LLEGAR) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl p-3 flex items-center justify-between">
+                    {/* 4 TARJETAS DE PANORAMA DEL PEDIDO COMPLETO CON LETRA Y BORDES MÁS VISIBLES */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      <div className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-2xl p-3.5 flex items-center justify-between">
                         <div>
-                          <div className="text-[10px] font-black uppercase theme-text-muted">
+                          <div className="text-xs font-black uppercase theme-text-muted">
                             Total Productos del Pedido
                           </div>
-                          <div className="text-lg font-black theme-text-main mt-0.5">
+                          <div className="text-xl font-black theme-text-main mt-0.5">
                             {orderPanorama.totalOrderItemsCount} productos
                           </div>
-                          <div className="text-[11px] font-bold text-slate-400">
+                          <div className="text-xs md:text-sm font-bold text-slate-400">
                             {orderPanorama.totalOrderUnitsCount} unidades totales
                           </div>
                         </div>
-                        <Package className="text-slate-400" size={26} />
+                        <Package className="text-slate-400" size={30} />
                       </div>
 
-                      <div className="bg-[var(--color-base)] border border-emerald-500/40 rounded-xl p-3 flex items-center justify-between">
+                      <div className="bg-[var(--color-base)] border-2 border-emerald-500/50 rounded-2xl p-3.5 flex items-center justify-between">
                         <div>
-                          <div className="text-[10px] font-black uppercase text-emerald-400">
+                          <div className="text-xs font-black uppercase text-emerald-400">
                             Ya Empacados / En Despachos
                           </div>
-                          <div className="text-lg font-black text-emerald-400 mt-0.5">
+                          <div className="text-xl font-black text-emerald-400 mt-0.5">
                             {orderPanorama.packedOrDispatchedItemsCount +
                               completedEmpaqueProductsReadyForDispatch.length}{' '}
                             productos
                           </div>
-                          <div className="text-[11px] font-bold text-emerald-300/80">
+                          <div className="text-xs md:text-sm font-bold text-emerald-300/90">
                             {(activePackingList.packages || []).length} bultos QR (
                             {packingStats.totalUnidadesEmpacadas} unds)
                           </div>
                         </div>
-                        <CheckCircle className="text-emerald-400" size={26} />
+                        <CheckCircle className="text-emerald-400" size={30} />
                       </div>
 
-                      <div className="bg-[var(--color-base)] border border-amber-500/40 rounded-xl p-3 flex items-center justify-between">
+                      <div className="bg-[var(--color-base)] border-2 border-amber-500/50 rounded-2xl p-3.5 flex items-center justify-between">
                         <div>
-                          <div className="text-[10px] font-black uppercase text-amber-400">
+                          <div className="text-xs font-black uppercase text-amber-400">
                             En Área EMPAQUE (Por Empacar)
                           </div>
-                          <div className="text-lg font-black text-amber-400 mt-0.5">
+                          <div className="text-xl font-black text-amber-400 mt-0.5">
                             {pendingEmpaqueProducts.length} productos
                           </div>
-                          <div className="text-[11px] font-bold text-amber-300/80">
+                          <div className="text-xs md:text-sm font-bold text-amber-300/90">
                             {packingStats.totalUnidadesPendientes} unds listas para empacar
                           </div>
                         </div>
-                        <Calculator className="text-amber-400" size={26} />
+                        <Calculator className="text-amber-400" size={30} />
                       </div>
 
                       <div
                         onClick={() => setIsPendingArrivalExpanded(true)}
-                        className={`rounded-xl p-3 flex items-center justify-between cursor-pointer transition-all border ${
+                        className={`rounded-2xl p-3.5 flex items-center justify-between cursor-pointer transition-all border-2 ${
                           orderPanorama.pendingArrivalItems.length > 0
-                            ? 'bg-rose-950/30 border-rose-500/60 hover:bg-rose-950/50'
-                            : 'bg-emerald-950/20 border-emerald-500/30'
+                            ? 'bg-rose-950/35 border-rose-500/70 hover:bg-rose-950/55'
+                            : 'bg-emerald-950/20 border-emerald-500/40'
                         }`}
                         title="Haz clic para ver qué productos faltan por llegar a Empaque y en qué área están"
                       >
                         <div>
                           <div
-                            className={`text-[10px] font-black uppercase ${
+                            className={`text-xs font-black uppercase ${
                               orderPanorama.pendingArrivalItems.length > 0
                                 ? 'text-rose-400'
                                 : 'text-emerald-400'
@@ -2160,7 +2258,7 @@ const PackingListsModal = () => {
                             Faltan por Llegar a Empaque
                           </div>
                           <div
-                            className={`text-lg font-black mt-0.5 ${
+                            className={`text-xl font-black mt-0.5 ${
                               orderPanorama.pendingArrivalItems.length > 0
                                 ? 'text-rose-400'
                                 : 'text-emerald-400'
@@ -2168,7 +2266,7 @@ const PackingListsModal = () => {
                           >
                             {orderPanorama.pendingArrivalItems.length} productos
                           </div>
-                          <div className="text-[11px] font-bold text-slate-300">
+                          <div className="text-xs md:text-sm font-bold text-slate-300">
                             {orderPanorama.pendingArrivalItems.length > 0
                               ? `En ${orderPanorama.pendingByAreaList.length} área(s) de planta`
                               : '✓ 100% ya llegó a Empaque'}
@@ -2180,12 +2278,12 @@ const PackingListsModal = () => {
                               ? 'text-rose-400 animate-bounce'
                               : 'text-emerald-400'
                           }
-                          size={26}
+                          size={30}
                         />
                       </div>
                     </div>
 
-                    <div className="w-full bg-slate-800/80 h-2.5 rounded-full overflow-hidden border border-slate-700">
+                    <div className="w-full bg-slate-800/80 h-3 rounded-full overflow-hidden border border-slate-700">
                       <div
                         className={`h-full transition-all duration-300 ${
                           packingStats.pctUnidades === 100 ? 'bg-emerald-500' : 'bg-amber-500'
@@ -2195,12 +2293,14 @@ const PackingListsModal = () => {
                     </div>
                   </div>
 
-                  {/* SECCIÓN 1: CALCULADORA DE FRACCIONAMIENTO Y AGRUPACIÓN (SOLO PRODUCTOS EN 'EMPAQUE' CON SALDO PENDIENTE) */}
-                  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-lg">
-                    <div className="px-4 py-3 bg-amber-500/10 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Calculator size={18} className="text-amber-400" />
-                        <h3 className="text-sm font-black uppercase tracking-wider theme-text-main">
+                  {/* ==================================================================================== */}
+                  {/* SECCIÓN 1: PRODUCTOS EN ÁREA 'EMPAQUE' CON INTERFAZ LIMPIA Y OPCIONES BAJO DEMANDA   */}
+                  {/* ==================================================================================== */}
+                  <div className="bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-2xl overflow-hidden shadow-lg">
+                    <div className="px-5 py-3.5 bg-amber-500/10 border-b-2 border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <Calculator size={22} className="text-amber-400" />
+                        <h3 className="text-base md:text-lg font-black uppercase tracking-wider theme-text-main">
                           1. Productos en Área 'EMPAQUE' Pendientes por Asignar a Bultos / Guacales ({pendingEmpaqueProducts.length})
                         </h3>
                       </div>
@@ -2209,21 +2309,21 @@ const PackingListsModal = () => {
                         value={filterProductSearch}
                         onChange={(e) => setFilterProductSearch(e.target.value)}
                         placeholder="Filtrar por código o nombre..."
-                        className="bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-3 py-1 text-xs theme-text-main focus:outline-none focus:border-amber-500"
+                        className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3.5 py-1.5 text-sm font-bold theme-text-main focus:outline-none focus:border-amber-500"
                       />
                     </div>
 
-                    <div className="p-4 space-y-4">
+                    <div className="p-4 md:p-5 space-y-4">
                       {pendingEmpaqueProducts.length === 0 ? (
-                        <div className="p-6 rounded-2xl bg-[var(--color-base)] border border-[var(--color-border)] text-center space-y-2">
-                          <CheckCircle size={32} className="text-emerald-400 mx-auto" />
-                          <div className="text-sm font-black uppercase theme-text-main">
+                        <div className="p-7 rounded-2xl bg-[var(--color-base)] border-2 border-[var(--color-border)] text-center space-y-2.5">
+                          <CheckCircle size={38} className="text-emerald-400 mx-auto" />
+                          <div className="text-base md:text-lg font-black uppercase theme-text-main">
                             No hay productos pendientes por empacar actualmente en el área 'EMPAQUE'
                           </div>
-                          <p className="text-xs theme-text-muted max-w-2xl mx-auto">
+                          <p className="text-sm font-bold theme-text-muted max-w-2xl mx-auto">
                             Todos los productos que ya habían ingresado a <strong>EMPAQUE</strong> tienen sus bultos generados.
                             {orderPanorama.pendingArrivalItems.length > 0 && (
-                              <span className="text-rose-400 font-black block mt-1">
+                              <span className="text-rose-400 font-black block mt-1.5 text-sm md:text-base">
                                 ⚠️ Atención: Aún faltan {orderPanorama.pendingArrivalItems.length} producto(s) de este pedido por llegar a Empaque desde otras áreas (ver Sección 2 abajo).
                               </span>
                             )}
@@ -2232,10 +2332,13 @@ const PackingListsModal = () => {
                       ) : (
                         pendingEmpaqueProducts.map((prod) => {
                           const calc = itemCalculators[prod.itemKey] || {
+                            openPanel: null,
                             mode: 'LOTES_IGUALES',
                             tipoEmpaque: 'Paquete',
                             numBultos: 1,
                             undsPorBulto: prod.cantidadPendiente,
+                            numSubpaquetes: 2,
+                            unidadesParaSubpaquetes: 1,
                             manualQty: prod.cantidadPendiente,
                             targetPkgId: 'NUEVO',
                             observaciones: ''
@@ -2247,9 +2350,24 @@ const PackingListsModal = () => {
                             Math.floor(Number(calc.undsPorBulto) || 0)
                           );
                           const manualQty = Math.max(0, Math.floor(Number(calc.manualQty) || 0));
+                          const numSubpaquetes = Math.max(
+                            2,
+                            Math.floor(Number(calc.numSubpaquetes) || 2)
+                          );
 
                           const totalUnitsToAssign =
-                            calc.mode === 'LOTES_IGUALES' ? numBultos * undsPorBulto : manualQty;
+                            calc.openPanel === 'SUBPAQUETES'
+                              ? Math.max(
+                                  1,
+                                  Math.min(
+                                    prod.cantidadPendiente,
+                                    Math.floor(Number(calc.unidadesParaSubpaquetes) || 1)
+                                  )
+                                )
+                              : calc.openPanel === 'AGRUPACION_MANUAL'
+                              ? manualQty
+                              : numBultos * undsPorBulto;
+
                           const exceedsBalance = totalUnitsToAssign > prod.cantidadPendiente;
                           const isZeroOrInvalid = totalUnitsToAssign <= 0;
                           const isValidMath = !exceedsBalance && !isZeroOrInvalid;
@@ -2257,23 +2375,24 @@ const PackingListsModal = () => {
                           return (
                             <div
                               key={prod.itemKey}
-                              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-base)] p-4 shadow-md space-y-3"
+                              className="rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-base)] p-4 md:p-5 shadow-md space-y-4"
                             >
-                              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
-                                <div className="flex items-center gap-2.5 flex-wrap">
-                                  <span className="font-mono text-xs md:text-sm font-black px-2.5 py-1 rounded-lg bg-slate-800 text-amber-300 border border-slate-700">
+                              {/* ENCABEZADO DEL PRODUCTO CON LETRA GRANDE Y CLARA */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[var(--color-border)] pb-3.5">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="font-mono text-sm md:text-base font-black px-3 py-1.5 rounded-xl bg-slate-800 text-amber-300 border-2 border-slate-700">
                                     {prod.codArticulo}
                                   </span>
-                                  <span className="text-sm md:text-base font-black theme-text-main">
+                                  <span className="text-base md:text-lg font-black theme-text-main">
                                     {prod.nombre}
                                   </span>
-                                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                  <span className="px-3 py-1 rounded-lg text-xs font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
                                     📍 Área Actual: EMPAQUE
                                   </span>
                                 </div>
 
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <div className="px-3 py-1.5 rounded-xl bg-[var(--color-surface)] border border-amber-500/40 text-xs font-black">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <div className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] border-2 border-amber-500/40 text-xs md:text-sm font-black">
                                     <span className="theme-text-muted">Empacado: </span>
                                     <span className="text-emerald-400">
                                       {prod.cantidadEmpacada}
@@ -2283,319 +2402,480 @@ const PackingListsModal = () => {
                                       {prod.cantidadTotalPedido} unidades
                                     </span>
                                   </div>
-                                  <div className="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs font-black text-amber-300">
+                                  <div className="px-3.5 py-2 rounded-xl bg-amber-500/15 border-2 border-amber-500/50 text-xs md:text-sm font-black text-amber-300">
                                     Saldo Pendiente: {prod.cantidadPendiente} unds
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="inline-flex rounded-xl bg-[var(--color-surface)] p-1 border border-[var(--color-border)]">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateItemCalc(prod.itemKey, { mode: 'LOTES_IGUALES' })
-                                    }
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-1.5 transition-all ${
-                                      calc.mode === 'LOTES_IGUALES'
-                                        ? 'bg-amber-500 text-slate-950 shadow'
-                                        : 'theme-text-muted hover:text-white'
-                                    }`}
-                                  >
-                                    <SplitSquareVertical size={14} />
-                                    <span>Modo A: Distribución Automática / Lotes Iguales</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateItemCalc(prod.itemKey, {
-                                        mode: 'AGRUPACION_MANUAL'
-                                      })
-                                    }
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-1.5 transition-all ${
-                                      calc.mode === 'AGRUPACION_MANUAL'
-                                        ? 'bg-amber-500 text-slate-950 shadow'
-                                        : 'theme-text-muted hover:text-white'
-                                    }`}
-                                  >
-                                    <Layers size={14} />
-                                    <span>Modo B: Agrupación Manual / Caja Mixta</span>
-                                  </button>
+                              {/* BARRA PRINCIPAL LIMPIA (SIN SOBRECARGAR): TIPO DE EMBALAJE + BOTONES RÁPIDOS + BOTONES PARA ABRIR DIVISIÓN */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface)] p-3.5 rounded-2xl border-2 border-[var(--color-border)]">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <div>
+                                    <label className="block text-xs font-black uppercase theme-text-muted mb-1">
+                                      Tipo de Embalaje
+                                    </label>
+                                    <select
+                                      value={calc.tipoEmpaque}
+                                      onChange={(e) =>
+                                        updateItemCalc(prod.itemKey, {
+                                          tipoEmpaque: e.target.value
+                                        })
+                                      }
+                                      className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3 py-2 text-sm font-black theme-text-main cursor-pointer"
+                                    >
+                                      <option value="Paquete">Paquete</option>
+                                      <option value="Guacal">Guacal</option>
+                                      <option value="Caja">Caja</option>
+                                      <option value="Estiba">Estiba</option>
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-black uppercase theme-text-muted mb-1">
+                                      Nota / Observación (Opcional)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={calc.observaciones}
+                                      onChange={(e) =>
+                                        updateItemCalc(prod.itemKey, {
+                                          observaciones: e.target.value
+                                        })
+                                      }
+                                      placeholder="Ej. Frágil / Con herrajes..."
+                                      className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3.5 py-2 text-sm font-bold theme-text-main w-52 md:w-64"
+                                    />
+                                  </div>
                                 </div>
 
-                                {calc.mode === 'LOTES_IGUALES' && (
-                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                {/* BOTONES DE ACCIÓN DIRECTA (1 CLIC) */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleGenerateBultosForItem(prod, {
+                                        mode: 'LOTES_IGUALES',
+                                        numBultos: 1,
+                                        undsPorBulto: prod.cantidadPendiente
+                                      })
+                                    }
+                                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase flex items-center gap-2 shadow-md border-2 border-amber-300 transition-all cursor-pointer"
+                                  >
+                                    <QrCode size={17} />
+                                    <span>
+                                      📦 Empacar Todo en 1 {calc.tipoEmpaque} ({prod.cantidadPendiente} unds)
+                                    </span>
+                                  </button>
+
+                                  {prod.cantidadPendiente > 1 && prod.cantidadPendiente <= 50 && (
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        updateItemCalc(prod.itemKey, {
+                                        handleGenerateBultosForItem(prod, {
+                                          mode: 'LOTES_IGUALES',
                                           numBultos: prod.cantidadPendiente,
                                           undsPorBulto: 1
                                         })
                                       }
-                                      className="px-2.5 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 text-[11px] font-black uppercase"
+                                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs md:text-sm uppercase flex items-center gap-2 shadow-md border-2 border-indigo-400/50 transition-all cursor-pointer"
                                     >
-                                      ⚡ 1 Paquete por Unidad ({prod.cantidadPendiente} bultos × 1 und)
+                                      <SplitSquareVertical size={17} />
+                                      <span>
+                                        ⚡ 1 {calc.tipoEmpaque} por Unidad ({prod.cantidadPendiente} bultos × 1 und)
+                                      </span>
                                     </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* BOTONES PARA HABILITAR OPCIONES DE DIVISIÓN SOLO CUANDO SE NECESITEN (SIN SOBRECARGAR LA VISTA) */}
+                              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                                <span className="text-xs md:text-sm font-black uppercase theme-text-muted mr-1">
+                                  Opciones de División Especial:
+                                </span>
+
+                                {/* OPCIÓN 1: SEPARAR 1 PRODUCTO GRANDE EN SUBPAQUETES / PARTES */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateItemCalc(prod.itemKey, {
+                                      openPanel:
+                                        calc.openPanel === 'SUBPAQUETES' ? null : 'SUBPAQUETES',
+                                      mode: 'SUBPAQUETES',
+                                      numSubpaquetes: calc.numSubpaquetes || 2,
+                                      unidadesParaSubpaquetes: 1
+                                    })
+                                  }
+                                  className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 border-2 transition-all cursor-pointer ${
+                                    calc.openPanel === 'SUBPAQUETES'
+                                      ? 'bg-purple-600 text-white border-purple-400 shadow-lg'
+                                      : 'bg-[var(--color-surface)] text-purple-300 border-purple-500/40 hover:border-purple-400'
+                                  }`}
+                                >
+                                  <Boxes size={16} />
+                                  <span>
+                                    🧩 Separar Producto Grande en Subpaquetes / Partes
+                                  </span>
+                                </button>
+
+                                {/* OPCIÓN 2: SOLO SE HABILITA CUANDO EL PRODUCTO TIENE VARIAS CANTIDADES (Ej. 500 flautas -> 10 paquetes de 50) */}
+                                {prod.cantidadPendiente > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const defaultUndsPorPaquete =
+                                        prod.cantidadPendiente >= 10
+                                          ? Math.ceil(prod.cantidadPendiente / 2)
+                                          : 1;
+                                      const defaultPaquetes = Math.max(
+                                        1,
+                                        Math.floor(prod.cantidadPendiente / defaultUndsPorPaquete)
+                                      );
+                                      updateItemCalc(prod.itemKey, {
+                                        openPanel:
+                                          calc.openPanel === 'LOTES_IGUALES'
+                                            ? null
+                                            : 'LOTES_IGUALES',
+                                        mode: 'LOTES_IGUALES',
+                                        numBultos: defaultPaquetes,
+                                        undsPorBulto: defaultUndsPorPaquete
+                                      });
+                                    }}
+                                    className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 border-2 transition-all cursor-pointer ${
+                                      calc.openPanel === 'LOTES_IGUALES'
+                                        ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-lg'
+                                        : 'bg-[var(--color-surface)] text-amber-300 border-amber-500/40 hover:border-amber-400'
+                                    }`}
+                                  >
+                                    <SplitSquareVertical size={16} />
+                                    <span>
+                                      ➗ Dividir {prod.cantidadPendiente} Unidades en Varios Paquetes (Ej. X paquetes de Y unds)
+                                    </span>
+                                  </button>
+                                )}
+
+                                {/* OPCIÓN 3: AGRUPAR EN CAJA / GUACAL MIXTO */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateItemCalc(prod.itemKey, {
+                                      openPanel:
+                                        calc.openPanel === 'AGRUPACION_MANUAL'
+                                          ? null
+                                          : 'AGRUPACION_MANUAL',
+                                      mode: 'AGRUPACION_MANUAL'
+                                    })
+                                  }
+                                  className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 border-2 transition-all cursor-pointer ${
+                                    calc.openPanel === 'AGRUPACION_MANUAL'
+                                      ? 'bg-sky-600 text-white border-sky-400 shadow-lg'
+                                      : 'bg-[var(--color-surface)] text-sky-300 border-sky-500/40 hover:border-sky-400'
+                                  }`}
+                                >
+                                  <Layers size={16} />
+                                  <span>➕ Agrupar en Caja / Guacal Mixto</span>
+                                </button>
+                              </div>
+
+                              {/* PANEL DESPLEGABLE 1: SEPARAR 1 PRODUCTO GRANDE EN SUBPAQUETES (MUEBLE GRANDE DESARMADO) */}
+                              {calc.openPanel === 'SUBPAQUETES' && (
+                                <div className="bg-purple-950/25 border-2 border-purple-500/60 rounded-2xl p-4 space-y-3 animate-in fade-in duration-150">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm md:text-base font-black text-purple-300 uppercase flex items-center gap-2">
+                                      <Boxes size={18} />
+                                      <span>
+                                        Dividir 1 Producto Grande en Múltiples Subpaquetes con QR Individual
+                                      </span>
+                                    </div>
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        updateItemCalc(prod.itemKey, {
-                                          numBultos: 1,
-                                          undsPorBulto: prod.cantidadPendiente
-                                        })
+                                        updateItemCalc(prod.itemKey, { openPanel: null })
                                       }
-                                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-[11px] font-black uppercase"
+                                      className="text-xs font-black uppercase text-slate-400 hover:text-white"
                                     >
-                                      📦 Todo en 1 Bulto (1 × {prod.cantidadPendiente} unds)
+                                      Ocultar ✕
                                     </button>
                                   </div>
-                                )}
-                              </div>
 
-                              {calc.mode === 'LOTES_IGUALES' ? (
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-[var(--color-surface)] p-3 rounded-xl border border-[var(--color-border)]">
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase theme-text-muted mb-1">
-                                      Tipo de Embalaje
-                                    </label>
-                                    <select
-                                      value={calc.tipoEmpaque}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          tipoEmpaque: e.target.value
-                                        })
-                                      }
-                                      className="w-full bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-2.5 py-2 text-xs font-bold theme-text-main"
-                                    >
-                                      <option value="Paquete">Paquete</option>
-                                      <option value="Guacal">Guacal</option>
-                                      <option value="Caja">Caja</option>
-                                      <option value="Estiba">Estiba</option>
-                                    </select>
-                                  </div>
+                                  <p className="text-xs md:text-sm font-bold text-slate-300">
+                                    Ideal cuando un mueble o estructura grande se desarma en varias partes o paquetes físicos. Se generará 1 etiqueta QR por cada subpaquete (Subpaquete 1 de N, 2 de N...).
+                                  </p>
 
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase text-amber-400 mb-1">
-                                      Cantidad de Bultos (N)
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={prod.cantidadPendiente}
-                                      value={calc.numBultos}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          numBultos: e.target.value
-                                        })
-                                      }
-                                      className="w-full bg-[var(--color-base)] border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-black theme-text-main text-center"
-                                    />
-                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+                                    <div className="md:col-span-4">
+                                      <label className="block text-xs md:text-sm font-black uppercase text-purple-300 mb-1">
+                                        ¿En cuántos paquetes / partes vas a dividir este producto?
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min={2}
+                                        max={50}
+                                        value={calc.numSubpaquetes ?? 2}
+                                        onChange={(e) =>
+                                          updateItemCalc(prod.itemKey, {
+                                            numSubpaquetes: e.target.value,
+                                            mode: 'SUBPAQUETES'
+                                          })
+                                        }
+                                        className="w-full bg-[var(--color-base)] border-2 border-purple-500 rounded-xl px-3.5 py-2.5 text-base font-black theme-text-main text-center"
+                                      />
+                                    </div>
 
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase text-amber-400 mb-1">
-                                      Unidades por Bulto (X)
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={prod.cantidadPendiente}
-                                      value={calc.undsPorBulto}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          undsPorBulto: e.target.value
-                                        })
-                                      }
-                                      className="w-full bg-[var(--color-base)] border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-black theme-text-main text-center"
-                                    />
-                                  </div>
+                                    <div className="md:col-span-4">
+                                      <label className="block text-xs md:text-sm font-black uppercase theme-text-muted mb-1">
+                                        Detalle de las partes (Opcional)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={calc.observaciones}
+                                        onChange={(e) =>
+                                          updateItemCalc(prod.itemKey, {
+                                            observaciones: e.target.value
+                                          })
+                                        }
+                                        placeholder="Ej. Base + Cuerpo + Vidrios..."
+                                        className="w-full bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3.5 py-2.5 text-sm font-bold theme-text-main"
+                                      />
+                                    </div>
 
-                                  <div className="md:col-span-3">
-                                    <label className="block text-[10px] font-black uppercase theme-text-muted mb-1">
-                                      Observación del Bulto (Opcional)
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={calc.observaciones}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          observaciones: e.target.value
-                                        })
-                                      }
-                                      placeholder="Ej. Frágil / Con herrajes"
-                                      className="w-full bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-xs font-bold theme-text-main"
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <button
-                                      type="button"
-                                      disabled={!isValidMath}
-                                      onClick={() => handleGenerateBultosForItem(prod)}
-                                      className={`w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-md transition-all ${
-                                        isValidMath
-                                          ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer'
-                                          : 'bg-red-950/50 border border-red-500/40 text-red-300 cursor-not-allowed'
-                                      }`}
-                                    >
-                                      <QrCode size={15} />
-                                      <span>
-                                        Generar {numBultos} {numBultos === 1 ? 'Bulto' : 'Bultos'}{' '}
-                                        ({totalUnitsToAssign} unds)
-                                      </span>
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-[var(--color-surface)] p-3 rounded-xl border border-[var(--color-border)]">
-                                  <div className="md:col-span-3">
-                                    <label className="block text-[10px] font-black uppercase theme-text-muted mb-1">
-                                      Destino del Empaque Manual
-                                    </label>
-                                    <select
-                                      value={calc.targetPkgId || 'NUEVO'}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          targetPkgId: e.target.value
-                                        })
-                                      }
-                                      className="w-full bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-2.5 py-2 text-xs font-bold theme-text-main"
-                                    >
-                                      <option value="NUEVO">
-                                        + Crear Nuevo Bulto / Caja Mixta
-                                      </option>
-                                      {(activePackingList.packages || []).map((p, idx) => (
-                                        <option key={p.id} value={p.id}>
-                                          Agregar a {p.codigoPaquete} (Bulto {idx + 1} —{' '}
-                                          {(p.items || []).length} ítems)
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase theme-text-muted mb-1">
-                                      Tipo de Embalaje
-                                    </label>
-                                    <select
-                                      value={calc.tipoEmpaque}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          tipoEmpaque: e.target.value
-                                        })
-                                      }
-                                      disabled={calc.targetPkgId && calc.targetPkgId !== 'NUEVO'}
-                                      className="w-full bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-2.5 py-2 text-xs font-bold theme-text-main"
-                                    >
-                                      <option value="Caja">Caja</option>
-                                      <option value="Paquete">Paquete</option>
-                                      <option value="Guacal">Guacal</option>
-                                      <option value="Estiba">Estiba</option>
-                                    </select>
-                                  </div>
-
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase text-amber-400 mb-1">
-                                      Unidades a Incluir
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={prod.cantidadPendiente}
-                                      value={calc.manualQty}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          manualQty: e.target.value
-                                        })
-                                      }
-                                      className="w-full bg-[var(--color-base)] border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-black theme-text-main text-center"
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-black uppercase theme-text-muted mb-1">
-                                      Nota (Opcional)
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={calc.observaciones}
-                                      onChange={(e) =>
-                                        updateItemCalc(prod.itemKey, {
-                                          observaciones: e.target.value
-                                        })
-                                      }
-                                      placeholder="Nota..."
-                                      className="w-full bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-xs font-bold theme-text-main"
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <button
-                                      type="button"
-                                      disabled={!isValidMath}
-                                      onClick={() => handleGenerateBultosForItem(prod)}
-                                      className={`w-full py-2.5 px-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-md transition-all ${
-                                        isValidMath
-                                          ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer'
-                                          : 'bg-red-950/50 border border-red-500/40 text-red-300 cursor-not-allowed'
-                                      }`}
-                                    >
-                                      <Plus size={15} />
-                                      <span>
-                                        {calc.targetPkgId && calc.targetPkgId !== 'NUEVO'
-                                          ? `Incluir ${manualQty} unds en Bulto`
-                                          : `Crear Bulto con ${manualQty} unds`}
-                                      </span>
-                                    </button>
+                                    <div className="md:col-span-4">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleGenerateBultosForItem(prod, {
+                                            mode: 'SUBPAQUETES'
+                                          })
+                                        }
+                                        className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg border-2 border-purple-400 cursor-pointer"
+                                      >
+                                        <QrCode size={18} />
+                                        <span>
+                                          Generar {numSubpaquetes} Subpaquetes con QR Individual
+                                        </span>
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               )}
 
-                              <div className="flex items-center justify-between text-xs px-1">
-                                {exceedsBalance ? (
-                                  <span className="text-red-400 font-black flex items-center gap-1.5">
-                                    <AlertTriangle size={14} />
-                                    Validación de Saldo: Intentas asignar {totalUnitsToAssign}{' '}
-                                    unidades, pero el saldo disponible por empacar es de{' '}
-                                    {prod.cantidadPendiente} unidades (Total pedido:{' '}
-                                    {prod.cantidadTotalPedido}).
-                                  </span>
-                                ) : (
-                                  <span className="theme-text-muted font-semibold">
-                                    {calc.mode === 'LOTES_IGUALES' ? (
-                                      <>
-                                        Resultado: Se generarán{' '}
-                                        <strong className="text-amber-400">
-                                          {numBultos} registros de{' '}
-                                          {calc.tipoEmpaque.toUpperCase()} independientes
-                                        </strong>{' '}
-                                        con códigos QR únicos, cada uno indicando{' '}
-                                        <strong className="text-emerald-400">
-                                          "{undsPorBulto} de {prod.cantidadTotalPedido} unds"
-                                        </strong>
-                                        . Saldo restante tras aplicar:{' '}
-                                        <strong>
-                                          {prod.cantidadPendiente - totalUnitsToAssign} unds
-                                        </strong>
-                                        .
-                                      </>
+                              {/* PANEL DESPLEGABLE 2: DIVIDIR MUCHAS UNIDADES EN PAQUETES (Ej. 500 flautas -> 10 paquetes de 50 unds) */}
+                              {calc.openPanel === 'LOTES_IGUALES' && (
+                                <div className="bg-amber-950/20 border-2 border-amber-500/60 rounded-2xl p-4 space-y-3 animate-in fade-in duration-150">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm md:text-base font-black text-amber-400 uppercase flex items-center gap-2">
+                                      <SplitSquareVertical size={18} />
+                                      <span>
+                                        Distribuir {prod.cantidadPendiente} Unidades en Paquetes (Ej. 10 paquetes de 50 unidades)
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateItemCalc(prod.itemKey, { openPanel: null })
+                                      }
+                                      className="text-xs font-black uppercase text-slate-400 hover:text-white"
+                                    >
+                                      Ocultar ✕
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+                                    <div className="md:col-span-4">
+                                      <label className="block text-xs md:text-sm font-black uppercase text-amber-400 mb-1">
+                                        ¿Cuántas unidades van en cada paquete?
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={prod.cantidadPendiente}
+                                        value={calc.undsPorBulto}
+                                        onChange={(e) => {
+                                          const valUnds = Math.max(
+                                            1,
+                                            Math.floor(Number(e.target.value) || 1)
+                                          );
+                                          const autoPackages = Math.max(
+                                            1,
+                                            Math.floor(prod.cantidadPendiente / valUnds)
+                                          );
+                                          updateItemCalc(prod.itemKey, {
+                                            undsPorBulto: e.target.value,
+                                            numBultos: autoPackages,
+                                            mode: 'LOTES_IGUALES'
+                                          });
+                                        }}
+                                        className="w-full bg-[var(--color-base)] border-2 border-amber-500 rounded-xl px-3.5 py-2.5 text-base font-black theme-text-main text-center"
+                                      />
+                                    </div>
+
+                                    <div className="md:col-span-4">
+                                      <label className="block text-xs md:text-sm font-black uppercase text-amber-400 mb-1">
+                                        Cantidad de Paquetes a Generar
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={prod.cantidadPendiente}
+                                        value={calc.numBultos}
+                                        onChange={(e) =>
+                                          updateItemCalc(prod.itemKey, {
+                                            numBultos: e.target.value,
+                                            mode: 'LOTES_IGUALES'
+                                          })
+                                        }
+                                        className="w-full bg-[var(--color-base)] border-2 border-amber-500 rounded-xl px-3.5 py-2.5 text-base font-black theme-text-main text-center"
+                                      />
+                                    </div>
+
+                                    <div className="md:col-span-4">
+                                      <button
+                                        type="button"
+                                        disabled={!isValidMath}
+                                        onClick={() =>
+                                          handleGenerateBultosForItem(prod, {
+                                            mode: 'LOTES_IGUALES'
+                                          })
+                                        }
+                                        className={`w-full py-3 px-4 rounded-xl font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg border-2 transition-all ${
+                                          isValidMath
+                                            ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 cursor-pointer'
+                                            : 'bg-red-950/50 border-red-500/50 text-red-300 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        <QrCode size={18} />
+                                        <span>
+                                          Generar {numBultos}{' '}
+                                          {numBultos === 1 ? 'Paquete' : 'Paquetes'} de{' '}
+                                          {undsPorBulto} unds ({totalUnitsToAssign} unds)
+                                        </span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-xs md:text-sm font-bold px-1">
+                                    {exceedsBalance ? (
+                                      <span className="text-red-400 font-black flex items-center gap-1.5">
+                                        <AlertTriangle size={16} />
+                                        Intentas asignar {totalUnitsToAssign} unidades ({numBultos} ×{' '}
+                                        {undsPorBulto}), pero el saldo disponible es de{' '}
+                                        {prod.cantidadPendiente} unidades.
+                                      </span>
                                     ) : (
-                                      <>
-                                        Resultado: Se asignarán{' '}
+                                      <span className="theme-text-main">
+                                        Resultado: Se crearán{' '}
+                                        <strong className="text-amber-400">
+                                          {numBultos} paquetes independientes con QR único
+                                        </strong>
+                                        , cada uno con{' '}
                                         <strong className="text-emerald-400">
-                                          {manualQty} de {prod.cantidadTotalPedido} unds
+                                          {undsPorBulto} de {prod.cantidadTotalPedido} unidades
                                         </strong>
                                         . Saldo restante tras aplicar:{' '}
                                         <strong>
-                                          {prod.cantidadPendiente - totalUnitsToAssign} unds
+                                          {prod.cantidadPendiente - totalUnitsToAssign} unidades
                                         </strong>
                                         .
-                                      </>
+                                      </span>
                                     )}
-                                  </span>
-                                )}
-                              </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* PANEL DESPLEGABLE 3: AGRUPACIÓN MANUAL EN CAJA MIXTA */}
+                              {calc.openPanel === 'AGRUPACION_MANUAL' && (
+                                <div className="bg-sky-950/25 border-2 border-sky-500/60 rounded-2xl p-4 space-y-3 animate-in fade-in duration-150">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm md:text-base font-black text-sky-300 uppercase flex items-center gap-2">
+                                      <Layers size={18} />
+                                      <span>
+                                        Agrupar Unidades en Caja / Guacal Mixto con Otros Productos
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateItemCalc(prod.itemKey, { openPanel: null })
+                                      }
+                                      className="text-xs font-black uppercase text-slate-400 hover:text-white"
+                                    >
+                                      Ocultar ✕
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+                                    <div className="md:col-span-5">
+                                      <label className="block text-xs md:text-sm font-black uppercase text-sky-300 mb-1">
+                                        Destino del Empaque Manual
+                                      </label>
+                                      <select
+                                        value={calc.targetPkgId || 'NUEVO'}
+                                        onChange={(e) =>
+                                          updateItemCalc(prod.itemKey, {
+                                            targetPkgId: e.target.value,
+                                            mode: 'AGRUPACION_MANUAL'
+                                          })
+                                        }
+                                        className="w-full bg-[var(--color-base)] border-2 border-sky-500/60 rounded-xl px-3.5 py-2.5 text-sm font-black theme-text-main"
+                                      >
+                                        <option value="NUEVO">
+                                          + Crear Nuevo Bulto / Caja Mixta
+                                        </option>
+                                        {(activePackingList.packages || []).map((p, idx) => (
+                                          <option key={p.id} value={p.id}>
+                                            Agregar a {p.codigoPaquete} (Bulto {idx + 1} —{' '}
+                                            {(p.items || []).length} ítems)
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+
+                                    <div className="md:col-span-3">
+                                      <label className="block text-xs md:text-sm font-black uppercase text-sky-300 mb-1">
+                                        Unidades a Incluir
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={prod.cantidadPendiente}
+                                        value={calc.manualQty}
+                                        onChange={(e) =>
+                                          updateItemCalc(prod.itemKey, {
+                                            manualQty: e.target.value,
+                                            mode: 'AGRUPACION_MANUAL'
+                                          })
+                                        }
+                                        className="w-full bg-[var(--color-base)] border-2 border-sky-500 rounded-xl px-3.5 py-2.5 text-base font-black theme-text-main text-center"
+                                      />
+                                    </div>
+
+                                    <div className="md:col-span-4">
+                                      <button
+                                        type="button"
+                                        disabled={!isValidMath}
+                                        onClick={() =>
+                                          handleGenerateBultosForItem(prod, {
+                                            mode: 'AGRUPACION_MANUAL'
+                                          })
+                                        }
+                                        className={`w-full py-3 px-4 rounded-xl font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg border-2 transition-all ${
+                                          isValidMath
+                                            ? 'bg-sky-600 hover:bg-sky-500 text-white border-sky-400 cursor-pointer'
+                                            : 'bg-red-950/50 border-red-500/50 text-red-300 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        <Plus size={18} />
+                                        <span>
+                                          {calc.targetPkgId && calc.targetPkgId !== 'NUEVO'
+                                            ? `Incluir ${manualQty} unds en Bulto`
+                                            : `Crear Bulto Mixto (${manualQty} unds)`}
+                                        </span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })
@@ -2605,15 +2885,15 @@ const PackingListsModal = () => {
 
                   {/* SECCIÓN DE PRODUCTOS EN EMPAQUE 100% EMPACADOS LISTOS PARA TRANSFERIR A DESPACHOS */}
                   {completedEmpaqueProductsReadyForDispatch.length > 0 && (
-                    <div className="bg-emerald-950/20 border-2 border-emerald-500/40 rounded-2xl p-4 shadow-lg">
-                      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <PackageCheck size={20} className="text-emerald-400" />
+                    <div className="bg-emerald-950/25 border-2 border-emerald-500/60 rounded-2xl p-5 shadow-lg">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <PackageCheck size={24} className="text-emerald-400" />
                           <div>
-                            <h3 className="text-sm font-black uppercase text-emerald-400">
+                            <h3 className="text-base md:text-lg font-black uppercase text-emerald-400">
                               Productos con Empaque 100% Completado — Listos para Transferir a DESPACHOS ({completedEmpaqueProductsReadyForDispatch.length})
                             </h3>
-                            <p className="text-xs theme-text-muted">
+                            <p className="text-xs md:text-sm font-bold theme-text-muted">
                               Estos ítems ya tienen el 100% de sus unidades asignadas a bultos/QR. Transfiérelos a Despachos (En Espera).
                             </p>
                           </div>
@@ -2623,29 +2903,29 @@ const PackingListsModal = () => {
                           onClick={() =>
                             handleTransferToDespachos(completedEmpaqueProductsReadyForDispatch)
                           }
-                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer"
+                          className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 shadow-md border-2 border-emerald-300 cursor-pointer"
                         >
-                          <Truck size={16} />
+                          <Truck size={18} />
                           <span>Transferir Todos a DESPACHOS (En Espera)</span>
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {completedEmpaqueProductsReadyForDispatch.map((item) => (
                           <div
                             key={item.itemKey}
-                            className="p-3 rounded-xl bg-[var(--color-surface)] border border-emerald-500/30 flex items-center justify-between gap-3"
+                            className="p-3.5 rounded-xl bg-[var(--color-surface)] border-2 border-emerald-500/40 flex items-center justify-between gap-3"
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-slate-800 text-emerald-300">
+                                <span className="font-mono text-xs md:text-sm font-black px-2.5 py-0.5 rounded bg-slate-800 text-emerald-300">
                                   {item.codArticulo}
                                 </span>
-                                <span className="text-xs font-extrabold theme-text-main truncate">
+                                <span className="text-sm font-extrabold theme-text-main truncate">
                                   {item.nombre}
                                 </span>
                               </div>
-                              <div className="text-[11px] text-emerald-400 font-black mt-1">
+                              <div className="text-xs md:text-sm text-emerald-400 font-black mt-1">
                                 ✓ Empacado: {item.cantidadEmpacada} / Total:{' '}
                                 {item.cantidadTotalPedido} unidades ({item.bultosGenerados} bultos QR)
                               </div>
@@ -2653,10 +2933,10 @@ const PackingListsModal = () => {
                             <button
                               type="button"
                               onClick={() => handleTransferToDespachos([item])}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 font-black text-[11px] uppercase flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                              className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border-2 border-emerald-500/50 font-black text-xs uppercase flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
                             >
                               <span>Pasar a Despachos</span>
-                              <ArrowRight size={13} />
+                              <ArrowRight size={15} />
                             </button>
                           </div>
                         ))}
@@ -2665,26 +2945,26 @@ const PackingListsModal = () => {
                   )}
 
                   {/* ==================================================================================== */}
-                  {/* SECCIÓN 2 (NUEVA): PRODUCTOS DEL PEDIDO PENDIENTES POR LLEGAR A EMPAQUE Y SU ÁREA    */}
+                  {/* SECCIÓN 2: PRODUCTOS DEL PEDIDO PENDIENTES POR LLEGAR A EMPAQUE Y SU ÁREA            */}
                   {/* ==================================================================================== */}
                   <div
                     className={`bg-[var(--color-surface)] border-2 rounded-2xl overflow-hidden shadow-lg transition-all ${
                       orderPanorama.pendingArrivalItems.length > 0
-                        ? 'border-rose-500/50'
+                        ? 'border-rose-500/60'
                         : 'border-[var(--color-border)]'
                     }`}
                   >
                     <div
                       onClick={() => setIsPendingArrivalExpanded(!isPendingArrivalExpanded)}
-                      className={`px-4 py-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3 cursor-pointer ${
+                      className={`px-5 py-3.5 border-b-2 border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3 cursor-pointer ${
                         orderPanorama.pendingArrivalItems.length > 0
                           ? 'bg-rose-500/10'
                           : 'bg-emerald-500/10'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-3">
                         <MapPin
-                          size={19}
+                          size={22}
                           className={
                             orderPanorama.pendingArrivalItems.length > 0
                               ? 'text-rose-400'
@@ -2692,10 +2972,10 @@ const PackingListsModal = () => {
                           }
                         />
                         <div>
-                          <h3 className="text-sm font-black uppercase tracking-wider theme-text-main">
+                          <h3 className="text-base md:text-lg font-black uppercase tracking-wider theme-text-main">
                             2. Productos del Pedido Pendientes por Llegar a Empaque y su Ubicación en Planta ({orderPanorama.pendingArrivalItems.length} de {orderPanorama.totalOrderItemsCount})
                           </h3>
-                          <p className="text-xs theme-text-muted">
+                          <p className="text-xs md:text-sm font-bold theme-text-muted">
                             {orderPanorama.pendingArrivalItems.length > 0
                               ? `De los ${orderPanorama.totalOrderItemsCount} productos del Pedido #${activePackingList.pedidoNum}, ya recibiste ${orderPanorama.inEmpaqueOrDispatchedCount} en Empaque/Despachos y aún faltan ${orderPanorama.pendingArrivalItems.length} producto(s) por llegar.`
                               : `Todos los ${orderPanorama.totalOrderItemsCount} productos del Pedido #${activePackingList.pedidoNum} ya llegaron al área de Empaque / Despachos.`}
@@ -2703,9 +2983,9 @@ const PackingListsModal = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span
-                          className={`px-3 py-1 rounded-xl text-xs font-black uppercase ${
+                          className={`px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black uppercase ${
                             orderPanorama.pendingArrivalItems.length > 0
                               ? 'bg-rose-500 text-white'
                               : 'bg-emerald-500 text-slate-950'
@@ -2716,33 +2996,32 @@ const PackingListsModal = () => {
                             : '0 Pendientes en Planta'}
                         </span>
                         {isPendingArrivalExpanded ? (
-                          <ChevronUp size={18} className="theme-text-muted" />
+                          <ChevronUp size={20} className="theme-text-muted" />
                         ) : (
-                          <ChevronDown size={18} className="theme-text-muted" />
+                          <ChevronDown size={20} className="theme-text-muted" />
                         )}
                       </div>
                     </div>
 
                     {isPendingArrivalExpanded && (
-                      <div className="p-4 space-y-4">
+                      <div className="p-4 md:p-5 space-y-4">
                         {orderPanorama.pendingArrivalItems.length === 0 ? (
-                          <div className="p-5 rounded-xl bg-[var(--color-base)] border border-emerald-500/30 text-center">
-                            <CheckCircle size={28} className="text-emerald-400 mx-auto mb-1.5" />
-                            <div className="text-xs font-black uppercase text-emerald-400">
+                          <div className="p-6 rounded-xl bg-[var(--color-base)] border-2 border-emerald-500/40 text-center">
+                            <CheckCircle size={32} className="text-emerald-400 mx-auto mb-2" />
+                            <div className="text-sm md:text-base font-black uppercase text-emerald-400">
                               ¡Pedido 100% recibido en Empaque / Despachos! No quedan productos rezagados en otras áreas de la planta.
                             </div>
                           </div>
                         ) : (
                           <>
-                            {/* CHIPS DE RESUMEN POR ÁREA DONDE SE ENCUENTRAN LOS PRODUCTOS FALTANTES */}
                             <div className="flex flex-wrap items-center justify-between gap-3">
                               <div className="flex flex-wrap items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedPendingAreaFilter('TODAS')}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase border transition-all cursor-pointer ${
+                                  className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black uppercase border-2 transition-all cursor-pointer ${
                                     selectedPendingAreaFilter === 'TODAS'
-                                      ? 'bg-rose-500 text-white border-rose-400 shadow'
+                                      ? 'bg-rose-500 text-white border-rose-300 shadow'
                                       : 'bg-[var(--color-base)] theme-text-muted border-[var(--color-border)] hover:text-white'
                                   }`}
                                 >
@@ -2754,13 +3033,13 @@ const PackingListsModal = () => {
                                     key={areaStat.area}
                                     type="button"
                                     onClick={() => setSelectedPendingAreaFilter(areaStat.area)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                    className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black uppercase border-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                                       selectedPendingAreaFilter === areaStat.area
-                                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow'
-                                        : 'bg-[var(--color-base)] text-amber-300 border-amber-500/30 hover:border-amber-400'
+                                        ? 'bg-amber-500 text-slate-950 border-amber-300 shadow'
+                                        : 'bg-[var(--color-base)] text-amber-300 border-amber-500/40 hover:border-amber-400'
                                     }`}
                                   >
-                                    <MapPin size={13} />
+                                    <MapPin size={15} />
                                     <span>
                                       {areaStat.area}: {areaStat.itemsCount} prod ({areaStat.unitsCount} unds)
                                     </span>
@@ -2773,54 +3052,53 @@ const PackingListsModal = () => {
                                 value={pendingArrivalSearch}
                                 onChange={(e) => setPendingArrivalSearch(e.target.value)}
                                 placeholder="Buscar producto o área..."
-                                className="bg-[var(--color-base)] border border-[var(--color-border)] rounded-xl px-3 py-1.5 text-xs theme-text-main focus:outline-none focus:border-rose-500"
+                                className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-xl px-3.5 py-2 text-sm font-bold theme-text-main focus:outline-none focus:border-rose-500"
                               />
                             </div>
 
-                            {/* TABLA DETALLADA DE LOS PRODUCTOS QUE FALTAN POR LLEGAR A EMPAQUE */}
-                            <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+                            <div className="overflow-x-auto rounded-xl border-2 border-[var(--color-border)]">
                               <table className="w-full border-collapse text-left">
                                 <thead>
-                                  <tr className="bg-[var(--color-base)] border-b border-[var(--color-border)] text-[11px] font-black uppercase tracking-wider theme-text-muted">
-                                    <th className="py-2.5 px-4 border-r border-[var(--color-border)] w-36">
+                                  <tr className="bg-[var(--color-base)] border-b-2 border-[var(--color-border)] text-xs md:text-sm font-black uppercase tracking-wider theme-text-muted">
+                                    <th className="py-3 px-4 border-r border-[var(--color-border)] w-40">
                                       Código
                                     </th>
-                                    <th className="py-2.5 px-4 border-r border-[var(--color-border)]">
+                                    <th className="py-3 px-4 border-r border-[var(--color-border)]">
                                       Producto que Falta por Llegar a Empaque
                                     </th>
-                                    <th className="py-2.5 px-4 border-r border-[var(--color-border)] w-32 text-center">
+                                    <th className="py-3 px-4 border-r border-[var(--color-border)] w-36 text-center">
                                       Cantidad
                                     </th>
-                                    <th className="py-2.5 px-4 border-r border-[var(--color-border)] w-64">
+                                    <th className="py-3 px-4 border-r border-[var(--color-border)] w-68">
                                       📍 Área Actual en Planta
                                     </th>
-                                    <th className="py-2.5 px-4 w-56">Estado / Seguimiento</th>
+                                    <th className="py-3 px-4 w-60">Estado / Seguimiento</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--color-border)] text-xs">
+                                <tbody className="divide-y divide-[var(--color-border)] text-sm">
                                   {filteredPendingArrivalItems.map((it) => (
                                     <tr
                                       key={it.id}
                                       className="hover:bg-white/[0.02] transition-colors"
                                     >
-                                      <td className="py-2.5 px-4 border-r border-[var(--color-border)] font-mono font-black text-amber-300">
+                                      <td className="py-3 px-4 border-r border-[var(--color-border)] font-mono font-black text-amber-300">
                                         {it.codArticulo}
                                       </td>
-                                      <td className="py-2.5 px-4 border-r border-[var(--color-border)] font-bold theme-text-main">
+                                      <td className="py-3 px-4 border-r border-[var(--color-border)] font-extrabold theme-text-main">
                                         {it.nombre}
                                       </td>
-                                      <td className="py-2.5 px-4 border-r border-[var(--color-border)] text-center font-black theme-text-main">
+                                      <td className="py-3 px-4 border-r border-[var(--color-border)] text-center font-black theme-text-main">
                                         {it.cantidad} unds
                                       </td>
-                                      <td className="py-2.5 px-4 border-r border-[var(--color-border)]">
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-300 font-black text-xs uppercase">
-                                          <MapPin size={13} />
+                                      <td className="py-3 px-4 border-r border-[var(--color-border)]">
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-500/15 border-2 border-rose-500/40 text-rose-300 font-black text-xs md:text-sm uppercase">
+                                          <MapPin size={15} />
                                           {it.areaActual}
                                         </span>
                                       </td>
-                                      <td className="py-2.5 px-4 font-semibold theme-text-muted">
+                                      <td className="py-3 px-4 font-bold theme-text-muted">
                                         <div className="flex items-center gap-1.5">
-                                          <Clock size={13} className="text-amber-400 shrink-0" />
+                                          <Clock size={15} className="text-amber-400 shrink-0" />
                                           <span>{it.estadoDetalle}</span>
                                         </div>
                                       </td>
@@ -2835,49 +3113,51 @@ const PackingListsModal = () => {
                     )}
                   </div>
 
-                  {/* SECCIÓN 3: TABLA DE BULTOS FÍSICOS GENERADOS Y ETIQUETAS QR INDIVIDUALES */}
-                  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-lg">
-                    <div className="px-4 py-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <FileText size={18} className="text-emerald-400" />
-                        <h3 className="text-sm font-black uppercase tracking-wider theme-text-main">
+                  {/* ==================================================================================== */}
+                  {/* SECCIÓN 3: TABLA DE BULTOS FÍSICOS GENERADOS Y ETIQUETAS QR INDIVIDUALES             */}
+                  {/* ==================================================================================== */}
+                  <div className="bg-[var(--color-surface)] border-2 border-[var(--color-border)] rounded-2xl overflow-hidden shadow-lg">
+                    <div className="px-5 py-3.5 border-b-2 border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <FileText size={22} className="text-emerald-400" />
+                        <h3 className="text-base md:text-lg font-black uppercase tracking-wider theme-text-main">
                           3. Bultos Físicos Generados y Códigos QR Individuales ({(activePackingList.packages || []).length} Bultos)
                         </h3>
                       </div>
-                      <span className="text-xs theme-text-muted">
-                        Cada bulto físico tiene su propio Consecutivo (Bulto X de N) y su etiqueta QR imprimible con la cantidad exacta contenida en ese bulto
+                      <span className="text-xs md:text-sm font-bold theme-text-muted">
+                        Cada bulto físico tiene su propio Consecutivo (Bulto X de N) y su etiqueta QR imprimible
                       </span>
                     </div>
 
                     {(activePackingList.packages || []).length === 0 ? (
                       <div className="p-8 text-center">
-                        <p className="text-sm font-bold theme-text-muted">
-                          Aún no se han generado bultos para este pedido. Usa la calculadora de distribución en la Sección 1 para fraccionar o agrupar los productos en Empaque.
+                        <p className="text-base font-bold theme-text-muted">
+                          Aún no se han generado bultos para este pedido. Usa los botones de empaque en la Sección 1 arriba.
                         </p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse text-left">
                           <thead>
-                            <tr className="bg-[var(--color-base)] border-b border-[var(--color-border)] text-[11px] font-black uppercase tracking-wider theme-text-muted">
-                              <th className="py-3 px-4 border-r border-[var(--color-border)] w-52">
+                            <tr className="bg-[var(--color-base)] border-b-2 border-[var(--color-border)] text-xs md:text-sm font-black uppercase tracking-wider theme-text-muted">
+                              <th className="py-3.5 px-4 border-r border-[var(--color-border)] w-56">
                                 Tipo y Consecutivo de Bulto
                               </th>
-                              <th className="py-3 px-4 border-r border-[var(--color-border)] w-40">
+                              <th className="py-3.5 px-4 border-r border-[var(--color-border)] w-44">
                                 Código de Producto
                               </th>
-                              <th className="py-3 px-4 border-r border-[var(--color-border)]">
-                                Nombre del Producto
+                              <th className="py-3.5 px-4 border-r border-[var(--color-border)]">
+                                Nombre del Producto y Notas
                               </th>
-                              <th className="py-3 px-4 border-r border-[var(--color-border)] w-52 text-center">
+                              <th className="py-3.5 px-4 border-r border-[var(--color-border)] w-60 text-center">
                                 Cantidad en ESTE Bulto
                               </th>
-                              <th className="py-3 px-4 w-56 text-center">
+                              <th className="py-3.5 px-4 w-64 text-center">
                                 Etiqueta QR Individual / Acciones
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[var(--color-border)] text-xs">
+                          <tbody className="divide-y divide-[var(--color-border)] text-sm">
                             {(activePackingList.packages || []).map((pkg, pkgIdx) => {
                               const items = Array.isArray(pkg.items) ? pkg.items : [];
                               const totalPackages = (activePackingList.packages || []).length;
@@ -2897,7 +3177,11 @@ const PackingListsModal = () => {
                                 const isFirstItemOfPkg = itemIdx === 0;
                                 const rowSpanCount = items.length;
                                 const cantBulto =
-                                  Number(item.cantidadEnEsteBulto ?? item.cantidadEmpacada) || 1;
+                                  Number(
+                                    item.cantidadMostradaBulto ??
+                                      item.cantidadEnEsteBulto ??
+                                      item.cantidadEmpacada
+                                  ) || 1;
                                 const cantTotalItem =
                                   Number(item.cantidadTotalItem ?? item.cantidadTotalPedido) ||
                                   cantBulto;
@@ -2912,53 +3196,60 @@ const PackingListsModal = () => {
                                         rowSpan={rowSpanCount}
                                         className="p-4 border-r border-[var(--color-border)] align-top bg-[var(--color-base)]/40"
                                       >
-                                        <div className="flex flex-col gap-1.5">
+                                        <div className="flex flex-col gap-2">
                                           <div className="inline-flex items-center gap-2 flex-wrap">
-                                            <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xs md:text-sm shadow">
+                                            <span className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-sm md:text-base shadow">
                                               {tipoUpper} #{numPadded}
                                             </span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-slate-800 text-amber-300 font-black text-[11px] border border-amber-500/30">
+                                            <span className="px-2.5 py-1 rounded-lg bg-slate-800 text-amber-300 font-black text-xs border border-amber-500/40">
                                               Bulto {pkgIdx + 1} de {totalPackages}
                                             </span>
                                           </div>
-                                          <div className="text-[10px] font-mono theme-text-muted">
+                                          <div className="text-xs font-mono font-bold theme-text-muted">
                                             ID:{' '}
                                             {pkg.codigoUnicoPedido ||
                                               `${activePackingList.pedidoNum}-B${numPadded}`}
                                           </div>
                                           {pkg.observaciones && (
-                                            <div className="text-[11px] bg-amber-500/10 border border-amber-500/30 text-amber-300 px-2 py-1 rounded-lg mt-1">
-                                              Obs: {pkg.observaciones}
+                                            <div className="text-xs md:text-sm font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 px-2.5 py-1.5 rounded-xl mt-1">
+                                              Nota: {pkg.observaciones}
                                             </div>
                                           )}
                                         </div>
                                       </td>
                                     )}
 
-                                    <td className="p-3.5 border-r border-[var(--color-border)] font-mono font-black text-amber-300 align-middle">
+                                    <td className="p-4 border-r border-[var(--color-border)] font-mono font-black text-sm md:text-base text-amber-300 align-middle">
                                       {item.codArticulo || 'S/C'}
                                     </td>
 
-                                    <td className="p-3.5 border-r border-[var(--color-border)] font-bold theme-text-main align-middle">
+                                    <td className="p-4 border-r border-[var(--color-border)] font-extrabold text-sm md:text-base theme-text-main align-middle">
                                       <div>{item.nombre}</div>
+                                      {item.subpaqueteLabel && (
+                                        <span className="inline-block mt-1 mr-2 px-2.5 py-0.5 rounded-lg text-xs font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                          🧩 {item.subpaqueteLabel}
+                                        </span>
+                                      )}
                                       {item.transferidoADespachos ? (
-                                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        <span className="inline-block mt-1 px-2.5 py-0.5 rounded-lg text-xs font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                                           ✓ Transferido a Despachos (EN ESPERA)
                                         </span>
                                       ) : (
-                                        <span className="inline-block mt-1 text-[10px] theme-text-muted font-semibold">
+                                        <span className="inline-block mt-1 text-xs theme-text-muted font-bold">
                                           Origen: Área de Empaque
                                         </span>
                                       )}
                                     </td>
 
-                                    <td className="p-3.5 border-r border-[var(--color-border)] text-center align-middle">
+                                    <td className="p-4 border-r border-[var(--color-border)] text-center align-middle">
                                       <div className="inline-flex flex-col items-center">
-                                        <span className="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-black text-xs md:text-sm">
+                                        <span className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-400 font-black text-sm md:text-base">
                                           {cantBulto} de {cantTotalItem} unds
                                         </span>
-                                        <span className="text-[10px] theme-text-muted font-bold mt-0.5">
-                                          Contenido en este bulto
+                                        <span className="text-xs theme-text-muted font-bold mt-1">
+                                          {item.subpaqueteLabel
+                                            ? item.subpaqueteLabel
+                                            : 'Contenido en este bulto'}
                                         </span>
                                         {items.length > 1 && (
                                           <button
@@ -2966,7 +3257,7 @@ const PackingListsModal = () => {
                                             onClick={() =>
                                               handleRemoveItemFromPackage(pkg.id, itemIdx)
                                             }
-                                            className="text-[10px] text-red-400 hover:underline mt-1"
+                                            className="text-xs font-bold text-red-400 hover:underline mt-1.5"
                                           >
                                             Quitar de este bulto
                                           </button>
@@ -2977,9 +3268,9 @@ const PackingListsModal = () => {
                                     {isFirstItemOfPkg && (
                                       <td
                                         rowSpan={rowSpanCount}
-                                        className="p-3.5 align-middle text-center bg-[var(--color-base)]/20"
+                                        className="p-4 align-middle text-center bg-[var(--color-base)]/20"
                                       >
-                                        <div className="flex flex-col items-center justify-center gap-2">
+                                        <div className="flex flex-col items-center justify-center gap-2.5">
                                           <div
                                             onClick={() =>
                                               setQrPreviewPkg({
@@ -2992,27 +3283,27 @@ const PackingListsModal = () => {
                                             className="cursor-pointer group relative inline-block"
                                             title="Haz clic para ver e imprimir el Código QR individual de este bulto"
                                           >
-                                            <QRCodeSVG value={qrPayload} size={84} />
-                                            <div className="mt-1 text-[10px] font-black text-indigo-400 group-hover:underline flex items-center justify-center gap-1">
-                                              <Eye size={12} /> Ver QR Bulto #{numPadded}
+                                            <QRCodeSVG value={qrPayload} size={88} />
+                                            <div className="mt-1.5 text-xs font-black text-indigo-400 group-hover:underline flex items-center justify-center gap-1">
+                                              <Eye size={14} /> Ver QR Bulto #{numPadded}
                                             </div>
                                           </div>
 
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex items-center gap-2">
                                             <button
                                               type="button"
                                               onClick={() => handlePrint('ROTULOS_QR', pkg)}
-                                              className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-[10px] font-black uppercase flex items-center gap-1 transition-colors"
+                                              className="px-3 py-1.5 rounded-xl bg-indigo-600/25 hover:bg-indigo-600 text-indigo-200 hover:text-white border-2 border-indigo-500/50 text-xs font-black uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
                                             >
-                                              <Printer size={12} /> Etiqueta QR
+                                              <Printer size={14} /> Etiqueta QR
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => handleDeletePackage(pkg.id)}
-                                              className="px-2 py-1 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-[10px] font-black uppercase transition-colors"
+                                              className="px-2.5 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-600 text-red-300 hover:text-white border-2 border-red-500/40 text-xs font-black uppercase transition-colors cursor-pointer"
                                               title="Eliminar este bulto"
                                             >
-                                              <Trash2 size={12} />
+                                              <Trash2 size={14} />
                                             </button>
                                           </div>
                                         </div>
@@ -3044,7 +3335,7 @@ const PackingListsModal = () => {
                   <AlertOctagon size={40} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <span className="px-3 py-0.5 rounded-full text-[11px] font-black uppercase bg-red-500 text-white tracking-wider">
+                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-red-500 text-white tracking-wider">
                     ALERTA PREVENTIVA DE EMPAQUE Y DESPACHOS
                   </span>
                   <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white mt-1">
@@ -3054,7 +3345,7 @@ const PackingListsModal = () => {
               </div>
 
               <div className="bg-red-900/60 border-2 border-red-400/50 rounded-2xl p-4 space-y-3">
-                <p className="text-sm md:text-base font-bold text-red-100 leading-relaxed">
+                <p className="text-base font-bold text-red-100 leading-relaxed">
                   El <strong className="text-amber-300">PEDIDO #{incompleteCloseWarningModal.pedidoNum}</strong> ({incompleteCloseWarningModal.cliente}) tiene un total de{' '}
                   <strong className="text-white underline">
                     {incompleteCloseWarningModal.totalPedidoItems} productos
@@ -3066,7 +3357,7 @@ const PackingListsModal = () => {
                   por completar el proceso de empaque y despacho:
                 </p>
 
-                <div className="space-y-2 text-xs md:text-sm font-bold bg-black/30 p-3.5 rounded-xl border border-red-400/30">
+                <div className="space-y-2.5 text-sm md:text-base font-bold bg-black/30 p-4 rounded-xl border border-red-400/30">
                   {incompleteCloseWarningModal.faltanPorLlegarCount > 0 && (
                     <div className="flex items-start gap-2 text-amber-300">
                       <span>•</span>
@@ -3109,7 +3400,7 @@ const PackingListsModal = () => {
                 </div>
               </div>
 
-              <div className="bg-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-xs md:text-sm font-black text-amber-200 leading-relaxed">
+              <div className="bg-amber-500/20 border-2 border-amber-400 rounded-2xl p-4 text-sm md:text-base font-black text-amber-200 leading-relaxed">
                 📌 PROTECCIÓN DE LISTA DE EMPAQUE (DESPACHO PARCIAL PERMITIDO):
                 <span className="block font-bold text-white mt-1">
                   Puedes despachar hoy los productos que ya están empacados ({incompleteCloseWarningModal.bultosCount} bultos QR). Al darle clic en &quot;ACEPTAR&quot;, el progreso queda guardado pero{' '}
@@ -3144,11 +3435,11 @@ const PackingListsModal = () => {
             >
               <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div className="text-left">
-                  <span className="text-[10px] font-black uppercase text-amber-400">
+                  <span className="text-xs font-black uppercase text-amber-400">
                     Etiqueta QR Individual • Bulto {qrPreviewPkg.pkgIdx + 1} de{' '}
                     {qrPreviewPkg.totalPackages}
                   </span>
-                  <h4 className="text-lg font-black theme-text-main">
+                  <h4 className="text-xl font-black theme-text-main">
                     PEDIDO #{activePackingList.pedidoNum} • {qrPreviewPkg.pkg.codigoPaquete}
                   </h4>
                 </div>
@@ -3157,7 +3448,7 @@ const PackingListsModal = () => {
                   onClick={() => setQrPreviewPkg(null)}
                   className="p-1.5 rounded-xl bg-[var(--color-base)] theme-text-muted hover:text-white"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -3169,11 +3460,11 @@ const PackingListsModal = () => {
                 />
               </div>
 
-              <div className="bg-[var(--color-base)] border border-[var(--color-border)] rounded-2xl p-3 text-left">
-                <div className="text-[10px] font-black uppercase text-amber-400 mb-1">
+              <div className="bg-[var(--color-base)] border-2 border-[var(--color-border)] rounded-2xl p-3.5 text-left">
+                <div className="text-xs font-black uppercase text-amber-400 mb-1">
                   Payload del QR (Visible al escanear este bulto físico):
                 </div>
-                <pre className="text-[11px] font-mono theme-text-main whitespace-pre-wrap leading-relaxed">
+                <pre className="text-xs font-mono font-bold theme-text-main whitespace-pre-wrap leading-relaxed">
                   {qrPreviewPkg.qrPayload}
                 </pre>
               </div>
@@ -3182,14 +3473,14 @@ const PackingListsModal = () => {
                 <button
                   type="button"
                   onClick={() => handlePrint('ROTULOS_QR', qrPreviewPkg.pkg)}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs md:text-sm uppercase flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Printer size={16} /> Imprimir Etiqueta QR de este Bulto
+                  <Printer size={17} /> Imprimir Etiqueta QR de este Bulto
                 </button>
                 <button
                   type="button"
                   onClick={() => setQrPreviewPkg(null)}
-                  className="px-4 py-2.5 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] theme-text-main font-black text-xs uppercase"
+                  className="px-4 py-3 rounded-xl bg-[var(--color-base)] border-2 border-[var(--color-border)] theme-text-main font-black text-xs md:text-sm uppercase cursor-pointer"
                 >
                   Cerrar
                 </button>
