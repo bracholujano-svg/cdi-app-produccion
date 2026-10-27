@@ -3,6 +3,7 @@ import { X, Clock, MapPin, Activity, Calendar, AlertTriangle, Monitor, Package, 
 import { getDaysLeft } from '../../utils/helpers';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS } from '../../utils/constants';
+import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 
 const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) => {
     const { supervisorProfile } = useAppContext();
@@ -14,18 +15,20 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
     // Estado para el reloj y rotación
     const [currentTime, setCurrentTime] = useState(new Date());
     const [currentPage, setCurrentPage] = useState(0);
+    const [isMaximized, setIsMaximized] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(false);
     const ITEMS_PER_PAGE = 10; // Ajustable según altura de la pantalla de TV
     const ROTATION_INTERVAL = 5000; // 5 segundos
 
-    // Reloj y Bloqueo de Scroll Principal
+    // Reloj y Bloqueo de Scroll Principal (se libera al minimizar para trabajar en el fondo)
     useEffect(() => {
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = isMinimized ? '' : 'hidden';
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => {
             clearInterval(timer);
             document.body.style.overflow = '';
         };
-    }, []);
+    }, [isMinimized]);
 
     // Cálculo de Eficiencia y Procesamiento de Pedidos
     const { processedOrders, metrics } = useMemo(() => {
@@ -177,7 +180,18 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
     };
 
     return (
-        <div className="fixed inset-0 theme-bg-main theme-text-main z-[200] flex flex-col overflow-hidden animate-in fade-in duration-500 font-sans">
+        <>
+        <MinimizedWindowDock
+            isMinimized={isMinimized}
+            title={`Monitor TV • ${selectedArea}`}
+            subtitle={`${metrics.total} en cola • Rotación activa`}
+            icon={Monitor}
+            accentClass="bg-blue-600 text-white"
+            onRestore={() => setIsMinimized(false)}
+            onClose={onClose}
+        />
+        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 bg-black/75 backdrop-blur-sm z-[200] flex items-center justify-center animate-in fade-in duration-300 font-sans'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
+            <div className={`theme-bg-main theme-text-main flex flex-col overflow-hidden border theme-border transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
             {/* Cabecera Tipo Aeropuerto */}
             <div className="theme-bg-card border-b-2 border-[var(--color-primary)] p-4 md:p-6 flex justify-between items-center shrink-0 shadow-2xl relative">
                 
@@ -229,8 +243,8 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                     </div>
                 </div>
 
-                {/* Lado Derecho: Reloj y Botón Salir */}
-                <div className="flex items-center gap-6">
+                {/* Lado Derecho: Reloj y Controles de Ventana */}
+                <div className="flex items-center gap-4 md:gap-6">
                     <div className="text-right flex flex-col items-end">
                         <span className="text-sm md:text-base theme-text-main font-bold uppercase tracking-widest">
                             {currentTime.toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit', month: 'short' }).replace('.','')}
@@ -239,9 +253,12 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                             {currentTime.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                         </span>
                     </div>
-                    <button onClick={onClose} className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-colors border border-red-500/30 shrink-0">
-                        <X size="2em" />
-                    </button>
+                    <WindowControls
+                        isMaximized={isMaximized}
+                        onToggleMaximize={() => setIsMaximized(prev => !prev)}
+                        onMinimize={() => setIsMinimized(true)}
+                        onClose={onClose}
+                    />
                 </div>
             </div>
 
@@ -395,7 +412,9 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                     </span>
                 </div>
             )}
+            </div>
         </div>
+        </>
     );
 };
 

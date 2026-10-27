@@ -47,6 +47,7 @@ const BulkOrderDetailsModal = ({
 
   const [isTerminadoLocal, setIsTerminadoLocal] = useState(false);
   const [tempPartialQty, setTempPartialQty] = useState(0);
+  const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
   // DIRECTIVA 2: Estado del Formulario Logístico para Despachos
   const [datosLogistica, setDatosLogistica] = useState({
@@ -438,7 +439,7 @@ const BulkOrderDetailsModal = ({
                         
                         
                         
-                        <button type="button" onClick={()=>{
+                        <button type="button" disabled={isSubmittingTransfer} onClick={async ()=>{
                               const en = document.getElementById('entregadoPorBulk').value.trim().toUpperCase();
                               if(en && tempTransferDate && tempTransferAreas.length > 0) {
                                 if (tempIsPartial && tempTransferAreas.length > 1) { alert("No se puede hacer bifurcación a múltiples áreas y entrega parcial al mismo tiempo. Seleccione solo un área destino."); return; }
@@ -448,23 +449,28 @@ const BulkOrderDetailsModal = ({
                                        return;
                                    }
                                 }
-                                updateTransfer(
-                                  selectedBulkOrders.map(o => o.id), 
-                                  tempTransferAreas, 
-                                  tempTransferDate, 
-                                  en, 
-                                  null, 
-                                  tempIsPartial, 
-                                  tempIsPartial && tempPartialQty ? tempPartialQty : false,
-                                  null
-                                );
-                                setTempIsPartial(false);
-                                setTempPartialQty(0);
+                                setIsSubmittingTransfer(true);
+                                try {
+                                  await updateTransfer(
+                                    selectedBulkOrders.map(o => o.id), 
+                                    tempTransferAreas, 
+                                    tempTransferDate, 
+                                    en, 
+                                    null, 
+                                    tempIsPartial, 
+                                    tempIsPartial && tempPartialQty ? tempPartialQty : false,
+                                    null
+                                  );
+                                  setTempIsPartial(false);
+                                  setTempPartialQty(0);
+                                } finally {
+                                  setIsSubmittingTransfer(false);
+                                }
                               } else {
                                 alert("Debe seleccionar al menos un área de destino, firmar la entrega e indicar la fecha.");
                               }
-                          }} className="w-full py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 bg-[var(--color-primary)] text-[var(--color-surface)]">
-                          Confirmar Entrega de Sección
+                          }} className="w-full py-4 rounded-xl font-black uppercase text-base lg:text-lg shadow-sm border border-[var(--color-border)] transition-colors duration-200 hover:brightness-125 active:scale-95 bg-[var(--color-primary)] text-[var(--color-surface)] disabled:opacity-60">
+                          {isSubmittingTransfer ? 'Registrando Entrega...' : 'Confirmar Entrega de Sección'}
                         </button>
                             </>
                           );

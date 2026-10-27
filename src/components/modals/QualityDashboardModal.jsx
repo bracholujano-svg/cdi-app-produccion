@@ -4,6 +4,7 @@ import {
     Calendar, ChevronUp, ChevronDown, Activity, Filter, Search, Award
 } from 'lucide-react';
 import { AREAS } from '../../utils/constants';
+import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 
 const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = [], onClose }) => {
     const [startDate, setStartDate] = useState('');
@@ -11,6 +12,8 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
     const [showQualityObs, setShowQualityObs] = useState(true);
     const [obsFilter, setObsFilter] = useState('TODOS');
     const [searchTerm, setSearchTerm] = useState('');
+    const [isMaximized, setIsMaximized] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(false);
     const chartsRef = useRef({});
 
     // 1. Filtrado por fechas
@@ -197,8 +200,18 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
     });
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[110] flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-200">
-            <div className="theme-bg-card w-full h-full md:max-w-7xl md:h-[94vh] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border theme-border flex flex-col">
+        <>
+        <MinimizedWindowDock
+            isMinimized={isMinimized}
+            title="Calidad & ISO 9001"
+            subtitle="Auditoría y Trazabilidad en segundo plano"
+            icon={ShieldCheck}
+            accentClass="bg-emerald-600 text-white"
+            onRestore={() => setIsMinimized(false)}
+            onClose={onClose}
+        />
+        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 bg-black/70 backdrop-blur-md z-[110] flex items-center justify-center animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
+            <div className={`theme-bg-card overflow-hidden border theme-border flex flex-col transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
                 
                 {/* Cabecera Principal */}
                 <div className="p-4 md:p-5 theme-bg-header border-b theme-border flex flex-wrap items-center justify-between gap-3 shrink-0">
@@ -242,14 +255,12 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
                             />
                         </div>
 
-                        <button 
-                            type="button" 
-                            onClick={onClose} 
-                            className="p-2 hover:bg-red-500/10 rounded-xl theme-text-muted hover:text-red-500 transition-colors"
-                            title="Cerrar módulo de Calidad"
-                        >
-                            <X size={22} />
-                        </button>
+                        <WindowControls
+                            isMaximized={isMaximized}
+                            onToggleMaximize={() => setIsMaximized(prev => !prev)}
+                            onMinimize={() => setIsMinimized(true)}
+                            onClose={onClose}
+                        />
                     </div>
                 </div>
 
@@ -460,6 +471,7 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

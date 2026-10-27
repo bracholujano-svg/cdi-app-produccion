@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { calculatePlantMatrix, calculateUnstartedErpOrders } from '../../services/PlantPlannerService';
 import IndicatorsDrawer from '../layout/IndicatorsDrawer';
+import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
@@ -41,6 +42,10 @@ const PlantPlannerModal = ({
 
     // Pestañas principales: 'matriz' (Matriz de Áreas) o 'coordinacion' (Coordinación Logística)
     const [activeTab, setActiveTab] = useState('matriz');
+
+    // Estado de Ventana Multitarea (Pantalla Completa por defecto y Minimizable)
+    const [isMaximized, setIsMaximized] = useState(true);
+    const [isMinimized, setIsMinimized] = useState(false);
 
     // Estado para el Drawer lateral de Indicadores
     const [showIndicadores, setShowIndicadores] = useState(false);
@@ -259,8 +264,18 @@ const PlantPlannerModal = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-200">
-            <div className="theme-bg-primary rounded-2xl shadow-2xl flex flex-col overflow-hidden border theme-border w-full h-full md:w-[98%] md:h-[95%] relative">
+        <>
+        <MinimizedWindowDock
+            isMinimized={isMinimized}
+            title="Planificador de Planta"
+            subtitle="Control Estratégico y Mapa de Áreas"
+            icon={LayoutGrid}
+            accentClass="bg-indigo-600 text-white"
+            onRestore={() => setIsMinimized(false)}
+            onClose={() => setShowPlantPlannerModal(false)}
+        />
+        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
+            <div className={`theme-bg-primary flex flex-col overflow-hidden border theme-border relative transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
                 
                 {/* BOTÓN FLOTANTE LATERAL IZQUIERDO: VER INDICADORES (DIRECTIVA 2) */}
                 <button 
@@ -349,13 +364,12 @@ const PlantPlannerModal = ({
                             />
                         )}
 
-                        <button 
-                            onClick={() => setShowPlantPlannerModal(false)}
-                            className="p-2 hover:bg-red-500/10 rounded-lg transition-colors theme-text-secondary hover:text-red-500 border border-transparent hover:border-red-500/30 ml-1"
-                            title="Cerrar Planificador"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+                        <WindowControls
+                            isMaximized={isMaximized}
+                            onToggleMaximize={() => setIsMaximized(prev => !prev)}
+                            onMinimize={() => setIsMinimized(true)}
+                            onClose={() => setShowPlantPlannerModal(false)}
+                        />
                     </div>
                 </div>
 
@@ -1195,6 +1209,7 @@ const PlantPlannerModal = ({
                 />
             </div>
         </div>
+        </>
     );
 };
 

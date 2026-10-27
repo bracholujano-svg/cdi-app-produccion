@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
+import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 
 /**
  * Normaliza el nombre de un área para comparaciones estrictas sin errores de tildes o espacios
@@ -160,6 +161,10 @@ const PackingListsModal = () => {
   const [activeListId, setActiveListId] = useState(() => {
     return packingLists && packingLists.length > 0 ? packingLists[0].id : null;
   });
+
+  // Estado de Ventana Multitarea (Pantalla Completa por defecto y Minimizable)
+  const [isMaximized, setIsMaximized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Buscador de pedidos elegibles (estrictamente con ítems en EMPAQUE)
   const [searchPedidoInput, setSearchPedidoInput] = useState('');
@@ -1123,8 +1128,18 @@ const PackingListsModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-2 md:p-5 overflow-hidden">
-      <div className="bg-[var(--color-base)] border border-[var(--color-border)] rounded-3xl w-full max-w-[1460px] h-[94vh] flex flex-col shadow-2xl overflow-hidden">
+    <>
+    <MinimizedWindowDock
+      isMinimized={isMinimized}
+      title="Lista de Empaque"
+      subtitle={activePackingList ? `Pedido #${activePackingList.pedidoNum} • En segundo plano` : 'Bultos y QR en segundo plano'}
+      icon={Package}
+      accentClass="bg-amber-500 text-slate-950"
+      onRestore={() => setIsMinimized(false)}
+      onClose={() => setShowPackingListsModal(false)}
+    />
+    <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center overflow-hidden'} ${isMaximized ? 'p-0' : 'p-2 md:p-5'}`}>
+      <div className={`bg-[var(--color-base)] border border-[var(--color-border)] flex flex-col overflow-hidden transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
         {/* CABECERA PRINCIPAL */}
         <div className="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 md:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
@@ -1240,14 +1255,12 @@ const PackingListsModal = () => {
               <span>Pedidos en Empaque</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setShowPackingListsModal(false)}
-              className="p-2 rounded-xl bg-[var(--color-base)] border border-[var(--color-border)] theme-text-muted hover:text-white hover:border-red-500/50 transition-colors ml-1"
-              title="Cerrar Módulo de Empaque"
-            >
-              <X size={20} />
-            </button>
+            <WindowControls
+              isMaximized={isMaximized}
+              onToggleMaximize={() => setIsMaximized((prev) => !prev)}
+              onMinimize={() => setIsMinimized(true)}
+              onClose={() => setShowPackingListsModal(false)}
+            />
           </div>
         </div>
 
@@ -2129,6 +2142,7 @@ const PackingListsModal = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

@@ -76,7 +76,7 @@ export const AppContextProvider = ({ children }) => {
   const [showRecetarioModal, setShowRecetarioModal] = useState(false);
   const [showEtpSupervisorModal, setShowEtpSupervisorModal] = useState(false);
   const [showTVMonitor, setShowTVMonitor] = useState(false);
-  const [recetarioMaximized, setRecetarioMaximized] = useState(false);
+  const [recetarioMaximized, setRecetarioMaximized] = useState(true);
   const [showCoordinationModal, setShowCoordinationModal] = useState(false);
   const [showCoordViewModal, setShowCoordViewModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);

@@ -55,6 +55,7 @@ function MainApp() {
   const [coordSearchPedido, setCoordSearchPedido] = useState('');
   const [coordSearchFecha, setCoordSearchFecha] = useState('');
   const [coordSortOrder, setCoordSortOrder] = useState('asc');
+  const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
 const {
     supabaseData,
     orders, setOrders, coordinationAlerts, setCoordinationAlerts, syncOrderToSupabase, syncAlertToSupabase,
@@ -103,6 +104,7 @@ const {
     calidadPhoto, setCalidadPhoto,
     transferNota, setTransferNota,
     transferPhoto, setTransferPhoto,
+    tempIsPartial, setTempIsPartial,
     
     recognitionRef,
     coordList, setCoordList,
@@ -469,8 +471,11 @@ const {
         setTempAssignedPersonnel({});
         setTransferNota('');
         setTransferPhoto(null);
+        setShowTransferSuccessModal(true);
+        return true;
     } catch (err) {
         alert('Error en transferencia: ' + err.message);
+        return false;
     }
   };
 
@@ -503,8 +508,20 @@ const {
   };
 
   const handleBulkTransfer = async (ids, areas, date, operario, _, isPartial, partialQty, logisticaData = null) => {
-    await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty, logisticaData);
+    return await updateTransfer(ids, areas, date, operario, _, isPartial, partialQty, logisticaData);
+  };
+
+  const handleDismissTransferSuccess = () => {
+    setShowTransferSuccessModal(false);
     setShowBulkModal(false);
+    setSelectedOrder(null);
+    setSelectedBulkOrders([]);
+    setTempTransferAreas([]);
+    setTempAssignedPersonnel({});
+    setTransferNota('');
+    setTransferPhoto(null);
+    if (setTempIsPartial) setTempIsPartial(false);
+    if (setOpenSection) setOpenSection(null);
   };
 
   const processReception = async (pedidoNum, isTotal = true, receptionName, receptionNotes, tempPhoto) => {
@@ -916,6 +933,35 @@ const {
           activeAlertMaterials={activeAlertMaterials} 
           setShowMaterialsAlertModal={setShowMaterialsAlertModal} 
         />
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN DE ENTREGA DE SECCIÓN Y CIERRE AUTOMÁTICO EN CASCADA */}
+      {showTransferSuccessModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[260] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500/60 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl text-center space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle className="w-10 h-10" strokeWidth={2.5} />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                Confirmación de Entrega
+              </h3>
+              <p className="text-sm md:text-base font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
+                Entrega registrada exitosamente. Los productos han sido enviados y se encuentran en espera de recepción/aprobación por parte de la sección de destino.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              autoFocus
+              onClick={handleDismissTransferSuccess}
+              className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-black uppercase tracking-widest text-base shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+            >
+              ACEPTAR
+            </button>
+          </div>
+        </div>
       )}
 
     </div>
