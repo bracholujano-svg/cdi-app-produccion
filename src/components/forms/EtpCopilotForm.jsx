@@ -39,10 +39,12 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { verifySupervisorCredentials } from '../../utils/security';
 import {
   ColorQRCodeSVG,
   buildColorQRPayload,
-  printColorSampleBackLabel
+  printColorSampleBackLabel,
+  printFullTechnicalSheetA4
 } from '../../utils/colorQrHelper';
 
 export default function EtpCopilotForm({
@@ -51,6 +53,8 @@ export default function EtpCopilotForm({
   onSave,
   onCancel,
   isSupervisorView = false,
+  preAuthorizedBySupervisor = false,
+  onRequestPrintConfig = null,
   initialData = {}
 }) {
   const procInit =
@@ -106,7 +110,7 @@ export default function EtpCopilotForm({
     initialData?.estado_aprobacion || 'borrador'
   );
   const [isLocked, setIsLocked] = useState(
-    initialData?.estado_aprobacion === 'aprobado_produccion'
+    preAuthorizedBySupervisor ? false : initialData?.estado_aprobacion === 'aprobado_produccion'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -116,8 +120,12 @@ export default function EtpCopilotForm({
 
   // Estados para Modal PIN y Lightbox
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [authUsernameInput, setAuthUsernameInput] = useState(
+    supervisorProfile?.email || ''
+  );
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isLightboxMenuOpen, setIsLightboxMenuOpen] = useState(false);
 
@@ -396,51 +404,48 @@ export default function EtpCopilotForm({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Validación de PIN para Desbloqueo de Ficha
+  // Validación Estricta de Clave de Supervisor (Pintura Líquida o Administrador) sin alterar sesión ni gestor de contraseñas
   const handleValidatePin = async (e) => {
-    if (e) e.preventDefault();
-    if (!pinInput.trim()) return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!pinInput.trim()) {
+      setPinError('Ingresa tu clave de Supervisor o Administrador.');
+      return;
+    }
 
     setPinError('');
+    setIsVerifyingPin(true);
     try {
-      let emailToAuth = supervisorProfile?.email;
+      let emailToAuth = authUsernameInput.trim() || supervisorProfile?.email;
       if (!emailToAuth) {
         const {
           data: { session }
         } = await supabase.auth.getSession();
-        emailToAuth = session?.user?.email;
+        emailToAuth = session?.user?.email || '';
       }
 
-      let isAuthenticated = false;
-      if (emailToAuth) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: emailToAuth,
-          password: pinInput.trim()
-        });
-        if (!error && data?.user) isAuthenticated = true;
-      }
+      const authResult = await verifySupervisorCredentials({
+        emailOrUsername: emailToAuth,
+        password: pinInput.trim(),
+        fallbackProfile: supervisorProfile,
+        requirePaintOrAdmin: true
+      });
 
-      if (
-        !isAuthenticated &&
-        (pinInput.trim() === '1234' ||
-          pinInput.trim() === 'admin123' ||
-          pinInput.trim().length >= 4)
-      ) {
-        isAuthenticated = true;
-      }
-
-      if (isAuthenticated) {
+      if (authResult.ok) {
         setIsLocked(false);
         setIsPinModalOpen(false);
         setPinInput('');
         setPinError('');
-        alert('🔓 Ficha ETP desbloqueada. Los campos ahora son editables.');
+        alert(
+          `🔓 Ficha ETP desbloqueada por ${authResult.user.nombre} (${authResult.user.rol}). Los campos ahora son editables.`
+        );
       } else {
-        setPinError('PIN o Clave incorrecta. Acceso denegado.');
+        setPinError(authResult.error || '❌ Clave incorrecta. Acceso denegado.');
       }
     } catch (err) {
       console.error(err);
       setPinError('Error de validación: ' + (err.message || err));
+    } finally {
+      setIsVerifyingPin(false);
     }
   };
 
@@ -948,22 +953,34 @@ export default function EtpCopilotForm({
                 {/* BOTONERA ÚNICA Y LIMPIA (3 ACCIONES PRINCIPALES) */}
                 <button
                   type="button"
-                  onClick={() => printColorSampleBackLabel(consolidatedColorData)}
-                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase ${
+                  onClick={() => {
+                    if (onRequestPrintConfig) {
+                      onRequestPrintConfig('label', consolidatedColorData);
+                    } else {
+                      printColorSampleBackLabel(consolidatedColorData);
+                    }
+                  }}
+                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
                     isGeneratingPDF ? 'hidden' : 'print:hidden'
                   }`}
-                  title="Imprimir etiqueta pequeña con Código QR para el reverso de la muestra física"
+                  title="Configurar tamaño de etiqueta (100x80mm, térmica, etc.) e imprimir etiqueta con Código QR"
                 >
                   <Printer size={13} /> Imprimir Etiqueta de Muestra
                 </button>
 
                 <button
                   type="button"
-                  onClick={handlePrintPDF}
-                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase ${
+                  onClick={() => {
+                    if (onRequestPrintConfig) {
+                      onRequestPrintConfig('sheet', consolidatedColorData);
+                    } else {
+                      printFullTechnicalSheetA4(consolidatedColorData);
+                    }
+                  }}
+                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
                     isGeneratingPDF ? 'hidden' : 'print:hidden'
                   }`}
-                  title="Imprimir Ficha Técnica Completa en formato Carta / A4"
+                  title="Configurar tamaño de hoja, escala y ajuste e imprimir Ficha Técnica Completa"
                 >
                   <Printer size={13} /> Imprimir Ficha Técnica
                 </button>
@@ -1962,58 +1979,101 @@ export default function EtpCopilotForm({
         </form>
       </div>
 
-      {/* Modal para Desbloquear con PIN / Clave */}
+      {/* Modal Seguro para Desbloquear con Clave de Supervisor (Sin <form> para no alterar navegador) */}
       {isPinModalOpen && (
-        <div className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-[210] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-slate-900 dark:text-white mb-4">
-              <div className="p-2.5 bg-amber-100 text-amber-700 rounded-2xl">
+              <div className="p-2.5 bg-amber-100 text-amber-700 rounded-2xl shrink-0">
                 <Lock size={22} />
               </div>
               <div>
-                <h3 className="font-black text-base">Desbloquear Ficha ETP</h3>
-                <p className="text-xs text-slate-500">Ingrese su PIN o clave de Supervisor</p>
+                <h3 className="font-black text-base uppercase">
+                  Autorización para Modificar Ficha ETP
+                </h3>
+                <p className="text-xs text-slate-500 font-bold">
+                  Exclusivo para Supervisor de Pintura Líquida o Administrador
+                </p>
               </div>
             </div>
 
-            <form onSubmit={handleValidatePin} className="space-y-4">
+            <div className="space-y-3.5" role="region" aria-label="Verificación de seguridad">
               <div>
+                <label className="block text-[11px] font-black uppercase text-slate-500 mb-1">
+                  Usuario Autorizado (@cdiexhibiciones.co)
+                </label>
                 <input
-                  type="password"
+                  type="text"
+                  name="sc_verify_supervisor_user"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  value={authUsernameInput}
+                  onChange={(e) => {
+                    setAuthUsernameInput(e.target.value);
+                    setPinError('');
+                  }}
+                  placeholder="usuario@cdiexhibiciones.co"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black uppercase text-slate-500 mb-1">
+                  Clave de Usuario (Verificación en Servidor)
+                </label>
+                <input
+                  type="text"
+                  name="sc_verify_supervisor_secret"
                   autoFocus
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  style={{ WebkitTextSecurity: 'disc' }}
                   value={pinInput}
                   onChange={(e) => {
                     setPinInput(e.target.value);
                     setPinError('');
                   }}
-                  placeholder="PIN o Clave..."
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 text-center text-lg font-black tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleValidatePin();
+                    }
+                  }}
+                  placeholder="Ingresa tu clave real..."
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-center text-lg font-black tracking-widest outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 {pinError && (
-                  <p className="text-xs font-bold text-rose-500 mt-2 text-center">{pinError}</p>
+                  <div className="mt-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-700 text-xs font-black text-rose-600 dark:text-rose-300 text-center">
+                    {pinError}
+                  </div>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
+                  disabled={isVerifyingPin}
                   onClick={() => {
                     setIsPinModalOpen(false);
                     setPinInput('');
                     setPinError('');
                   }}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-black uppercase text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow"
+                  type="button"
+                  disabled={isVerifyingPin || !pinInput.trim()}
+                  onClick={handleValidatePin}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-black uppercase text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 transition-colors shadow cursor-pointer"
                 >
-                  Validar PIN
+                  {isVerifyingPin ? 'Verificando...' : 'Verificar Clave'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

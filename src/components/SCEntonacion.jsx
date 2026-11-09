@@ -15,18 +15,27 @@ import {
   ArrowLeft,
   Printer,
   ShieldCheck,
-  Home,
-  Edit3
+  Edit3,
+  Trash2,
+  Lock,
+  Sliders,
+  Maximize2,
+  Beaker
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import EtpCopilotForm from './forms/EtpCopilotForm';
 import OperarioPasoDos from './forms/OperarioPasoDos';
+import { verifySupervisorCredentials } from '../utils/security';
 import {
   ColorQRCodeSVG,
+  LABEL_PAGE_PRESETS,
   buildColorQRPayload,
+  resolvePrintDimensions,
   printColorSampleBackLabel,
   printFullTechnicalSheetA4
 } from '../utils/colorQrHelper';
+
+const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v2';
 
 export default function SCEntonacion({ inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
@@ -37,12 +46,15 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [isSearching, setIsSearching] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState('');
   const [showEtpModal, setShowEtpModal] = useState(false);
+  const [etpPreAuthorized, setEtpPreAuthorized] = useState(false);
   const [showOperarioModal, setShowOperarioModal] = useState(false);
   const [savedColorId, setSavedColorId] = useState(null);
   const [savedColorData, setSavedColorData] = useState(null);
 
-  // Estados para la Vista 2 (Formulación)
+  // Estados para la Vista 2 (Formulación y Modo Ensayo)
   const [showFormulacion, setShowFormulacion] = useState(false);
+  const [isEnsayoMode, setIsEnsayoMode] = useState(false);
+  const [notasEnsayo, setNotasEnsayo] = useState('');
 
   // Tabla acumulativa
   const [filasReceta, setFilasReceta] = useState([]); // { id_referencia, descripcion, gramos }
@@ -55,15 +67,136 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
 
   // Estados para cálculo de producción
   const [targetGramos, setTargetGramos] = useState('');
-  const [ppgInputValue, setPpgInputValue] = useState('');
 
-  // Estados Catálogo
+  // Estados Catálogo y Filtro de Ensayos
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [catalogColors, setCatalogColors] = useState([]);
+  const [catalogFilter, setCatalogFilter] = useState('TODOS'); // 'TODOS' | 'APROBADOS' | 'ENSAYOS' | 'REVISION'
+  const [catalogSearch, setCatalogSearch] = useState('');
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [cameFromCatalog, setCameFromCatalog] = useState(false);
   const [currentView, setCurrentView] = useState('inicio'); // 'inicio' | 'catalogo' | 'detalle' | 'formulacion'
   const [selectedColor, setSelectedColor] = useState(null);
+
+  // ============================================================================
+  // ESTADO UNIFICADO DE AUTORIZACIÓN CON CLAVE (MODIFICAR / ELIMINAR COLOR)
+  // ============================================================================
+  const [securityModal, setSecurityModal] = useState({
+    isOpen: false,
+    actionType: null, // 'EDIT_ETP' | 'EDIT_BALANZA' | 'DELETE_COLOR'
+    targetColor: null,
+    username: supervisorProfile?.email || '',
+    password: '',
+    error: '',
+    isVerifying: false
+  });
+
+  useEffect(() => {
+    if (supervisorProfile?.email && !securityModal.username) {
+      setSecurityModal((prev) => ({ ...prev, username: supervisorProfile.email }));
+    }
+  }, [supervisorProfile, securityModal.username]);
+
+  // ============================================================================
+  // ESTADO DEL CONFIGURADOR DE IMPRESIÓN (ETIQUETA 100x80 TÉRMICA Y FICHA TÉCNICA)
+  // ============================================================================
+  const [printConfigModal, setPrintConfigModal] = useState(() => {
+    let saved = null;
+    try {
+      const raw = localStorage.getItem(PRINT_PREFS_STORAGE_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch (_) {}
+
+    return {
+      isOpen: false,
+      mode: 'label', // 'label' (Etiqueta Muestra) | 'sheet' (Ficha Técnica)
+      dataToPrint: null,
+      labelConfig: {
+        presetId: saved?.labelConfig?.presetId || '100x80',
+        customWidthMm: saved?.labelConfig?.customWidthMm || 100,
+        customHeightMm: saved?.labelConfig?.customHeightMm || 80,
+        orientation: saved?.labelConfig?.orientation || 'landscape',
+        marginMm: saved?.labelConfig?.marginMm ?? 2,
+        scalePct: saved?.labelConfig?.scalePct || 100,
+        fitToPage: saved?.labelConfig?.fitToPage ?? true,
+        density: saved?.labelConfig?.density || 'compacta'
+      },
+      sheetConfig: {
+        presetId: saved?.sheetConfig?.presetId || 'letter',
+        customWidthMm: saved?.sheetConfig?.customWidthMm || 216,
+        customHeightMm: saved?.sheetConfig?.customHeightMm || 279,
+        orientation: saved?.sheetConfig?.orientation || 'portrait',
+        marginMm: saved?.sheetConfig?.marginMm ?? 10,
+        scalePct: saved?.sheetConfig?.scalePct || 100,
+        fitToPage: saved?.sheetConfig?.fitToPage ?? true,
+        fontSizePt: saved?.sheetConfig?.fontSizePt || 11
+      }
+    };
+  });
+
+  const openPrintConfigurator = (mode, customData = null) => {
+    setPrintConfigModal((prev) => ({
+      ...prev,
+      isOpen: true,
+      mode,
+      dataToPrint: customData || fichaConsolidada
+    }));
+  };
+
+  const updateActivePrintSettings = (patch) => {
+    setPrintConfigModal((prev) => {
+      const key = prev.mode === 'label' ? 'labelConfig' : 'sheetConfig';
+      const updatedSection = {
+        ...prev[key],
+        ...patch
+      };
+
+      // Si cambia el preset, sugerir orientación, margen y densidad recomendados
+      if (patch.presetId && patch.presetId !== prev[key].presetId) {
+        const found = LABEL_PAGE_PRESETS.find((p) => p.id === patch.presetId);
+        if (found) {
+          updatedSection.orientation = found.defaultOrientation;
+          updatedSection.marginMm = found.defaultMarginMm;
+          if (prev.mode === 'label') {
+            updatedSection.density = found.defaultDensity;
+          }
+          if (patch.presetId !== 'custom') {
+            updatedSection.customWidthMm = found.widthMm;
+            updatedSection.customHeightMm = found.heightMm;
+          }
+        }
+      }
+
+      const nextState = {
+        ...prev,
+        [key]: updatedSection
+      };
+
+      try {
+        localStorage.setItem(
+          PRINT_PREFS_STORAGE_KEY,
+          JSON.stringify({
+            labelConfig: nextState.labelConfig,
+            sheetConfig: nextState.sheetConfig
+          })
+        );
+      } catch (_) {}
+
+      return nextState;
+    });
+  };
+
+  const handleConfirmAndPrint = () => {
+    const payload = printConfigModal.dataToPrint || fichaConsolidada;
+    if (!payload) return;
+
+    if (printConfigModal.mode === 'label') {
+      printColorSampleBackLabel(payload, printConfigModal.labelConfig);
+    } else {
+      printFullTechnicalSheetA4(payload, printConfigModal.sheetConfig);
+    }
+    setPrintConfigModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const openCatalog = async () => {
     setCurrentView('catalogo');
@@ -95,7 +228,6 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     setShowCatalogModal(false);
     setCurrentView('detalle');
 
-    // Cargar receta y datos del color directamente
     setIsSearching(true);
     try {
       const { data: recetaData } = await supabase
@@ -158,9 +290,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             scanner.clear();
           }
         },
-        () => {
-          // ignorar errores de lectura continua
-        }
+        () => {}
       );
 
       return () => {
@@ -246,16 +376,27 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     setFilasReceta((prev) => prev.filter((f) => f.id_referencia !== idRef));
   };
 
-  const guardarReceta = async () => {
+  const guardarReceta = async (guardarSoloComoEnsayo = false) => {
     if (filasReceta.length === 0) return;
+
+    const rawCode = codigoObjetivo.trim().toUpperCase();
+    const codObj =
+      rawCode ||
+      `ENSAYO-${new Date().toISOString().slice(5, 10).replace('-', '')}-${Math.floor(
+        100 + Math.random() * 900
+      )}`;
+
+    if (!codigoObjetivo.trim()) {
+      setCodigoObjetivo(codObj);
+    }
 
     setIsSearching(true);
     setSearchFeedback('⏳ GUARDANDO...');
 
     try {
       const totalGramos = filasReceta.reduce((sum, f) => sum + f.gramos, 0);
-      const codObj = codigoObjetivo.trim().toUpperCase();
       let colorId;
+      const esEnsayoFlag = Boolean(isEnsayoMode || guardarSoloComoEnsayo);
 
       const formulacionPastas = filasReceta.map((f) => ({
         codigo: f.id_referencia,
@@ -278,6 +419,8 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           .update({
             procedimiento_preparacion: {
               ...prevProc,
+              es_ensayo: esEnsayoFlag,
+              notas_ensayo: notasEnsayo.trim() || prevProc.notas_ensayo || '',
               formulacion_pastas: formulacionPastas,
               total_gramos_muestra: totalGramos
             }
@@ -290,7 +433,11 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             sistema_color: sistemaColor,
             codigo_objetivo: codObj,
             color_hexadecimal: '#cccccc',
+            estado_aprobacion: 'borrador',
             procedimiento_preparacion: {
+              es_ensayo: esEnsayoFlag,
+              notas_ensayo: notasEnsayo.trim() || '',
+              cliente: esEnsayoFlag ? 'ENSAYO DE LABORATORIO (PRUEBA)' : 'USO GENERAL PLANTA',
               formulacion_pastas: formulacionPastas,
               total_gramos_muestra: totalGramos,
               acabado_muestra_fisica:
@@ -312,14 +459,31 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       }));
 
       const { error: recetaError } = await supabase.from('recetas_detalle').insert(detalles);
-
       if (recetaError) throw recetaError;
 
-      setSearchFeedback('✅ ¡Fórmula guardada como borrador! Complete la ETP.');
       setSavedColorId(colorId);
       setSavedColorData({ id: colorId, codigo_objetivo: codObj });
-      alert('✅ Fórmula guardada exitosamente. A continuación declare el proceso de la muestra.');
-      setShowOperarioModal(true);
+
+      if (guardarSoloComoEnsayo) {
+        setSearchFeedback('✅ ¡Ensayo guardado! Abriendo vista del ensayo...');
+        setShowFormulacion(false);
+        setFilasReceta([]);
+        const { data: refreshedColor } = await supabase
+          .from('colores_aprobados')
+          .select('*')
+          .eq('id', colorId)
+          .single();
+        if (refreshedColor) {
+          setColorEncontrado(refreshedColor);
+          setSelectedColor(refreshedColor);
+          setRecetaExistente(detalles);
+          setCurrentView('detalle');
+        }
+      } else {
+        setSearchFeedback('✅ ¡Fórmula guardada como borrador! Complete la ETP.');
+        alert('✅ Fórmula guardada exitosamente. A continuación declare el proceso de la muestra.');
+        setShowOperarioModal(true);
+      }
     } catch (e) {
       console.error(e);
       setSearchFeedback(`❌ Error al guardar: ${e.message || e.details || JSON.stringify(e)}`);
@@ -329,48 +493,140 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     }
   };
 
-  const handleEditRecipe = async () => {
-    if (!supervisorProfile || !supervisorProfile.email) {
-      alert('Error: Sesión de usuario no encontrada.');
+  // ============================================================================
+  // APERTURA Y EJECUCIÓN DEL MODAL DE SEGURIDAD (MODIFICAR / BORRAR CON CLAVE)
+  // ============================================================================
+  const requestProtectedAction = (actionType, targetColorObj = null) => {
+    setSecurityModal({
+      isOpen: true,
+      actionType,
+      targetColor: targetColorObj || colorEncontrado,
+      username: supervisorProfile?.email || '',
+      password: '',
+      error: '',
+      isVerifying: false
+    });
+  };
+
+  const handleExecuteProtectedAction = async () => {
+    if (!securityModal.password.trim()) {
+      setSecurityModal((prev) => ({
+        ...prev,
+        error: 'Por favor ingresa tu clave de Supervisor de Pintura Líquida o Administrador.'
+      }));
       return;
     }
-    const pwd = prompt('Por seguridad, ingresa tu clave para modificar esta receta:');
-    if (!pwd) return;
 
-    setIsSearching(true);
-    setSearchFeedback('Validando credenciales...');
+    setSecurityModal((prev) => ({ ...prev, isVerifying: true, error: '' }));
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: supervisorProfile.email,
-        password: pwd
+      const authResult = await verifySupervisorCredentials({
+        emailOrUsername: securityModal.username,
+        password: securityModal.password,
+        fallbackProfile: supervisorProfile,
+        requirePaintOrAdmin: true
       });
 
-      if (error || !data) {
-        alert('❌ Clave incorrecta. No tienes permiso para editar esta receta.');
+      if (!authResult.ok) {
+        setSecurityModal((prev) => ({
+          ...prev,
+          isVerifying: false,
+          error: authResult.error || '❌ Clave incorrecta. Acceso denegado.'
+        }));
         return;
       }
 
-      const savedPastas = colorEncontrado?.procedimiento_preparacion?.formulacion_pastas || [];
-      setFilasReceta(
-        recetaExistente.map((req) => {
-          const matchSaved = savedPastas.find(
-            (p) => p.codigo === req.id_referencia_ppg || p.nombre === req.nombre_base
+      const actionType = securityModal.actionType;
+      const targetColor = securityModal.targetColor || colorEncontrado;
+
+      // Cerrar modal de seguridad tras verificar con éxito
+      setSecurityModal((prev) => ({
+        ...prev,
+        isOpen: false,
+        password: '',
+        error: '',
+        isVerifying: false
+      }));
+
+      if (actionType === 'EDIT_ETP' && targetColor) {
+        setSavedColorId(targetColor.id);
+        setSavedColorData(targetColor);
+        setEtpPreAuthorized(true);
+        setShowEtpModal(true);
+      } else if (actionType === 'EDIT_BALANZA' && targetColor) {
+        const savedPastas = targetColor?.procedimiento_preparacion?.formulacion_pastas || [];
+        setFilasReceta(
+          recetaExistente.map((req) => {
+            const matchSaved = savedPastas.find(
+              (p) => p.codigo === req.id_referencia_ppg || p.nombre === req.nombre_base
+            );
+            return {
+              id_referencia: req.id_referencia_ppg,
+              descripcion: req.nombre_base,
+              gramos: matchSaved?.gramos
+                ? Number(matchSaved.gramos)
+                : Number(req.porcentaje_final)
+            };
+          })
+        );
+        setIsEnsayoMode(Boolean(targetColor?.procedimiento_preparacion?.es_ensayo));
+        setNotasEnsayo(targetColor?.procedimiento_preparacion?.notas_ensayo || '');
+        setShowFormulacion(true);
+      } else if (actionType === 'DELETE_COLOR' && targetColor) {
+        setIsSearching(true);
+        try {
+          // 1. Eliminar primero ingredientes hijos en recetas_detalle
+          const { error: errDetalles } = await supabase
+            .from('recetas_detalle')
+            .delete()
+            .eq('id_color', targetColor.id);
+
+          if (errDetalles) throw errDetalles;
+
+          // 2. Eliminar registro principal en colores_aprobados
+          const { error: errColor } = await supabase
+            .from('colores_aprobados')
+            .delete()
+            .eq('id', targetColor.id);
+
+          if (errColor) throw errColor;
+
+          // 3. Actualizar estado local y catálogo
+          setCatalogColors((prev) => prev.filter((c) => c.id !== targetColor.id));
+
+          if (colorEncontrado && colorEncontrado.id === targetColor.id) {
+            setColorEncontrado(null);
+            setSelectedColor(null);
+            setRecetaExistente([]);
+            setShowEtpModal(false);
+            if (cameFromCatalog) {
+              openCatalog();
+            } else {
+              setCurrentView('inicio');
+            }
+          }
+
+          alert(
+            `🗑️ El color "${targetColor.sistema_color} - ${targetColor.codigo_objetivo}" fue eliminado correctamente por ${authResult.user.nombre} (${authResult.user.rol}).`
           );
-          return {
-            id_referencia: req.id_referencia_ppg,
-            descripcion: req.nombre_base,
-            gramos: matchSaved?.gramos
-              ? Number(matchSaved.gramos)
-              : Number(req.porcentaje_final)
-          };
-        })
-      );
-      setShowFormulacion(true);
-    } catch (e) {
-      alert('Error validando: ' + e.message);
-    } finally {
-      setIsSearching(false);
-      setSearchFeedback('');
+        } catch (delErr) {
+          console.error('Error eliminando color:', delErr);
+          alert(
+            `❌ No se pudo eliminar el color: ${
+              delErr.message || delErr.details || JSON.stringify(delErr)
+            }`
+          );
+        } finally {
+          setIsSearching(false);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setSecurityModal((prev) => ({
+        ...prev,
+        isVerifying: false,
+        error: 'Error inesperado al verificar credenciales.'
+      }));
     }
   };
 
@@ -404,6 +660,8 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
 
     return {
       id: colorEncontrado.id,
+      es_ensayo: Boolean(proc.es_ensayo),
+      notas_ensayo: proc.notas_ensayo || '',
       cliente: proc.cliente || colorEncontrado.cliente || 'USO GENERAL PLANTA',
       sistema_color: colorEncontrado.sistema_color || sistemaColor,
       codigo_color: proc.codigo_color || colorEncontrado.codigo_objetivo || codigoObjetivo,
@@ -467,13 +725,663 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     return buildColorQRPayload(fichaConsolidada);
   }, [fichaConsolidada]);
 
+  // Filtrado de colores en el Catálogo (Todos, Aprobados, Revisión, Ensayos/Pruebas)
+  const filteredCatalogColors = useMemo(() => {
+    return catalogColors.filter((c) => {
+      const proc = c.procedimiento_preparacion || {};
+      const isEnsayo = Boolean(
+        proc.es_ensayo ||
+          String(c.codigo_objetivo || '').toUpperCase().includes('ENSAYO') ||
+          String(c.codigo_objetivo || '').toUpperCase().includes('PRUEBA')
+      );
+
+      if (catalogFilter === 'APROBADOS' && c.estado_aprobacion !== 'aprobado_produccion') {
+        return false;
+      }
+      if (catalogFilter === 'ENSAYOS' && !isEnsayo && c.estado_aprobacion === 'aprobado_produccion') {
+        return false;
+      }
+      if (catalogFilter === 'SOLO_ENSAYOS' && !isEnsayo) {
+        return false;
+      }
+
+      if (catalogSearch.trim()) {
+        const term = catalogSearch.trim().toUpperCase();
+        const codeMatch = String(c.codigo_objetivo || '').toUpperCase().includes(term);
+        const sysMatch = String(c.sistema_color || '').toUpperCase().includes(term);
+        const cliMatch = String(proc.cliente || '').toUpperCase().includes(term);
+        if (!codeMatch && !sysMatch && !cliMatch) return false;
+      }
+
+      return true;
+    });
+  }, [catalogColors, catalogFilter, catalogSearch]);
+
   // ============================================================================
-  // VISTA A: FORMULACIÓN Y PESAJE EN LABORATORIO (PANTALLA DEDICADA)
+  // RENDERIZADO DEL MODAL UNIFICADO DE SEGURIDAD (CLAVE SUPERVISOR / ADMIN)
+  // ============================================================================
+  const renderSecurityModal = () => {
+    if (!securityModal.isOpen) return null;
+
+    const isDelete = securityModal.actionType === 'DELETE_COLOR';
+    const targetName = securityModal.targetColor
+      ? `${securityModal.targetColor.sistema_color || ''} ${
+          securityModal.targetColor.codigo_objetivo || ''
+        }`.trim()
+      : '';
+
+    return (
+      <div className="fixed inset-0 z-[260] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border-2 border-slate-200 dark:border-slate-700 space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div
+              className={`p-3 rounded-2xl shrink-0 ${
+                isDelete
+                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+              }`}
+            >
+              {isDelete ? <Trash2 size={24} /> : <Lock size={24} />}
+            </div>
+            <div>
+              <span
+                className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-1 ${
+                  isDelete
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                }`}
+              >
+                Control de Seguridad • SC COLOR
+              </span>
+              <h3 className="font-black text-lg text-slate-900 dark:text-white uppercase leading-tight">
+                {isDelete
+                  ? 'Autorizar Eliminación de Color'
+                  : 'Autorizar Modificación de Fórmula / Ficha'}
+              </h3>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">
+                Exclusivo para <strong>Supervisor de Pintura Líquida</strong> o{' '}
+                <strong>Administrador</strong>.
+              </p>
+            </div>
+          </div>
+
+          {targetName && (
+            <div
+              className={`p-3 rounded-xl border text-xs font-black uppercase flex items-center justify-between ${
+                isDelete
+                  ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+              }`}
+            >
+              <span>Color seleccionado:</span>
+              <span className="font-mono text-sm">{targetName}</span>
+            </div>
+          )}
+
+          {/* Contenedor sin <form> para impedir que el navegador sobrescriba contraseñas guardadas */}
+          <div className="space-y-3" role="region" aria-label="Autorización de seguridad">
+            <div>
+              <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+                Usuario Corporativo Autorizado
+              </label>
+              <input
+                type="text"
+                name="sc_sec_auth_identifier"
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                value={securityModal.username}
+                onChange={(e) =>
+                  setSecurityModal((prev) => ({
+                    ...prev,
+                    username: e.target.value,
+                    error: ''
+                  }))
+                }
+                placeholder="usuario@cdiexhibiciones.co"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+                Clave de Usuario (Supervisor Pintura Líquida / Admin)
+              </label>
+              <input
+                type="text"
+                name="sc_sec_auth_token_ mask"
+                autoFocus
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                style={{ WebkitTextSecurity: 'disc' }}
+                value={securityModal.password}
+                onChange={(e) =>
+                  setSecurityModal((prev) => ({
+                    ...prev,
+                    password: e.target.value,
+                    error: ''
+                  }))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleExecuteProtectedAction();
+                  }
+                }}
+                placeholder="Ingresa tu clave real..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-center text-lg font-black tracking-widest outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {securityModal.error && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-xs font-black text-rose-600 dark:text-rose-300 text-center">
+                {securityModal.error}
+              </div>
+            )}
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={securityModal.isVerifying}
+                onClick={() =>
+                  setSecurityModal((prev) => ({
+                    ...prev,
+                    isOpen: false,
+                    password: '',
+                    error: '',
+                    isVerifying: false
+                  }))
+                }
+                className="flex-1 py-3 rounded-xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={securityModal.isVerifying || !securityModal.password.trim()}
+                onClick={handleExecuteProtectedAction}
+                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase text-white transition-colors shadow-md cursor-pointer ${
+                  isDelete
+                    ? 'bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300'
+                    : 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300'
+                }`}
+              >
+                {securityModal.isVerifying
+                  ? 'Verificando...'
+                  : isDelete
+                  ? 'Confirmar y Borrar'
+                  : 'Verificar y Continuar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // RENDERIZADO DEL MODAL CONFIGURADOR DE IMPRESIÓN (ETIQUETA 100x80 Y FICHA A4)
+  // ============================================================================
+  const renderPrintConfigModal = () => {
+    if (!printConfigModal.isOpen) return null;
+
+    const isLabel = printConfigModal.mode === 'label';
+    const activeCfg = isLabel ? printConfigModal.labelConfig : printConfigModal.sheetConfig;
+    const resolved = resolvePrintDimensions(activeCfg);
+    const dataObj = printConfigModal.dataToPrint || fichaConsolidada || {};
+
+    return (
+      <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full shadow-2xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[92vh]">
+          {/* Cabecera del Configurador */}
+          <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2.5 rounded-2xl ${
+                  isLabel ? 'bg-emerald-500 text-slate-950' : 'bg-indigo-600 text-white'
+                }`}
+              >
+                <Printer size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                    Configurador de Impresión Industrial
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mt-0.5">
+                  {isLabel
+                    ? 'Imprimir Etiqueta de Muestra / Color (Térmica o Hoja)'
+                    : 'Imprimir Ficha Técnica Completa de Producción'}
+                </h3>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPrintConfigModal((prev) => ({ ...prev, isOpen: false }))}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Cambio rápido entre Etiqueta de Muestra y Ficha Técnica */}
+          <div className="px-5 pt-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-2 pb-3">
+              <button
+                type="button"
+                onClick={() => setPrintConfigModal((prev) => ({ ...prev, mode: 'label' }))}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  isLabel
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                🏷️ Etiqueta de Muestra (100×80 / Térmica)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintConfigModal((prev) => ({ ...prev, mode: 'sheet' }))}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  !isLabel
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                📄 Ficha Técnica Completa (Carta / A4 / Oficio)
+              </button>
+            </div>
+            <div className="pb-3 text-xs font-black text-slate-600 dark:text-slate-300">
+              Color:{' '}
+              <span className="text-indigo-600 dark:text-indigo-400">
+                {dataObj.sistema_color || dataObj.sistemaCatalogo}{' '}
+                {dataObj.codigo_color || dataObj.codigoColor || dataObj.codigo_objetivo}
+              </span>
+            </div>
+          </div>
+
+          {/* Cuerpo del Configurador */}
+          <div className="p-5 overflow-y-auto space-y-5 flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+              {/* Columna Izquierda: Parámetros de Papel, Formato y Escala */}
+              <div className="md:col-span-7 space-y-4">
+                {/* 1. Selección del Tamaño de Papel / Etiqueta */}
+                <div>
+                  <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                    <Maximize2 size={14} className="text-indigo-600" />
+                    1. Selecciona el Tamaño de Etiqueta o Tipo de Hoja
+                  </label>
+                  <select
+                    value={activeCfg.presetId}
+                    onChange={(e) => updateActivePrintSettings({ presetId: e.target.value })}
+                    className="w-full px-3.5 py-3 rounded-xl border-2 border-indigo-500/60 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <optgroup label="🏷️ Etiquetas para Impresora Térmica (Rollo / Zebra / TSC)">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'termica').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📄 Hojas de Papel Estándar (Impresora Láser / Tinta)">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'hoja').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📐 Medida Libre en Milímetros">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'custom').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+
+                  {/* Botones de Acceso Rápido a los formatos más usados en planta */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      { id: '100x80', tag: '⭐ 100×80 mm (Estándar)' },
+                      { id: '100x50', tag: '100×50 mm' },
+                      { id: '80x50', tag: '80×50 mm' },
+                      { id: 'letter', tag: 'Hoja Carta' },
+                      { id: 'a4', tag: 'Hoja A4' },
+                      { id: 'custom', tag: 'Personalizado' }
+                    ].map((quick) => (
+                      <button
+                        key={quick.id}
+                        type="button"
+                        onClick={() => updateActivePrintSettings({ presetId: quick.id })}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-colors cursor-pointer ${
+                          activeCfg.presetId === quick.id
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-indigo-400'
+                        }`}
+                      >
+                        {quick.tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Campos de Ancho x Alto si eligió Tamaño Personalizado */}
+                {activeCfg.presetId === 'custom' && (
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+                    <div>
+                      <label className="block text-[11px] font-black uppercase text-indigo-900 dark:text-indigo-300 mb-1">
+                        Ancho de Hoja / Etiqueta (mm)
+                      </label>
+                      <input
+                        type="number"
+                        min={25}
+                        max={400}
+                        value={activeCfg.customWidthMm}
+                        onChange={(e) =>
+                          updateActivePrintSettings({ customWidthMm: Number(e.target.value) })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black text-sm text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase text-indigo-900 dark:text-indigo-300 mb-1">
+                        Alto de Hoja / Etiqueta (mm)
+                      </label>
+                      <input
+                        type="number"
+                        min={20}
+                        max={500}
+                        value={activeCfg.customHeightMm}
+                        onChange={(e) =>
+                          updateActivePrintSettings({ customHeightMm: Number(e.target.value) })
+                        }
+                        className="w-full px-3 py-2 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black text-sm text-center"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Orientación y Márgenes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1">
+                      2. Orientación de Impresión
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateActivePrintSettings({ orientation: 'landscape' })}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase border transition-all cursor-pointer ${
+                          activeCfg.orientation === 'landscape'
+                            ? 'bg-slate-900 text-white dark:bg-indigo-600 border-slate-900'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        ▭ Horizontal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateActivePrintSettings({ orientation: 'portrait' })}
+                        className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase border transition-all cursor-pointer ${
+                          activeCfg.orientation === 'portrait'
+                            ? 'bg-slate-900 text-white dark:bg-indigo-600 border-slate-900'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        ▯ Vertical
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1">
+                      3. Márgenes de Hoja
+                    </label>
+                    <select
+                      value={activeCfg.marginMm}
+                      onChange={(e) =>
+                        updateActivePrintSettings({ marginMm: Number(e.target.value) })
+                      }
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-black outline-none cursor-pointer"
+                    >
+                      <option value={0}>Sin margen (0 mm — Térmica al borde)</option>
+                      <option value={2}>Mínimo (2 mm — Recomendado 100×80)</option>
+                      <option value={4}>Compacto (4 mm)</option>
+                      <option value={8}>Estándar (8 mm)</option>
+                      <option value={12}>Amplio (12 mm — Hoja Carta/A4)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. Escala, Formato y Ajuste a Tamaño de Hoja */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                      <Sliders size={14} className="text-emerald-600" />
+                      4. Escala y Ajuste de Formato ({activeCfg.scalePct}%)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateActivePrintSettings({ scalePct: 100 })}
+                      className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      Restablecer 100%
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-400">50%</span>
+                    <input
+                      type="range"
+                      min={50}
+                      max={140}
+                      step={5}
+                      value={activeCfg.scalePct}
+                      onChange={(e) =>
+                        updateActivePrintSettings({ scalePct: Number(e.target.value) })
+                      }
+                      className="flex-1 accent-indigo-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-400">140%</span>
+                    <input
+                      type="number"
+                      min={50}
+                      max={150}
+                      value={activeCfg.scalePct}
+                      onChange={(e) =>
+                        updateActivePrintSettings({ scalePct: Number(e.target.value) || 100 })
+                      }
+                      className="w-16 px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-center font-black text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2.5 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(activeCfg.fitToPage)}
+                      onChange={(e) =>
+                        updateActivePrintSettings({ fitToPage: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-black text-slate-700 dark:text-slate-200">
+                      Ajustar automáticamente el contenido al tamaño de la etiqueta / hoja (Evita que salte a 2 páginas)
+                    </span>
+                  </label>
+
+                  {isLabel ? (
+                    <div className="pt-1">
+                      <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+                        Diseño / Nivel de Contenido en la Etiqueta:
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'compacta', label: 'Térmica 100×80 (QR + Fórmula)' },
+                          { id: 'completa', label: 'Completa Amplia' },
+                          { id: 'mini_qr', label: 'Mini (Solo QR + Cód)' }
+                        ].map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => updateActivePrintSettings({ density: d.id })}
+                            className={`py-2 px-2 rounded-xl text-[11px] font-black uppercase border transition-all cursor-pointer ${
+                              activeCfg.density === d.id
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-1">
+                      <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+                        Tamaño de Letra de la Ficha Técnica:
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[10, 11, 12, 14].map((pt) => (
+                          <button
+                            key={pt}
+                            type="button"
+                            onClick={() => updateActivePrintSettings({ fontSizePt: pt })}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-black uppercase border cursor-pointer ${
+                              Number(activeCfg.fontSizePt) === pt
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                            }`}
+                          >
+                            {pt} pt
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Columna Derecha: Resumen Visual de Hoja e Instrucción de Selección de Impresora */}
+              <div className="md:col-span-5 flex flex-col justify-between bg-slate-100 dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 space-y-4">
+                <div className="text-center space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 block">
+                    Proporción de Salida Configurada
+                  </span>
+                  <div className="text-base font-black text-slate-900 dark:text-white">
+                    {resolved.pageWidthMm} mm × {resolved.pageHeightMm} mm
+                  </div>
+                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    {resolved.orientation === 'landscape' ? '▭ Horizontal' : '▯ Vertical'} • Escala{' '}
+                    {resolved.scalePct}% • Margen {resolved.marginMm} mm
+                  </div>
+                </div>
+
+                {/* Representación a escala de la etiqueta o página */}
+                <div className="flex-1 flex items-center justify-center py-2">
+                  <div
+                    style={{
+                      width:
+                        resolved.pageWidthMm >= resolved.pageHeightMm
+                          ? '210px'
+                          : `${Math.max(
+                              110,
+                              Math.round((resolved.pageWidthMm / resolved.pageHeightMm) * 195)
+                            )}px`,
+                      height:
+                        resolved.pageHeightMm > resolved.pageWidthMm
+                          ? '195px'
+                          : `${Math.max(
+                              95,
+                              Math.round((resolved.pageHeightMm / resolved.pageWidthMm) * 210)
+                            )}px`
+                    }}
+                    className="bg-white text-slate-900 rounded-xl border-2 border-slate-900 shadow-lg p-3 flex flex-col justify-between text-left overflow-hidden relative"
+                  >
+                    <div className="border-b border-slate-300 pb-1 flex justify-between items-start">
+                      <div>
+                        <div className="text-[8px] font-black uppercase text-slate-500">
+                          CDI LAB COLOR
+                        </div>
+                        <div className="text-[11px] font-black uppercase truncate max-w-[115px]">
+                          {dataObj.codigo_color || dataObj.codigoColor || 'COLOR'}
+                        </div>
+                      </div>
+                      <span className="bg-slate-900 text-amber-300 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
+                        {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 my-auto py-1">
+                      <div className="p-1 border border-slate-300 rounded bg-white shrink-0">
+                        <ColorQRCodeSVG value={qrPayloadActual || 'CDI'} size={44} />
+                      </div>
+                      <div className="text-[8px] font-bold text-slate-600 leading-tight space-y-0.5 truncate">
+                        <div>
+                          <strong>Formato:</strong> {resolved.pageWidthMm}×{resolved.pageHeightMm}mm
+                        </div>
+                        <div>
+                          <strong>Escala:</strong> {resolved.scalePct}%
+                        </div>
+                        <div>
+                          <strong>Ajuste:</strong> {resolved.fitToPage ? 'Automático' : 'Libre'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-300 pt-1 text-[7.5px] font-black text-amber-800 truncate">
+                      ✨ Muestra Física en Brillante • QR Oficial
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] font-bold text-amber-950 dark:text-amber-200 leading-snug">
+                  💡 <strong>Selección de Impresora:</strong> Al pulsar el botón verde abajo, se abrirá el cuadro de impresión con el tamaño{' '}
+                  <strong>
+                    {resolved.pageWidthMm}×{resolved.pageHeightMm} mm
+                  </strong>{' '}
+                  ya configurado para que escojas tu <strong>Impresora Térmica o de Red</strong>.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pie del Configurador */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setPrintConfigModal((prev) => ({ ...prev, isOpen: false }))}
+              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmAndPrint}
+              className="px-6 py-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Printer size={18} />
+              <span>
+                Escoger Impresora e Imprimir ({resolved.pageWidthMm}×{resolved.pageHeightMm} mm)
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // VISTA A: FORMULACIÓN Y PESAJE EN LABORATORIO (CON MODO ENSAYOS)
   // ============================================================================
   if (showFormulacion) {
     const totalGramosActual = filasReceta.reduce((s, f) => s + f.gramos, 0);
     return (
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-12">
+        {renderSecurityModal()}
+        {renderPrintConfigModal()}
+
         <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
@@ -484,10 +1392,17 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
               <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
             <div>
-              <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase flex items-center gap-2.5">
-                <FlaskConical className="text-indigo-600" size={26} />
-                Formulación Colorimétrica
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase flex items-center gap-2.5">
+                  <FlaskConical className="text-indigo-600" size={26} />
+                  Formulación Colorimétrica
+                </h2>
+                {isEnsayoMode && (
+                  <span className="px-3 py-0.5 rounded-full text-xs font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
+                    🧪 Modo Ensayo / Prueba
+                  </span>
+                )}
+              </div>
               <p className="text-sm font-bold mt-1 flex items-center gap-2">
                 <span className="text-slate-400 uppercase tracking-widest text-xs">
                   COLOR OBJETIVO:
@@ -496,18 +1411,77 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                   {sistemaColor}
                 </span>
                 <span className="text-indigo-600 dark:text-indigo-400 font-black text-base">
-                  {codigoObjetivo}
+                  {codigoObjetivo || (isEnsayoMode ? 'ENSAYO DE PRUEBA' : 'SIN CÓDIGO')}
                 </span>
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setShowFormulacion(false)}
-            className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-black uppercase tracking-wider rounded-xl text-xs transition-colors border border-red-200 cursor-pointer"
-          >
-            CANCELAR
-          </button>
+
+          {/* Selector Rápido: Fórmula Oficial vs Ensayo de Laboratorio */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsEnsayoMode(false)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
+                  !isEnsayoMode
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                📋 Fórmula Oficial
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEnsayoMode(true)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
+                  isEnsayoMode
+                    ? 'bg-purple-600 text-white shadow'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                🧪 Ensayo / Prueba
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowFormulacion(false)}
+              className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-black uppercase tracking-wider rounded-xl text-xs transition-colors border border-red-200 cursor-pointer"
+            >
+              CANCELAR
+            </button>
+          </div>
         </div>
+
+        {/* Si está en Modo Ensayo, permitir editar código/nombre de ensayo y notas rápidas */}
+        {isEnsayoMode && (
+          <div className="bg-purple-50/80 dark:bg-purple-950/30 border-2 border-purple-300 dark:border-purple-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            <div className="md:col-span-5">
+              <label className="block text-[11px] font-black uppercase text-purple-900 dark:text-purple-300 mb-1">
+                Identificador del Ensayo / Muestra de Prueba
+              </label>
+              <input
+                type="text"
+                value={codigoObjetivo}
+                onChange={(e) => setCodigoObjetivo(e.target.value.toUpperCase())}
+                placeholder="Ej. ENSAYO-ROJO-01, PRUEBA-CLIENTE..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-slate-900 dark:text-white font-black text-sm uppercase"
+              />
+            </div>
+            <div className="md:col-span-7">
+              <label className="block text-[11px] font-black uppercase text-purple-900 dark:text-purple-300 mb-1">
+                Notas u Observaciones del Ensayo (Opcional)
+              </label>
+              <input
+                type="text"
+                value={notasEnsayo}
+                onChange={(e) => setNotasEnsayo(e.target.value)}
+                placeholder="Ej. Prueba variando 5% de tinte amarillo sobre MDF..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-slate-900 dark:text-white font-bold text-sm"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
@@ -623,7 +1597,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           <div className="p-5 bg-slate-900 flex flex-wrap justify-between items-center gap-4 text-white">
             <h3 className="font-black text-base flex items-center gap-2 tracking-wider uppercase">
               <CheckCircle2 className="text-emerald-400" size={20} />
-              RECETA EN CURSO
+              {isEnsayoMode ? 'ENSAYO EN BALANZA (PRUEBA)' : 'RECETA EN CURSO'}
             </h3>
             <div className="flex gap-3">
               <div className="bg-slate-800 px-4 py-1.5 rounded-xl flex flex-col items-end border border-slate-700">
@@ -753,14 +1727,30 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
               </tbody>
             </table>
           </div>
-          <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800">
+
+          <div className="p-5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
             <button
-              onClick={guardarReceta}
+              type="button"
+              onClick={() => guardarReceta(true)}
               disabled={isSearching || filasReceta.length === 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-md transition-colors flex items-center justify-center gap-3 text-base uppercase tracking-wider cursor-pointer"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white font-black py-4 px-5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2.5 text-sm uppercase tracking-wider cursor-pointer"
             >
-              <Save size={22} />
-              {isSearching ? 'GUARDANDO FÓRMULA...' : 'GUARDAR FÓRMULA Y CONTINUAR'}
+              <Beaker size={20} />
+              {isSearching
+                ? 'GUARDANDO...'
+                : 'GUARDAR COMO ENSAYO / PRUEBA RÁPIDA'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => guardarReceta(false)}
+              disabled={isSearching || filasReceta.length === 0}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-black py-4 px-5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2.5 text-sm uppercase tracking-wider cursor-pointer"
+            >
+              <Save size={20} />
+              {isSearching
+                ? 'GUARDANDO FÓRMULA...'
+                : 'GUARDAR Y DECLARAR MUESTRA FÍSICA (ETP)'}
             </button>
           </div>
         </div>
@@ -793,7 +1783,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   if (colorEncontrado && fichaConsolidada) {
     return (
       <div className="max-w-6xl mx-auto space-y-5 animate-fade-in pb-10 relative">
-        {/* BARRA SUPERIOR DE NAVEGACIÓN + BOTONERA ÚNICA DE 3 ACCIONES */}
+        {renderSecurityModal()}
+        {renderPrintConfigModal()}
+
+        {/* BARRA SUPERIOR DE NAVEGACIÓN + BOTONERA DE ACCIONES */}
         <div className="bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           {/* Izquierda: Botón de Regreso a Búsqueda/Catálogo + Título del Color */}
           <div className="flex flex-wrap items-center gap-3">
@@ -818,10 +1811,15 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                   {fichaConsolidada.sistema_color}
                 </span>
+                {fichaConsolidada.es_ensayo && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
+                    🧪 Ensayo / Prueba
+                  </span>
+                )}
                 {colorEncontrado.estado_aprobacion === 'aprobado_produccion' ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
                     <ShieldCheck size={12} /> Ficha Oficial Aprobada
@@ -846,37 +1844,42 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             </div>
           </div>
 
-          {/* Derecha: BOTONERA LIMPIA CON SOLO TRES BOTONES ÚNICOS */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-            {/* 1. IMPRIMIR ETIQUETA DE MUESTRA */}
+          {/* Derecha: BOTONERA CON IMPRESIÓN CONFIGURABLE + MODIFICACIÓN Y BORRADO CON CLAVE */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
+            {/* 1. IMPRIMIR ETIQUETA DE MUESTRA (Con selector 100x80mm / Térmica / Escala) */}
             <button
-              onClick={() => printColorSampleBackLabel(fichaConsolidada)}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
-              title="Imprimir etiqueta con Código QR para el reverso de la muestra física"
+              onClick={() => openPrintConfigurator('label', fichaConsolidada)}
+              className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              title="Seleccionar tamaño de etiqueta (100x80mm, térmica, etc.), ajustar escala e imprimir etiqueta de muestra"
             >
               <Printer size={15} /> Imprimir Etiqueta de Muestra
             </button>
 
-            {/* 2. IMPRIMIR FICHA TÉCNICA (Formato Carta / A4 completo) */}
+            {/* 2. IMPRIMIR FICHA TÉCNICA (Con selector de hoja Carta/A4/Oficio y Escala) */}
             <button
-              onClick={() => printFullTechnicalSheetA4(fichaConsolidada)}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
-              title="Imprimir la Ficha Técnica de Producción completa en tamaño Carta / A4"
+              onClick={() => openPrintConfigurator('sheet', fichaConsolidada)}
+              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              title="Seleccionar tipo de hoja, formato y escala para imprimir la Ficha Técnica Completa"
             >
               <Printer size={15} /> Imprimir Ficha Técnica
             </button>
 
-            {/* 3. MODIFICAR FÓRMULA (Edición Supervisor / ETP) */}
+            {/* 3. MODIFICAR FÓRMULA (Protegido con Clave real de Supervisor Pintura Líquida o Admin) */}
             <button
-              onClick={() => {
-                setSavedColorId(colorEncontrado.id);
-                setSavedColorData(colorEncontrado);
-                setShowEtpModal(true);
-              }}
-              className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
-              title="Modificar parámetros de la ficha técnica o fórmula"
+              onClick={() => requestProtectedAction('EDIT_ETP', colorEncontrado)}
+              className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Modificar especificaciones o fórmula (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
             >
               <Edit3 size={15} /> Modificar Fórmula
+            </button>
+
+            {/* 4. ELIMINAR COLOR / LIMPIAR PRUEBA (Protegido con Clave de Supervisor Pintura Líquida o Admin) */}
+            <button
+              onClick={() => requestProtectedAction('DELETE_COLOR', colorEncontrado)}
+              className="px-3 py-2.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Eliminar este color o ensayo de prueba (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
+            >
+              <Trash2 size={15} /> Eliminar
             </button>
           </div>
         </div>
@@ -945,6 +1948,12 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             </div>
           </div>
 
+          {fichaConsolidada.notas_ensayo && (
+            <div className="px-3.5 py-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold text-purple-900 dark:text-purple-200">
+              🧪 <strong>Notas de Ensayo:</strong> {fichaConsolidada.notas_ensayo}
+            </div>
+          )}
+
           {/* Banner sutil de Norma de Laboratorio CDI */}
           <div className="px-3.5 py-2 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center gap-2 text-[11px] text-amber-900">
             <AlertTriangle size={14} className="text-amber-600 shrink-0" />
@@ -963,7 +1972,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
 
         {/* GRID PRINCIPAL: IZQUIERDA (MUESTRA + QR COMPACTO) | DERECHA (FÓRMULA Y CALCULADORA) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* Columna Izquierda Compacta: Muestra de Color + Código QR limpio sin botones redundantes */}
+          {/* Columna Izquierda Compacta: Muestra de Color + Código QR limpio */}
           <div className="lg:col-span-3">
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col items-center justify-between text-center space-y-4">
               <div className="flex flex-col items-center space-y-2.5 pt-1">
@@ -1007,9 +2016,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                 </div>
 
                 <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
-                  <span className="text-xs font-bold text-slate-300">
-                    ⚖️ Preparar Lote:
-                  </span>
+                  <span className="text-xs font-bold text-slate-300">⚖️ Preparar Lote:</span>
                   <input
                     type="number"
                     value={targetGramos}
@@ -1058,7 +2065,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                             <div
                               className="bg-gradient-to-r from-indigo-600 to-emerald-500 h-full rounded-full"
                               style={{
-                                width: `${Math.min(100, Math.max(4, Number(item.porcentaje) || 0))}%`
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(4, Number(item.porcentaje) || 0)
+                                )}%`
                               }}
                             />
                           </div>
@@ -1090,7 +2100,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                 </table>
               </div>
 
-              {/* Pie sutil con opción de modificar pesaje en balanza si requiere recalcular gramos */}
+              {/* Pie sutil con opción de modificar pesaje en balanza (Protegido con Clave) */}
               <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
                 <span>
                   Total componentes:{' '}
@@ -1099,10 +2109,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                   </strong>
                 </span>
                 <button
-                  onClick={handleEditRecipe}
+                  onClick={() => requestProtectedAction('EDIT_BALANZA', colorEncontrado)}
                   className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-black uppercase tracking-wider text-[11px] cursor-pointer"
                 >
-                  ⚖️ Ajustar Pesaje en Balanza
+                  ⚖️ Ajustar Pesaje en Balanza (Clave Supervisor)
                 </button>
               </div>
             </div>
@@ -1115,7 +2125,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             <div className="w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col bg-slate-50 dark:bg-[#0f172a] rounded-3xl relative shadow-2xl border border-slate-700">
               <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
                 <button
-                  onClick={() => setShowEtpModal(false)}
+                  onClick={() => {
+                    setShowEtpModal(false);
+                    setEtpPreAuthorized(false);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   <ArrowLeft size={16} />
@@ -1131,7 +2144,10 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                 </div>
 
                 <button
-                  onClick={() => setShowEtpModal(false)}
+                  onClick={() => {
+                    setShowEtpModal(false);
+                    setEtpPreAuthorized(false);
+                  }}
                   className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-colors cursor-pointer"
                   title="Cerrar Editor"
                 >
@@ -1145,9 +2161,17 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                   initialData={savedColorData}
                   supervisorProfile={supervisorProfile}
                   isSupervisorView={false}
-                  onCancel={() => setShowEtpModal(false)}
+                  preAuthorizedBySupervisor={etpPreAuthorized}
+                  onRequestPrintConfig={(mode, customData) =>
+                    openPrintConfigurator(mode, customData)
+                  }
+                  onCancel={() => {
+                    setShowEtpModal(false);
+                    setEtpPreAuthorized(false);
+                  }}
                   onSave={() => {
                     setShowEtpModal(false);
+                    setEtpPreAuthorized(false);
                     handleBuscar();
                   }}
                 />
@@ -1160,10 +2184,13 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   }
 
   // ============================================================================
-  // VISTA C: PANTALLA PRINCIPAL DE SC COLOR (BUSCADOR Y ACCESO AL CATÁLOGO)
+  // VISTA C: PANTALLA PRINCIPAL DE SC COLOR (BUSCADOR, ENSAYOS Y CATÁLOGO)
   // ============================================================================
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-12 relative">
+      {renderSecurityModal()}
+      {renderPrintConfigModal()}
+
       {/* Cabecera Principal con Botón Restaurado "VOLVER A INICIO" */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -1190,12 +2217,33 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           </div>
         </div>
 
-        <button
-          onClick={openCatalog}
-          className="bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 self-stretch md:self-auto justify-center transition-colors cursor-pointer"
-        >
-          <Palette size={18} /> Catálogo de Colores
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-stretch md:self-auto">
+          <button
+            onClick={() => {
+              setIsEnsayoMode(true);
+              setNotasEnsayo('');
+              setFilasReceta([]);
+              if (!codigoObjetivo.trim()) {
+                setCodigoObjetivo(
+                  `ENSAYO-${new Date().toISOString().slice(5, 10).replace('-', '')}`
+                );
+              }
+              setColorEncontrado(null);
+              setShowFormulacion(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 justify-center transition-colors cursor-pointer"
+            title="Iniciar un ensayo o prueba de colorimetría en laboratorio"
+          >
+            <Beaker size={18} /> Modo Ensayo
+          </button>
+
+          <button
+            onClick={openCatalog}
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 justify-center transition-colors cursor-pointer"
+          >
+            <Palette size={18} /> Catálogo de Colores
+          </button>
+        </div>
       </div>
 
       {/* Buscador Limpio de Fórmulas */}
@@ -1265,6 +2313,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             </button>
             <button
               onClick={() => {
+                setIsEnsayoMode(false);
+                setNotasEnsayo('');
+                setFilasReceta([]);
                 setShowFormulacion(true);
                 setColorEncontrado(null);
               }}
@@ -1301,105 +2352,171 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                 <strong>
                   {sistemaColor} {codigoObjetivo}
                 </strong>
-                . Inicia una nueva formulación en balanza para registrar la receta.
+                . Inicia una nueva formulación o un ensayo en balanza para registrar la receta.
               </p>
             </div>
-            <button
-              onClick={() => {
-                setShowFormulacion(true);
-                setColorEncontrado(null);
-              }}
-              className="mt-2 px-7 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-md transition-colors cursor-pointer"
-            >
-              + INICIAR FORMULACIÓN EN LABORATORIO
-            </button>
+            <div className="flex flex-wrap justify-center gap-3 mt-2">
+              <button
+                onClick={() => {
+                  setIsEnsayoMode(false);
+                  setShowFormulacion(true);
+                  setColorEncontrado(null);
+                }}
+                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+              >
+                + INICIAR FORMULACIÓN OFICIAL
+              </button>
+              <button
+                onClick={() => {
+                  setIsEnsayoMode(true);
+                  setShowFormulacion(true);
+                  setColorEncontrado(null);
+                }}
+                className="px-6 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+              >
+                🧪 INICIAR COMO ENSAYO / PRUEBA
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* MODAL CATÁLOGO */}
+      {/* MODAL CATÁLOGO CON FILTROS DE LIMPIEZA Y BOTÓN DE BORRADO PROTEGIDO */}
       {showCatalogModal && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-end p-0 sm:p-2">
-          <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[520px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-black theme-text-main uppercase flex items-center gap-2">
-                <Palette size={'1.2em'} /> Catálogo de Colores
-              </h2>
-              <button
-                onClick={() => {
-                  setShowCatalogModal(false);
-                  setCurrentView('inicio');
-                }}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2 cursor-pointer shadow-sm"
-              >
-                <ArrowLeft size={18} /> CERRAR CATÁLOGO
-              </button>
+          <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[580px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
+            <div className="p-5 theme-bg-header border-b theme-border space-y-3 shrink-0">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-black theme-text-main uppercase flex items-center gap-2">
+                  <Palette size={'1.2em'} /> Catálogo de Colores ({filteredCatalogColors.length})
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowCatalogModal(false);
+                    setCurrentView('inicio');
+                  }}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2 cursor-pointer shadow-sm text-xs uppercase"
+                >
+                  <ArrowLeft size={16} /> Cerrar
+                </button>
+              </div>
+
+              {/* Buscador interno y filtros para encontrar/limpiar colores de prueba */}
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="Filtrar por código, cliente o sistema..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--color-base)] border theme-border text-xs font-bold theme-text-main outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: 'TODOS', label: 'Todos' },
+                    { id: 'APROBADOS', label: '✓ Oficiales' },
+                    { id: 'ENSAYOS', label: '🧪 Borradores / Pruebas' },
+                    { id: 'SOLO_ENSAYOS', label: 'Solo Ensayos' }
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setCatalogFilter(f.id)}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase transition-colors cursor-pointer ${
+                        catalogFilter === f.id
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-[var(--color-base)] theme-text-muted border theme-border hover:theme-text-main'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+
             <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-base)] custom-scrollbar">
               {isLoadingCatalog ? (
                 <div className="flex justify-center items-center h-40">
                   <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                 </div>
-              ) : catalogColors.length === 0 ? (
-                <p className="text-center theme-text-main/50 font-bold p-8">
-                  No hay colores registrados aún.
+              ) : filteredCatalogColors.length === 0 ? (
+                <p className="text-center theme-text-muted font-bold p-8">
+                  No hay colores que coincidan con este filtro.
                 </p>
               ) : (
                 <div className="space-y-6">
                   {Object.entries(
-                    catalogColors.reduce((acc, curr) => {
+                    filteredCatalogColors.reduce((acc, curr) => {
                       if (!acc[curr.sistema_color]) acc[curr.sistema_color] = [];
                       acc[curr.sistema_color].push(curr);
                       return acc;
                     }, {})
                   ).map(([sistema, colores]) => (
                     <div key={sistema}>
-                      <h3 className="text-sm font-black theme-text-main/50 uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">
-                        {sistema}
+                      <h3 className="text-sm font-black theme-text-muted uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">
+                        {sistema} ({colores.length})
                       </h3>
                       <div className="grid grid-cols-2 gap-3">
                         {colores.map((c) => {
                           const proc = c.procedimiento_preparacion || {};
+                          const isEnsayo = Boolean(proc.es_ensayo);
                           return (
-                            <button
+                            <div
                               key={c.id}
                               onClick={() => handleSelectFromCatalog(c)}
-                              className="flex flex-col items-start bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-[var(--color-primary)] transition-colors text-left group hover:-translate-y-1 shadow-sm relative overflow-hidden cursor-pointer"
+                              className="flex flex-col items-start bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-indigo-500 transition-colors text-left group hover:-translate-y-0.5 shadow-sm relative overflow-hidden cursor-pointer"
                             >
                               <div
                                 className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5 relative"
                                 style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}
                               >
                                 <span
-                                  className={`absolute top-1.5 right-1.5 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                                    c.estado_aprobacion === 'aprobado_produccion'
+                                  className={`absolute top-1.5 left-1.5 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                    isEnsayo
+                                      ? 'bg-purple-600 text-white'
+                                      : c.estado_aprobacion === 'aprobado_produccion'
                                       ? 'bg-emerald-600 text-white'
                                       : c.estado_aprobacion === 'pendiente_revision'
                                       ? 'bg-amber-500 text-white'
                                       : 'bg-slate-700 text-white'
                                   }`}
                                 >
-                                  {c.estado_aprobacion === 'aprobado_produccion'
+                                  {isEnsayo
+                                    ? '🧪 Ensayo'
+                                    : c.estado_aprobacion === 'aprobado_produccion'
                                     ? 'Aprobado'
                                     : c.estado_aprobacion === 'pendiente_revision'
                                     ? 'En Ajuste'
                                     : 'Borrador'}
                                 </span>
+
+                                {/* Botón para Eliminar Color / Limpiar Prueba con Clave de Supervisor */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    requestProtectedAction('DELETE_COLOR', c);
+                                  }}
+                                  className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white shadow transition-transform hover:scale-105 cursor-pointer"
+                                  title="Eliminar este color (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
                               </div>
                               <span className="font-black theme-text-main text-sm w-full truncate">
                                 {c.codigo_objetivo}
                               </span>
                               {proc.cliente && (
-                                <span className="text-[10px] font-bold text-slate-400 w-full truncate">
+                                <span className="text-[10px] font-bold theme-text-muted w-full truncate">
                                   Cliente: {proc.cliente}
                                 </span>
                               )}
                               {proc.acabado_produccion && (
-                                <span className="text-[10px] font-black text-indigo-500 w-full truncate">
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 w-full truncate">
                                   Acabado: {proc.acabado_produccion}
                                 </span>
                               )}
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
