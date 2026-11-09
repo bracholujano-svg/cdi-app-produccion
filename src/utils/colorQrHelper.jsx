@@ -7,12 +7,12 @@ import { generateQRMatrix } from './qrGenerator';
 export const LABEL_PAGE_PRESETS = [
   {
     id: '100x80',
-    label: 'Etiqueta Estándar CDI (100 × 80 mm) ⭐',
+    label: 'Etiqueta Estándar CDI (100 × 80 mm) ⭐ Tamaño Completo',
     shortLabel: '100 × 80 mm (Térmica Estándar)',
     widthMm: 100,
     heightMm: 80,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 2,
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'termica'
   },
@@ -23,7 +23,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 100,
     heightMm: 70,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 2,
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'termica'
   },
@@ -34,7 +34,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 100,
     heightMm: 50,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 2,
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'termica'
   },
@@ -45,7 +45,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 80,
     heightMm: 50,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 2,
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'termica'
   },
@@ -56,7 +56,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 60,
     heightMm: 40,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 1.5,
+    defaultMarginMm: 1,
     defaultDensity: 'mini_qr',
     category: 'termica'
   },
@@ -78,7 +78,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 100,
     heightMm: 100,
     defaultOrientation: 'portrait',
-    defaultMarginMm: 3,
+    defaultMarginMm: 2,
     defaultDensity: 'completa',
     category: 'termica'
   },
@@ -89,18 +89,18 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 100,
     heightMm: 150,
     defaultOrientation: 'portrait',
-    defaultMarginMm: 3,
+    defaultMarginMm: 2,
     defaultDensity: 'completa',
     category: 'termica'
   },
   {
     id: 'rollo80',
-    label: 'Rollo Térmico Continuo 80 mm (80 × 90 mm)',
+    label: 'Rollo Térmico Continuo 80 mm (80 × 80 mm)',
     shortLabel: 'Rollo 80 mm',
     widthMm: 80,
-    heightMm: 90,
-    defaultOrientation: 'portrait',
-    defaultMarginMm: 2,
+    heightMm: 80,
+    defaultOrientation: 'landscape',
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'termica'
   },
@@ -111,7 +111,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 216,
     heightMm: 140,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 8,
+    defaultMarginMm: 6,
     defaultDensity: 'completa',
     category: 'hoja'
   },
@@ -155,7 +155,7 @@ export const LABEL_PAGE_PRESETS = [
     widthMm: 100,
     heightMm: 80,
     defaultOrientation: 'landscape',
-    defaultMarginMm: 2,
+    defaultMarginMm: 1.5,
     defaultDensity: 'compacta',
     category: 'custom'
   }
@@ -373,7 +373,7 @@ export const normalizeColorSheetData = (raw = {}) => {
 };
 
 /**
- * Construye el payload estructurado del Código QR para una Ficha Técnica de Color Aprobada
+ * Construye el payload estructurado del Código QR para una Muestra / Ficha Técnica de Color
  */
 export const buildColorQRPayload = (rawInput = {}) => {
   const {
@@ -389,7 +389,7 @@ export const buildColorQRPayload = (rawInput = {}) => {
     coordenadasColor,
     aprobadoPor,
     fechaAprobacion,
-    formulacionPastas,
+    catalizador,
     esEnsayo
   } = normalizeColorSheetData(rawInput);
 
@@ -410,41 +410,19 @@ export const buildColorQRPayload = (rawInput = {}) => {
   const b = coordenadasColor?.b ? `b*:${coordenadasColor.b} ` : '';
   const dE = coordenadasColor?.deltaE || 'ΔE < 0.8';
 
-  const totalGramos = (formulacionPastas || []).reduce(
-    (acc, it) => acc + (Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0),
-    0
-  );
-
   const lines = [
     `CDI EXHIBICIONES - LAB. COLOR${esEnsayo ? ' [ENSAYO/PRUEBA]' : ''}`,
     `ID FICHA: ${idFichaTecnica}`,
-    `COLOR: [${cod}] ${nom}`,
-    `CAT: ${sistemaCatalogo || 'INTERNO'} | CLIENTE: ${cli.slice(0, 32)}`,
-    `SISTEMA: ${sisPint}`,
+    `SISTEMA: ${sistemaCatalogo || 'INTERNO'} | CODIGO: ${cod}`,
+    nom !== cod ? `NOMBRE: ${nom}` : null,
+    `CLIENTE: ${cli.slice(0, 38)}`,
+    `BRILLO / ACABADO: ${acabProd}${glossTxt}`,
+    `PINTURA: ${sisPint} | CAT: ${catalizador || 'ESTANDAR'}`,
     `SUSTRATO: ${sust}`,
-    `ACABADO PRODUCCION: ${acabProd}${glossTxt}`,
     `PATRON FISICO: BRILLANTE (SELLADO ESPECTROFOTOMETRO)`,
     `LAB: ${L}${a}${b}${dE}`,
-    `APROBADO: ${sup} (${fechaStr})`,
-    `--- FORMULA PASTAS/BASES ---`
-  ];
-
-  (formulacionPastas || []).slice(0, 10).forEach((item, idx) => {
-    const ref = String(
-      item.codigo || item.id_referencia_ppg || item.id_referencia || `P${idx + 1}`
-    ).trim();
-    const desc = String(item.nombre || item.nombre_base || item.descripcion || '')
-      .trim()
-      .slice(0, 24);
-    const gr = Number(item.gramos ?? item.peso_g ?? item.porcentaje_final) || 0;
-    const pct =
-      item.porcentaje !== undefined
-        ? Number(item.porcentaje).toFixed(1)
-        : totalGramos > 0
-        ? ((gr / totalGramos) * 100).toFixed(1)
-        : '0.0';
-    lines.push(`${idx + 1}. ${ref} ${desc}: ${gr.toFixed(1)}g (${pct}%)`);
-  });
+    `APROBADO: ${sup} (${fechaStr})`
+  ].filter(Boolean);
 
   return lines.join('\n');
 };
@@ -465,7 +443,7 @@ const buildQRSvgMarkup = (qrPayload, pixelSize = 140) => {
       }
     }
   }
-  return `<svg viewBox="0 0 ${tot} ${tot}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges" style="display:block;margin:0 auto;">${rects}</svg>`;
+  return `<svg viewBox="0 0 ${tot} ${tot}" width="100%" height="100%" style="max-width:${pixelSize}px;max-height:${pixelSize}px;display:block;margin:0 auto;" shape-rendering="crispEdges">${rects}</svg>`;
 };
 
 /**
@@ -494,7 +472,7 @@ export const resolvePrintDimensions = (options = {}) => {
 
   const marginMm =
     options.marginMm !== undefined ? Number(options.marginMm) : foundPreset.defaultMarginMm;
-  const scalePct = Math.min(160, Math.max(40, Number(options.scalePct) || 100));
+  const scalePct = Math.min(180, Math.max(50, Number(options.scalePct) || 100));
   const fitToPage = options.fitToPage !== undefined ? Boolean(options.fitToPage) : true;
   const density = options.density || foundPreset.defaultDensity || 'compacta';
 
@@ -512,7 +490,14 @@ export const resolvePrintDimensions = (options = {}) => {
 };
 
 /**
- * Genera e imprime la Etiqueta Técnica Oficial configurable para impresoras térmicas (100x80mm, etc.) o de hoja
+ * Genera e imprime la Etiqueta de la Muestra Física (100x80mm tamaño completo, sin receta de pastas).
+ * Incluye exclusivamente:
+ *  - Sistema de color utilizado y Código de la pintura
+ *  - Cliente e ID de Ficha Técnica
+ *  - Brillo / Acabado de la pintura (Satinado, 70%, 50% Semimate, Mate, Brillante, etc.)
+ *  - Sistema de pintura, Catalizador y Sustrato
+ *  - Código QR Oficial grande
+ *  - Notas inferiores de protocolo y firma de Supervisor + Fecha
  */
 export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
   const data = normalizeColorSheetData(rawData);
@@ -529,7 +514,6 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
     coordenadasColor,
     aprobadoPor,
     fechaAprobacion,
-    formulacionPastas,
     catalizador,
     esEnsayo
   } = data;
@@ -537,7 +521,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
   const cfg = resolvePrintDimensions({
     presetId: '100x80',
     orientation: 'landscape',
-    marginMm: 2,
+    marginMm: 1.5,
     scalePct: 100,
     fitToPage: true,
     density: 'compacta',
@@ -546,41 +530,9 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
 
   const qrPayload = buildColorQRPayload(data);
   const isMini = cfg.density === 'mini_qr' || cfg.pageHeightMm <= 45 || cfg.pageWidthMm <= 65;
-  const isCompactThermal =
-    !isMini && (cfg.density === 'compacta' || cfg.pageWidthMm <= 120 || cfg.pageHeightMm <= 100);
 
-  const qrPixelSize = isMini ? 68 : isCompactThermal ? 96 : 138;
+  const qrPixelSize = isMini ? 90 : 185;
   const qrSvgMarkup = buildQRSvgMarkup(qrPayload, qrPixelSize);
-
-  const totalGramos = (formulacionPastas || []).reduce(
-    (acc, it) => acc + (Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0),
-    0
-  );
-
-  const maxPastasToShow = isMini ? 0 : isCompactThermal ? 6 : 12;
-  const pastasRowsHtml = (formulacionPastas || [])
-    .slice(0, maxPastasToShow)
-    .map((it) => {
-      const ref = it.codigo || it.id_referencia_ppg || it.id_referencia || 'BASE';
-      const desc = it.nombre || it.nombre_base || it.descripcion || '';
-      const gr = Number(it.gramos ?? it.peso_g ?? it.porcentaje_final) || 0;
-      const pct =
-        it.porcentaje !== undefined
-          ? Number(it.porcentaje).toFixed(1)
-          : totalGramos > 0
-          ? ((gr / totalGramos) * 100).toFixed(1)
-          : '0.0';
-
-      return `
-        <tr>
-          <td style="font-family: monospace; font-weight: 900; padding: ${isCompactThermal ? '1.5px 3px' : '3px 6px'}; border-bottom: 1px solid #cbd5e1; font-size: ${isCompactThermal ? '7.5pt' : '9.5pt'};">${ref}</td>
-          <td style="padding: ${isCompactThermal ? '1.5px 3px' : '3px 6px'}; border-bottom: 1px solid #cbd5e1; font-weight: 700; font-size: ${isCompactThermal ? '7.5pt' : '9.5pt'}; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${desc}</td>
-          <td style="padding: ${isCompactThermal ? '1.5px 3px' : '3px 6px'}; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: ${isCompactThermal ? '7.5pt' : '9.5pt'};">${gr.toFixed(1)}g</td>
-          <td style="padding: ${isCompactThermal ? '1.5px 3px' : '3px 6px'}; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: 900; font-size: ${isCompactThermal ? '7.5pt' : '9.5pt'};">${pct}%</td>
-        </tr>
-      `;
-    })
-    .join('');
 
   const fechaFmt = fechaAprobacion
     ? new Date(fechaAprobacion).toLocaleDateString('es-CO')
@@ -595,11 +547,12 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
     .filter(Boolean)
     .join(' | ');
 
-  const scaleDecimal = (cfg.scalePct / 100).toFixed(2);
-  const usableWidthMm = Math.max(20, cfg.pageWidthMm - cfg.marginMm * 2);
-  const usableHeightMm = Math.max(15, cfg.pageHeightMm - cfg.marginMm * 2);
+  // Formatear de manera clara el Brillo y Acabado (Satinado, 70%, 50% Semimate, Mate, etc.)
+  const acabadoUpper = String(acabadoProduccion || 'SATINADO').trim().toUpperCase();
+  const glossStr = String(glossLevel || '').trim();
+  const brilloDisplay = glossStr ? `BRILLO: ${glossStr}%` : 'ESTÁNDAR PLANTA';
 
-  const printWindow = window.open('', '_blank', 'width=980,height=800');
+  const printWindow = window.open('', '_blank', 'width=1020,height=840');
   if (!printWindow) {
     alert(
       'Por favor permite las ventanas emergentes para imprimir la etiqueta de la muestra física.'
@@ -611,216 +564,98 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
 
   if (isMini) {
     bodyContentHtml = `
-      <div class="label-surface" style="display:flex;align-items:center;gap:6px;padding:3px;">
-        <div style="flex-shrink:0;">
+      <div class="label-surface" style="display:flex;align-items:center;gap:8px;padding:4px;">
+        <div style="width:36%;display:flex;align-items:center;justify-content:center;">
           ${qrSvgMarkup}
         </div>
-        <div style="flex:1;min-width:0;overflow:hidden;">
-          <div style="font-size:6.5pt;font-weight:900;text-transform:uppercase;color:#334155;">
-            CDI • ${sistemaCatalogo} ${esEnsayo ? '[ENSAYO]' : ''}
-          </div>
-          <div style="font-size:10pt;font-weight:900;color:#000;line-height:1.1;word-break:break-word;">
-            ${codigoColor || nombreColor || 'S/C'}
-          </div>
-          <div style="font-size:7pt;font-weight:800;color:#1e293b;margin-top:2px;">
-            Prod: ${(acabadoProduccion || 'SATINADO').toUpperCase()} (${glossLevel || '40'}%)
-          </div>
-          <div style="font-size:6.5pt;font-weight:800;color:#0f172a;margin-top:1px;">
-            Cli: ${(cliente || 'CDI').slice(0, 22)} | ${fechaFmt}
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (isCompactThermal) {
-    // Diseño optimizado específicamente para Etiqueta Térmica 100x80 mm (y 100x70, 100x50, 80x50)
-    bodyContentHtml = `
-      <div class="label-surface" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:4px;">
-            <div style="min-width:0;flex:1;padding-right:6px;">
-              <div style="font-size:6.5pt;font-weight:900;letter-spacing:0.4px;text-transform:uppercase;color:#1e293b;">
-                CDI • LAB. COLOR • ID: ${idFichaTecnica} ${esEnsayo ? '• [ENSAYO]' : ''}
-              </div>
-              <div style="font-size:12pt;font-weight:900;color:#000;line-height:1.1;text-transform:uppercase;">
-                ${sistemaCatalogo}: ${codigoColor || 'S/C'} ${
-      nombreColor && nombreColor !== codigoColor ? `— ${nombreColor}` : ''
-    }
-              </div>
-              <div style="font-size:7.5pt;font-weight:800;color:#0f172a;margin-top:1px;">
-                CLIENTE: ${(cliente || 'ESTÁNDAR CDI').slice(0, 36)}
-              </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+          <div>
+            <div style="font-size:8pt;font-weight:900;text-transform:uppercase;color:#1e293b;">
+              CDI • ${sistemaCatalogo} ${esEnsayo ? '[ENSAYO]' : ''}
             </div>
-            <div style="background:#000;color:#fff;padding:3px 7px;border-radius:5px;text-align:right;flex-shrink:0;">
-              <div style="font-size:5.5pt;font-weight:800;letter-spacing:0.4px;color:#fcd34d;">ACABADO PRODUCCIÓN</div>
-              <div style="font-size:9.5pt;font-weight:900;text-transform:uppercase;line-height:1.1;">${
-                acabadoProduccion || 'SATINADO'
-              }</div>
-              <div style="font-size:6.5pt;font-weight:800;">Brillo 60°: ${glossLevel || '40'}%</div>
+            <div style="font-size:14pt;font-weight:900;color:#000;line-height:1.05;word-break:break-word;">
+              ${codigoColor || nombreColor || 'S/C'}
             </div>
           </div>
-
-          <div style="display:flex;gap:6px;align-items:flex-start;">
-            <div style="flex-shrink:0;width:104px;border:1.5px solid #000;border-radius:6px;padding:3px;text-align:center;background:#fff;">
-              ${qrSvgMarkup}
-              <div style="font-size:6pt;font-weight:900;color:#000;margin-top:1px;">ESCANEAR QR OFICIAL</div>
-              ${
-                coordsText
-                  ? `<div style="font-size:5.5pt;font-weight:800;color:#1e293b;margin-top:1px;line-height:1.1;">${coordsText}</div>`
-                  : ''
-              }
-            </div>
-
-            <div style="flex:1;min-width:0;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:4px;">
-                <div style="border:1px solid #64748b;border-radius:4px;padding:2px 4px;">
-                  <div style="font-size:5.5pt;font-weight:900;text-transform:uppercase;color:#475569;">SISTEMA / CATALIZADOR</div>
-                  <div style="font-size:7pt;font-weight:900;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sistemaPintura} • ${catalizador}</div>
-                </div>
-                <div style="border:1px solid #64748b;border-radius:4px;padding:2px 4px;">
-                  <div style="font-size:5.5pt;font-weight:900;text-transform:uppercase;color:#475569;">SUSTRATO / MUESTRA</div>
-                  <div style="font-size:7pt;font-weight:900;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sustratoBase} (Muestra Brillante)</div>
-                </div>
-              </div>
-
-              <div style="font-size:6.5pt;font-weight:900;text-transform:uppercase;border-bottom:1px solid #000;padding-bottom:1px;margin-bottom:2px;">
-                FÓRMULA PASTAS / BASES (MUESTRA: ${totalGramos.toFixed(1)}g)
-              </div>
-              <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                  <tr style="background:#e2e8f0;">
-                    <th style="text-align:left;padding:1px 3px;font-size:6pt;">CÓD</th>
-                    <th style="text-align:left;padding:1px 3px;font-size:6pt;">PASTA / BASE</th>
-                    <th style="text-align:right;padding:1px 3px;font-size:6pt;">GR</th>
-                    <th style="text-align:right;padding:1px 3px;font-size:6pt;">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${
-                    pastasRowsHtml ||
-                    '<tr><td colspan="4" style="padding:3px;font-size:7pt;text-align:center;">Sin pastas</td></tr>'
-                  }
-                </tbody>
-              </table>
-            </div>
+          <div style="background:#000;color:#fff;padding:3px 6px;border-radius:4px;font-size:9pt;font-weight:900;text-transform:uppercase;">
+            ${acabadoUpper} ${glossStr ? `(${glossStr}%)` : ''}
           </div>
-        </div>
-
-        <div style="margin-top:3px;">
-          <div style="padding:2.5px 5px;background:#fef3c7;border:1px solid #000;border-radius:4px;font-size:6pt;font-weight:900;color:#000;text-align:center;line-height:1.15;">
-            ⚠️ MUESTRA EN BRILLANTE (Protección Espectrofotómetro). En planta aplicar en ${(
-              acabadoProduccion || 'SATINADO'
-            ).toUpperCase()} (${glossLevel || '40'}%).
-          </div>
-          <div style="margin-top:2px;display:flex;justify-content:space-between;font-size:6.5pt;font-weight:900;color:#000;border-top:1px dashed #64748b;padding-top:2px;">
-            <span>SUPERVISOR: ${(aprobadoPor || 'SUPERVISOR').toUpperCase()}</span>
-            <span>FECHA: ${fechaFmt}</span>
+          <div style="font-size:7.5pt;font-weight:800;color:#0f172a;">
+            ${(cliente || 'CDI').slice(0, 24)} • ${fechaFmt}
           </div>
         </div>
       </div>
     `;
   } else {
-    // Diseño Amplio (100x150, Media Carta, Carta, A4)
+    // Diseño Oficial de Etiqueta de Muestra a Tamaño Completo (Sin Receta de Pastas)
     bodyContentHtml = `
       <div class="label-surface">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #0f172a;padding-bottom:8px;margin-bottom:10px;">
-          <div>
-            <div style="font-size:9pt;font-weight:900;letter-spacing:1px;color:#334155;text-transform:uppercase;">
-              CDI EXHIBICIONES • LAB. COLOR (ID FICHA: ${idFichaTecnica}) ${
-                esEnsayo ? '• [ENSAYO DE PRUEBA]' : ''
-              }
+        <!-- 1. CABECERA SUPERIOR: SISTEMA DE COLOR, CÓDIGO DE PINTURA Y BRILLO / ACABADO -->
+        <div class="label-header">
+          <div class="header-left">
+            <div class="id-line">
+              CDI • LAB. COLOR • ID: ${idFichaTecnica} ${esEnsayo ? '• [ENSAYO]' : ''}
             </div>
-            <div style="font-size:18pt;font-weight:900;color:#0f172a;line-height:1.15;margin-top:2px;text-transform:uppercase;">
-              ${sistemaCatalogo}: ${codigoColor || 'S/C'} ${
-      nombreColor && nombreColor !== codigoColor ? `— ${nombreColor}` : ''
+            <div class="system-code-title">
+              ${sistemaCatalogo}: ${codigoColor || 'S/C'}${
+      nombreColor && nombreColor !== codigoColor ? ` — ${nombreColor}` : ''
     }
             </div>
-            <div style="font-size:10pt;font-weight:800;color:#1e293b;margin-top:3px;">
-              CLIENTE / PROYECTO: ${cliente || 'ESTÁNDAR CDI'}
+            <div class="client-line">
+              CLIENTE: ${(cliente || 'USO GENERAL PLANTA').slice(0, 42)}
             </div>
           </div>
-          <div style="background:#0f172a;color:#ffffff;padding:6px 12px;border-radius:8px;text-align:right;">
-            <div style="font-size:7pt;font-weight:800;letter-spacing:0.8px;color:#fbbf24;">ACABADO DE PRODUCCIÓN</div>
-            <div style="font-size:13pt;font-weight:900;text-transform:uppercase;">${
-              acabadoProduccion || 'SATINADO'
-            }</div>
-            <div style="font-size:8.5pt;font-weight:800;color:#e2e8f0;">Brillo a 60°: ${
-              glossLevel || '40'
-            }%</div>
+
+          <div class="gloss-badge">
+            <div class="gloss-badge-label">ACABADO PRODUCCIÓN</div>
+            <div class="gloss-badge-main">${acabadoUpper}</div>
+            <div class="gloss-badge-sub">${brilloDisplay}</div>
           </div>
         </div>
 
-        <div style="display:flex;gap:14px;align-items:flex-start;">
-          <div style="flex-shrink:0;width:155px;border:1.5px solid #0f172a;border-radius:10px;padding:6px;text-align:center;background:#ffffff;">
-            ${qrSvgMarkup}
-            <div style="font-size:7.5pt;font-weight:900;color:#0f172a;margin-top:3px;">
-              ESCANEAR FICHA OFICIAL QR
+        <!-- 2. CUERPO CENTRAL: QR GRANDE + ESPECIFICACIONES DE PINTURA Y BRILLO (SIN RECETA) -->
+        <div class="label-middle">
+          <div class="qr-card">
+            <div class="qr-svg-wrap">
+              ${qrSvgMarkup}
             </div>
-            ${
-              coordsText
-                ? `<div style="font-size:7pt;font-weight:800;color:#475569;margin-top:2px;">${coordsText}</div>`
-                : ''
-            }
+            <div class="qr-caption">ESCANEAR QR OFICIAL</div>
+            ${coordsText ? `<div class="qr-coords">${coordsText}</div>` : ''}
           </div>
 
-          <div style="flex:1;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
-              <div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#f8fafc;">
-                <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#64748b;">Sistema de Pintura</div>
-                <div style="font-size:9.5pt;font-weight:900;color:#0f172a;">${
-                  sistemaPintura || 'Poliuretano (PU)'
-                }</div>
-              </div>
-              <div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#f8fafc;">
-                <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#64748b;">Sustrato Base Oficial</div>
-                <div style="font-size:9.5pt;font-weight:900;color:#0f172a;">${
-                  sustratoBase || 'MDF RH'
-                }</div>
-              </div>
-              <div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#f8fafc;">
-                <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#64748b;">Catalizador / Mezcla</div>
-                <div style="font-size:9.5pt;font-weight:900;color:#0f172a;">${
-                  catalizador || 'Estándar'
-                }</div>
-              </div>
-              <div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#f8fafc;">
-                <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#64748b;">Acabado de Muestra Física</div>
-                <div style="font-size:9.5pt;font-weight:900;color:#b45309;">BRILLANTE (SELLADO)</div>
-              </div>
+          <div class="specs-column">
+            <div class="spec-box spec-box-primary">
+              <div class="spec-label">BRILLO / ACABADO DE LA PINTURA EN PLANTA</div>
+              <div class="spec-value-xl">${acabadoUpper} ${
+      glossStr ? `— AL ${glossStr}%` : ''
+    }</div>
             </div>
 
-            <div style="font-size:8.5pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #0f172a;padding-bottom:2px;margin-bottom:3px;">
-              FÓRMULA DE PASTAS / TINTAS / BASES (TOTAL MUESTRA: ${totalGramos.toFixed(1)} g)
+            <div class="spec-box">
+              <div class="spec-label">SISTEMA DE PINTURA / CATALIZADOR</div>
+              <div class="spec-value">${sistemaPintura || 'Poliuretano (PU)'} • ${
+      catalizador || 'Estándar'
+    }</div>
             </div>
-            <table style="width:100%;border-collapse:collapse;">
-              <thead>
-                <tr style="background:#f1f5f9;">
-                  <th style="text-align:left;padding:3px 6px;font-size:8pt;">CÓDIGO</th>
-                  <th style="text-align:left;padding:3px 6px;font-size:8pt;">COMPONENTE / PASTA</th>
-                  <th style="text-align:right;padding:3px 6px;font-size:8pt;">GRAMOS</th>
-                  <th style="text-align:right;padding:3px 6px;font-size:8pt;">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${
-                  pastasRowsHtml ||
-                  '<tr><td colspan="4" style="padding:6px;font-size:9pt;text-align:center;">Sin pastas detalladas</td></tr>'
-                }
-              </tbody>
-            </table>
+
+            <div class="spec-box">
+              <div class="spec-label">SUSTRATO BASE / PATRÓN DE MUESTRA</div>
+              <div class="spec-value">${sustratoBase || 'MDF RH'} (Muestra Sellada Brillante)</div>
+            </div>
           </div>
         </div>
 
-        <div style="margin-top:8px;padding:6px 10px;background:#fef3c7;border:2px solid #d97706;border-radius:8px;font-size:9pt;font-weight:900;color:#78350f;text-align:center;line-height:1.3;">
-          ⚠️ PATRÓN EN BRILLANTE (Protección para Colorímetro/Espectrofotómetro). Aplicar en planta según Acabado de Producción indicado (${(
-            acabadoProduccion || 'SATINADO'
-          ).toUpperCase()} - ${glossLevel || '40'}%).
-        </div>
-
-        <div style="margin-top:6px;display:flex;justify-content:space-between;font-size:8.5pt;font-weight:800;color:#334155;border-top:1px dashed #94a3b8;padding-top:4px;">
-          <span>APROBADO POR SUPERVISOR: <strong>${(
-            aprobadoPor || 'SUPERVISOR'
-          ).toUpperCase()}</strong></span>
-          <span>FECHA APROBACIÓN: <strong>${fechaFmt}</strong></span>
+        <!-- 3. NOTAS INFERIORES Y FIRMA DEL SUPERVISOR -->
+        <div class="label-footer">
+          <div class="warning-note">
+            ⚠️ MUESTRA EN BRILLANTE (Protección Espectrofotómetro). En planta aplicar en <u>${acabadoUpper}${
+      glossStr ? ` (${glossStr}%)` : ''
+    }</u>.
+          </div>
+          <div class="signature-row">
+            <span>SUPERVISOR: ${(aprobadoPor || 'SUPERVISOR').toUpperCase()}</span>
+            <span>FECHA: ${fechaFmt}</span>
+          </div>
         </div>
       </div>
     `;
@@ -834,11 +669,13 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
         <title>Etiqueta Muestra (${cfg.pageWidthMm}x${cfg.pageHeightMm}mm) - ${
     codigoColor || nombreColor
   }</title>
-        <style>
+        <style id="dynamic-page-style">
           @page {
             size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
-            margin: ${cfg.marginMm}mm;
+            margin: 0mm !important;
           }
+        </style>
+        <style>
           * {
             box-sizing: border-box;
             -webkit-print-color-adjust: exact !important;
@@ -849,10 +686,10 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
             margin: 0;
             padding: 0;
             color: #000000;
-            background: #f1f5f9;
+            background: #0f172a;
           }
           .no-print-bar {
-            background: #0f172a;
+            background: #020617;
             color: #ffffff;
             padding: 10px 16px;
             display: flex;
@@ -868,52 +705,262 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
             font-weight: 900;
             border: none;
             border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 12px;
+            padding: 8px 13px;
+            font-size: 11.5px;
             text-transform: uppercase;
+            transition: filter 0.15s;
+          }
+          .no-print-bar button:hover {
+            filter: brightness(1.12);
           }
           .preview-stage {
-            padding: 16px;
+            padding: 20px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
+            min-height: calc(100vh - 70px);
           }
+          /* En pantalla muestra las dimensiones exactas de la etiqueta */
           .page-box {
-            width: ${usableWidthMm}mm;
-            ${cfg.fitToPage ? `height: ${usableHeightMm}mm; overflow: hidden;` : `min-height: ${usableHeightMm}mm;`}
+            width: ${cfg.pageWidthMm}mm;
+            height: ${cfg.pageHeightMm}mm;
+            padding: ${cfg.marginMm}mm;
             background: #ffffff;
-            border: 2px solid #000000;
-            border-radius: ${isMini ? '4px' : '8px'};
-            padding: ${isMini ? '1.5mm' : isCompactThermal ? '2.5mm' : '4mm'};
-            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
-            transform: scale(${scaleDecimal});
-            transform-origin: top center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
           }
           .label-surface {
             width: 100%;
             height: 100%;
+            border: 2.2px solid #000000;
+            border-radius: 6px;
+            padding: 2.5mm 3mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #ffffff;
+            zoom: ${(cfg.scalePct / 100).toFixed(2)};
           }
+          .label-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 8px;
+            border-bottom: 2.5px solid #000000;
+            padding-bottom: 2mm;
+          }
+          .header-left {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .id-line {
+            font-size: 8.5pt;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            color: #1e293b;
+          }
+          .system-code-title {
+            font-size: 16pt;
+            font-weight: 900;
+            color: #000000;
+            line-height: 1.08;
+            text-transform: uppercase;
+            margin-top: 1px;
+            word-break: break-word;
+          }
+          .client-line {
+            font-size: 10pt;
+            font-weight: 900;
+            color: #0f172a;
+            margin-top: 2px;
+            text-transform: uppercase;
+          }
+          .gloss-badge {
+            background: #000000;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex-shrink: 0;
+            min-width: 118px;
+          }
+          .gloss-badge-label {
+            font-size: 6.5pt;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #fde047;
+          }
+          .gloss-badge-main {
+            font-size: 13.5pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-top: 1px;
+          }
+          .gloss-badge-sub {
+            font-size: 9.5pt;
+            font-weight: 900;
+            color: #ffffff;
+            margin-top: 1px;
+          }
+          .label-middle {
+            flex: 1;
+            display: flex;
+            align-items: stretch;
+            gap: 3mm;
+            margin: 2mm 0;
+            min-height: 0;
+          }
+          .qr-card {
+            width: 36%;
+            max-width: 145px;
+            border: 2px solid #000000;
+            border-radius: 6px;
+            padding: 2mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+            flex-shrink: 0;
+          }
+          .qr-svg-wrap {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+          }
+          .qr-caption {
+            font-size: 7.5pt;
+            font-weight: 900;
+            color: #000000;
+            margin-top: 2px;
+            line-height: 1.05;
+          }
+          .qr-coords {
+            font-size: 7pt;
+            font-weight: 900;
+            color: #1e293b;
+            margin-top: 1px;
+          }
+          .specs-column {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 1.8mm;
+          }
+          .spec-box {
+            border: 1.6px solid #000000;
+            border-radius: 5px;
+            padding: 1.8mm 2.5mm;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+          }
+          .spec-box-primary {
+            background: #f8fafc;
+            border-width: 2px;
+          }
+          .spec-label {
+            font-size: 7pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #334155;
+            letter-spacing: 0.3px;
+          }
+          .spec-value-xl {
+            font-size: 12.5pt;
+            font-weight: 900;
+            color: #000000;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-top: 1px;
+          }
+          .spec-value {
+            font-size: 10pt;
+            font-weight: 900;
+            color: #000000;
+            line-height: 1.15;
+            margin-top: 1px;
+          }
+          .label-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5mm;
+          }
+          .warning-note {
+            padding: 1.8mm 2.5mm;
+            background: #fef3c7;
+            border: 1.8px solid #000000;
+            border-radius: 5px;
+            font-size: 8.5pt;
+            font-weight: 900;
+            color: #000000;
+            text-align: center;
+            line-height: 1.15;
+          }
+          .signature-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8.5pt;
+            font-weight: 900;
+            color: #000000;
+            border-top: 1.5px dashed #000000;
+            padding-top: 1mm;
+          }
+
+          /* MODO IMPRESIÓN: OCUPA EL 100% DEL ÁREA DE LA ETIQUETA (SIN ENCOGERSE AL CENTRO) */
           @media print {
             html, body {
               background: #ffffff !important;
-              width: ${usableWidthMm}mm;
-              height: ${usableHeightMm}mm;
+              width: 100% !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
             }
             .no-print-bar {
               display: none !important;
             }
             .preview-stage {
               padding: 0 !important;
+              margin: 0 !important;
+              min-height: 0 !important;
+              width: 100vw !important;
+              height: 100vh !important;
               display: block !important;
             }
             .page-box {
               box-shadow: none !important;
-              width: ${usableWidthMm}mm !important;
-              ${cfg.fitToPage ? `height: ${usableHeightMm}mm !important; overflow: hidden !important;` : ''}
+              width: 100vw !important;
+              height: 100vh !important;
+              max-width: 100% !important;
+              max-height: 100% !important;
+              margin: 0 !important;
+              padding: ${cfg.marginMm}mm !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              transform: scale(${scaleDecimal}) !important;
-              transform-origin: top left !important;
+            }
+            .label-surface {
+              width: 100% !important;
+              height: 100% !important;
             }
           }
         </style>
@@ -922,19 +969,33 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
         <div class="no-print-bar">
           <div>
             <div style="font-size:13px;font-weight:900;color:#34d399;">
-              🖨️ VISTA LISTA PARA IMPRESORA TÉRMICA / ESTÁNDAR — FORMATO: ${cfg.pageWidthMm} × ${
-    cfg.pageHeightMm
-  } mm (${cfg.orientation === 'landscape' ? 'Horizontal' : 'Vertical'})
+              🏷️ ETIQUETA DE MUESTRA A TAMAÑO COMPLETO — <span id="dim-indicator">${
+                cfg.pageWidthMm
+              } × ${cfg.pageHeightMm} mm</span> (<span id="orient-indicator">${
+    cfg.orientation === 'landscape' ? 'Horizontal' : 'Vertical'
+  }</span>)
             </div>
             <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">
-              En la ventana de impresión elige tu <strong>Impresora Térmica o de Red</strong>. Escala aplicada: <strong>${
-                cfg.scalePct
-              }%</strong> • Margen: <strong>${cfg.marginMm} mm</strong>.
+              💡 En la ventana de tu impresora abre <strong>"Más ajustes"</strong> y verifica que <strong>Márgenes = Ninguno</strong> y <strong>Escala = Predeterminado / 100%</strong>.
             </div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button onclick="window.print()" style="background:#10b981;color:#052e16;">
-              🖨️ Escoger Impresora e Imprimir
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+            <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
+              ➖ Letra / Zoom
+            </button>
+            <button onclick="resetFullSize()" style="background:#0284c7;color:#ffffff;">
+              ⛶ 100% Tamaño Etiqueta
+            </button>
+            <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
+              ➕ Letra / Zoom
+            </button>
+            <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">
+              🔄 Girar (${cfg.pageWidthMm}×${cfg.pageHeightMm} ⇄ ${cfg.pageHeightMm}×${
+    cfg.pageWidthMm
+  })
+            </button>
+            <button onclick="window.print()" style="background:#10b981;color:#052e16;font-size:12.5px;padding:9px 18px;">
+              🖨️ Imprimir Ahora
             </button>
             <button onclick="window.close()" style="background:#334155;color:#ffffff;">
               ✕ Cerrar
@@ -942,11 +1003,46 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           </div>
         </div>
         <div class="preview-stage">
-          <div class="page-box">
+          <div class="page-box" id="label-page-box">
             ${bodyContentHtml}
           </div>
         </div>
         <script>
+          var currentW = ${cfg.pageWidthMm};
+          var currentH = ${cfg.pageHeightMm};
+          var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+
+          function adjustZoom(delta) {
+            currentZoom = Math.min(1.6, Math.max(0.6, Number(currentZoom) + delta));
+            var surf = document.querySelector('.label-surface');
+            if (surf) surf.style.zoom = currentZoom.toFixed(2);
+          }
+
+          function resetFullSize() {
+            currentZoom = 1.0;
+            var surf = document.querySelector('.label-surface');
+            if (surf) surf.style.zoom = '1';
+          }
+
+          function toggleOrientation() {
+            var temp = currentW;
+            currentW = currentH;
+            currentH = temp;
+            var box = document.getElementById('label-page-box');
+            if (box) {
+              box.style.width = currentW + 'mm';
+              box.style.height = currentH + 'mm';
+            }
+            var styleTag = document.getElementById('dynamic-page-style');
+            if (styleTag) {
+              styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
+            }
+            var dimInd = document.getElementById('dim-indicator');
+            if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
+            var orientInd = document.getElementById('orient-indicator');
+            if (orientInd) orientInd.textContent = currentW >= currentH ? 'Horizontal' : 'Vertical';
+          }
+
           window.onload = function() {
             setTimeout(function() { window.print(); }, 250);
           };
@@ -1111,8 +1207,7 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
             background: #ffffff;
             padding: 8mm;
             box-shadow: 0 12px 32px rgba(0,0,0,0.18);
-            transform: scale(${scaleDecimal});
-            transform-origin: top center;
+            zoom: ${scaleDecimal};
           }
           h1, h2, h3, h4, th, strong, b, .title-black {
             font-family: 'Arial Black', Arial, sans-serif !important;
@@ -1200,8 +1295,7 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
               width: 100% !important;
               padding: 0 !important;
               box-shadow: none !important;
-              transform: scale(${scaleDecimal}) !important;
-              transform-origin: top left !important;
+              zoom: ${scaleDecimal} !important;
             }
           }
         </style>
@@ -1253,7 +1347,7 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
                       </div>`
                     : ''
                 }
-                <div style="text-align: center; border: 1.5px solid #0f172a; padding: 5px; border-radius: 8px;">
+                <div style="text-align: center; border: 1.5px solid #0f172a; padding: 5px; border-radius: 8px; width: 114px; height: 114px;">
                   ${qrSvgMarkup}
                 </div>
               </div>

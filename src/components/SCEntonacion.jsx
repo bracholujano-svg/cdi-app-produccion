@@ -39,7 +39,7 @@ import {
   printFullTechnicalSheetA4
 } from '../utils/colorQrHelper';
 
-const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v2';
+const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v3';
 
 export default function SCEntonacion({ inventario, onClose, supervisorProfile }) {
   // Estados para la Vista 1 (Buscador)
@@ -123,7 +123,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         customWidthMm: saved?.labelConfig?.customWidthMm || 100,
         customHeightMm: saved?.labelConfig?.customHeightMm || 80,
         orientation: saved?.labelConfig?.orientation || 'landscape',
-        marginMm: saved?.labelConfig?.marginMm ?? 2,
+        marginMm: saved?.labelConfig?.marginMm ?? 1.5,
         scalePct: saved?.labelConfig?.scalePct || 100,
         fitToPage: saved?.labelConfig?.fitToPage ?? true,
         density: saved?.labelConfig?.density || 'compacta'
@@ -1207,8 +1207,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                       }
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-black outline-none cursor-pointer"
                     >
-                      <option value={0}>Sin margen (0 mm — Térmica al borde)</option>
-                      <option value={2}>Mínimo (2 mm — Recomendado 100×80)</option>
+                      <option value={0}>Sin margen (0 mm — Llenar 100% al borde)</option>
+                      <option value={1.5}>Tamaño Completo (1.5 mm — Ideal 100×80)</option>
+                      <option value={2}>Mínimo (2 mm)</option>
                       <option value={4}>Compacto (4 mm)</option>
                       <option value={8}>Estándar (8 mm)</option>
                       <option value={12}>Amplio (12 mm — Hoja Carta/A4)</option>
@@ -1218,26 +1219,45 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
 
                 {/* 3. Escala, Formato y Ajuste a Tamaño de Hoja */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                       <Sliders size={14} className="text-emerald-600" />
-                      4. Escala y Ajuste de Formato ({activeCfg.scalePct}%)
+                      4. Escala y Ajuste a Tamaño Completo ({activeCfg.scalePct}%)
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => updateActivePrintSettings({ scalePct: 100 })}
-                      className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                    >
-                      Restablecer 100%
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isLabel && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateActivePrintSettings({
+                              presetId: '100x80',
+                              marginMm: 1.5,
+                              scalePct: 100,
+                              fitToPage: true,
+                              density: 'compacta'
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase shadow-xs cursor-pointer"
+                        >
+                          ⛶ Expandir 100% Etiqueta 100×80
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => updateActivePrintSettings({ scalePct: 100 })}
+                        className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        Restablecer 100%
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-400">50%</span>
+                    <span className="text-xs font-bold text-slate-400">60%</span>
                     <input
                       type="range"
-                      min={50}
-                      max={140}
+                      min={60}
+                      max={150}
                       step={5}
                       value={activeCfg.scalePct}
                       onChange={(e) =>
@@ -1245,11 +1265,11 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                       }
                       className="flex-1 accent-indigo-600 cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-slate-400">140%</span>
+                    <span className="text-xs font-bold text-slate-400">150%</span>
                     <input
                       type="number"
-                      min={50}
-                      max={150}
+                      min={60}
+                      max={160}
                       value={activeCfg.scalePct}
                       onChange={(e) =>
                         updateActivePrintSettings({ scalePct: Number(e.target.value) || 100 })
@@ -1268,26 +1288,25 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                       className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
                     />
                     <span className="text-xs font-black text-slate-700 dark:text-slate-200">
-                      Ajustar automáticamente el contenido al tamaño de la etiqueta / hoja (Evita que salte a 2 páginas)
+                      Expandir al 100% del área útil de la etiqueta ({resolved.pageWidthMm}×{resolved.pageHeightMm} mm) sin reducir al centro
                     </span>
                   </label>
 
                   {isLabel ? (
                     <div className="pt-1">
                       <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
-                        Diseño / Nivel de Contenido en la Etiqueta:
+                        Diseño de Etiqueta de Muestra (Sin Receta de Pastas):
                       </label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: 'compacta', label: 'Térmica 100×80 (QR + Fórmula)' },
-                          { id: 'completa', label: 'Completa Amplia' },
-                          { id: 'mini_qr', label: 'Mini (Solo QR + Cód)' }
+                          { id: 'compacta', label: '⭐ Tamaño Completo 100×80 (Sistema + Código + Brillo + QR + Notas)' },
+                          { id: 'mini_qr', label: 'Mini Compacta (Solo QR + Código + Brillo)' }
                         ].map((d) => (
                           <button
                             key={d.id}
                             type="button"
                             onClick={() => updateActivePrintSettings({ density: d.id })}
-                            className={`py-2 px-2 rounded-xl text-[11px] font-black uppercase border transition-all cursor-pointer ${
+                            className={`py-2 px-2.5 rounded-xl text-[11px] font-black uppercase border transition-all cursor-pointer ${
                               activeCfg.density === d.id
                                 ? 'bg-emerald-600 text-white border-emerald-600'
                                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
@@ -1360,39 +1379,44 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                     }}
                     className="bg-white text-slate-900 rounded-xl border-2 border-slate-900 shadow-lg p-3 flex flex-col justify-between text-left overflow-hidden relative"
                   >
-                    <div className="border-b border-slate-300 pb-1 flex justify-between items-start">
-                      <div>
-                        <div className="text-[8px] font-black uppercase text-slate-500">
-                          CDI LAB COLOR
+                    <div className="border-b-2 border-slate-900 pb-1 flex justify-between items-start gap-1">
+                      <div className="min-w-0">
+                        <div className="text-[7.5px] font-black uppercase text-slate-600 truncate">
+                          {dataObj.sistema_color || dataObj.sistemaCatalogo || 'SISTEMA COLOR'}
                         </div>
-                        <div className="text-[11px] font-black uppercase truncate max-w-[115px]">
-                          {dataObj.codigo_color || dataObj.codigoColor || 'COLOR'}
+                        <div className="text-[11px] font-black uppercase truncate max-w-[115px] text-slate-950">
+                          {dataObj.codigo_color || dataObj.codigoColor || 'CÓDIGO'}
                         </div>
                       </div>
-                      <span className="bg-slate-900 text-amber-300 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">
-                        {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'}
-                      </span>
+                      <div className="bg-slate-950 text-white px-1.5 py-0.5 rounded text-right shrink-0">
+                        <div className="text-[7.5px] font-black uppercase text-amber-300 leading-none">
+                          {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'}
+                        </div>
+                        <div className="text-[7px] font-black text-white leading-tight">
+                          Brillo: {dataObj.brillo || dataObj.glossLevel || '40'}%
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 my-auto py-1">
-                      <div className="p-1 border border-slate-300 rounded bg-white shrink-0">
-                        <ColorQRCodeSVG value={qrPayloadActual || 'CDI'} size={44} />
+                      <div className="p-1 border-2 border-slate-900 rounded bg-white shrink-0">
+                        <ColorQRCodeSVG value={qrPayloadActual || 'CDI'} size={48} />
                       </div>
-                      <div className="text-[8px] font-bold text-slate-600 leading-tight space-y-0.5 truncate">
-                        <div>
-                          <strong>Formato:</strong> {resolved.pageWidthMm}×{resolved.pageHeightMm}mm
+                      <div className="text-[8px] font-black text-slate-800 leading-tight space-y-1 min-w-0 flex-1">
+                        <div className="border border-slate-400 rounded px-1.5 py-0.5 truncate bg-slate-50">
+                          <span className="text-[6.5px] text-slate-500 block">ACABADO / BRILLO</span>
+                          {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'} (
+                          {dataObj.brillo || dataObj.glossLevel || '40'}%)
                         </div>
-                        <div>
-                          <strong>Escala:</strong> {resolved.scalePct}%
-                        </div>
-                        <div>
-                          <strong>Ajuste:</strong> {resolved.fitToPage ? 'Automático' : 'Libre'}
+                        <div className="border border-slate-400 rounded px-1.5 py-0.5 truncate">
+                          <span className="text-[6.5px] text-slate-500 block">SISTEMA PINTURA</span>
+                          {dataObj.sistema_pintura || dataObj.sistemaPintura || 'Poliuretano (PU)'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="border-t border-dashed border-slate-300 pt-1 text-[7.5px] font-black text-amber-800 truncate">
-                      ✨ Muestra Física en Brillante • QR Oficial
+                    <div className="border-t border-dashed border-slate-400 pt-1 text-[7.5px] font-black text-amber-900 truncate">
+                      ⚠️ Muestra Brillante • Sin Receta • 100% Etiqueta
                     </div>
                   </div>
                 </div>
