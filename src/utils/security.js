@@ -46,18 +46,37 @@ export const escapePostgrestFilter = (value, maxLength = 60) => {
   return safe.replace(/[%_(),*\\;'"`]/g, '').trim();
 };
 
+/**
+ * Detecta patrones clásicos de Inyección SQL (SQLi) o comandos maliciosos en inputs críticos
+ */
+export const containsSqlInjectionPattern = (value = '') => {
+  const str = String(value || '');
+  // Detectar comillas simples/dobles combinadas con operadores SQL, comentarios SQL (-- o /* */), punto y coma o palabras clave de ataque
+  const sqliRegex =
+    /('|"|;|--|\/\*|\*\/|\b(UNION\s+SELECT|DROP\s+TABLE|ALTER\s+TABLE|INSERT\s+INTO|DELETE\s+FROM|OR\s+1\s*=\s*1|AND\s+1\s*=\s*1|EXEC\s*\(|SLEEP\s*\(|BENCHMARK\s*\()\b)/i;
+  return sqliRegex.test(str);
+};
+
 export const validateCorporateEmail = (rawInput = '') => {
+  if (containsSqlInjectionPattern(rawInput)) {
+    return {
+      valid: false,
+      email: '',
+      error: 'Entrada bloqueada por contener caracteres no permitidos.'
+    };
+  }
   const clean = validateSafeText(rawInput, 120).toLowerCase().replace(/\s+/g, '');
   if (!clean) {
     return { valid: false, email: '', error: 'Ingresa tu usuario corporativo.' };
   }
   const emailFull = clean.includes('@') ? clean : `${clean}@cdiexhibiciones.co`;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(emailFull)) {
+  // Lista blanca estricta: solo letras, números, punto, guion y guion bajo (bloquea ', ", ;, =, paréntesis, etc.)
+  const strictEmailAllowlist = /^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+  if (!strictEmailAllowlist.test(emailFull)) {
     return {
       valid: false,
       email: emailFull,
-      error: 'Formato de usuario o correo inválido.'
+      error: 'Formato de usuario o correo inválido (solo letras, números, puntos y guiones).'
     };
   }
   return { valid: true, email: emailFull, error: null };
