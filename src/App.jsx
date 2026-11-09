@@ -26,7 +26,7 @@ import ReportConfigModal from './components/modals/ReportConfigModal';
 import PlantPlannerModal from './components/modals/PlantPlannerModal';
 import PackingListsModal from './components/modals/PackingListsModal';
 import QRScannerModal from './components/modals/QRScannerModal';
-import { parseCdiQRCodePayload } from './utils/colorQrHelper';
+import { parseCdiQRCodePayload, buildProductBlueprintQrPayload } from './utils/colorQrHelper';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -132,9 +132,10 @@ const {
     showBulkModal, setShowBulkModal,
     showDossierModal,
     setScannedQrTarget,
+    setShowQRScannerModal,
   } = useAppContext();
 
-  // Redirección automática cuando se escanea un código QR con el lector de Google del teléfono (?qr=COLOR | EMPAQUE | DESPACHO)
+  // Redirección automática cuando se escanea un código QR con el lector de Google del teléfono (?qr=COLOR | EMPAQUE | DESPACHO | PLANO)
   useEffect(() => {
     if (!supervisorProfile) return;
     if (typeof window === 'undefined' || !window.location?.search) return;
@@ -142,6 +143,13 @@ const {
 
     const parsed = parseCdiQRCodePayload(window.location.href);
     if (!parsed || parsed.type === 'UNKNOWN') return;
+
+    if (parsed.type === 'PLANO_PRODUCTO') {
+      setScannedQrTarget(parsed);
+      setShowQRScannerModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
 
     if (parsed.type === 'COLOR') {
       setScannedQrTarget(parsed);
@@ -304,10 +312,16 @@ const {
     
     const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
 
+    const newId = generateUUID();
     const newOrder = {
-      id: generateUUID(),
+      id: newId,
       pedidoNum: pedNum,
       codArticulo: codArt,
+      qr_plano_payload: buildProductBlueprintQrPayload({
+        id: newId,
+        pedidoNum: pedNum,
+        codArticulo: codArt
+      }),
       nombre: (form.nombre.value || "").trim().toUpperCase(),
       cantidad: Number(form.cantidad.value) || 1,
       cliente: (form.cliente.value || "").trim().toUpperCase(),
@@ -366,11 +380,17 @@ const {
 
       const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
 
+      const newId = generateUUID();
       const newOrder = {
-        id: generateUUID(),
+        id: newId,
         pedidoNum: pedNum,
         codArticulo: codArt,
         codigo_item: codArt,
+        qr_plano_payload: buildProductBlueprintQrPayload({
+          id: newId,
+          pedidoNum: pedNum,
+          codArticulo: codArt
+        }),
         nombre: (res.nombre || "").trim().toUpperCase(),
         cantidad: Number(res.cantidad) || 1,
         cliente: (res.cliente || "").trim().toUpperCase(),

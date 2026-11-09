@@ -78,7 +78,7 @@ const RecetarioModal = () => {
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
             <SCEntonacion
               supabase={supabase}
-              inventario={supabaseData.inventario}
+              inventario={supabaseData?.inventario || []}
               onClose={() => setShowRecetarioModal(false)}
               supervisorProfile={supervisorProfile}
               scannedQrTarget={scannedQrTarget}

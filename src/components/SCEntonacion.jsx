@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import CreatableSelect from 'react-select/creatable';
+import localforage from 'localforage';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import {
   Search,
@@ -315,22 +316,114 @@ export default function SCEntonacion({
     };
   }, [scannedQrTarget]);
 
-  // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
-  const ppgOptions = useMemo(() => {
-    if (!inventario) return [];
-    return inventario
-      .filter(
-        (item) =>
-          item.descripcion &&
-          (item.descripcion.toUpperCase().includes('POL-') ||
-            item.descripcion.toUpperCase().includes('(PPG)'))
-      )
-      .map((item) => ({
-        value: item.id_referencia,
-        label: item.descripcion,
-        descripcion: item.descripcion
-      }));
+  // Catálogo completo de inventario del almacén en memoria (con respaldo localforage y Supabase)
+  const [catalogoInventario, setCatalogoInventario] = useState(() =>
+    Array.isArray(inventario) && inventario.length > 0 ? inventario : []
+  );
+
+  useEffect(() => {
+    if (Array.isArray(inventario) && inventario.length > 0) {
+      setCatalogoInventario(inventario);
+      return;
+    }
+
+    let isMounted = true;
+    const cargarRespaldoInventario = async () => {
+      try {
+        const cached = await localforage.getItem('cdi_mrp_processed_cache_v3');
+        if (
+          isMounted &&
+          cached?.inventario &&
+          Array.isArray(cached.inventario) &&
+          cached.inventario.length > 0
+        ) {
+          setCatalogoInventario(cached.inventario);
+          return;
+        }
+
+        const { data, error } = await supabase.from('inventario').select('*').limit(3000);
+        if (isMounted && !error && Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((item) => ({
+            id_referencia:
+              item.id_referencia ||
+              item.idreferencia ||
+              item['Id Referencia'] ||
+              item.codigo ||
+              '',
+            idreferencia:
+              item.idreferencia ||
+              item.id_referencia ||
+              item['Id Referencia'] ||
+              item.codigo ||
+              '',
+            descripcion:
+              item.descripcion ||
+              item.referencia ||
+              item['Descripcion'] ||
+              item['Referencia'] ||
+              '',
+            referencia:
+              item.referencia ||
+              item.descripcion ||
+              item['Referencia'] ||
+              item['Descripcion'] ||
+              ''
+          }));
+          setCatalogoInventario(mapped);
+        }
+      } catch (err) {
+        console.warn('Error cargando respaldo de inventario en SC Color:', err);
+      }
+    };
+
+    cargarRespaldoInventario();
+    return () => {
+      isMounted = false;
+    };
   }, [inventario]);
+
+  // Opciones de inventario de almacén para formulación (con Código oficial y Descripción)
+  const ppgOptions = useMemo(() => {
+    const list =
+      Array.isArray(catalogoInventario) && catalogoInventario.length > 0
+        ? catalogoInventario
+        : Array.isArray(inventario)
+        ? inventario
+        : [];
+
+    return list
+      .map((item) => {
+        const codigo = String(
+          item.id_referencia ||
+            item.idreferencia ||
+            item.codigo ||
+            item['Id Referencia'] ||
+            ''
+        ).trim();
+        const descripcion = String(
+          item.descripcion ||
+            item.referencia ||
+            item['Descripcion'] ||
+            item['Referencia'] ||
+            ''
+        ).trim();
+
+        if (!codigo && !descripcion) return null;
+
+        const label =
+          codigo && descripcion && !descripcion.toUpperCase().includes(codigo.toUpperCase())
+            ? `${codigo} - ${descripcion}`
+            : descripcion || codigo;
+
+        return {
+          value: codigo || descripcion,
+          label: label,
+          codigo: codigo,
+          descripcion: descripcion || codigo
+        };
+      })
+      .filter(Boolean);
+  }, [catalogoInventario, inventario]);
 
   // Manejar Escáner
   useEffect(() => {
@@ -372,20 +465,96 @@ export default function SCEntonacion({
     }
   }, [isScannerOpen, ppgOptions]);
 
-  const handleBuscar = async () => {
-    if (!codigoObjetivo.trim()) return;
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchDropdownRef = useRef(null);
+
+  // Coincidencias en tiempo real desde el inventario de almacén al escribir en el buscador
+  const sugerenciasBusqueda = useMemo(() => {
+    const term = codigoObjetivo.trim().toLowerCase();
+    if (!term || term.length < 2) return [];
+
+    const list =
+      Array.isArray(catalogoInventario) && catalogoInventario.length > 0
+        ? catalogoInventario
+        : Array.isArray(inventario)
+        ? inventario
+        : [];
+
+    const matches = [];
+    const seen = new Set();
+
+    for (const item of list) {
+      const cod = String(
+        item.id_referencia ||
+          item.idreferencia ||
+          item.codigo ||
+          item['Id Referencia'] ||
+          ''
+      ).trim();
+      const desc = String(
+        item.descripcion ||
+          item.referencia ||
+          item['Descripcion'] ||
+          item['Referencia'] ||
+          ''
+      ).trim();
+
+      if (
+        (cod && cod.toLowerCase().includes(term)) ||
+        (desc && desc.toLowerCase().includes(term))
+      ) {
+        const key = `${cod}_${desc}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          matches.push({ codigo: cod, descripcion: desc });
+          if (matches.length >= 8) break;
+        }
+      }
+    }
+    return matches;
+  }, [codigoObjetivo, catalogoInventario, inventario]);
+
+  // Cerrar sugerencias al hacer clic fuera del input
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleBuscar = async (codigoForzado = null) => {
+    const codeToSearch = String(codigoForzado || codigoObjetivo || '').trim().toUpperCase();
+    if (!codeToSearch) return;
     setCameFromCatalog(false);
     setIsSearching(true);
     setColorEncontrado(null);
     setSearchFeedback('');
+    setShowSearchDropdown(false);
 
     try {
-      const { data: colorData, error: colorError } = await supabase
+      // 1. Buscar coincidencia exacta en colores_aprobados
+      let { data: colorData, error: colorError } = await supabase
         .from('colores_aprobados')
         .select('*')
         .eq('sistema_color', sistemaColor)
-        .eq('codigo_objetivo', codigoObjetivo.trim().toUpperCase())
-        .single();
+        .eq('codigo_objetivo', codeToSearch)
+        .maybeSingle();
+
+      // 2. Si no hay coincidencia exacta con el sistema actual, buscar por coincidencia parcial en codigo_objetivo
+      if (!colorData) {
+        const { data: partialData } = await supabase
+          .from('colores_aprobados')
+          .select('*')
+          .ilike('codigo_objetivo', `%${codeToSearch}%`)
+          .limit(1);
+        if (partialData && partialData.length > 0) {
+          colorData = partialData[0];
+          colorError = null;
+        }
+      }
 
       if (colorError || !colorData) {
         setColorEncontrado(false);
@@ -414,7 +583,7 @@ export default function SCEntonacion({
     if (!selectedPPG || !gramosInput || isNaN(gramosInput) || Number(gramosInput) <= 0) return;
 
     const gramos = Number(gramosInput);
-    const idRef = selectedPPG.value;
+    const idRef = selectedPPG.codigo || selectedPPG.value;
     const desc = selectedPPG.descripcion || selectedPPG.label;
 
     setFilasReceta((prev) => {
@@ -1658,21 +1827,60 @@ export default function SCEntonacion({
                     isClearable
                     options={ppgOptions}
                     value={selectedPPG}
-                    onChange={(val) => setSelectedPPG(val)}
+                    onChange={(val) => {
+                      if (!val) {
+                        setSelectedPPG(null);
+                        return;
+                      }
+                      // Autocompletar automáticamente el Código oficial y la Descripción completa del almacén
+                      setSelectedPPG({
+                        value: val.codigo || val.value,
+                        label: val.label,
+                        codigo: val.codigo || val.value,
+                        descripcion: val.descripcion || val.label
+                      });
+                    }}
                     onCreateOption={(inputValue) => {
+                      const cleanInput = inputValue.trim().toUpperCase();
                       const newOption = {
-                        value: inputValue,
-                        label: inputValue,
-                        descripcion: inputValue
+                        value: cleanInput,
+                        label: cleanInput,
+                        codigo: cleanInput,
+                        descripcion: cleanInput
                       };
                       setSelectedPPG(newOption);
                     }}
-                    placeholder="Escribe (ej. Amarillo 900) o busca en inventario..."
+                    placeholder="Escribe (ej. 840, ECO-840, Blanco) o busca en inventario..."
                     className="text-base font-bold shadow-sm"
                     menuPosition="fixed"
                     menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                     closeMenuOnSelect={true}
                     blurInputOnSelect={true}
+                    filterOption={(candidate, rawInput) => {
+                      if (!rawInput) return true;
+                      const term = rawInput.toLowerCase().trim();
+                      const val = String(candidate.value || '').toLowerCase();
+                      const lab = String(candidate.label || '').toLowerCase();
+                      const cod = String(candidate.data?.codigo || '').toLowerCase();
+                      const desc = String(candidate.data?.descripcion || '').toLowerCase();
+                      return (
+                        val.includes(term) ||
+                        lab.includes(term) ||
+                        cod.includes(term) ||
+                        desc.includes(term)
+                      );
+                    }}
+                    isValidNewOption={(inputValue, selectValue, selectOptions) => {
+                      if (!inputValue || !inputValue.trim()) return false;
+                      // PASO 3: Solo mostrar "Crear manualmente" si NO hay coincidencias reales en el inventario del almacén
+                      return selectOptions.length === 0;
+                    }}
+                    formatCreateLabel={(inputValue) => `➕ Crear "${inputValue}" manualmente`}
+                    noOptionsMessage={({ inputValue }) =>
+                      inputValue
+                        ? `No hay coincidencias en almacén para "${inputValue}"`
+                        : 'Escribe un código o nombre para buscar en almacén'
+                    }
                     styles={{
                       control: (base) => ({
                         ...base,
@@ -1688,9 +1896,9 @@ export default function SCEntonacion({
                         color: '#0f172a',
                         backgroundColor: state.isFocused ? '#e2e8f0' : '#ffffff',
                         cursor: 'pointer',
-                        padding: '14px 16px',
-                        fontSize: '15px',
-                        minHeight: '44px',
+                        padding: '12px 16px',
+                        fontSize: '14px',
+                        minHeight: '42px',
                         touchAction: 'manipulation'
                       }),
                       menu: (base) => ({
@@ -1700,7 +1908,6 @@ export default function SCEntonacion({
                         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)'
                       })
                     }}
-                    formatCreateLabel={(inputValue) => `Crear "${inputValue}" manualmente`}
                   />
                 </div>
                 <button
@@ -2926,18 +3133,60 @@ export default function SCEntonacion({
               </div>
             </div>
           </div>
-          <div className="col-span-12 md:col-span-5">
+          <div className="col-span-12 md:col-span-5 relative" ref={searchDropdownRef}>
             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
               Código de Fórmula o Nombre del Color
             </label>
             <input
               type="text"
               value={codigoObjetivo}
-              onChange={(e) => setCodigoObjetivo(e.target.value.toUpperCase())}
-              placeholder="Ej. 7005 C, BLANCO NIEVE, GRIS GRAFITO..."
+              onChange={(e) => {
+                setCodigoObjetivo(e.target.value.toUpperCase());
+                setShowSearchDropdown(true);
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              placeholder="Ej. 840, ECO-840, 7005 C, BLANCO NIEVE..."
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-base font-black px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors uppercase placeholder:font-normal placeholder:text-slate-400"
-              onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setShowSearchDropdown(false);
+                  handleBuscar();
+                }
+              }}
             />
+
+            {showSearchDropdown && sugerenciasBusqueda.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  Coincidencias en Inventario de Almacén ({sugerenciasBusqueda.length})
+                </div>
+                {sugerenciasBusqueda.map((sug, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      const selCode = sug.codigo || sug.descripcion;
+                      setCodigoObjetivo(selCode);
+                      setShowSearchDropdown(false);
+                      handleBuscar(selCode);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                  >
+                    <div className="truncate">
+                      <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 text-xs sm:text-sm mr-2">
+                        {sug.codigo || 'S/C'}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
+                        {sug.descripcion}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">
+                      Almacén
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="col-span-12 md:col-span-3 flex gap-2">
             <button

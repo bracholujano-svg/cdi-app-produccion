@@ -263,22 +263,30 @@ export const LABEL_PAGE_PRESETS = [
 ];
 
 /**
- * Componente SVG vectorial de alta nitidez para el Código QR de Laboratorio de Colorimetría
+ * Componente SVG vectorial de alta nitidez para Códigos QR de Planta CDI.
+ * Soporta nivel de corrección de errores configurable (ej. level="H" para planos en planta).
  */
-export const ColorQRCodeSVG = ({ value, payload, size = 116, className = '' }) => {
+export const ColorQRCodeSVG = ({
+  value,
+  payload,
+  size = 116,
+  level = 'L',
+  quietZone = 2,
+  className = ''
+}) => {
   const qrText = value || payload || 'CDI-SC-COLOR';
   const matrix = useMemo(() => {
     try {
-      return generateQRMatrix(qrText);
+      return generateQRMatrix(qrText, { ecl: level, boostEcl: false });
     } catch (e) {
-      console.error('Error generando QR de color:', e);
+      console.error('Error generando QR:', e);
       return [[true]];
     }
-  }, [qrText]);
+  }, [qrText, level]);
 
   const moduleCount = matrix.length;
-  const quietZone = 2;
-  const totalSize = moduleCount + quietZone * 2;
+  const qz = typeof quietZone === 'number' && quietZone >= 1 ? quietZone : 2;
+  const totalSize = moduleCount + qz * 2;
 
   return (
     <svg
@@ -294,8 +302,8 @@ export const ColorQRCodeSVG = ({ value, payload, size = 116, className = '' }) =
           cell ? (
             <rect
               key={`${rIdx}-${cIdx}`}
-              x={cIdx + quietZone}
-              y={rIdx + quietZone}
+              x={cIdx + qz}
+              y={rIdx + qz}
               width={1}
               height={1}
               fill="#000000"
@@ -305,6 +313,298 @@ export const ColorQRCodeSVG = ({ value, payload, size = 116, className = '' }) =
       )}
     </svg>
   );
+};
+
+/**
+ * Construye el payload determinístico y único del Código QR de trazabilidad para planos (SolidWorks):
+ * Formato exacto: CDI|PED:${numero_pedido}|COD:${codigo_producto}|ID:${item_id}
+ */
+export const buildProductBlueprintQrPayload = (product = {}) => {
+  const numeroPedido = String(product?.pedidoNum || product?.pedido_num || product?.pedido || 'S/N')
+    .replace(/^#/, '')
+    .trim()
+    .toUpperCase();
+  const codigoProducto = String(
+    product?.codArticulo || product?.codigo_item || product?.articulo || 'S/C'
+  )
+    .trim()
+    .toUpperCase();
+  const rawId = String(product?.master_id || product?.id || '').trim();
+  const itemId = rawId
+    ? (rawId.includes('-') ? rawId.split('-')[0] : rawId.slice(0, 12)).toUpperCase()
+    : `${numeroPedido}-${codigoProducto}`;
+
+  return `CDI|PED:${numeroPedido}|COD:${codigoProducto}|ID:${itemId}`;
+};
+
+/**
+ * Muestra un toast visual flotante de confirmación en pantalla.
+ */
+export const showCdiBlueprintToast = (
+  message = '¡Estampilla QR copiada! Presione Ctrl+V en SolidWorks'
+) => {
+  if (typeof document === 'undefined') return;
+  const existing = document.getElementById('cdi-blueprint-qr-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'cdi-blueprint-qr-toast';
+  toast.setAttribute(
+    'style',
+    [
+      'position:fixed',
+      'bottom:24px',
+      'right:24px',
+      'z-index:99999',
+      'background:#0f172a',
+      'color:#ffffff',
+      'border:2px solid #10b981',
+      'border-radius:14px',
+      'padding:14px 20px',
+      'font-family:Arial,sans-serif',
+      'font-size:13px',
+      'font-weight:900',
+      'box-shadow:0 20px 35px rgba(0,0,0,0.45)',
+      'display:flex',
+      'align-items:center',
+      'gap:10px',
+      'pointer-events:none'
+    ].join(';')
+  );
+  toast.innerHTML = `<span style="display:inline-flex;width:22px;height:22px;border-radius:999px;background:#10b981;color:#052e16;align-items:center;justify-content:center;font-weight:900;">✓</span><span>${message}</span>`;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 3400);
+};
+
+/**
+ * Renderiza en un <canvas> la estampilla horizontal calibrada para SolidWorks (.SLDDRW):
+ * - scale = 1 -> 220x96 px (96 DPI ~ 58mm x 25mm al pegar con Ctrl+V en SolidWorks)
+ * - scale = 2 -> 440x192 px (para Descargar PNG en alta resolución)
+ * - Fondo blanco puro (#FFFFFF, sin canal alfa) y borde sólido negro (#000000) de 2px
+ * - Lado izquierdo (88x88px, margen 4px): QR con level="H" y margen silencioso de 1 módulo
+ * - Lado derecho (124px restantes):
+ *   Línea 1 (10px bold): CDI EXHIBICIONES
+ *   Línea 2 (13px bold): PED: ${numero_pedido}
+ *   Línea 3 (12px bold): CÓD: ${codigo_producto}
+ *   Línea 4 (10px regular, truncado a 18 caracteres): ${nombre_producto}
+ */
+export const renderSolidWorksBlueprintStampCanvas = (product = {}, scale = 1) => {
+  const s = Math.max(1, Number(scale) || 1);
+  const width = Math.round(220 * s);
+  const height = Math.round(96 * s);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // 1. Fondo blanco puro (#FFFFFF) sin transparencia alfa
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, width, height);
+
+  // 2. Borde exterior sólido negro (#000000) de 2px
+  const borderPx = Math.round(2 * s);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, width, borderPx);
+  ctx.fillRect(0, height - borderPx, width, borderPx);
+  ctx.fillRect(0, 0, borderPx, height);
+  ctx.fillRect(width - borderPx, 0, borderPx, height);
+
+  // 3. Lado Izquierdo (88px x 88px, margen 4px): Código QR (level="H", quietZone = 1 módulo)
+  const payload = buildProductBlueprintQrPayload(product);
+  const matrix = generateQRMatrix(payload, { ecl: 'H', boostEcl: false });
+  const moduleCount = matrix.length;
+  const quietZoneModules = 1;
+  const totalModules = moduleCount + quietZoneModules * 2;
+
+  const qrBoxSize = Math.round(88 * s);
+  const qrBoxX = Math.round(4 * s);
+  const qrBoxY = Math.round(4 * s);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+
+  const intModulePx = Math.floor(qrBoxSize / totalModules);
+  ctx.fillStyle = '#000000';
+
+  if (intModulePx >= 2 * s) {
+    const drawnSize = intModulePx * totalModules;
+    const offset = Math.floor((qrBoxSize - drawnSize) / 2);
+    const startX = qrBoxX + offset + quietZoneModules * intModulePx;
+    const startY = qrBoxY + offset + quietZoneModules * intModulePx;
+
+    for (let r = 0; r < moduleCount; r++) {
+      for (let c = 0; c < moduleCount; c++) {
+        if (matrix[r][c]) {
+          ctx.fillRect(
+            startX + c * intModulePx,
+            startY + r * intModulePx,
+            intModulePx,
+            intModulePx
+          );
+        }
+      }
+    }
+  } else {
+    for (let r = 0; r < moduleCount; r++) {
+      const y0 = qrBoxY + Math.floor(((r + quietZoneModules) * qrBoxSize) / totalModules);
+      const y1 = qrBoxY + Math.floor(((r + quietZoneModules + 1) * qrBoxSize) / totalModules);
+      for (let c = 0; c < moduleCount; c++) {
+        if (matrix[r][c]) {
+          const x0 = qrBoxX + Math.floor(((c + quietZoneModules) * qrBoxSize) / totalModules);
+          const x1 = qrBoxX + Math.floor(((c + quietZoneModules + 1) * qrBoxSize) / totalModules);
+          ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+        }
+      }
+    }
+  }
+
+  // 4. Lado Derecho (124px restantes: desde x = 96px): Texto técnico en negro puro (#000000)
+  const numeroPedido = String(product?.pedidoNum || product?.pedido_num || 'S/N')
+    .replace(/^#/, '')
+    .trim()
+    .toUpperCase();
+  const codigoProducto = String(product?.codArticulo || product?.codigo_item || 'S/C')
+    .trim()
+    .toUpperCase();
+  const nombreProducto = String(product?.nombre || product?.descripcion || 'PRODUCTO CDI')
+    .trim()
+    .toUpperCase()
+    .slice(0, 18);
+
+  const textX = Math.round(96 * s);
+  const maxTextWidth = Math.round(118 * s);
+  ctx.fillStyle = '#000000';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+
+  // Línea 1 (10px bold): CDI EXHIBICIONES
+  ctx.font = `bold ${Math.round(10 * s)}px Arial, Consolas, sans-serif`;
+  ctx.fillText('CDI EXHIBICIONES', textX, Math.round(12 * s), maxTextWidth);
+
+  // Línea 2 (13px bold): PED: ${numero_pedido}
+  ctx.font = `bold ${Math.round(13 * s)}px Arial, Consolas, sans-serif`;
+  ctx.fillText(`PED: ${numeroPedido}`, textX, Math.round(29 * s), maxTextWidth);
+
+  // Línea 3 (12px bold): CÓD: ${codigo_producto}
+  ctx.font = `bold ${Math.round(12 * s)}px Arial, Consolas, sans-serif`;
+  ctx.fillText(`CÓD: ${codigoProducto}`, textX, Math.round(50 * s), maxTextWidth);
+
+  // Línea 4 (10px regular, truncado a 18 caracteres): ${nombre_producto}
+  ctx.font = `${Math.round(10 * s)}px Arial, Consolas, sans-serif`;
+  ctx.fillText(nombreProducto, textX, Math.round(71 * s), maxTextWidth);
+
+  return canvas;
+};
+
+/**
+ * Copia la estampilla QR de 220x96px al portapapeles de Windows para pegarla con Ctrl+V en SolidWorks (.SLDDRW)
+ */
+export const copyBlueprintQrToClipboard = async (product = {}) => {
+  const canvas = renderSolidWorksBlueprintStampCanvas(product, 1);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('No se pudo generar la imagen PNG de la estampilla QR.');
+
+  if (navigator.clipboard && typeof window.ClipboardItem !== 'undefined') {
+    await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+    showCdiBlueprintToast('¡Estampilla QR copiada! Presione Ctrl+V en SolidWorks');
+    return true;
+  }
+
+  throw new Error('El navegador no permite copiar imágenes directamente al portapapeles.');
+};
+
+/**
+ * Descarga la estampilla QR en PNG al doble de resolución (440x192px)
+ */
+export const downloadBlueprintQrPng = (product = {}) => {
+  const canvas = renderSolidWorksBlueprintStampCanvas(product, 2);
+  const dataUrl = canvas.toDataURL('image/png');
+  const ped = String(product?.pedidoNum || 'PED')
+    .replace(/[^A-Z0-9_-]/gi, '')
+    .toUpperCase();
+  const cod = String(product?.codArticulo || 'ITEM')
+    .replace(/[^A-Z0-9_-]/gi, '')
+    .toUpperCase();
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `QR_PLANO_PED_${ped}_COD_${cod}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  showCdiBlueprintToast(`PNG descargado (440×192 px): PED ${ped} • CÓD ${cod}`);
+};
+
+/**
+ * Vista previa fiel 1:1 (220x96px) de la estampilla de SolidWorks renderizada sobre <canvas>
+ */
+export const SolidWorksStampPreview = ({ product, className = '' }) => {
+  const canvasRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!canvasRef.current || !product) return;
+    try {
+      const stampCanvas = renderSolidWorksBlueprintStampCanvas(product, 1);
+      const target = canvasRef.current;
+      target.width = stampCanvas.width;
+      target.height = stampCanvas.height;
+      const ctx = target.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(stampCanvas, 0, 0);
+    } catch (e) {
+      console.error('Error renderizando vista previa de estampilla SolidWorks:', e);
+    }
+  }, [
+    product?.id,
+    product?.pedidoNum,
+    product?.codArticulo,
+    product?.codigo_item,
+    product?.nombre
+  ]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={220}
+      height={96}
+      style={{ width: '220px', height: '96px', imageRendering: 'pixelated' }}
+      className={`bg-white shadow-sm rounded-sm shrink-0 ${className}`}
+    />
+  );
+};
+
+/**
+ * Determina de forma unificada si un producto se encuentra activamente "EN PROCESO / TRABAJANDO"
+ * o si está "EN ESPERA" en su sección actual.
+ */
+export const isProductInProcessState = (p) => {
+  if (!p || p.isTerminado) return false;
+  const est = String(p.estadoInterno || p.estado || '')
+    .trim()
+    .toUpperCase();
+  if (est === 'DESPACHADO' || est === 'ENTREGADO') return false;
+  if (
+    est === 'EN ESPERA' ||
+    est === 'EN ESPERA PARA DESPACHO' ||
+    est === 'INGRESO DE PEDIDO' ||
+    est.startsWith('EN TRÁNSITO') ||
+    est.startsWith('EN TRANSITO') ||
+    est.startsWith('RECHAZADO')
+  ) {
+    return false;
+  }
+  if (est === 'EN PROCESO' || est === 'TRABAJANDO' || est.includes('EN PROCESO')) {
+    return true;
+  }
+  if (est && est !== 'EN ESPERA') {
+    return true;
+  }
+  return Array.isArray(p.bitacoraTurnos) && p.bitacoraTurnos.length > 0;
 };
 
 /**
@@ -600,8 +900,40 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
           raw: text
         };
       }
+      if (qrType === 'PLANO' || qrType === 'PLANO_PRODUCTO') {
+        return {
+          type: 'PLANO_PRODUCTO',
+          pedidoNum: (parsedUrl.searchParams.get('ped') || '').replace(/^#/, '').trim().toUpperCase(),
+          codArticulo: (parsedUrl.searchParams.get('cod') || '').trim().toUpperCase(),
+          itemId: (parsedUrl.searchParams.get('id') || '').trim().toUpperCase(),
+          raw: text
+        };
+      }
     }
   } catch (_) {}
+
+  // 1.5. Reconocer QR Oficial de Plano por Producto (SolidWorks):
+  // Formato exacto: CDI|PED:${numero_pedido}|COD:${codigo_producto}|ID:${item_id}
+  // También normaliza separadores si una pistola lectora USB en teclado español envía ] o Ñ en lugar de | y :
+  const normalizedBlueprintText = text
+    .replace(/[\]\}\¦]/g, '|')
+    .replace(/[Ññ]/g, ':')
+    .trim();
+  const blueprintMatch = normalizedBlueprintText.match(
+    /^CDI\|PED:([^|]+)\|COD:([^|]+)(?:\|ID:([^|\s]+))?/i
+  );
+  if (blueprintMatch) {
+    return {
+      type: 'PLANO_PRODUCTO',
+      pedidoNum: String(blueprintMatch[1] || '')
+        .replace(/^#/, '')
+        .trim()
+        .toUpperCase(),
+      codArticulo: String(blueprintMatch[2] || '').trim().toUpperCase(),
+      itemId: String(blueprintMatch[3] || '').trim().toUpperCase(),
+      raw: text
+    };
+  }
 
   const upper = text.toUpperCase();
 
@@ -702,6 +1034,61 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
     type: 'UNKNOWN',
     raw: text
   };
+};
+
+/**
+ * Localiza el producto exacto en la lista de órdenes a partir del QR escaneado de un plano (CDI|PED:...|COD:...|ID:...)
+ */
+export const findProductByBlueprintQr = (parsed, orders = []) => {
+  if (!parsed || !Array.isArray(orders) || orders.length === 0) return null;
+
+  const targetPed = String(parsed.pedidoNum || '')
+    .replace(/^#/, '')
+    .trim()
+    .toUpperCase();
+  const targetCod = String(parsed.codArticulo || '').trim().toUpperCase();
+  const targetId = String(parsed.itemId || '').trim().toUpperCase();
+
+  // 1. Coincidencia por ID de ítem (exacto o prefijo de UUID) + Pedido
+  if (targetId) {
+    const byIdAndPed = orders.find((o) => {
+      if (!o) return false;
+      const oPed = String(o.pedidoNum || '').trim().toUpperCase();
+      const oId = String(o.id || '').trim().toUpperCase();
+      const oMaster = String(o.master_id || '').trim().toUpperCase();
+      const idMatches =
+        oId === targetId ||
+        oId.startsWith(targetId) ||
+        (oMaster && (oMaster === targetId || oMaster.startsWith(targetId)));
+      return idMatches && (!targetPed || oPed === targetPed);
+    });
+    if (byIdAndPed) return byIdAndPed;
+  }
+
+  // 2. Coincidencia por Pedido + Código de Producto (priorizando el ítem maestro o activo)
+  if (targetPed && targetCod) {
+    const candidates = orders.filter((o) => {
+      if (!o) return false;
+      const oPed = String(o.pedidoNum || '').trim().toUpperCase();
+      const oCod = String(o.codArticulo || o.codigo_item || '').trim().toUpperCase();
+      return oPed === targetPed && oCod === targetCod;
+    });
+    if (candidates.length > 0) {
+      return candidates.find((c) => !c.master_id) || candidates[0];
+    }
+  }
+
+  // 3. Coincidencia solo por ID si existe
+  if (targetId) {
+    const byIdOnly = orders.find((o) => {
+      if (!o) return false;
+      const oId = String(o.id || '').trim().toUpperCase();
+      return oId === targetId || oId.startsWith(targetId);
+    });
+    if (byIdOnly) return byIdOnly;
+  }
+
+  return null;
 };
 
 /**
