@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Truck, CheckCircle2, Search, Calendar, User, Package, FileText, ArrowRight, Layers, Table, Grid } from 'lucide-react';
+import { Truck, CheckCircle2, Search, Calendar, User, Package, FileText, ArrowRight, Layers, Table, Grid, Printer } from 'lucide-react';
 import OrderCard from '../orders/OrderCard';
+import { LABEL_PAGE_PRESETS, printDispatchLabelsOrSheet } from '../../utils/colorQrHelper';
 
 export default function DispatchHistoryTable({
   filteredOrders = [],
@@ -15,6 +16,41 @@ export default function DispatchHistoryTable({
 }) {
   const [displayMode, setDisplayMode] = useState('table'); // 'table' | 'grid'
   const [tableSearch, setTableSearch] = useState('');
+  const [selectedPaperPreset, setSelectedPaperPreset] = useState('100x80');
+
+  const handlePrintFromHistory = (itemsToPrint, mode = 'ETIQUETAS_DESPACHO') => {
+    const list = Array.isArray(itemsToPrint) ? itemsToPrint : [itemsToPrint];
+    if (list.length === 0) return;
+    const first = list[0] || {};
+    const log = first.datos_logistica || {};
+    const presetToUse = mode === 'REMISION_DESPACHO' && selectedPaperPreset === '100x80' ? 'letter' : selectedPaperPreset;
+    printDispatchLabelsOrSheet(
+      {
+        order_no: first.pedidoNum || 'S/O',
+        client_name: first.cliente || 'CLIENTE CDI',
+        project_name: first.nombre_proyecto || 'DESPACHO PLANTA',
+        remision: log.guiaRemesa || `REM-${first.pedidoNum || 'CDI'}`,
+        carrier: log.empresaTransporte || log.tipoTransporte || 'Transporte CDI',
+        plate: log.placaMarca || 'S/P',
+        driver_name: log.nombreChofer || 'Conductor Autorizado',
+        destination: first.cliente || 'CLIENTE CDI',
+        receiver_name: first.cliente || 'CLIENTE CDI',
+        dispatched_at: first.fechaDespacho || Date.now(),
+        items: list.map((o) => ({
+          order_no: o.pedidoNum,
+          item_code: o.codArticulo || 'S/C',
+          part_description: o.nombre || 'PIEZA DESPACHADA',
+          quantity: Number(o.cantidad || 1),
+          area: 'DESPACHADO'
+        }))
+      },
+      {
+        dispatchMode: mode,
+        presetId: presetToUse,
+        orientation: presetToUse === 'letter' || presetToUse === 'a4' ? 'portrait' : 'landscape'
+      }
+    );
+  };
 
   // Total de unidades despachadas
   const totalUnidades = filteredOrders.reduce((sum, o) => sum + (parseInt(o.cantidad) || 1), 0);
@@ -105,9 +141,9 @@ export default function DispatchHistoryTable({
       {/* VISTA 1: TABLA HISTÓRICA DETALLADA */}
       {displayMode === 'table' ? (
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1">
-          {/* Barra de búsqueda de la tabla */}
-          <div className="p-3 md:p-4 border-b border-[var(--color-border)] flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
+          {/* Barra de búsqueda de la tabla y selector de impresión para Despachos */}
+          <div className="p-3 md:p-4 border-b border-[var(--color-border)] flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-muted" />
               <input
                 type="text"
@@ -117,6 +153,50 @@ export default function DispatchHistoryTable({
                 className="w-full pl-9 pr-3 py-2 rounded-xl text-xs font-bold theme-bg-input border theme-border outline-none theme-text-primary"
               />
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-black uppercase theme-text-muted">Papel / Impresora:</span>
+              <select
+                value={selectedPaperPreset}
+                onChange={(e) => setSelectedPaperPreset(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-black theme-bg-input border theme-border theme-text-main cursor-pointer"
+              >
+                <optgroup label="🏷️ Impresora Térmica">
+                  {LABEL_PAGE_PRESETS.filter((p) => p.category === 'termica').map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="📄 Impresora Láser (Hoja)">
+                  {LABEL_PAGE_PRESETS.filter((p) => p.category === 'hoja').map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+
+              {tableRows.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handlePrintFromHistory(tableRows, 'ETIQUETAS_DESPACHO')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Printer size={13} /> Etiquetas QR ({tableRows.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePrintFromHistory(tableRows, 'REMISION_DESPACHO')}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] uppercase flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <FileText size={13} /> Remisión (Carta/A4)
+                  </button>
+                </>
+              )}
+            </div>
+
             <span className="text-xs theme-text-muted font-bold ml-auto">
               Mostrando {tableRows.length} de {filteredOrders.length} ítems
             </span>
@@ -230,16 +310,29 @@ export default function DispatchHistoryTable({
                       </td>
 
                       <td className="p-3.5 text-center whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectGroup?.(o.pedidoNum);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 theme-text-main font-black text-[11px] uppercase transition-colors"
-                        >
-                          Ver Lote
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePrintFromHistory([o], 'ETIQUETAS_DESPACHO');
+                            }}
+                            title="Imprimir Etiqueta de Despacho (Térmica 100×80 o Hoja Carta)"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Printer size={12} /> Etiqueta
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectGroup?.(o.pedidoNum);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 theme-text-main font-black text-[11px] uppercase transition-colors cursor-pointer"
+                          >
+                            Ver Lote
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

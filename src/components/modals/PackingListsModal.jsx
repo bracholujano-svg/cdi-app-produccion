@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
+import { LABEL_PAGE_PRESETS, resolvePrintDimensions } from '../../utils/colorQrHelper';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 import { supabase } from '../../supabaseClient';
 
@@ -229,6 +230,21 @@ const PackingListsModal = () => {
 
   // Modal de vista ampliada de Código QR
   const [qrPreviewPkg, setQrPreviewPkg] = useState(null);
+
+  // Estado del Modal Configurador de Impresión (Etiquetas Térmicas 100×80 o Hoja Carta / A4 Láser)
+  const [packingPrintConfig, setPackingPrintConfig] = useState({
+    isOpen: false,
+    mode: 'ROTULOS_QR', // 'ROTULOS_QR' | 'LISTA_COMPLETA'
+    singlePkg: null,
+    customListObj: null,
+    presetId: '100x80',
+    orientation: 'landscape',
+    marginMm: 1.5,
+    scalePct: 100,
+    fitToPage: true,
+    customWidthMm: 100,
+    customHeightMm: 80
+  });
 
   // Listas activas (no cerradas como terminadas) vs todas las listas en historial
   const activeWorkingLists = useMemo(() => {
@@ -1348,9 +1364,49 @@ const PackingListsModal = () => {
       return;
     }
 
+    const isLabels = mode === 'ROTULOS_QR';
+    setPackingPrintConfig((prev) => ({
+      ...prev,
+      isOpen: true,
+      mode,
+      singlePkg,
+      customListObj: targetList,
+      presetId: isLabels ? '100x80' : 'letter',
+      orientation: isLabels ? 'landscape' : 'portrait',
+      marginMm: isLabels ? 1.5 : 8,
+      scalePct: 100,
+      fitToPage: true
+    }));
+  };
+
+  const executePackingPrint = () => {
+    const targetList = packingPrintConfig.customListObj || activePackingList;
+    if (!targetList) return;
+    const allPackages = targetList.packages || [];
+    const packagesToPrint = packingPrintConfig.singlePkg
+      ? [packingPrintConfig.singlePkg]
+      : allPackages;
+
+    if (packagesToPrint.length === 0) {
+      alert('Aún no hay bultos/paquetes generados en esta lista de empaque para imprimir.');
+      return;
+    }
+
+    const mode = packingPrintConfig.mode || 'ROTULOS_QR';
+    const cfg = resolvePrintDimensions({
+      presetId: packingPrintConfig.presetId,
+      orientation: packingPrintConfig.orientation,
+      marginMm: packingPrintConfig.marginMm,
+      scalePct: packingPrintConfig.scalePct,
+      fitToPage: packingPrintConfig.fitToPage,
+      customWidthMm: packingPrintConfig.customWidthMm,
+      customHeightMm: packingPrintConfig.customHeightMm
+    });
+
+    const isThermalLabel = cfg.pageWidthMm <= 125 && cfg.pageHeightMm <= 125;
     const totalPackagesCount = allPackages.length;
 
-    const renderQRInlineSVG = (text, pxSize = 115) => {
+    const renderQRInlineSVG = (text, pxSize = 110) => {
       const mat = generateQRMatrix(text || 'CDI');
       const N = mat.length;
       const qz = 3;
@@ -1363,7 +1419,7 @@ const PackingListsModal = () => {
           }
         }
       }
-      return `<svg width="${pxSize}" height="${pxSize}" viewBox="0 0 ${tot} ${tot}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect width="${tot}" height="${tot}" fill="#fff"/>${rects}</svg>`;
+      return `<svg width="${pxSize}" height="${pxSize}" style="width:${pxSize}px;height:${pxSize}px;display:block;margin:0 auto;" viewBox="0 0 ${tot} ${tot}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect width="${tot}" height="${tot}" fill="#fff"/>${rects}</svg>`;
     };
 
     const printWindow = window.open('', '_blank', 'width=1020,height=780');
@@ -1378,7 +1434,7 @@ const PackingListsModal = () => {
           const realIdx = allPackages.findIndex((p) => p.id === pkg.id);
           const idxToUse = realIdx >= 0 ? realIdx : 0;
           const qrText = buildPackageQRText(targetList, pkg, idxToUse, totalPackagesCount);
-          const qrSvg = renderQRInlineSVG(qrText, 145);
+          const qrSvg = renderQRInlineSVG(qrText, isThermalLabel ? 96 : 130);
           const tipo = String(pkg.tipoEmpaque || 'PAQUETE').toUpperCase();
           const numPadded = String(pkg.consecutivo || idxToUse + 1).padStart(2, '0');
 
@@ -1390,16 +1446,16 @@ const PackingListsModal = () => {
               const cantTotalItem =
                 Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
               return `
-                <div style="border-bottom: 1px dashed #cbd5e1; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                  <div style="font-size: 13px; font-weight: 800; color: #0f172a;">
-                    <span style="background: #0f172a; color: #fff; padding: 2px 7px; border-radius: 4px; font-family: monospace; margin-right: 5px;">${it.codArticulo || 'S/C'}</span>
+                <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: #f8fafc;">
+                  <div style="font-size: 8.5pt; font-weight: 900; color: #0f172a; line-height: 1.15;">
+                    <span style="background: #0f172a; color: #fff; padding: 1px 5px; border-radius: 3px; font-family: monospace; margin-right: 4px; font-size: 7.5pt;">${it.codArticulo || 'S/C'}</span>
                     ${it.nombre || ''}
                   </div>
-                  <div style="font-size: 13px; font-weight: 900; background: #fef3c7; border: 1.5px solid #f59e0b; color: #92400e; padding: 3px 8px; border-radius: 6px; white-space: nowrap;">
+                  <div style="font-size: 8pt; font-weight: 900; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">
                     ${
                       it.subpaqueteLabel
-                        ? `${cantBulto} de ${cantTotalItem} unds (${it.subpaqueteLabel})`
-                        : `Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds`
+                        ? `${cantBulto}/${cantTotalItem} (${it.subpaqueteLabel})`
+                        : `${cantBulto} de ${cantTotalItem} unds`
                     }
                   </div>
                 </div>
@@ -1409,34 +1465,53 @@ const PackingListsModal = () => {
 
           return `
             <div class="qr-label-card">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0f172a; padding-bottom: 8px; margin-bottom: 10px;">
-                <div>
-                  <div style="font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #475569;">CDI EXHIBICIONES • CONTROL DE EMPAQUE Y DESPACHOS</div>
-                  <div style="font-size: 24px; font-weight: 900; color: #0f172a;">PEDIDO #${targetList.pedidoNum}</div>
-                  <div style="font-size: 13px; font-weight: 800; color: #1e293b;">CLIENTE: ${targetList.cliente}</div>
-                </div>
-                <div style="text-align: right; background: #0f172a; color: #fff; padding: 8px 14px; border-radius: 10px;">
-                  <div style="font-size: 20px; font-weight: 900; color: #fbbf24;">${tipo} #${numPadded}</div>
-                  <div style="font-size: 12px; font-weight: 800;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
-                </div>
-              </div>
-              <div style="display: flex; gap: 14px; align-items: center;">
-                <div style="border: 2px solid #0f172a; border-radius: 10px; padding: 6px; background: #fff; text-align: center;">
-                  ${qrSvg}
-                  <div style="font-size: 9px; font-weight: 900; font-family: monospace; margin-top: 2px;">${targetList.pedidoNum}-B${numPadded}</div>
-                </div>
-                <div style="flex: 1;">
-                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; color: #334155; margin-bottom: 4px;">
-                    Contenido Exacto de este Bulto Físico:
-                  </div>
-                  ${itemsRows}
-                  ${
-                    pkg.observaciones
-                      ? `<div style="margin-top: 6px; font-size: 12px; font-weight: 800; color: #b45309;">OBSERVACIÓN: ${pkg.observaciones}</div>`
-                      : ''
-                  }
-                </div>
-              </div>
+              <table style="width:100%;height:100%;border-collapse:collapse;">
+                <tr style="height:26%;">
+                  <td colspan="2" style="background:#0f172a;color:#ffffff;padding:5px 8px;border-bottom:2px solid #0f172a;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                      <div>
+                        <div style="font-size:7pt;font-weight:900;letter-spacing:0.05em;color:#38bdf8;text-transform:uppercase;">
+                          📦 CDI EXHIBICIONES • CONTROL DE EMPAQUE Y DESPACHOS
+                        </div>
+                        <div style="font-size:13pt;font-weight:900;color:#ffffff;line-height:1.05;">
+                          PEDIDO #${targetList.pedidoNum}
+                        </div>
+                        <div style="font-size:8.5pt;font-weight:800;color:#cbd5e1;text-transform:uppercase;">
+                          CLIENTE: ${targetList.cliente}
+                        </div>
+                      </div>
+                      <div style="text-align:right;background:#fbbf24;color:#0f172a;padding:4px 9px;border-radius:6px;white-space:nowrap;">
+                        <div style="font-size:11pt;font-weight:900;line-height:1.05;">${tipo} #${numPadded}</div>
+                        <div style="font-size:7.5pt;font-weight:900;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr style="height:58%;">
+                  <td style="width:32%;padding:5px;border-right:1.5px solid #0f172a;text-align:center;vertical-align:middle;background:#f8fafc;">
+                    <div style="display:inline-block;border:1.5px solid #0f172a;border-radius:6px;padding:3px;background:#fff;">
+                      ${qrSvg}
+                    </div>
+                    <div style="font-size:7pt;font-weight:900;font-family:monospace;margin-top:2px;color:#0f172a;">
+                      #${targetList.pedidoNum}-B${numPadded}
+                    </div>
+                  </td>
+                  <td style="width:68%;padding:5px 7px;vertical-align:middle;">
+                    <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#334155;margin-bottom:3px;">
+                      CONTENIDO EXACTO DE ESTE BULTO FÍSICO:
+                    </div>
+                    ${itemsRows}
+                  </td>
+                </tr>
+                <tr style="height:16%;">
+                  <td colspan="2" style="padding:3px 7px;border-top:1.5px solid #0f172a;background:#fef3c7;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:7pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
+                      <span>${pkg.observaciones ? `OBS: ${pkg.observaciones}` : 'TRAZABILIDAD OFICIAL QR PLANTA CDI'}</span>
+                      <span>FECHA: ${new Date().toLocaleDateString('es-CO')}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </div>
           `;
         })
@@ -1444,30 +1519,180 @@ const PackingListsModal = () => {
 
       printWindow.document.write(`
         <!DOCTYPE html>
-        <html>
+        <html lang="es">
           <head>
             <meta charset="utf-8" />
             <title>Etiquetas QR - Pedido #${targetList.pedidoNum}</title>
+            <style id="dynamic-page-style">
+              @page {
+                size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
+                margin: ${cfg.marginMm}mm !important;
+              }
+            </style>
             <style>
-              body { font-family: Arial, sans-serif; margin: 12px; color: #0f172a; }
+              * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              html, body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #0f172a;
+                color: #0f172a;
+              }
+              .no-print-bar {
+                background: #0f172a;
+                color: #f8fafc;
+                padding: 10px 16px;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+                border-bottom: 2px solid #334155;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+              }
+              .no-print-bar button, .no-print-bar select {
+                border: none;
+                padding: 7px 11px;
+                border-radius: 8px;
+                font-weight: 800;
+                cursor: pointer;
+                font-size: 11px;
+                text-transform: uppercase;
+              }
+              .preview-stage {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 14px;
+                padding: 20px;
+                zoom: ${(cfg.scalePct / 100).toFixed(2)};
+              }
               .qr-label-card {
-                border: 2.5px solid #0f172a;
-                border-radius: 12px;
-                padding: 14px;
-                margin-bottom: 16px;
-                page-break-inside: avoid;
+                width: ${cfg.pageWidthMm}mm;
+                height: ${cfg.pageHeightMm}mm;
+                background: #ffffff;
+                border: 2px solid #0f172a;
+                border-radius: 6px;
+                overflow: hidden;
+                page-break-after: always;
+                break-after: page;
+                box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+              }
+              .qr-label-card:last-child {
+                page-break-after: auto;
+                break-after: auto;
+              }
+              @media print {
+                html, body { background: #ffffff !important; }
+                .no-print-bar { display: none !important; }
+                .preview-stage { padding: 0 !important; gap: 0 !important; display: block !important; }
+                .qr-label-card {
+                  width: 100vw !important;
+                  height: 100vh !important;
+                  box-shadow: none !important;
+                  margin: 0 !important;
+                }
               }
             </style>
           </head>
           <body>
-            ${labelsHtml}
+            <div class="no-print-bar">
+              <div>
+                <div style="font-size:13px;font-weight:900;color:#fbbf24;">
+                  📦 ETIQUETAS QR DE EMPAQUE — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+                </div>
+                <div style="font-size:11px;color:#cbd5e1;">
+                  Puedes alternar aquí mismo entre Impresora Térmica (100×80 mm) o Impresora Láser (Hoja Carta / A4).
+                </div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
+                  <option value="100x80" ${cfg.presetId === '100x80' ? 'selected' : ''}>🏷️ Térmica 100×80 mm</option>
+                  <option value="100x50" ${cfg.presetId === '100x50' ? 'selected' : ''}>🏷️ Térmica 100×50 mm</option>
+                  <option value="80x50" ${cfg.presetId === '80x50' ? 'selected' : ''}>🏷️ Térmica 80×50 mm</option>
+                  <option value="half_letter" ${cfg.presetId === 'half_letter' ? 'selected' : ''}>📄 Media Carta (216×140)</option>
+                  <option value="letter" ${cfg.presetId === 'letter' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
+                  <option value="a4" ${cfg.presetId === 'a4' ? 'selected' : ''}>📄 Hoja A4 (Láser)</option>
+                </select>
+                <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
+                <button onclick="resetZoom()" style="background:#0284c7;color:#ffffff;">⛶ 100%</button>
+                <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
+                <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">🔄 Girar</button>
+                <button onclick="window.print()" style="background:#10b981;color:#052e16;font-size:12.5px;padding:8px 16px;">🖨️ Imprimir</button>
+                <button onclick="window.close()" style="background:#334155;color:#ffffff;">✕ Cerrar</button>
+              </div>
+            </div>
+            <div class="preview-stage" id="packing-print-stage">
+              ${labelsHtml}
+            </div>
             <script>
-              window.onload = function() { window.print(); };
+              var currentW = ${cfg.pageWidthMm};
+              var currentH = ${cfg.pageHeightMm};
+              var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+
+              function applyPageSize(w, h) {
+                currentW = w;
+                currentH = h;
+                var cards = document.querySelectorAll('.qr-label-card');
+                cards.forEach(function(el) {
+                  el.style.width = currentW + 'mm';
+                  el.style.height = currentH + 'mm';
+                });
+                var styleTag = document.getElementById('dynamic-page-style');
+                if (styleTag) {
+                  styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 1.5mm !important; }';
+                }
+                var dimInd = document.getElementById('dim-indicator');
+                if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
+              }
+
+              function changePaperSize(preset) {
+                var map = {
+                  '100x80': [100, 80, 1.0],
+                  '100x50': [100, 50, 0.85],
+                  '80x50': [80, 50, 0.78],
+                  'half_letter': [216, 140, 1.2],
+                  'letter': [216, 279, 1.25],
+                  'a4': [210, 297, 1.25]
+                };
+                var target = map[preset] || [100, 80, 1.0];
+                applyPageSize(target[0], target[1]);
+                currentZoom = target[2];
+                var stage = document.getElementById('packing-print-stage');
+                if (stage) stage.style.zoom = currentZoom.toFixed(2);
+              }
+
+              function adjustZoom(delta) {
+                currentZoom = Math.min(1.8, Math.max(0.55, Number(currentZoom) + delta));
+                var stage = document.getElementById('packing-print-stage');
+                if (stage) stage.style.zoom = currentZoom.toFixed(2);
+              }
+
+              function resetZoom() {
+                currentZoom = 1.0;
+                var stage = document.getElementById('packing-print-stage');
+                if (stage) stage.style.zoom = '1';
+              }
+
+              function toggleOrientation() {
+                applyPageSize(currentH, currentW);
+              }
+
+              window.onload = function() {
+                setTimeout(function() { window.print(); }, 250);
+              };
             </script>
           </body>
         </html>
       `);
       printWindow.document.close();
+      setPackingPrintConfig((prev) => ({ ...prev, isOpen: false }));
       return;
     }
 
@@ -1523,63 +1748,186 @@ const PackingListsModal = () => {
 
     printWindow.document.write(`
       <!DOCTYPE html>
-      <html>
+      <html lang="es">
         <head>
           <meta charset="utf-8" />
           <title>Lista de Empaque Oficial - Pedido #${targetList.pedidoNum}</title>
+          <style id="dynamic-page-style">
+            @page {
+              size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
+              margin: ${cfg.marginMm}mm !important;
+            }
+          </style>
           <style>
-            body { font-family: Arial, sans-serif; margin: 18px; color: #0f172a; }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #0f172a; color: #0f172a; }
+            .no-print-bar {
+              background: #0f172a;
+              color: #f8fafc;
+              padding: 10px 16px;
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: space-between;
+              align-items: center;
+              gap: 10px;
+              border-bottom: 2px solid #334155;
+              position: sticky;
+              top: 0;
+              z-index: 100;
+            }
+            .no-print-bar button, .no-print-bar select {
+              border: none;
+              padding: 7px 11px;
+              border-radius: 8px;
+              font-weight: 800;
+              cursor: pointer;
+              font-size: 11px;
+              text-transform: uppercase;
+            }
+            .sheet-stage {
+              width: ${cfg.pageWidthMm}mm;
+              min-height: ${cfg.pageHeightMm}mm;
+              margin: 18px auto;
+              background: #ffffff;
+              padding: 12mm;
+              box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+              zoom: ${(cfg.scalePct / 100).toFixed(2)};
+            }
             table { width: 100%; border-collapse: collapse; margin-top: 12px; }
             th { background: #0f172a; color: #fff; padding: 9px; font-size: 11px; text-transform: uppercase; border: 1px solid #0f172a; }
+            @media print {
+              html, body { background: #ffffff !important; }
+              .no-print-bar { display: none !important; }
+              .sheet-stage {
+                width: 100% !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+              }
+            }
           </style>
         </head>
         <body>
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px;">
+          <div class="no-print-bar">
             <div>
-              <div style="font-size: 12px; font-weight: 900; color: #475569;">CDI EXHIBICIONES • LISTA DE EMPAQUE OFICIAL CON TRAZABILIDAD QR</div>
-              <div style="font-size: 24px; font-weight: 900; margin-top: 2px;">PEDIDO #${targetList.pedidoNum}</div>
-              <div style="font-size: 14px; font-weight: 800; color: #1e293b;">CLIENTE: ${targetList.cliente}</div>
+              <div style="font-size:13px;font-weight:900;color:#38bdf8;">
+                📄 LISTA DE EMPAQUE OFICIAL — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+              </div>
+              <div style="font-size:11px;color:#cbd5e1;">
+                Selecciona el tipo de hoja (Carta, Media Carta, A4 o Térmica) y tu impresora.
+              </div>
             </div>
-            <div style="text-align: right; font-size: 12px; font-weight: 700;">
-              <div>TOTAL BULTOS FÍSICOS GENERADOS: <strong>${totalPackagesCount}</strong></div>
-              <div>ESTADO LISTA: <strong>${targetList.estadoLista === 'TERMINADA' ? 'TERMINADA / COMPLETA' : 'ACTIVA / EN CURSO'}</strong></div>
-              <div>FECHA: ${new Date().toLocaleDateString('es-CO')}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+              <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
+                <option value="letter" ${cfg.presetId === 'letter' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
+                <option value="a4" ${cfg.presetId === 'a4' ? 'selected' : ''}>📄 Hoja A4 (Láser)</option>
+                <option value="half_letter" ${cfg.presetId === 'half_letter' ? 'selected' : ''}>📄 Media Carta (216×140)</option>
+                <option value="100x80" ${cfg.presetId === '100x80' ? 'selected' : ''}>🏷️ Térmica 100×80 mm</option>
+              </select>
+              <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
+              <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
+              <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">🔄 Girar</button>
+              <button onclick="window.print()" style="background:#10b981;color:#052e16;font-size:12.5px;padding:8px 16px;">🖨️ Imprimir</button>
+              <button onclick="window.close()" style="background:#334155;color:#ffffff;">✕ Cerrar</button>
             </div>
           </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 18%;">TIPO Y CONSECUTIVO</th>
-                <th style="width: 16%; text-align: left;">CÓDIGO</th>
-                <th style="width: 38%; text-align: left;">NOMBRE DEL PRODUCTO</th>
-                <th style="width: 16%;">CONTENIDO EN ESTE BULTO</th>
-                <th style="width: 12%;">QR INDIVIDUAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRowsHtml}
-            </tbody>
-          </table>
-
-          <div style="margin-top: 32px; display: flex; justify-content: space-between; gap: 30px; font-size: 12px; font-weight: 700;">
-            <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
-              ENTREGADO POR (ÁREA DE EMPAQUE)
+          <div class="sheet-stage" id="packing-sheet-stage">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px;">
+              <div>
+                <div style="font-size: 12px; font-weight: 900; color: #475569;">CDI EXHIBICIONES • LISTA DE EMPAQUE OFICIAL CON TRAZABILIDAD QR</div>
+                <div style="font-size: 24px; font-weight: 900; margin-top: 2px;">PEDIDO #${targetList.pedidoNum}</div>
+                <div style="font-size: 14px; font-weight: 800; color: #1e293b;">CLIENTE: ${targetList.cliente}</div>
+              </div>
+              <div style="text-align: right; font-size: 12px; font-weight: 700;">
+                <div>TOTAL BULTOS FÍSICOS GENERADOS: <strong>${totalPackagesCount}</strong></div>
+                <div>ESTADO LISTA: <strong>${targetList.estadoLista === 'TERMINADA' ? 'TERMINADA / COMPLETA' : 'ACTIVA / EN CURSO'}</strong></div>
+                <div>FECHA: ${new Date().toLocaleDateString('es-CO')}</div>
+              </div>
             </div>
-            <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
-              RECIBIDO EN DESPACHOS (EN ESPERA DE SALIDA)
-            </div>
-            <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
-              VERIFICACIÓN CLIENTE / INSTALACIÓN
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 18%;">TIPO Y CONSECUTIVO</th>
+                  <th style="width: 16%; text-align: left;">CÓDIGO</th>
+                  <th style="width: 38%; text-align: left;">NOMBRE DEL PRODUCTO</th>
+                  <th style="width: 16%;">CONTENIDO EN ESTE BULTO</th>
+                  <th style="width: 12%;">QR INDIVIDUAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRowsHtml}
+              </tbody>
+            </table>
+
+            <div style="margin-top: 32px; display: flex; justify-content: space-between; gap: 30px; font-size: 12px; font-weight: 700;">
+              <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
+                ENTREGADO POR (ÁREA DE EMPAQUE)
+              </div>
+              <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
+                RECIBIDO EN DESPACHOS (EN ESPERA DE SALIDA)
+              </div>
+              <div style="flex: 1; border-top: 1.5px solid #334155; padding-top: 6px; text-align: center;">
+                VERIFICACIÓN CLIENTE / INSTALACIÓN
+              </div>
             </div>
           </div>
           <script>
-            window.onload = function() { window.print(); };
+            var currentW = ${cfg.pageWidthMm};
+            var currentH = ${cfg.pageHeightMm};
+            var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+
+            function applyPageSize(w, h) {
+              currentW = w;
+              currentH = h;
+              var stage = document.getElementById('packing-sheet-stage');
+              if (stage) {
+                stage.style.width = currentW + 'mm';
+                stage.style.minHeight = currentH + 'mm';
+              }
+              var styleTag = document.getElementById('dynamic-page-style');
+              if (styleTag) {
+                styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 8mm !important; }';
+              }
+              var dimInd = document.getElementById('dim-indicator');
+              if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
+            }
+
+            function changePaperSize(preset) {
+              var map = {
+                'letter': [216, 279],
+                'a4': [210, 297],
+                'half_letter': [216, 140],
+                '100x80': [100, 80]
+              };
+              var target = map[preset] || [216, 279];
+              applyPageSize(target[0], target[1]);
+            }
+
+            function adjustZoom(delta) {
+              currentZoom = Math.min(1.6, Math.max(0.6, Number(currentZoom) + delta));
+              var stage = document.getElementById('packing-sheet-stage');
+              if (stage) stage.style.zoom = currentZoom.toFixed(2);
+            }
+
+            function toggleOrientation() {
+              applyPageSize(currentH, currentW);
+            }
+
+            window.onload = function() {
+              setTimeout(function() { window.print(); }, 250);
+            };
           </script>
         </body>
       </html>
     `);
     printWindow.document.close();
+    setPackingPrintConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
   const enrichedHistoryLists = useMemo(() => {
@@ -3591,6 +3939,247 @@ const PackingListsModal = () => {
                   className="px-4 py-3 rounded-xl bg-[var(--color-base)] border-2 border-[var(--color-border)] theme-text-main font-black text-xs md:text-sm uppercase cursor-pointer"
                 >
                   Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CONFIGURADOR DE IMPRESIÓN DE EMPAQUE (ETIQUETAS TÉRMICAS 100×80 O HOJA CARTA / A4 LÁSER) */}
+        {packingPrintConfig.isOpen && (
+          <div
+            className="fixed inset-0 bg-black/85 z-[140] flex items-center justify-center p-3 sm:p-5 animate-fade-in"
+            onClick={() => setPackingPrintConfig((prev) => ({ ...prev, isOpen: false }))}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-amber-500 text-slate-950">
+                    <Printer size={22} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
+                      Configuración de Impresión • Área de Empaque
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black uppercase tracking-tight mt-0.5">
+                      {packingPrintConfig.mode === 'ROTULOS_QR'
+                        ? 'Imprimir Etiquetas QR de Bultos (Térmica o Hoja Carta)'
+                        : 'Imprimir Lista de Empaque Oficial'}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPackingPrintConfig((prev) => ({ ...prev, isOpen: false }))}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Pestañas para alternar entre Etiquetas QR y Lista Completa */}
+              <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPackingPrintConfig((prev) => ({
+                      ...prev,
+                      mode: 'ROTULOS_QR',
+                      presetId: '100x80',
+                      orientation: 'landscape',
+                      marginMm: 1.5
+                    }))
+                  }
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase cursor-pointer ${
+                    packingPrintConfig.mode === 'ROTULOS_QR'
+                      ? 'bg-amber-500 text-slate-950 shadow'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  🏷️ Etiquetas QR de Bultos ({packingPrintConfig.singlePkg ? '1 Bulto' : 'Todos'})
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPackingPrintConfig((prev) => ({
+                      ...prev,
+                      mode: 'LISTA_COMPLETA',
+                      presetId: 'letter',
+                      orientation: 'portrait',
+                      marginMm: 8
+                    }))
+                  }
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase cursor-pointer ${
+                    packingPrintConfig.mode === 'LISTA_COMPLETA'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  📄 Lista de Empaque Completa (Carta / A4)
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-4">
+                {/* 1. Selector de Tipo de Hoja / Etiqueta */}
+                <div>
+                  <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1.5">
+                    1. Selecciona el Tipo de Papel o Etiqueta (Impresora Térmica o Láser)
+                  </label>
+                  <select
+                    value={packingPrintConfig.presetId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const found = LABEL_PAGE_PRESETS.find((p) => p.id === nextId);
+                      setPackingPrintConfig((prev) => ({
+                        ...prev,
+                        presetId: nextId,
+                        orientation: found?.defaultOrientation || prev.orientation,
+                        marginMm: found?.category === 'termica' ? 1.5 : 8
+                      }));
+                    }}
+                    className="w-full px-3.5 py-3 rounded-xl border-2 border-amber-500 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-black outline-none cursor-pointer"
+                  >
+                    <optgroup label="🏷️ Etiquetas Pequeñas (Impresora Térmica Zebra / TSC)">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'termica').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📄 Hojas Estándar (Impresora Láser / Tinta)">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'hoja').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📐 Medida Personalizada">
+                      {LABEL_PAGE_PRESETS.filter((p) => p.category === 'custom').map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      { id: '100x80', tag: '⭐ Térmica 100×80 mm', orient: 'landscape', m: 1.5 },
+                      { id: '100x50', tag: 'Térmica 100×50 mm', orient: 'landscape', m: 1.5 },
+                      { id: '80x50', tag: 'Térmica 80×50 mm', orient: 'landscape', m: 1.5 },
+                      { id: 'letter', tag: '📄 Hoja Carta (Láser)', orient: 'portrait', m: 8 },
+                      { id: 'half_letter', tag: 'Media Carta', orient: 'landscape', m: 6 },
+                      { id: 'a4', tag: '📄 Hoja A4 (Láser)', orient: 'portrait', m: 8 }
+                    ].map((q) => (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() =>
+                          setPackingPrintConfig((prev) => ({
+                            ...prev,
+                            presetId: q.id,
+                            orientation: q.orient,
+                            marginMm: q.m
+                          }))
+                        }
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border cursor-pointer ${
+                          packingPrintConfig.presetId === q.id
+                            ? 'bg-amber-500 text-slate-950 border-amber-500'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        {q.tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Orientación y Escala */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1">
+                      2. Orientación de Hoja
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPackingPrintConfig((prev) => ({ ...prev, orientation: 'landscape' }))
+                        }
+                        className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase border cursor-pointer ${
+                          packingPrintConfig.orientation === 'landscape'
+                            ? 'bg-slate-900 text-white dark:bg-indigo-600 border-slate-900'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        ▭ Horizontal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPackingPrintConfig((prev) => ({ ...prev, orientation: 'portrait' }))
+                        }
+                        className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase border cursor-pointer ${
+                          packingPrintConfig.orientation === 'portrait'
+                            ? 'bg-slate-900 text-white dark:bg-indigo-600 border-slate-900'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        ▯ Vertical
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-1">
+                      3. Escala de Impresión ({packingPrintConfig.scalePct}%)
+                    </label>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="range"
+                        min={65}
+                        max={145}
+                        step={5}
+                        value={packingPrintConfig.scalePct}
+                        onChange={(e) =>
+                          setPackingPrintConfig((prev) => ({
+                            ...prev,
+                            scalePct: Number(e.target.value)
+                          }))
+                        }
+                        className="flex-1 accent-amber-500 cursor-pointer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPackingPrintConfig((prev) => ({ ...prev, scalePct: 100 }))
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-xs font-black text-slate-800 dark:text-white cursor-pointer"
+                      >
+                        100%
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPackingPrintConfig((prev) => ({ ...prev, isOpen: false }))}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black uppercase text-slate-700 dark:text-slate-200 bg-slate-200 dark:bg-slate-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={executePackingPrint}
+                  className="px-6 py-3 rounded-xl text-xs sm:text-sm font-black uppercase bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg flex items-center gap-2 cursor-pointer"
+                >
+                  <Printer size={18} /> Abrir Vista de Impresión y Escoger Impresora
                 </button>
               </div>
             </div>

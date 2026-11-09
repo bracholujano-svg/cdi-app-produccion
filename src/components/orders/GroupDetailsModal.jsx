@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap, Truck } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap, Truck, Printer } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
+import { printDispatchLabelsOrSheet } from '../../utils/colorQrHelper';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic, isListening, activeDictationTarget }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -99,6 +100,29 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                         <Truck size={"1.2em"} /> DAR SALIDA ({selectedBulkOrders.filter(o => o.areaActual === 'Despachos' && o.estadoInterno !== 'DESPACHADO').length})
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        printDispatchLabelsOrSheet(
+                          {
+                            order_no: activeGroupObj.pedidoNum,
+                            client_name: activeGroupObj.cliente || 'CLIENTE CDI',
+                            items: selectedBulkOrders.map((o) => ({
+                              order_no: o.pedidoNum,
+                              item_code: o.codArticulo || 'S/C',
+                              part_description: o.nombre || 'PIEZA',
+                              quantity: Number(o.cantidad || 1),
+                              area: o.areaActual || 'DESPACHOS'
+                            }))
+                          },
+                          { dispatchMode: 'ETIQUETAS_DESPACHO', presetId: '100x80', orientation: 'landscape' }
+                        )
+                      }
+                      className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all text-xs md:text-sm font-black mr-2 shadow-lg flex items-center gap-1.5 border border-white/20 cursor-pointer"
+                      title="Imprimir Etiquetas QR de los ítems seleccionados (100×80 Térmica o Hoja Carta)"
+                    >
+                      <Printer size={"1.1em"} /> ETIQUETAS ({selectedBulkOrders.length})
+                    </button>
                     <button type="button" onClick={() => setShowBulkModal(true)} className="px-4 py-2.5 bg-[var(--color-primary)] text-[var(--color-surface)] rounded-xl hover:brightness-110 transition-colors text-sm md:text-base font-black mr-3 shadow-lg shadow-[var(--color-primary)]/30 animate-in zoom-in flex items-center gap-2 border border-white/20">
                         <Zap size={"1.2em"} /> ACCIÓN MASIVA ({selectedBulkOrders.length})
                     </button>

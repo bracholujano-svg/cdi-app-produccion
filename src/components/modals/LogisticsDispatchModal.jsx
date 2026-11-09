@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, X, Calendar, User, FileText, CheckCircle2, AlertCircle, Shield, Package } from 'lucide-react';
+import { Truck, X, Calendar, User, FileText, CheckCircle2, AlertCircle, Shield, Package, Printer } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { LABEL_PAGE_PRESETS, printDispatchLabelsOrSheet } from '../../utils/colorQrHelper';
 
 export default function LogisticsDispatchModal({
   isOpen,
@@ -22,6 +23,12 @@ export default function LogisticsDispatchModal({
   const [nota, setNota] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Configuración de Impresión de Despachos (Térmica 100×80 vs Hoja Carta / A4 Láser)
+  const [dispatchPaperPreset, setDispatchPaperPreset] = useState('100x80');
+  const [dispatchOrientation, setDispatchOrientation] = useState('landscape');
+  const [dispatchScalePct, setDispatchScalePct] = useState(100);
+  const [autoPrintOnConfirm, setAutoPrintOnConfirm] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setFechaDespacho(new Date().toISOString().split('T')[0]);
@@ -31,6 +38,44 @@ export default function LogisticsDispatchModal({
   }, [isOpen, supervisorProfile]);
 
   if (!isOpen || !orders || orders.length === 0) return null;
+
+  const handlePrintDispatch = (dispatchMode = 'ETIQUETAS_DESPACHO', overridePreset = null) => {
+    const presetToUse = overridePreset || dispatchPaperPreset;
+    const first = orders[0] || {};
+    printDispatchLabelsOrSheet(
+      {
+        order_no: first.pedidoNum || first.order_no || 'S/O',
+        client_name: first.cliente || first.client_name || 'CLIENTE CDI',
+        project_name: first.nombre_proyecto || first.project_name || 'DESPACHO PLANTA',
+        remision: guiaRemesa.trim() || `REM-${first.pedidoNum || 'CDI'}`,
+        carrier: empresaTransporte.trim() || tipoTransporte || 'Transporte CDI',
+        plate: placaMarca.trim() || 'S/P',
+        driver_name: nombreChofer.trim().toUpperCase() || 'CONDUCTOR AUTORIZADO',
+        destination: first.cliente || 'CLIENTE CDI',
+        receiver_name: first.cliente || 'CLIENTE CDI',
+        observations: nota.trim(),
+        dispatched_at: fechaDespacho,
+        items: orders.map((o) => ({
+          order_no: o.pedidoNum || o.order_no,
+          item_code: o.codArticulo || o.item_code || 'S/C',
+          part_description: o.nombre || o.part_description || 'PIEZA DESPACHADA',
+          quantity: Number(o.cantidad || o.quantity || 1),
+          area: 'DESPACHOS'
+        }))
+      },
+      {
+        dispatchMode,
+        presetId: presetToUse,
+        orientation:
+          presetToUse === 'letter' || presetToUse === 'a4'
+            ? dispatchMode === 'REMISION_DESPACHO'
+              ? 'portrait'
+              : dispatchOrientation
+            : dispatchOrientation,
+        scalePct: dispatchScalePct
+      }
+    );
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -48,6 +93,10 @@ export default function LogisticsDispatchModal({
       precintoSeguridad: precintoSeguridad.trim(),
       guiaRemesa: guiaRemesa.trim()
     };
+
+    if (autoPrintOnConfirm) {
+      handlePrintDispatch('ETIQUETAS_DESPACHO');
+    }
 
     if (onConfirm) {
       onConfirm({
@@ -269,6 +318,104 @@ export default function LogisticsDispatchModal({
               placeholder="Detalles sobre el embalaje, condiciones de carga o instrucciones al transportista..."
               className="w-full p-3 rounded-xl theme-bg-input border theme-border font-medium text-xs sm:text-sm h-20 outline-none theme-text-main placeholder:theme-text-muted/50"
             />
+          </div>
+
+          {/* Configuración de Impresión de Etiquetas de Despacho y Remisión (Térmica 100×80 o Hoja Carta Láser) */}
+          <div className="p-4 rounded-2xl bg-purple-950/20 border-2 border-purple-500/40 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-black uppercase theme-text-main flex items-center gap-1.5">
+                <Printer size={15} className="text-purple-500" />
+                Impresión de Etiquetas de Despacho o Remisión (Selección de Hoja / Impresora)
+              </span>
+              <label className="flex items-center gap-1.5 text-[11px] font-black theme-text-main cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoPrintOnConfirm}
+                  onChange={(e) => setAutoPrintOnConfirm(e.target.checked)}
+                  className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
+                />
+                Imprimir al confirmar salida
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+              <div className="sm:col-span-6">
+                <label className="text-[11px] font-black uppercase theme-text-muted block mb-1">
+                  Tamaño de Papel / Etiqueta:
+                </label>
+                <select
+                  value={dispatchPaperPreset}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDispatchPaperPreset(val);
+                    const found = LABEL_PAGE_PRESETS.find((p) => p.id === val);
+                    if (found?.defaultOrientation) setDispatchOrientation(found.defaultOrientation);
+                  }}
+                  className="w-full p-2 rounded-xl theme-bg-input border theme-border font-black text-xs theme-text-main cursor-pointer"
+                >
+                  <optgroup label="🏷️ Impresora Térmica (Etiquetas Pequeñas)">
+                    {LABEL_PAGE_PRESETS.filter((p) => p.category === 'termica').map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="📄 Impresora Láser Normal (Hoja Carta / A4)">
+                    {LABEL_PAGE_PRESETS.filter((p) => p.category === 'hoja').map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="text-[11px] font-black uppercase theme-text-muted block mb-1">
+                  Orientación:
+                </label>
+                <select
+                  value={dispatchOrientation}
+                  onChange={(e) => setDispatchOrientation(e.target.value)}
+                  className="w-full p-2 rounded-xl theme-bg-input border theme-border font-black text-xs theme-text-main cursor-pointer"
+                >
+                  <option value="landscape">▭ Horizontal</option>
+                  <option value="portrait">▯ Vertical</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="text-[11px] font-black uppercase theme-text-muted block mb-1">
+                  Escala ({dispatchScalePct}%):
+                </label>
+                <input
+                  type="number"
+                  min={65}
+                  max={150}
+                  step={5}
+                  value={dispatchScalePct}
+                  onChange={(e) => setDispatchScalePct(Number(e.target.value) || 100)}
+                  className="w-full p-2 rounded-xl theme-bg-input border theme-border font-black text-xs text-center theme-text-main"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handlePrintDispatch('ETIQUETAS_DESPACHO')}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow cursor-pointer"
+              >
+                <Printer size={15} /> Imprimir Etiquetas QR ({dispatchPaperPreset === 'letter' ? 'Hoja Carta' : dispatchPaperPreset})
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrintDispatch('REMISION_DESPACHO', dispatchPaperPreset === '100x80' ? 'letter' : dispatchPaperPreset)}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow cursor-pointer"
+              >
+                <FileText size={15} /> Imprimir Remisión / Acta (Carta / Láser)
+              </button>
+            </div>
           </div>
 
           {/* Botones de Acción */}
