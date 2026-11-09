@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { deepSanitize } from '../utils/security';
+import { deepSanitize, formatSafeErrorMessage } from '../utils/security';
 
 /**
  * Detecta si un registro en `produccion_pedidos` pertenece a la extinta área
@@ -66,6 +66,12 @@ export const useOrders = () => {
         let retries = 2;
         while (retries >= 0) {
             try {
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData?.session?.user) {
+                    alert('🔒 Tu sesión ha expirado. Por favor vuelve a iniciar sesión para guardar cambios.');
+                    return;
+                }
+
                 let dbError = null;
                 if (isDelete) {
                     const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
@@ -96,7 +102,7 @@ export const useOrders = () => {
                         continue;
                     }
                     console.error("DB Error al sincronizar orden:", dbError);
-                    alert(`❌ Error al guardar en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS o tu conexión a internet.`);
+                    alert(formatSafeErrorMessage(dbError, 'No se pudo guardar la orden en la base de datos.'));
                 }
                 break; // success or non-retryable error
             } catch (e) { 
@@ -106,7 +112,7 @@ export const useOrders = () => {
                     continue;
                 }
                 console.error("Error al sincronizar orden", e); 
-                alert(`❌ Error inesperado de red: ${e.message || JSON.stringify(e)}. Verifica tu conexión.`);
+                alert(formatSafeErrorMessage(e, 'Error de red al sincronizar la orden. Verifica tu conexión.'));
                 break;
             }
         }
@@ -115,6 +121,9 @@ export const useOrders = () => {
     const syncAlertToSupabase = async (alertObject, isDelete = false) => {
         if (!alertObject || !alertObject.id) return;
         try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (!sessionData?.session?.user) return;
+
             let dbError = null;
             if (isDelete) {
                 const { error } = await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
@@ -129,7 +138,7 @@ export const useOrders = () => {
             }
             if (dbError) {
                 console.error("DB Error al sincronizar alerta:", dbError);
-                alert(`❌ Error al guardar alerta en base de datos: ${dbError.message || JSON.stringify(dbError)}. Verifica la seguridad RLS en Supabase.`);
+                alert(formatSafeErrorMessage(dbError, 'No se pudo guardar la alerta en la base de datos.'));
             }
         } catch (e) { console.error("Error al sincronizar alerta", e); }
     };
@@ -137,6 +146,9 @@ export const useOrders = () => {
     const syncPackingListToSupabase = async (packingListObject, isDelete = false) => {
         if (!packingListObject || !packingListObject.id) return;
         try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (!sessionData?.session?.user) return;
+
             if (isDelete) {
                 await supabase.from('coordinacion_alertas').delete().eq('id', packingListObject.id);
             } else {
@@ -252,7 +264,7 @@ export const useOrders = () => {
                 lastFetchProduccionAt = Date.now();
             } catch (err) {
                 console.error('Error fetching produccion:', err);
-                alert('Error de permisos (RLS): ' + (err?.message || err));
+                alert(formatSafeErrorMessage(err, 'No se pudieron cargar los pedidos de producción.'));
             } finally {
                 isFetchingProduccion = false;
             }

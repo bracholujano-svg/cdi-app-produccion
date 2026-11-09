@@ -32,6 +32,83 @@ export const AppContextProvider = ({ children }) => {
     } catch(e) { return null; }
   });
 
+  // Verificación continua del Token JWT de Supabase y prevención de suplantación o sesiones huérfanas
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncSessionWithSupabaseJwt = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (!session?.user) {
+          setSupervisorProfile(null);
+          safeSessionStorage.remove('cdi_supervisor_session');
+          return;
+        }
+
+        const verifiedProfile = {
+          id: session.user.id,
+          name: session.user.user_metadata?.nombre || session.user.user_metadata?.name || 'Usuario',
+          email: session.user.email,
+          area: session.user.user_metadata?.rol || session.user.user_metadata?.area || 'GENERAL'
+        };
+        const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
+        setSupervisorProfile(verifiedProfile);
+        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: verifiedProfile, signature }));
+      } catch (_) {}
+    };
+
+    syncSessionWithSupabaseJwt();
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setSupervisorProfile(null);
+        safeSessionStorage.remove('cdi_supervisor_session');
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        const verifiedProfile = {
+          id: session.user.id,
+          name: session.user.user_metadata?.nombre || session.user.user_metadata?.name || 'Usuario',
+          email: session.user.email,
+          area: session.user.user_metadata?.rol || session.user.user_metadata?.area || 'GENERAL'
+        };
+        const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
+        setSupervisorProfile(verifiedProfile);
+        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: verifiedProfile, signature }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authSub?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Cierre automático de sesión por inactividad (45 minutos) para evitar sesiones olvidadas en terminales de planta
+  useEffect(() => {
+    if (!supervisorProfile) return;
+    const IDLE_TIMEOUT_MS = 45 * 60 * 1000;
+    let idleTimer = null;
+
+    const resetIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(async () => {
+        await supabase.auth.signOut().catch(() => {});
+        setSupervisorProfile(null);
+        safeSessionStorage.remove('cdi_supervisor_session');
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, resetIdleTimer, { passive: true }));
+    resetIdleTimer();
+
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      activityEvents.forEach((evt) => window.removeEventListener(evt, resetIdleTimer));
+    };
+  }, [supervisorProfile]);
+
   const [selectedGroupPedido, setSelectedGroupPedido] = useState(null); 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedBulkOrders, setSelectedBulkOrders] = useState([]);

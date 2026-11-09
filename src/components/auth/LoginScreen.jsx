@@ -4,7 +4,7 @@ import { Lock, Sun, Moon, Info, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeStorage, safeSessionStorage } from '../../utils/helpers';
 import { AREAS } from '../../utils/constants';
-import { SESSION_SECRET } from '../../utils/security';
+import { SESSION_SECRET, validateSafeText } from '../../utils/security';
 import { loginEnGoogle, registrarEnGoogle } from '../../services/api';
 import CDILogo from '../ui/CDILogo';
 
@@ -21,7 +21,12 @@ const LoginScreen = () => {
   const handleVirtualLogin = async (e) => {
     e.preventDefault(); 
     setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE..."); 
-    const userStr = e.target.username.value.trim().toLowerCase();
+    const userCheck = validateSafeText(e.target.username.value, { maxLength: 100, fieldName: 'Usuario' });
+    if (!userCheck.valid) {
+      setAuthError(userCheck.error);
+      return;
+    }
+    const userStr = userCheck.value.toLowerCase();
     const passStr = e.target.password.value.trim();
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
 
@@ -50,11 +55,26 @@ const LoginScreen = () => {
   const handleVirtualRegister = async (e) => {
     e.preventDefault(); 
     setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
-    const name = e.target.name.value.trim().toUpperCase();
-    const userStr = e.target.username.value.trim().toLowerCase();
+    const nameCheck = validateSafeText(e.target.name.value, { maxLength: 80, fieldName: 'Nombre Completo' });
+    if (!nameCheck.valid) {
+      setAuthError(nameCheck.error);
+      return;
+    }
+    const name = nameCheck.value.toUpperCase();
+    const userCheck = validateSafeText(e.target.username.value, { maxLength: 100, fieldName: 'Usuario' });
+    if (!userCheck.valid) {
+      setAuthError(userCheck.error);
+      return;
+    }
+    const userStr = userCheck.value.toLowerCase();
     const pass = e.target.password.value.trim();
     const area = e.target.area ? e.target.area.value : 'Pendiente';
     
+    if (area === 'Administrador / Todos') {
+      setAuthError("❌ El rol de Administrador general no puede asignarse por auto-registro.");
+      return;
+    }
+
     if (pass.length < 6) {
       setAuthError("La clave debe tener un mínimo de 6 caracteres."); 
       return;
@@ -124,7 +144,7 @@ const LoginScreen = () => {
             <div className="space-y-1">
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
               <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-base lg:text-lg focus:ring-2 focus:ring-[var(--color-primary)]">
-                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                {AREAS.filter(a => a !== 'Administrador / Todos').map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
           )}

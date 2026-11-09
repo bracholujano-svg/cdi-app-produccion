@@ -27,7 +27,7 @@ import {
 import { supabase } from '../supabaseClient';
 import EtpCopilotForm from './forms/EtpCopilotForm';
 import OperarioPasoDos from './forms/OperarioPasoDos';
-import { verifySupervisorCredentials } from '../utils/security';
+import { verifySupervisorCredentials, formatSafeErrorMessage, validateSafeText } from '../utils/security';
 import {
   ColorQRCodeSVG,
   LABEL_PAGE_PRESETS,
@@ -493,8 +493,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       }
     } catch (e) {
       console.error(e);
-      setSearchFeedback(`❌ Error al guardar: ${e.message || e.details || JSON.stringify(e)}`);
-      alert(`❌ Error al guardar: ${e.message || e.details || JSON.stringify(e)}`);
+      const safeMsg = formatSafeErrorMessage(e, 'No se pudo guardar la formulación del color.');
+      setSearchFeedback(safeMsg);
+      alert(safeMsg);
     } finally {
       setIsSearching(false);
     }
@@ -618,11 +619,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           );
         } catch (delErr) {
           console.error('Error eliminando color:', delErr);
-          alert(
-            `❌ No se pudo eliminar el color: ${
-              delErr.message || delErr.details || JSON.stringify(delErr)
-            }`
-          );
+          alert(formatSafeErrorMessage(delErr, 'No se pudo eliminar el color seleccionado.'));
         } finally {
           setIsSearching(false);
         }
