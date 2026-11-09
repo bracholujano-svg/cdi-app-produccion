@@ -774,6 +774,7 @@ const {
     return arr;
   }, [filteredOrders, alertsByPedidoMap, sortBy]);
 
+  const groupedArray = finalGroupedArray;
   const activeGroupObj = finalGroupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 
   // Pagination logic
