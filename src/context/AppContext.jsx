@@ -113,6 +113,15 @@ export const AppContextProvider = ({ children }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedBulkOrders, setSelectedBulkOrders] = useState([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // Mantener `selectedOrder` actualizado en tiempo real cuando `orders` cambie desde otro computador
+  useEffect(() => {
+    if (!selectedOrder?.id || !Array.isArray(orders)) return;
+    const latestMatch = orders.find((o) => o && o.id === selectedOrder.id);
+    if (latestMatch && JSON.stringify(latestMatch) !== JSON.stringify(selectedOrder)) {
+      setSelectedOrder(latestMatch);
+    }
+  }, [orders, selectedOrder]);
   const [areaFilter, setAreaFilter] = useState('Todas');
   const [viewFilter, setViewFilter] = useState('TODOS'); 
   const [currentPage, setCurrentPage] = useState(1);

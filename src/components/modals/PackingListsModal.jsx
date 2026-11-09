@@ -265,6 +265,12 @@ const PackingListsModal = () => {
 
   // Cargar líneas de `ribisoft_pedidos` del pedido activo para detectar también ítems que aún estén en Administración/ERP
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cdi-force-sync'));
+    }
+  }, [mainViewTab]);
+
+  useEffect(() => {
     let isMounted = true;
     const targetPed = String(activePackingList?.pedidoNum || '').trim();
     if (!targetPed) {
@@ -784,7 +790,7 @@ const PackingListsModal = () => {
     }
 
     const newList = {
-      id: `PACKLIST_${pedNum}_${Date.now()}`,
+      id: `PACKLIST_PED_${pedNum}`,
       tipoRegistro: 'PACKING_LIST',
       pedidoNum: pedNum,
       cliente: clienteRaw || eligibleSummary.cliente || 'CLIENTE GENERAL',
@@ -860,6 +866,7 @@ const PackingListsModal = () => {
     const finishedList = {
       ...activePackingList,
       estadoLista: 'TERMINADA',
+      reabiertaManual: false,
       fechaCierre: new Date().toISOString(),
       cerradoPor: supervisorProfile?.nombre || supervisorProfile?.name || 'EMPAQUE',
       actualizadoEn: new Date().toISOString()
@@ -885,6 +892,7 @@ const PackingListsModal = () => {
     const reopened = {
       ...listObj,
       estadoLista: 'ACTIVA',
+      reabiertaManual: true,
       actualizadoEn: new Date().toISOString()
     };
     setPackingLists((prev) => prev.map((l) => (l.id === reopened.id ? reopened : l)));
@@ -1225,6 +1233,42 @@ const PackingListsModal = () => {
     if (!window.confirm(confirmMsg)) return;
 
     const targetOrderIds = new Set(validItems.map((i) => i.orderId));
+    const nowIso = new Date().toISOString();
+
+    let updatedListSnapshot = null;
+    if (activePackingList) {
+      const updatedPackages = (activePackingList.packages || []).map((pkg) => ({
+        ...pkg,
+        items: (pkg.items || []).map((it) =>
+          targetOrderIds.has(it.orderId)
+            ? { ...it, transferidoADespachos: true, fechaTransferencia: nowIso }
+            : it
+        )
+      }));
+
+      const remainingReadyNotTransferred = completedEmpaqueProductsReadyForDispatch.filter(
+        (it) => !targetOrderIds.has(it.orderId)
+      ).length;
+      const isCompleteNow =
+        remainingReadyNotTransferred === 0 &&
+        pendingEmpaqueProducts.length === 0 &&
+        orderPanorama.pendingArrivalItems.length === 0 &&
+        updatedPackages.length > 0;
+
+      updatedListSnapshot = {
+        ...activePackingList,
+        id: `PACKLIST_PED_${String(activePackingList.pedidoNum || '').trim().toUpperCase()}`,
+        estadoLista: isCompleteNow ? 'TERMINADA' : activePackingList.estadoLista,
+        reabiertaManual: isCompleteNow ? false : activePackingList.reabiertaManual,
+        fechaCierre: isCompleteNow ? nowIso : activePackingList.fechaCierre,
+        cerradoPor: isCompleteNow
+          ? supervisorProfile?.nombre || supervisorProfile?.name || 'EMPAQUE'
+          : activePackingList.cerradoPor,
+        actualizadoEn: nowIso,
+        packages: updatedPackages
+      };
+    }
+
     const ordersToSync = [];
 
     const updatedOrders = (orders || []).map((ord) => {
@@ -1235,7 +1279,7 @@ const PackingListsModal = () => {
         .map((pkg) => pkg.codigoPaquete);
 
       const historyEntry = {
-        fecha: new Date().toISOString(),
+        fecha: nowIso,
         supervisor: supervisorProfile?.nombre || 'EMPAQUE',
         accion: `Lista de Empaque Completada (${bultosDeEsteItem.join(', ') || `${totalPackagesOrder} bultos`}) -> Transferido a Despachos (EN ESPERA)`,
         entrega: 'EMPAQUE',
@@ -1253,8 +1297,9 @@ const PackingListsModal = () => {
           pedidoNum: activePackingList?.pedidoNum,
           totalBultosPedido: totalPackagesOrder,
           bultosProducto: bultosDeEsteItem,
-          fechaTransferenciaDespachos: new Date().toISOString()
+          fechaTransferenciaDespachos: nowIso
         },
+        packingListSnapshot: updatedListSnapshot || undefined,
         historial: [...(ord.historial || []), historyEntry]
       };
 
@@ -1267,24 +1312,16 @@ const PackingListsModal = () => {
       await syncOrderToSupabase(oSync);
     }
 
-    if (activePackingList) {
-      const updatedPackages = (activePackingList.packages || []).map((pkg) => ({
-        ...pkg,
-        items: (pkg.items || []).map((it) =>
-          targetOrderIds.has(it.orderId)
-            ? { ...it, transferidoADespachos: true, fechaTransferencia: new Date().toISOString() }
-            : it
+    if (updatedListSnapshot) {
+      setPackingLists((prev) =>
+        prev.map((l) =>
+          String(l.pedidoNum || '').trim().toUpperCase() ===
+          String(updatedListSnapshot.pedidoNum || '').trim().toUpperCase()
+            ? updatedListSnapshot
+            : l
         )
-      }));
-
-      const updatedList = {
-        ...activePackingList,
-        actualizadoEn: new Date().toISOString(),
-        packages: updatedPackages
-      };
-
-      setPackingLists((prev) => prev.map((l) => (l.id === updatedList.id ? updatedList : l)));
-      syncPackingListToSupabase(updatedList);
+      );
+      await syncPackingListToSupabase(updatedListSnapshot);
     }
   };
 
@@ -1962,10 +1999,18 @@ const PackingListsModal = () => {
           0
         );
 
-        const isTerminada = list.estadoLista === 'TERMINADA';
+        const isAutoCompleted =
+          pkgCount > 0 &&
+          inEmpaqueNow.length === 0 &&
+          pendingOtherAreas.length === 0 &&
+          inDespachosOrDone.length > 0 &&
+          !list.reabiertaManual;
+
+        const isTerminada = list.estadoLista === 'TERMINADA' || isAutoCompleted;
 
         return {
           ...list,
+          estadoLista: isTerminada ? 'TERMINADA' : list.estadoLista,
           pkgCount,
           totalPackedUnits,
           totalPlantItems: plantOrdersForPed.length,
@@ -1985,6 +2030,54 @@ const PackingListsModal = () => {
         );
       });
   }, [packingLists, orders, historySearchTerm, historyStatusFilter]);
+
+  // Si alguna lista activa ya tiene 100% de sus productos empacados y transferidos a Despachos (0 en Empaque y 0 por llegar),
+  // actualizar su estado a TERMINADA y sincronizarla con la nube automáticamente.
+  useEffect(() => {
+    if (!packingLists || packingLists.length === 0 || !orders || orders.length === 0) return;
+
+    const listsToFinalize = [];
+    const updatedAll = packingLists.map((list) => {
+      if (list.estadoLista === 'TERMINADA' || list.reabiertaManual) return list;
+      const pedNum = String(list.pedidoNum || '').trim().toUpperCase();
+      const plantOrdersForPed = orders.filter(
+        (o) => o && String(o.pedidoNum || '').trim().toUpperCase() === pedNum
+      );
+      if (plantOrdersForPed.length === 0) return list;
+
+      const pendingOtherAreas = plantOrdersForPed.filter(
+        (o) => !isOrderStrictlyInEmpaque(o) && !isOrderInDespachosOrDispatched(o)
+      );
+      const inEmpaqueNow = plantOrdersForPed.filter((o) => isOrderStrictlyInEmpaque(o));
+      const inDespachosOrDone = plantOrdersForPed.filter((o) =>
+        isOrderInDespachosOrDispatched(o)
+      );
+      const pkgCount = Array.isArray(list.packages) ? list.packages.length : 0;
+
+      if (
+        pkgCount > 0 &&
+        inEmpaqueNow.length === 0 &&
+        pendingOtherAreas.length === 0 &&
+        inDespachosOrDone.length > 0
+      ) {
+        const closedObj = {
+          ...list,
+          id: `PACKLIST_PED_${pedNum}`,
+          estadoLista: 'TERMINADA',
+          fechaCierre: list.fechaCierre || new Date().toISOString(),
+          actualizadoEn: new Date().toISOString()
+        };
+        listsToFinalize.push(closedObj);
+        return closedObj;
+      }
+      return list;
+    });
+
+    if (listsToFinalize.length > 0) {
+      setPackingLists(updatedAll);
+      listsToFinalize.forEach((l) => syncPackingListToSupabase(l));
+    }
+  }, [orders, packingLists, setPackingLists, syncPackingListToSupabase]);
 
   return (
     <>
@@ -2072,6 +2165,20 @@ const PackingListsModal = () => {
                   >
                     <History size={17} />
                     <span>Historial de Listas ({(packingLists || []).length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('cdi-force-sync'));
+                      }
+                    }}
+                    title="Sincronizar ahora mismo con todos los equipos de la planta"
+                    className="px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
+                  >
+                    <RotateCcw size={15} />
+                    <span className="hidden lg:inline">Sincronizado en Vivo</span>
                   </button>
                 </div>
 
