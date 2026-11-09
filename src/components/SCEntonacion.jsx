@@ -42,6 +42,74 @@ import {
 
 const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v3';
 
+/**
+ * Valida de forma estricta si un ítem del inventario pertenece a la línea de
+ * pinturas, pastas, tintas, bases o recubrimientos, excluyendo carpintería, maderas o ferretería general.
+ */
+export const esInsumoPinturaOPasta = (item) => {
+  if (!item) return false;
+
+  const codigo = String(
+    item.id_referencia ||
+      item.idreferencia ||
+      item.codigo ||
+      item['Id Referencia'] ||
+      ''
+  ).toUpperCase().trim();
+
+  const descripcion = String(
+    item.descripcion ||
+      item.referencia ||
+      item['Descripcion'] ||
+      item['Referencia'] ||
+      item.nombre ||
+      ''
+  ).toUpperCase().trim();
+
+  const categoria = String(
+    item.grupo ||
+      item.subgrupo ||
+      item.linea ||
+      item.categoria ||
+      item['Grupo'] ||
+      item['Subgrupo'] ||
+      item['Linea'] ||
+      ''
+  ).toUpperCase().trim();
+
+  const combined = `${codigo} ${descripcion} ${categoria}`;
+
+  // 1. Exclusión obligatoria: artículos de madera, tableros, ferretería o metalmecánica general
+  if (
+    /\b(MADECOR|MDF|TRIPLEX|TABLEX|AGLOMERADO|MELAMINA|CANTO|TAPACANTO|FORMICA|FÓRMICA|CHAPA|MADERA|ROBLE|CEDRO|PINO|CORIAN|BISAGRA|TORNILLO|RIEL|PERNO|TUERCA|HERRAJE|CERRADURA|MANIJA|BROCA|DISCO DE CORTE|LAMINA|LÁMINA|TUBO|TUBERIA|TUBERÍA|COLD ROLLED|PLATINA|VARILLA|SOLDADURA|VIDRIO)\b/.test(
+      combined
+    )
+  ) {
+    return false;
+  }
+
+  // 2. Inclusión estricta por prefijo de código característico de pinturas y pastas
+  if (
+    codigo.startsWith('POL-') ||
+    codigo.startsWith('ECO-') ||
+    codigo.startsWith('PINT-') ||
+    codigo.startsWith('TINT-') ||
+    codigo.startsWith('COL-') ||
+    codigo.startsWith('BASE-') ||
+    codigo.startsWith('CAT-') ||
+    codigo.startsWith('PPU-') ||
+    codigo.startsWith('PXP-')
+  ) {
+    return true;
+  }
+
+  // 3. Inclusión estricta por palabras clave de pinturas, tintas, bases, pastas y recubrimientos
+  const patronPintura =
+    /\b(PINTURA|PASTA|PASTAS|TINTA|TINTAS|TINTE|TINTES|BASE|BASES|POLIURETANO|POL|ESMALTE|ESMALTES|LACA|LACAS|BARNIZ|BARNICES|SELLADOR|SELLADORES|CATALIZADOR|CATALIZADORES|THINNER|DISOLVENTE|FONDO PU|FONDO|ACRILICO|MASILLA|ENTONADOR|ENTONADORES|ENTONAR|PIGMENTO|PIGMENTOS|RECUBRIMIENTO|RECUBRIMIENTOS|PPG|VALRESA|PINTUCO|COLORANTE|COLORANTES|EPOXICO|EPÓXICO|ELECTROSTATICA|ELECTROSTÁTICA)\b/;
+
+  return patronPintura.test(combined);
+};
+
 export default function SCEntonacion({
   inventario,
   onClose,
@@ -382,7 +450,7 @@ export default function SCEntonacion({
     };
   }, [inventario]);
 
-  // Opciones de inventario de almacén para formulación (con Código oficial y Descripción)
+  // Opciones de inventario de almacén filtradas exclusivamente para pinturas, pastas, tintas y bases
   const ppgOptions = useMemo(() => {
     const list =
       Array.isArray(catalogoInventario) && catalogoInventario.length > 0
@@ -392,6 +460,7 @@ export default function SCEntonacion({
         : [];
 
     return list
+      .filter((item) => esInsumoPinturaOPasta(item))
       .map((item) => {
         const codigo = String(
           item.id_referencia ||
@@ -484,6 +553,8 @@ export default function SCEntonacion({
     const seen = new Set();
 
     for (const item of list) {
+      if (!esInsumoPinturaOPasta(item)) continue;
+
       const cod = String(
         item.id_referencia ||
           item.idreferencia ||
