@@ -44,7 +44,9 @@ import {
   ColorQRCodeSVG,
   buildColorQRPayload,
   printColorSampleBackLabel,
-  printFullTechnicalSheetA4
+  printFullTechnicalSheetA4,
+  compressSpectroImage,
+  buildTechnicalSheetId
 } from '../../utils/colorQrHelper';
 
 export default function EtpCopilotForm({
@@ -309,9 +311,21 @@ export default function EtpCopilotForm({
     procInit.imagen_muestra || initialData?.imagen_muestra || null
   );
 
+  const idFichaTecnica = useMemo(
+    () =>
+      buildTechnicalSheetId({
+        id: colorId || initialData?.id,
+        codigo_color: colorRef || formData.nombreComercial,
+        procedimiento_preparacion: procInit
+      }),
+    [colorId, initialData?.id, colorRef, formData.nombreComercial, procInit]
+  );
+
   // Construir objeto consolidado para el QR y la Etiqueta Imprimible de Respaldo
   const consolidatedColorData = useMemo(
     () => ({
+      id: colorId || initialData?.id || null,
+      idFichaTecnica,
       codigoColor: colorRef || formData.nombreComercial || 'S/C',
       nombreColor: formData.nombreComercial || colorRef || 'COLOR OFICIAL',
       sistemaCatalogo: colorSystem,
@@ -327,6 +341,7 @@ export default function EtpCopilotForm({
         b: coordB,
         deltaE: formData.deltaE
       },
+      imagenMuestra,
       aprobadoPor: aprobadoPor || 'SUPERVISOR',
       fechaAprobacion,
       formulacionPastas: normalizedPastas,
@@ -334,6 +349,9 @@ export default function EtpCopilotForm({
       disolvente: formData.disolvente
     }),
     [
+      colorId,
+      initialData?.id,
+      idFichaTecnica,
       colorRef,
       formData.nombreComercial,
       formData.deltaE,
@@ -349,6 +367,7 @@ export default function EtpCopilotForm({
       coordL,
       coordA,
       coordB,
+      imagenMuestra,
       aprobadoPor,
       fechaAprobacion,
       normalizedPastas
@@ -449,13 +468,16 @@ export default function EtpCopilotForm({
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     if (isLocked) return;
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagenMuestra(reader.result);
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressSpectroImage(file);
+        setImagenMuestra(compressed);
+      } catch (err) {
+        console.error('Error comprimiendo imagen de espectrofotometría:', err);
+      }
     }
   };
 
@@ -569,6 +591,7 @@ export default function EtpCopilotForm({
       disolvente_tipo: formData.disolvente,
       procedimiento_preparacion: {
         ...procInit,
+        id_ficha_tecnica: idFichaTecnica,
         cliente: cliente.trim() || 'ESTÁNDAR CDI',
         codigo_color: (colorRef || formData.nombreComercial || '').trim().toUpperCase(),
         nombre_color: (formData.nombreComercial || colorRef || '').trim().toUpperCase(),

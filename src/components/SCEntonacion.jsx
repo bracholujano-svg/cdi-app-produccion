@@ -20,7 +20,9 @@ import {
   Lock,
   Sliders,
   Maximize2,
-  Beaker
+  Beaker,
+  Eye,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import EtpCopilotForm from './forms/EtpCopilotForm';
@@ -30,6 +32,8 @@ import {
   ColorQRCodeSVG,
   LABEL_PAGE_PRESETS,
   buildColorQRPayload,
+  buildTechnicalSheetId,
+  compressSpectroImage,
   resolvePrintDimensions,
   printColorSampleBackLabel,
   printFullTechnicalSheetA4
@@ -77,6 +81,9 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   const [cameFromCatalog, setCameFromCatalog] = useState(false);
   const [currentView, setCurrentView] = useState('inicio'); // 'inicio' | 'catalogo' | 'detalle' | 'formulacion'
   const [selectedColor, setSelectedColor] = useState(null);
+  const [showViewSheetModal, setShowViewSheetModal] = useState(false);
+  const [showSpectroLightbox, setShowSpectroLightbox] = useState(false);
+  const [isUploadingSpectroPhoto, setIsUploadingSpectroPhoto] = useState(false);
 
   // ============================================================================
   // ESTADO UNIFICADO DE AUTORIZACIÓN CON CLAVE (MODIFICAR / ELIMINAR COLOR)
@@ -658,8 +665,24 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
           })
         : savedPastas;
 
+    const idFichaTecnica = buildTechnicalSheetId(colorEncontrado);
+    const deltaEVal =
+      colorEncontrado.tolerancia_delta_e ||
+      proc.coordenadas_color?.deltaE ||
+      'ΔE ≤ 0.8';
+    const rawFondo = proc.fondo;
+    const formattedFondo =
+      typeof rawFondo === 'object' && rawFondo !== null
+        ? `Base ${rawFondo.tipo || ''} (${rawFondo.color || ''}) • ${rawFondo.manos || ''} • Cat: ${
+            rawFondo.catalizador || ''
+          } • Disolv: ${rawFondo.disolvente || ''}`
+        : typeof rawFondo === 'string' && rawFondo
+        ? rawFondo
+        : 'Aplicar fondo poliuretano según tono base.';
+
     return {
       id: colorEncontrado.id,
+      id_ficha_tecnica: idFichaTecnica,
       es_ensayo: Boolean(proc.es_ensayo),
       notas_ensayo: proc.notas_ensayo || '',
       cliente: proc.cliente || colorEncontrado.cliente || 'USO GENERAL PLANTA',
@@ -671,13 +694,22 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
         colorEncontrado.codigo_objetivo ||
         '',
       sistema_pintura: proc.sistema_pintura || proc.tipo_recubrimiento || 'Poliuretano (PU)',
-      sustrato_base: proc.sustrato_base || colorEncontrado.sustrato_madera || 'MDF RH / Estándar',
+      sustrato_base:
+        proc.sustrato_base ||
+        colorEncontrado.sustrato_muestra ||
+        colorEncontrado.sustrato_madera ||
+        'MDF RH / Estándar',
       acabado_produccion: proc.acabado_produccion || 'Satinado',
       brillo: proc.brillo || colorEncontrado.nivel_brillo || '40',
       acabado_muestra_fisica:
         proc.acabado_muestra_fisica ||
         'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)',
-      coordenadas_color: proc.coordenadas_color || null,
+      coordenadas_color: {
+        ...(proc.coordenadas_color || {}),
+        deltaE: proc.coordenadas_color?.deltaE || deltaEVal
+      },
+      tolerancia_delta_e: deltaEVal,
+      imagen_muestra: proc.imagen_muestra || colorEncontrado.imagen_muestra || null,
       aprobado_por:
         proc.aprobado_por ||
         colorEncontrado.aprobado_por ||
@@ -698,16 +730,13 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       boquilla: proc.boquilla || '1.3 mm',
       manos: proc.manos || '2 Manos Cruzadas',
       preparacion: proc.preparacion || 'Lijado del sustrato con grano 220/320.',
-      fondo:
-        typeof proc.fondo === 'string'
-          ? proc.fondo
-          : 'Aplicar fondo poliuretano según tono base.',
+      fondo: formattedFondo,
       color:
-        typeof proc.color === 'string'
+        typeof proc.color === 'string' && proc.color
           ? proc.color
           : 'Aplicar 2 manos cruzadas de entonador a presión estándar.',
       acabado:
-        typeof proc.acabado === 'string'
+        typeof proc.acabado === 'string' && proc.acabado
           ? proc.acabado
           : 'Aplicar barniz poliuretano según Acabado de Producción.'
     };
@@ -719,6 +748,42 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
     codigoObjetivo,
     supervisorProfile
   ]);
+
+  // Subir o actualizar directamente la foto del resultado del ensayo de espectrofotometría
+  const handleQuickSpectroPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !colorEncontrado?.id) return;
+    setIsUploadingSpectroPhoto(true);
+    try {
+      const compressed = await compressSpectroImage(file);
+      const prevProc = colorEncontrado.procedimiento_preparacion || {};
+      const nextProc = {
+        ...prevProc,
+        id_ficha_tecnica: buildTechnicalSheetId(colorEncontrado),
+        imagen_muestra: compressed
+      };
+
+      const { error } = await supabase
+        .from('colores_aprobados')
+        .update({ procedimiento_preparacion: nextProc })
+        .eq('id', colorEncontrado.id);
+
+      if (error) throw error;
+
+      const updatedColor = {
+        ...colorEncontrado,
+        procedimiento_preparacion: nextProc
+      };
+      setColorEncontrado(updatedColor);
+      setSelectedColor(updatedColor);
+      setSavedColorData(updatedColor);
+    } catch (err) {
+      console.error('Error guardando foto de espectrofotometría:', err);
+      alert('No se pudo guardar la foto del resultado del ensayo.');
+    } finally {
+      setIsUploadingSpectroPhoto(false);
+    }
+  };
 
   const qrPayloadActual = useMemo(() => {
     if (!fichaConsolidada) return '';
@@ -1778,6 +1843,403 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
   }
 
   // ============================================================================
+  // MODAL VISOR DE FICHA TÉCNICA COMPLETA + ENSAYO DE ESPECTROFOTOMETRÍA
+  // ============================================================================
+  const renderViewTechnicalSheetModal = () => {
+    if (!showViewSheetModal || !fichaConsolidada) return null;
+
+    const totalGramosMuestra = (fichaConsolidada.formulacion_pastas || []).reduce(
+      (acc, it) => acc + (Number(it.gramos) || 0),
+      0
+    );
+
+    return (
+      <div className="fixed inset-0 z-[240] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl border-2 border-slate-200 dark:border-slate-700 flex flex-col">
+          {/* Cabecera del Visor de Ficha Técnica */}
+          <div className="px-5 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-600 rounded-2xl text-white">
+                <FileText size={22} />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">
+                    FICHA TÉCNICA OFICIAL DE COLOR (ETP)
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 font-mono text-xs font-black tracking-wider">
+                    ID: {fichaConsolidada.id_ficha_tecnica}
+                  </span>
+                </div>
+                <h3 className="font-black text-base sm:text-xl uppercase tracking-tight mt-0.5">
+                  {fichaConsolidada.sistema_color}: {fichaConsolidada.codigo_color}
+                  {fichaConsolidada.nombre_color &&
+                  fichaConsolidada.nombre_color !== fichaConsolidada.codigo_color
+                    ? ` — ${fichaConsolidada.nombre_color}`
+                    : ''}
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openPrintConfigurator('label', fichaConsolidada)}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer size={14} /> Etiqueta 100×80
+              </button>
+              <button
+                type="button"
+                onClick={() => openPrintConfigurator('sheet', fichaConsolidada)}
+                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer size={14} /> Imprimir Ficha Técnica
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowViewSheetModal(false)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
+                title="Cerrar Ficha Técnica"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Cuerpo desplazable de la Ficha Técnica */}
+          <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50 dark:bg-slate-950">
+            {/* Bloque Superior: Muestra + Ensayo Espectrofotometría + QR Oficial */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              {/* Identificación y Especificaciones */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-16 h-16 rounded-2xl border-4 border-white shadow-md ring-1 ring-slate-200 shrink-0"
+                    style={{ backgroundColor: colorEncontrado?.color_hexadecimal || '#ccc' }}
+                  />
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 text-amber-300 font-mono text-xs font-black">
+                      ID FICHA: {fichaConsolidada.id_ficha_tecnica}
+                    </div>
+                    <div className="text-xs font-black text-slate-500 uppercase mt-1">
+                      Cliente: <span className="text-slate-900 dark:text-white">{fichaConsolidada.cliente}</span>
+                    </div>
+                    <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      Validado por: {fichaConsolidada.aprobado_por} ({fichaConsolidada.fecha_aprobacion})
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Sistema Pintura
+                    </span>
+                    <strong className="text-slate-900 dark:text-white">
+                      {fichaConsolidada.sistema_pintura}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Sustrato Muestra
+                    </span>
+                    <strong className="text-slate-900 dark:text-white">
+                      {fichaConsolidada.sustrato_base}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800">
+                    <span className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 block">
+                      Acabado Producción
+                    </span>
+                    <strong className="text-amber-950 dark:text-amber-200">
+                      {fichaConsolidada.acabado_produccion} ({fichaConsolidada.brillo}%)
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800">
+                    <span className="text-[10px] font-black uppercase text-emerald-800 dark:text-emerald-300 block">
+                      Resultado Espectro (ΔE)
+                    </span>
+                    <strong className="text-emerald-950 dark:text-emerald-200">
+                      {fichaConsolidada.tolerancia_delta_e}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Evidencia Fotográfica del Ensayo de Espectrofotometría */}
+              <div className="lg:col-span-4 flex flex-col justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Camera size={14} className="text-indigo-600" /> Foto Ensayo Espectrofotometría
+                  </span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    {fichaConsolidada.tolerancia_delta_e}
+                  </span>
+                </div>
+
+                {fichaConsolidada.imagen_muestra ? (
+                  <div className="space-y-2">
+                    <div
+                      onClick={() => setShowSpectroLightbox(true)}
+                      className="relative group cursor-pointer rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 bg-black h-40 flex items-center justify-center"
+                      title="Haz clic para ver la foto del ensayo en tamaño completo"
+                    >
+                      <img
+                        src={fichaConsolidada.imagen_muestra}
+                        alt="Resultado Ensayo Espectrofotometría"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="px-3 py-1.5 rounded-lg bg-white text-slate-900 font-black text-xs flex items-center gap-1.5 shadow">
+                          <Maximize2 size={14} /> Ampliar Foto
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowSpectroLightbox(true)}
+                        className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        🔍 Ver pantalla completa
+                      </button>
+                      <label className="text-[11px] font-black text-slate-600 dark:text-slate-300 hover:text-indigo-600 cursor-pointer">
+                        {isUploadingSpectroPhoto ? 'Guardando...' : '📷 Cambiar foto'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleQuickSpectroPhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl bg-white dark:bg-slate-900 hover:bg-indigo-50/40 transition-colors cursor-pointer p-4 text-center">
+                    <Camera size={28} className="text-indigo-500 mb-1.5" />
+                    <span className="text-xs font-black text-slate-700 dark:text-slate-200">
+                      {isUploadingSpectroPhoto
+                        ? 'Subiendo foto del espectrofotómetro...'
+                        : 'Sin foto inicial registrada'}
+                    </span>
+                    <span className="text-[11px] font-bold text-indigo-600 mt-1">
+                      Haz clic aquí para adjuntar la foto del resultado del ensayo (ΔE)
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQuickSpectroPhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Código QR Oficial */}
+              <div className="lg:col-span-3 flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-center">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                  Código QR Oficial
+                </span>
+                <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                  <ColorQRCodeSVG value={qrPayloadActual} size={112} />
+                </div>
+                <span className="text-[10px] font-mono font-black text-slate-600 dark:text-slate-300 mt-1.5">
+                  {fichaConsolidada.id_ficha_tecnica}
+                </span>
+              </div>
+            </div>
+
+            {/* 1. Tabla de Formulación Gravimétrica */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs">
+              <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider">
+                  1. Formulación de Pastas / Bases PPG (Muestra: {totalGramosMuestra.toFixed(1)} g)
+                </span>
+                <span className="text-xs font-bold text-emerald-400">
+                  {fichaConsolidada.formulacion_pastas.length} componentes
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                      <th className="p-3 font-black uppercase text-slate-500">Código</th>
+                      <th className="p-3 font-black uppercase text-slate-500">Pasta / Base PPG</th>
+                      <th className="p-3 font-black uppercase text-slate-500 text-right">Gramos</th>
+                      <th className="p-3 font-black uppercase text-slate-500 text-right">% Fórmula</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fichaConsolidada.formulacion_pastas.map((it, idx) => (
+                      <tr
+                        key={idx}
+                        className="border-b border-slate-100 dark:border-slate-800"
+                      >
+                        <td className="p-3 font-mono font-black text-indigo-600 dark:text-indigo-400">
+                          {it.codigo}
+                        </td>
+                        <td className="p-3 font-bold text-slate-800 dark:text-white">
+                          {it.nombre}
+                        </td>
+                        <td className="p-3 font-black text-right text-emerald-700 dark:text-emerald-400">
+                          {it.gramos} g
+                        </td>
+                        <td className="p-3 font-black text-right text-slate-900 dark:text-white">
+                          {it.porcentaje}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 2. Parámetros de Mezcla y Cabina + 3. Procedimiento de Aplicación */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-2">
+                  2. Parámetros de Mezcla y Cabina de Aplicación
+                </h4>
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Catalizador
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.catalizador}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Disolvente / Dilución
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.disolvente}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Viscosidad (Copa Ford #4)
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.viscosidad}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Presión de Aire
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.presion}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Boquilla / Pico
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.boquilla}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                      Número de Manos
+                    </span>
+                    <strong className="text-slate-800 dark:text-white">
+                      {fichaConsolidada.manos}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-2">
+                  3. Procedimiento Operativo de Aplicación en Planta
+                </h4>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
+                  <strong className="text-indigo-600 dark:text-indigo-400 block">
+                    Paso 1 — Preparación del Sustrato ({fichaConsolidada.sustrato_base}):
+                  </strong>
+                  <span className="text-slate-700 dark:text-slate-200">
+                    {fichaConsolidada.preparacion}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
+                  <strong className="text-indigo-600 dark:text-indigo-400 block">
+                    Paso 2 — Aplicación de Base / Fondo:
+                  </strong>
+                  <span className="text-slate-700 dark:text-slate-200">
+                    {fichaConsolidada.fondo}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
+                  <strong className="text-indigo-600 dark:text-indigo-400 block">
+                    Paso 3 — Aplicación de Color ({fichaConsolidada.sistema_pintura}):
+                  </strong>
+                  <span className="text-slate-700 dark:text-slate-200">
+                    {fichaConsolidada.color}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
+                  <strong className="text-indigo-600 dark:text-indigo-400 block">
+                    Paso 4 — Acabado Final ({fichaConsolidada.acabado_produccion} -{' '}
+                    {fichaConsolidada.brillo}%):
+                  </strong>
+                  <span className="text-slate-700 dark:text-slate-200">
+                    {fichaConsolidada.acabado}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSpectroLightbox = () => {
+    if (!showSpectroLightbox || !fichaConsolidada?.imagen_muestra) return null;
+    return (
+      <div
+        onClick={() => setShowSpectroLightbox(false)}
+        className="fixed inset-0 z-[280] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 cursor-zoom-out"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="max-w-4xl w-full bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl"
+        >
+          <div className="px-5 py-3.5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block">
+                EVIDENCIA COLORIMÉTRICA • ID FICHA: {fichaConsolidada.id_ficha_tecnica}
+              </span>
+              <h4 className="font-black text-sm sm:text-base uppercase">
+                {fichaConsolidada.sistema_color} {fichaConsolidada.codigo_color} — Resultado:{' '}
+                {fichaConsolidada.tolerancia_delta_e}
+              </h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSpectroLightbox(false)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4 bg-black flex items-center justify-center max-h-[78vh] overflow-auto">
+            <img
+              src={fichaConsolidada.imagen_muestra}
+              alt="Resultado Ensayo Espectrofotometría"
+              className="max-w-full max-h-[72vh] object-contain rounded-xl"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================================
   // VISTA B: FICHA TÉCNICA DEDICADA (SEPARADA ABSOLUTAMENTE DEL BUSCADOR)
   // ============================================================================
   if (colorEncontrado && fichaConsolidada) {
@@ -1785,6 +2247,8 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       <div className="max-w-6xl mx-auto space-y-5 animate-fade-in pb-10 relative">
         {renderSecurityModal()}
         {renderPrintConfigModal()}
+        {renderViewTechnicalSheetModal()}
+        {renderSpectroLightbox()}
 
         {/* BARRA SUPERIOR DE NAVEGACIÓN + BOTONERA DE ACCIONES */}
         <div className="bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -1815,6 +2279,12 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                   {fichaConsolidada.sistema_color}
                 </span>
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-black uppercase bg-slate-900 text-amber-300 border border-slate-700"
+                  title="Identificador único de la Ficha Técnica de Color"
+                >
+                  ID FICHA: {fichaConsolidada.id_ficha_tecnica}
+                </span>
                 {fichaConsolidada.es_ensayo && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
                     🧪 Ensayo / Prueba
@@ -1844,7 +2314,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
             </div>
           </div>
 
-          {/* Derecha: BOTONERA CON IMPRESIÓN CONFIGURABLE + MODIFICACIÓN Y BORRADO CON CLAVE */}
+          {/* Derecha: BOTONERA CON IMPRESIÓN CONFIGURABLE + VER FICHA TÉCNICA + MODIFICACIÓN Y BORRADO CON CLAVE */}
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
             {/* 1. IMPRIMIR ETIQUETA DE MUESTRA (Con selector 100x80mm / Térmica / Escala) */}
             <button
@@ -1855,16 +2325,25 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
               <Printer size={15} /> Imprimir Etiqueta de Muestra
             </button>
 
-            {/* 2. IMPRIMIR FICHA TÉCNICA (Con selector de hoja Carta/A4/Oficio y Escala) */}
+            {/* 2. VER FICHA TÉCNICA COMPLETA (Con ID de Ficha Técnica y Foto del Ensayo de Espectrofotometría) */}
+            <button
+              onClick={() => setShowViewSheetModal(true)}
+              className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              title="Ver Ficha Técnica completa con su ID y la foto del resultado del ensayo de espectrofotometría"
+            >
+              <Eye size={15} /> Ver Ficha Técnica
+            </button>
+
+            {/* 3. IMPRIMIR FICHA TÉCNICA (Con selector de hoja Carta/A4/Oficio y Escala) */}
             <button
               onClick={() => openPrintConfigurator('sheet', fichaConsolidada)}
-              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
               title="Seleccionar tipo de hoja, formato y escala para imprimir la Ficha Técnica Completa"
             >
               <Printer size={15} /> Imprimir Ficha Técnica
             </button>
 
-            {/* 3. MODIFICAR FÓRMULA (Protegido con Clave real de Supervisor Pintura Líquida o Admin) */}
+            {/* 4. MODIFICAR FÓRMULA (Protegido con Clave real de Supervisor Pintura Líquida o Admin) */}
             <button
               onClick={() => requestProtectedAction('EDIT_ETP', colorEncontrado)}
               className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1873,7 +2352,7 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
               <Edit3 size={15} /> Modificar Fórmula
             </button>
 
-            {/* 4. ELIMINAR COLOR / LIMPIAR PRUEBA (Protegido con Clave de Supervisor Pintura Líquida o Admin) */}
+            {/* 5. ELIMINAR COLOR / LIMPIAR PRUEBA (Protegido con Clave de Supervisor Pintura Líquida o Admin) */}
             <button
               onClick={() => requestProtectedAction('DELETE_COLOR', colorEncontrado)}
               className="px-3 py-2.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1972,30 +2451,97 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
 
         {/* GRID PRINCIPAL: IZQUIERDA (MUESTRA + QR COMPACTO) | DERECHA (FÓRMULA Y CALCULADORA) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* Columna Izquierda Compacta: Muestra de Color + Código QR limpio */}
+          {/* Columna Izquierda Compacta: Muestra de Color + Ensayo Espectrofotometría + Código QR */}
           <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col items-center justify-between text-center space-y-4">
-              <div className="flex flex-col items-center space-y-2.5 pt-1">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col items-center justify-between text-center space-y-3.5">
+              <div className="flex flex-col items-center space-y-2 pt-1 w-full">
                 <div
-                  className="w-24 h-24 rounded-2xl shadow-md border-4 border-white ring-1 ring-slate-200"
+                  className="w-20 h-20 rounded-2xl shadow-md border-4 border-white ring-1 ring-slate-200"
                   style={{ backgroundColor: colorEncontrado.color_hexadecimal || '#ccc' }}
                 />
                 <div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                     {fichaConsolidada.sistema_color}
                   </span>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
                     {fichaConsolidada.codigo_color}
                   </h3>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded bg-slate-900 text-amber-300 font-mono text-[10px] font-black">
+                    ID: {fichaConsolidada.id_ficha_tecnica}
+                  </span>
                 </div>
               </div>
 
-              <div className="w-full bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center space-y-2">
+              {/* Evidencia Fotográfica del Resultado del Ensayo de Espectrofotometría */}
+              <div className="w-full bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-left space-y-2">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <Camera size={12} className="text-indigo-600 shrink-0" /> Ensayo Espectro
+                  </span>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    {fichaConsolidada.tolerancia_delta_e}
+                  </span>
+                </div>
+
+                {fichaConsolidada.imagen_muestra ? (
+                  <div className="space-y-1.5">
+                    <div
+                      onClick={() => setShowSpectroLightbox(true)}
+                      className="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 bg-black h-28 flex items-center justify-center"
+                      title="Haz clic para ver la foto del resultado de espectrofotometría en pantalla completa"
+                    >
+                      <img
+                        src={fichaConsolidada.imagen_muestra}
+                        alt="Resultado Ensayo Espectrofotometría"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="px-2 py-1 rounded bg-white text-slate-900 font-black text-[10px] flex items-center gap-1">
+                          <Maximize2 size={12} /> Ver Foto
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-black">
+                      <button
+                        type="button"
+                        onClick={() => setShowSpectroLightbox(true)}
+                        className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      >
+                        🔍 Ampliar
+                      </button>
+                      <label className="text-slate-500 hover:text-indigo-600 cursor-pointer">
+                        {isUploadingSpectroPhoto ? 'Subiendo...' : '📷 Actualizar'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleQuickSpectroPhotoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg bg-white dark:bg-slate-900 hover:bg-indigo-50/40 transition-colors cursor-pointer p-2 text-center">
+                    <Camera size={18} className="text-indigo-500 mb-1" />
+                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 leading-tight">
+                      {isUploadingSpectroPhoto ? 'Guardando foto...' : 'Adjuntar Foto Ensayo ΔE'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQuickSpectroPhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="w-full bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center space-y-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
                   Código QR Oficial
                 </span>
-                <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                  <ColorQRCodeSVG value={qrPayloadActual} size={116} />
+                <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <ColorQRCodeSVG value={qrPayloadActual} size={102} />
                 </div>
               </div>
             </div>

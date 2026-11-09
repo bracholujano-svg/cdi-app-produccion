@@ -5,6 +5,10 @@ import localforage from 'localforage';
 export const useSupabaseData = () => {
     const [supabaseData, setSupabaseData] = useState(null);
     const workerRef = useRef(null);
+    const isFetchingRef = useRef(false);
+    const lastFullFetchAtRef = useRef(0);
+    const rawInvRef = useRef(null);
+    const rawReqRef = useRef(null);
 
     useEffect(() => {
         // Inicializar Worker
@@ -20,18 +24,36 @@ export const useSupabaseData = () => {
             }
         };
 
-        const loadFromCacheAndFetch = async () => {
+        const dispatchToWorker = (invData, reqData) => {
+            if (workerRef.current && invData && reqData) {
+                workerRef.current.postMessage({
+                    action: 'PROCESS_DATA',
+                    payload: { inv: invData, req: reqData }
+                });
+            }
+        };
+
+        const loadFromCacheAndFetch = async (force = false) => {
+            const now = Date.now();
+            if (isFetchingRef.current) return;
+            if (!force && lastFullFetchAtRef.current > 0 && now - lastFullFetchAtRef.current < 4000) {
+                return;
+            }
+            isFetchingRef.current = true;
+
             try {
                 // Ensure the user session is loaded to pass RLS
                 await supabase.auth.getSession();
                 
                 // 1. Mostrar caché primero para que la interfaz cargue rápido
-                const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v3');
-                if (cachedData) {
-                    setSupabaseData(cachedData);
+                if (!rawInvRef.current) {
+                    const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v3');
+                    if (cachedData) {
+                        setSupabaseData(cachedData);
+                    }
                 }
 
-                // 2. Fetch de BD en segundo plano
+                // 2. Fetch de BD en segundo plano en paralelo
                 const fetchAll = async (table) => {
                     let allData = [];
                     let from = 0;
@@ -47,7 +69,6 @@ export const useSupabaseData = () => {
                                 .not('idreferencia', 'is', null);
                         }
                         const { data, error } = await query
-                            // Ordenado por ID si existe, o limitará paginación
                             .range(from, from + step - 1);
                         if (error || !data || data.length === 0) {
                             hasMore = false;
@@ -60,48 +81,91 @@ export const useSupabaseData = () => {
                     return allData;
                 };
 
-                const inv = await fetchAll('inventario');
-                const req = await fetchAll('requerimientos_pedido');
+                const [inv, req] = await Promise.all([
+                    fetchAll('inventario'),
+                    fetchAll('requerimientos_pedido')
+                ]);
 
-                // Enviar data cruda al Worker para procesarla en segundo plano
                 if (inv && req) {
-                    workerRef.current.postMessage({
-                        action: 'PROCESS_DATA',
-                        payload: { inv, req }
-                    });
+                    rawInvRef.current = inv;
+                    rawReqRef.current = req;
+                    lastFullFetchAtRef.current = Date.now();
+                    dispatchToWorker(inv, req);
                 }
-            } catch(e) { console.error("Error fetching Supabase", e); }
+            } catch(e) {
+                console.error("Error fetching Supabase", e);
+            } finally {
+                isFetchingRef.current = false;
+            }
         };
 
-        loadFromCacheAndFetch();
+        loadFromCacheAndFetch(false);
         
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
             if (event === 'SIGNED_IN') {
-                loadFromCacheAndFetch();
+                loadFromCacheAndFetch(false);
             }
         });
 
         const handleErpSyncEvent = () => {
-            loadFromCacheAndFetch();
+            loadFromCacheAndFetch(true);
         };
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
         }
         
-        // Manejar Realtime de manera incremental (no refetch total)
-        const handleRealtimeInventario = async (payload) => {
-            // Un refetch total en realtime puede bloquear, idealmente sería incremental.
-            // Por ahora, para mantener la lógica exacta, programamos una recarga asincrónica (debounce-like)
-            // Esto se optimizará en la siguiente versión para inyectar directamente el payload.
-            loadFromCacheAndFetch(); 
+        let workerDebounceTimeout;
+        const scheduleWorkerReprocess = () => {
+            clearTimeout(workerDebounceTimeout);
+            workerDebounceTimeout = setTimeout(() => {
+                if (rawInvRef.current && rawReqRef.current) {
+                    dispatchToWorker(rawInvRef.current, rawReqRef.current);
+                } else {
+                    loadFromCacheAndFetch(false);
+                }
+            }, 900);
         };
 
-        let debounceTimeout;
-        const handleRealtimeRequerimientos = async (payload) => {
-             clearTimeout(debounceTimeout);
-             debounceTimeout = setTimeout(() => {
-                 loadFromCacheAndFetch();
-             }, 2000);
+        // Manejar Realtime de manera incremental en memoria (0 consultas de red por evento)
+        const handleRealtimeInventario = (payload) => {
+            if (!rawInvRef.current || !payload) {
+                scheduleWorkerReprocess();
+                return;
+            }
+            const getKey = (r) => r?.id ?? r?.idreferencia ?? r?.id_referencia ?? r?.['Id Referencia'];
+            if (payload.eventType === 'INSERT' && payload.new) {
+                rawInvRef.current = [...rawInvRef.current, payload.new];
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+                const kNew = getKey(payload.new);
+                rawInvRef.current = rawInvRef.current.map((item) =>
+                    getKey(item) === kNew ? { ...item, ...payload.new } : item
+                );
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+                const kOld = getKey(payload.old);
+                rawInvRef.current = rawInvRef.current.filter((item) => getKey(item) !== kOld);
+            }
+            scheduleWorkerReprocess();
+        };
+
+        const handleRealtimeRequerimientos = (payload) => {
+            if (!rawReqRef.current || !payload) {
+                scheduleWorkerReprocess();
+                return;
+            }
+            const getKey = (r) =>
+                r?.id ?? `${r?.numero_rq || ''}_${r?.pedido_sin || ''}_${r?.idreferencia || ''}`;
+            if (payload.eventType === 'INSERT' && payload.new) {
+                rawReqRef.current = [...rawReqRef.current, payload.new];
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+                const kNew = getKey(payload.new);
+                rawReqRef.current = rawReqRef.current.map((item) =>
+                    getKey(item) === kNew ? { ...item, ...payload.new } : item
+                );
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+                const kOld = getKey(payload.old);
+                rawReqRef.current = rawReqRef.current.filter((item) => getKey(item) !== kOld);
+            }
+            scheduleWorkerReprocess();
         };
 
         try {

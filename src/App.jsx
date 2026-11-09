@@ -669,82 +669,110 @@ const {
     return [...new Set(clients)].sort();
   }, [orders]);
 
-  const filteredOrders = orders.filter(o => {
-    if (!o) return false;
-    
-    // Ocultar clones (bifurcaciones) que ya llegaron a áreas de convergencia
-    if (o.master_id && ['Ensamble', 'Empaque', 'Despachos'].includes(o.areaActual)) {
-        return false;
-    }
-    
+  const alertsByPedidoMap = React.useMemo(() => {
+    const map = new Map();
+    (coordinationAlerts || []).forEach(a => {
+      const key = String(a?.pedidoNum || "").trim().toUpperCase();
+      if (key && !map.has(key)) {
+        map.set(key, a);
+      }
+    });
+    return map;
+  }, [coordinationAlerts]);
+
+  const filteredOrders = React.useMemo(() => {
     const st = searchTerm.toLowerCase().trim();
     const searchTerms = st ? st.split(/\s+/) : [];
-    
-    const matchSearch = searchTerms.length === 0 || searchTerms.every(term => 
-        (String(o.pedidoNum || "")).toLowerCase().includes(term) || 
-        (String(o.nombre || "")).toLowerCase().includes(term) || 
-        (String(o.codArticulo || "")).toLowerCase().includes(term) ||
-        (String(o.cliente || "")).toLowerCase().includes(term)
-    );
-
-    const matchArea = areaFilter === 'Todas' || 
-                      areaFilter === 'Administrador / Todos' || 
-                      o.areaActual === areaFilter || 
-                      (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter)) ||
-                      o.transferenciaPendiente?.haciaArea === areaFilter;
     const filterUpper = clientFilter.toUpperCase();
-    const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
-    
-    const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === (o.pedidoNum || "").toUpperCase());
-    const effectiveDate = alertMatch?.fechaEntrega;
 
-    // DIRECTIVA 3: TODO ítem con estado 'DESPACHADO' debe ser EXCLUIDO de la vista de producción activa
-    const isDespachado = o.estadoInterno === 'DESPACHADO';
+    return orders.filter(o => {
+      if (!o) return false;
+      
+      // Ocultar clones (bifurcaciones) que ya llegaron a áreas de convergencia
+      if (o.master_id && ['Ensamble', 'Empaque', 'Despachos'].includes(o.areaActual)) {
+          return false;
+      }
+      
+      const matchSearch = searchTerms.length === 0 || searchTerms.every(term => 
+          (String(o.pedidoNum || "")).toLowerCase().includes(term) || 
+          (String(o.nombre || "")).toLowerCase().includes(term) || 
+          (String(o.codArticulo || "")).toLowerCase().includes(term) ||
+          (String(o.cliente || "")).toLowerCase().includes(term)
+      );
 
-    if (viewFilter === 'DESPACHADOS') {
-      return matchSearch && matchClient && isDespachado;
+      if (!matchSearch) return false;
+
+      const matchClient = clientFilter === 'Todos' || String(o.cliente || "").toUpperCase().includes(filterUpper);
+      if (!matchClient) return false;
+
+      // DIRECTIVA 3: TODO ítem con estado 'DESPACHADO' debe ser EXCLUIDO de la vista de producción activa
+      const isDespachado = o.estadoInterno === 'DESPACHADO';
+
+      if (viewFilter === 'DESPACHADOS') {
+        return isDespachado;
+      }
+
+      // Para cualquier otra vista (Producción activa, Atrasos, Cumplidos), excluir estrictamente DESPACHADO
+      if (isDespachado) return false;
+
+      const matchArea = areaFilter === 'Todas' || 
+                        areaFilter === 'Administrador / Todos' || 
+                        o.areaActual === areaFilter || 
+                        (Array.isArray(o.areas_compartidas) && o.areas_compartidas.includes(areaFilter)) ||
+                        o.transferenciaPendiente?.haciaArea === areaFilter;
+      if (!matchArea) return false;
+      
+      const pKey = String(o.pedidoNum || "").trim().toUpperCase();
+      const alertMatch = alertsByPedidoMap.get(pKey);
+      const effectiveDate = alertMatch?.fechaEntrega;
+
+      if (viewFilter === 'ATRASADOS') {
+        const dLeft = getDaysLeft(effectiveDate);
+        return dLeft !== null && dLeft < 0;
+      }
+      if (viewFilter === 'CUMPLIDOS') {
+        const dLeft = getDaysLeft(effectiveDate);
+        return dLeft === null || dLeft >= 0;
+      }
+      return true;
+    });
+  }, [orders, searchTerm, areaFilter, clientFilter, viewFilter, alertsByPedidoMap]);
+
+  const finalGroupedArray = React.useMemo(() => {
+    const groupedOrders = filteredOrders.reduce((acc, order) => {
+      if (!order) return acc;
+      const pNum = order.pedidoNum || "S/N";
+      
+      if (!acc[pNum]) {
+        const alertMatch = alertsByPedidoMap.get(String(pNum).trim().toUpperCase());
+        const displayDate = alertMatch?.fechaEntrega;
+        acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: displayDate, products: [] };
+      }
+      acc[pNum].products.push(order);
+      return acc;
+    }, {});
+
+    const arr = Object.values(groupedOrders);
+
+    if (sortBy === 'pedido_asc') {
+      arr.sort((a, b) => String(a.pedidoNum).localeCompare(String(b.pedidoNum), undefined, {numeric: true}));
+    } else if (sortBy === 'pedido_desc') {
+      arr.sort((a, b) => String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, {numeric: true}));
+    } else if (sortBy === 'fecha_asc') {
+      arr.sort((a, b) => {
+        if (!a.fechaEntregaPrometida) return 1;
+        if (!b.fechaEntregaPrometida) return -1;
+        return new Date(a.fechaEntregaPrometida) - new Date(b.fechaEntregaPrometida);
+      });
+    } else if (sortBy === 'fecha_desc') {
+      arr.sort((a, b) => {
+        if (!a.fechaEntregaPrometida) return 1;
+        if (!b.fechaEntregaPrometida) return -1;
+        return new Date(b.fechaEntregaPrometida) - new Date(a.fechaEntregaPrometida);
+      });
     }
-
-    // Para cualquier otra vista (Producción activa, Atrasos, Cumplidos), excluir estrictamente DESPACHADO
-    if (isDespachado) return false;
-
-    if (viewFilter === 'ATRASADOS') return matchSearch && matchArea && matchClient && getDaysLeft(effectiveDate) !== null && getDaysLeft(effectiveDate) < 0;
-    if (viewFilter === 'CUMPLIDOS') return matchSearch && matchArea && matchClient && (getDaysLeft(effectiveDate) === null || getDaysLeft(effectiveDate) >= 0);
-    return matchSearch && matchArea && matchClient;
-  });
-
-  const groupedOrders = filteredOrders.reduce((acc, order) => {
-    if (!order) return acc;
-    const pNum = order.pedidoNum || "S/N";
-    
-    // Si la alerta tiene una fecha de entrega, usarla como prioridad
-    const alertMatch = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pNum.toUpperCase());
-    const displayDate = alertMatch?.fechaEntrega;
-
-    if (!acc[pNum]) acc[pNum] = { pedidoNum: pNum, cliente: order.cliente, fechaEntregaPrometida: displayDate, products: [] };
-    acc[pNum].products.push(order);
-    return acc;
-  }, {});
-  const groupedArray = Object.values(groupedOrders);
-  let finalGroupedArray = [...groupedArray];
-
-  if (sortBy === 'pedido_asc') {
-    finalGroupedArray.sort((a, b) => String(a.pedidoNum).localeCompare(String(b.pedidoNum), undefined, {numeric: true}));
-  } else if (sortBy === 'pedido_desc') {
-    finalGroupedArray.sort((a, b) => String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, {numeric: true}));
-  } else if (sortBy === 'fecha_asc') {
-    finalGroupedArray.sort((a, b) => {
-      if (!a.fechaEntregaPrometida) return 1;
-      if (!b.fechaEntregaPrometida) return -1;
-      return new Date(a.fechaEntregaPrometida) - new Date(b.fechaEntregaPrometida);
-    });
-  } else if (sortBy === 'fecha_desc') {
-    finalGroupedArray.sort((a, b) => {
-      if (!a.fechaEntregaPrometida) return 1;
-      if (!b.fechaEntregaPrometida) return -1;
-      return new Date(b.fechaEntregaPrometida) - new Date(a.fechaEntregaPrometida);
-    });
-  }
+    return arr;
+  }, [filteredOrders, alertsByPedidoMap, sortBy]);
 
   const activeGroupObj = finalGroupedArray.find(g => g?.pedidoNum === selectedGroupPedido) || null;
 

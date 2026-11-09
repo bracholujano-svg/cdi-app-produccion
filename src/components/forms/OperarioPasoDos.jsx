@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Layers, Droplet, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { compressSpectroImage, buildTechnicalSheetId } from '../../utils/colorQrHelper';
 
 const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
   const [formData, setFormData] = useState({
@@ -27,12 +28,15 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
   const [imagenMuestra, setImagenMuestra] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagenMuestra(reader.result);
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressSpectroImage(file);
+        setImagenMuestra(compressed);
+      } catch (err) {
+        console.error('Error comprimiendo foto de espectrofotometría:', err);
+      }
     }
   };
 
@@ -45,6 +49,15 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
     setIsSubmitting(true);
 
     try {
+      const { data: currentRow } = await supabase
+        .from('colores_aprobados')
+        .select('id, codigo_color, nombre_color, procedimiento_preparacion')
+        .eq('id', colorBorradorId)
+        .maybeSingle();
+
+      const prevProc = currentRow?.procedimiento_preparacion || {};
+      const idFichaTecnica = buildTechnicalSheetId(currentRow || { id: colorBorradorId });
+
       const { error } = await supabase.from('colores_aprobados')
         .update({ 
            sustrato_muestra: formData.sustrato_muestra,
@@ -53,7 +66,12 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
            catalizador_tipo: `${formData.catalizador_pct}% (Ref: ${formData.catalizador_tipo})`,
            disolvente_tipo: `${formData.disolvente_pct}% (${formData.disolvente_tipo})`,
            procedimiento_preparacion: {
-             preparacion: formData.procedimiento_preparacion,
+             ...prevProc,
+             id_ficha_tecnica: idFichaTecnica,
+             sustrato_base: formData.sustrato_muestra,
+             catalizador: `${formData.catalizador_pct}% (Ref: ${formData.catalizador_tipo})`,
+             disolvente: `${formData.disolvente_pct}% (${formData.disolvente_tipo})`,
+             preparacion: formData.procedimiento_preparacion || prevProc.preparacion || '',
              fondo: {
                 tipo: formData.base_tipo,
                 color: formData.base_color,
@@ -61,9 +79,13 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
                 catalizador: `${formData.base_catalizador_pct}% (${formData.base_catalizador_tipo})`,
                 disolvente: `${formData.base_disolvente_pct}%`
              },
-             color: '',
-             acabado: '',
-             imagen_muestra: imagenMuestra
+             color: prevProc.color || 'Aplicar 2 manos cruzadas homogéneas respetando tiempo de oreo de 10-15 min.',
+             acabado: prevProc.acabado || 'Aplicar barniz poliuretano ajustado al porcentaje de brillo de producción.',
+             coordenadas_color: {
+               ...(prevProc.coordenadas_color || {}),
+               deltaE: `ΔE = ${formData.tolerancia_delta_e}`
+             },
+             imagen_muestra: imagenMuestra || prevProc.imagen_muestra || null
            },
            estado_aprobacion: 'pendiente_revision' 
         })

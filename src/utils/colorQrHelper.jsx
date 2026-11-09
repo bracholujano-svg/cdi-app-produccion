@@ -207,11 +207,87 @@ export const ColorQRCodeSVG = ({ value, payload, size = 116, className = '' }) =
 };
 
 /**
+ * Comprime una imagen (ej. lectura de espectrofotómetro) en el navegador para evitar
+ * guardar megabytes en Base64 dentro de Supabase y mantener la app ultrarrápida.
+ */
+export const compressSpectroImage = (file, maxWidth = 960, quality = 0.75) => {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo de imagen'));
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onerror = () => resolve(event.target.result);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          if (height > maxWidth) {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (_) {
+          resolve(event.target.result);
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+/**
+ * Construye un ID de Ficha Técnica único, legible y consistente para cualquier registro de color
+ */
+export const buildTechnicalSheetId = (raw = {}) => {
+  const proc = raw.procedimiento_preparacion || {};
+  if (raw.idFichaTecnica || raw.id_ficha_tecnica || proc.id_ficha_tecnica) {
+    return String(raw.idFichaTecnica || raw.id_ficha_tecnica || proc.id_ficha_tecnica)
+      .trim()
+      .toUpperCase();
+  }
+  const rawId = String(raw.id || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const rawCode = String(
+    raw.codigoColor || raw.codigo_color || raw.codigo_objetivo || proc.codigo_color || 'COL'
+  )
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase()
+    .slice(0, 6);
+
+  if (rawId) {
+    return `ETP-${rawCode}-${rawId.slice(0, 6)}`;
+  }
+  return `ETP-${rawCode}-001`;
+};
+
+/**
  * Normaliza los datos de la ficha técnica independientemente de si vienen en camelCase o snake_case
  */
 export const normalizeColorSheetData = (raw = {}) => {
   const proc = raw.procedimiento_preparacion || {};
+  const idFichaTecnica = buildTechnicalSheetId(raw);
+  const deltaEVal =
+    raw.tolerancia_delta_e ||
+    raw.deltaE ||
+    proc.coordenadas_color?.deltaE ||
+    raw.coordenadasColor?.deltaE ||
+    '0.8';
+  const rawCoords =
+    raw.coordenadasColor || raw.coordenadas_color || proc.coordenadas_color || {};
+
   return {
+    id: raw.id || null,
+    idFichaTecnica,
     codigoColor:
       raw.codigoColor || raw.codigo_color || raw.codigo_objetivo || proc.codigo_color || '',
     nombreColor:
@@ -243,8 +319,17 @@ export const normalizeColorSheetData = (raw = {}) => {
       raw.acabado_muestra_fisica ||
       proc.acabado_muestra_fisica ||
       'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)',
-    coordenadasColor:
-      raw.coordenadasColor || raw.coordenadas_color || proc.coordenadas_color || {},
+    coordenadasColor: {
+      ...rawCoords,
+      deltaE: rawCoords.deltaE || deltaEVal
+    },
+    toleranciaDeltaE: deltaEVal,
+    imagenMuestra:
+      raw.imagenMuestra ||
+      raw.imagen_muestra ||
+      proc.imagen_muestra ||
+      proc.foto_espectrofotometro ||
+      null,
     aprobadoPor:
       raw.aprobadoPor || raw.aprobado_por || proc.aprobado_por || 'Supervisor de Planta',
     fechaAprobacion:
@@ -266,9 +351,15 @@ export const normalizeColorSheetData = (raw = {}) => {
       proc.preparacion ||
       'Lijado del sustrato con grano 220/320 y limpieza libre de polvo.',
     fondo:
-      raw.fondo ||
-      proc.fondo ||
-      'Aplicar fondo poliuretano de alto cubrimiento según tono base.',
+      typeof (raw.fondo || proc.fondo) === 'object' && (raw.fondo || proc.fondo) !== null
+        ? `Base ${(raw.fondo || proc.fondo).tipo || ''} (${
+            (raw.fondo || proc.fondo).color || ''
+          }) - ${(raw.fondo || proc.fondo).manos || ''} | Cat: ${
+            (raw.fondo || proc.fondo).catalizador || ''
+          } | Disolv: ${(raw.fondo || proc.fondo).disolvente || ''}`
+        : raw.fondo ||
+          proc.fondo ||
+          'Aplicar fondo poliuretano de alto cubrimiento según tono base.',
     color:
       raw.color ||
       proc.color ||
@@ -286,6 +377,7 @@ export const normalizeColorSheetData = (raw = {}) => {
  */
 export const buildColorQRPayload = (rawInput = {}) => {
   const {
+    idFichaTecnica,
     codigoColor,
     nombreColor,
     sistemaCatalogo,
@@ -325,6 +417,7 @@ export const buildColorQRPayload = (rawInput = {}) => {
 
   const lines = [
     `CDI EXHIBICIONES - LAB. COLOR${esEnsayo ? ' [ENSAYO/PRUEBA]' : ''}`,
+    `ID FICHA: ${idFichaTecnica}`,
     `COLOR: [${cod}] ${nom}`,
     `CAT: ${sistemaCatalogo || 'INTERNO'} | CLIENTE: ${cli.slice(0, 32)}`,
     `SISTEMA: ${sisPint}`,
@@ -424,6 +517,7 @@ export const resolvePrintDimensions = (options = {}) => {
 export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
   const data = normalizeColorSheetData(rawData);
   const {
+    idFichaTecnica,
     codigoColor,
     nombreColor,
     sistemaCatalogo,
@@ -545,7 +639,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:4px;">
             <div style="min-width:0;flex:1;padding-right:6px;">
               <div style="font-size:6.5pt;font-weight:900;letter-spacing:0.4px;text-transform:uppercase;color:#1e293b;">
-                CDI EXHIBICIONES • LAB. COLOR ${esEnsayo ? '• [ENSAYO DE PRUEBA]' : ''}
+                CDI • LAB. COLOR • ID: ${idFichaTecnica} ${esEnsayo ? '• [ENSAYO]' : ''}
               </div>
               <div style="font-size:12pt;font-weight:900;color:#000;line-height:1.1;text-transform:uppercase;">
                 ${sistemaCatalogo}: ${codigoColor || 'S/C'} ${
@@ -631,7 +725,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #0f172a;padding-bottom:8px;margin-bottom:10px;">
           <div>
             <div style="font-size:9pt;font-weight:900;letter-spacing:1px;color:#334155;text-transform:uppercase;">
-              CDI EXHIBICIONES • LABORATORIO DE COLORIMETRÍA (SC COLOR) ${
+              CDI EXHIBICIONES • LAB. COLOR (ID FICHA: ${idFichaTecnica}) ${
                 esEnsayo ? '• [ENSAYO DE PRUEBA]' : ''
               }
             </div>
@@ -869,6 +963,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
 export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
   const data = normalizeColorSheetData(rawData);
   const {
+    idFichaTecnica,
     codigoColor,
     nombreColor,
     sistemaCatalogo,
@@ -879,6 +974,7 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
     glossLevel,
     acabadoMuestraFisica,
     coordenadasColor,
+    imagenMuestra,
     aprobadoPor,
     fechaAprobacion,
     formulacionPastas,
@@ -1142,13 +1238,24 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
                   esEnsayo ? '— [DOCUMENTO DE ENSAYO / PRUEBA]' : ''
                 }</div>
                 <div>FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y COLORIMETRÍA (SC COLOR / ETP)</div>
+                <div><strong>ID FICHA TÉCNICA:</strong> <span style="background:#0f172a;color:#fff;padding:1px 6px;border-radius:4px;font-family:monospace;">${idFichaTecnica}</span></div>
                 <div><strong>COLOR:</strong> ${sistemaCatalogo} — ${codigoColor || 'S/C'} ${
     nombreColor && nombreColor !== codigoColor ? `(${nombreColor})` : ''
   }</div>
                 <div><strong>CLIENTE / PROYECTO:</strong> ${cliente || 'USO GENERAL PLANTA'}</div>
               </div>
-              <div style="text-align: center; border: 1.5px solid #0f172a; padding: 5px; border-radius: 8px;">
-                ${qrSvgMarkup}
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${
+                  imagenMuestra
+                    ? `<div style="text-align:center;border:1.5px solid #0f172a;padding:4px;border-radius:8px;">
+                        <img src="${imagenMuestra}" alt="Ensayo Espectrofotómetro" style="width:96px;height:96px;object-fit:cover;border-radius:4px;display:block;" />
+                        <div style="font-size:7pt !important;font-weight:900;margin-top:2px;">ENSAYO ΔE</div>
+                      </div>`
+                    : ''
+                }
+                <div style="text-align: center; border: 1.5px solid #0f172a; padding: 5px; border-radius: 8px;">
+                  ${qrSvgMarkup}
+                </div>
               </div>
             </div>
 

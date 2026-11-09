@@ -155,7 +155,16 @@ export const useOrders = () => {
     };
 
     useEffect(() => {
-        const fetchProduccion = async () => {
+        let isFetchingProduccion = false;
+        let lastFetchProduccionAt = 0;
+
+        const fetchProduccion = async (force = false) => {
+            const now = Date.now();
+            if (isFetchingProduccion) return;
+            if (!force && lastFetchProduccionAt > 0 && now - lastFetchProduccionAt < 4000) {
+                return;
+            }
+            isFetchingProduccion = true;
             try {
                 // Ensure the session is loaded from local storage before querying to prevent RLS from blocking the request
                 await supabase.auth.getSession();
@@ -240,18 +249,24 @@ export const useOrders = () => {
                         });
                     }
                 }
-            } catch (err) { console.error('Error fetching produccion:', err); alert('Error de permisos (RLS): ' + (err?.message || err)); }
+                lastFetchProduccionAt = Date.now();
+            } catch (err) {
+                console.error('Error fetching produccion:', err);
+                alert('Error de permisos (RLS): ' + (err?.message || err));
+            } finally {
+                isFetchingProduccion = false;
+            }
         };
-        fetchProduccion();
+        fetchProduccion(false);
         
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
             if (event === 'SIGNED_IN') {
-                fetchProduccion();
+                fetchProduccion(false);
             }
         });
 
         const handleErpSyncEvent = () => {
-            fetchProduccion();
+            fetchProduccion(true);
         };
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
