@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
-import { LABEL_PAGE_PRESETS, resolvePrintDimensions } from '../../utils/colorQrHelper';
+import { LABEL_PAGE_PRESETS, resolvePrintDimensions, buildPackingQRUrl } from '../../utils/colorQrHelper';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 import { supabase } from '../../supabaseClient';
 
@@ -139,42 +139,24 @@ const QRCodeSVG = ({ value, size = 128, className = '' }) => {
 };
 
 /**
- * Construye el payload oficial del Código QR de un bulto físico individual
+ * Construye el payload oficial del Código QR de un bulto físico individual.
+ * Genera un enlace directo (?qr=EMPAQUE&ped=...&pkg=...&bulto=...) para que tanto
+ * el lector de Google del celular como el Lector QR de la barra lateral abran directamente ese bulto.
  */
 export const buildPackageQRText = (packingList, pkg, pkgIndex, totalPackages) => {
   const pedNum = String(packingList?.pedidoNum || '').trim();
   const cliente = String(packingList?.cliente || 'CLIENTE GENERAL').trim();
   const tipo = String(pkg?.tipoEmpaque || 'PAQUETE').trim().toUpperCase();
   const numStr = String(pkg?.consecutivo || pkgIndex + 1).padStart(2, '0');
-  const tituloBulto = `${tipo} #${numStr} (Bulto ${pkgIndex + 1} de ${totalPackages})`;
-  const items = Array.isArray(pkg?.items) ? pkg.items : [];
+  const codigoPaquete = `${tipo} #${numStr}`;
 
-  const lines = [
-    `CDI PRODUCCION - ETIQUETA DE EMPAQUE`,
-    `PEDIDO: #${pedNum} | ORIGEN: EMPAQUE`,
-    `CLIENTE: ${cliente.slice(0, 38)}`,
-    `CONSECUTIVO: ${tituloBulto}`,
-    `--- DETALLE DE ESTE BULTO ---`
-  ];
-
-  items.forEach((it, idx) => {
-    const cod = String(it.codArticulo || 'S/C').trim();
-    const nom = String(it.nombre || 'PRODUCTO').trim().slice(0, 34);
-    const cantBulto = Number(it.cantidadMostradaBulto ?? it.cantidadEnEsteBulto ?? it.cantidadEmpacada) || 1;
-    const cantTotalItem = Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
-    lines.push(`${idx + 1}. [${cod}] ${nom}`);
-    if (it.subpaqueteLabel) {
-      lines.push(`   Contenido: ${cantBulto} de ${cantTotalItem} unds (${it.subpaqueteLabel})`);
-    } else {
-      lines.push(`   Contenido en este bulto: ${cantBulto} de ${cantTotalItem} unds`);
-    }
+  return buildPackingQRUrl({
+    pedidoNum: pedNum,
+    codigoPaquete,
+    bultoNum: pkgIndex + 1,
+    totalBultos: totalPackages,
+    cliente
   });
-
-  if (pkg?.observaciones) {
-    lines.push(`OBS: ${String(pkg.observaciones).trim().slice(0, 42)}`);
-  }
-
-  return lines.join('\n');
 };
 
 const PackingListsModal = () => {
@@ -186,7 +168,9 @@ const PackingListsModal = () => {
     setPackingLists,
     syncPackingListToSupabase,
     supervisorProfile,
-    setShowPackingListsModal
+    setShowPackingListsModal,
+    scannedQrTarget,
+    setScannedQrTarget
   } = useAppContext();
 
   // Vista principal del módulo: 'ACTIVAS' (Mesa de Empaque) vs 'HISTORIAL' (Listas Creadas y Terminadas)
@@ -262,6 +246,52 @@ const PackingListsModal = () => {
     if (foundActive) return foundActive;
     return activeWorkingLists[0] || null;
   }, [packingLists, activeListId, activeWorkingLists, consultingClosedListId]);
+
+  // Si se abre PackingListsModal desde el Lector QR con un pedido y/o bulto escaneado, seleccionarlo automáticamente
+  useEffect(() => {
+    if (!scannedQrTarget || scannedQrTarget.type !== 'EMPAQUE') return;
+    const ped = String(scannedQrTarget.pedidoNum || '').trim().toUpperCase();
+    if (!ped || !Array.isArray(packingLists) || packingLists.length === 0) return;
+
+    const matchedList = packingLists.find(
+      (l) => l && String(l.pedidoNum || '').trim().toUpperCase() === ped
+    );
+    if (matchedList) {
+      if (matchedList.estadoLista === 'TERMINADA') {
+        setConsultingClosedListId(matchedList.id);
+      } else {
+        setConsultingClosedListId(null);
+        setActiveListId(matchedList.id);
+      }
+      setMainViewTab('ACTIVAS');
+      setIsMinimized(false);
+
+      const pkgs = Array.isArray(matchedList.packages) ? matchedList.packages : [];
+      if (pkgs.length > 0 && (scannedQrTarget.bultoNum || scannedQrTarget.codigoPaquete)) {
+        const targetIdx = Math.max(
+          0,
+          pkgs.findIndex(
+            (p, idx) =>
+              idx + 1 === Number(scannedQrTarget.bultoNum) ||
+              (scannedQrTarget.codigoPaquete &&
+                String(p.codigoPaquete || '')
+                  .toUpperCase()
+                  .includes(String(scannedQrTarget.codigoPaquete).toUpperCase()))
+          )
+        );
+        const targetPkg = pkgs[targetIdx] || pkgs[0];
+        if (targetPkg) {
+          setQrPreviewPkg({
+            pkg: targetPkg,
+            pkgIdx: targetIdx,
+            totalPackages: pkgs.length,
+            qrPayload: buildPackageQRText(matchedList, targetPkg, targetIdx, pkgs.length)
+          });
+        }
+      }
+      setScannedQrTarget(null);
+    }
+  }, [scannedQrTarget, packingLists, setScannedQrTarget]);
 
   // Cargar líneas de `ribisoft_pedidos` del pedido activo para detectar también ítems que aún estén en Administración/ERP
   useEffect(() => {
@@ -1471,7 +1501,7 @@ const PackingListsModal = () => {
           const realIdx = allPackages.findIndex((p) => p.id === pkg.id);
           const idxToUse = realIdx >= 0 ? realIdx : 0;
           const qrText = buildPackageQRText(targetList, pkg, idxToUse, totalPackagesCount);
-          const qrSvg = renderQRInlineSVG(qrText, isThermalLabel ? 96 : 130);
+          const qrSvg = renderQRInlineSVG(qrText, isThermalLabel ? 88 : 124);
           const tipo = String(pkg.tipoEmpaque || 'PAQUETE').toUpperCase();
           const numPadded = String(pkg.consecutivo || idxToUse + 1).padStart(2, '0');
 
@@ -1483,7 +1513,7 @@ const PackingListsModal = () => {
               const cantTotalItem =
                 Number(it.cantidadTotalItem ?? it.cantidadTotalPedido) || cantBulto;
               return `
-                <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: #f8fafc;">
+                <div style="border: 1.2px solid #94a3b8; border-radius: 4px; padding: 3px 6px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: #f8fafc;">
                   <div style="font-size: 8.5pt; font-weight: 900; color: #0f172a; line-height: 1.15;">
                     <span style="background: #0f172a; color: #fff; padding: 1px 5px; border-radius: 3px; font-family: monospace; margin-right: 4px; font-size: 7.5pt;">${it.codArticulo || 'S/C'}</span>
                     ${it.nombre || ''}
@@ -1502,47 +1532,47 @@ const PackingListsModal = () => {
 
           return `
             <div class="qr-label-card">
-              <table style="width:100%;height:100%;border-collapse:collapse;">
-                <tr style="height:26%;">
-                  <td colspan="2" style="background:#0f172a;color:#ffffff;padding:5px 8px;border-bottom:2px solid #0f172a;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td colspan="2" style="background:#0f172a;color:#ffffff;padding:4px 8px;border-bottom:2px solid #0f172a;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                       <div>
-                        <div style="font-size:7pt;font-weight:900;letter-spacing:0.05em;color:#38bdf8;text-transform:uppercase;">
+                        <div style="font-size:6.8pt;font-weight:900;letter-spacing:0.04em;color:#38bdf8;text-transform:uppercase;">
                           📦 CDI EXHIBICIONES • CONTROL DE EMPAQUE Y DESPACHOS
                         </div>
-                        <div style="font-size:13pt;font-weight:900;color:#ffffff;line-height:1.05;">
+                        <div style="font-size:12.5pt;font-weight:900;color:#ffffff;line-height:1.05;">
                           PEDIDO #${targetList.pedidoNum}
                         </div>
-                        <div style="font-size:8.5pt;font-weight:800;color:#cbd5e1;text-transform:uppercase;">
+                        <div style="font-size:8pt;font-weight:800;color:#cbd5e1;text-transform:uppercase;">
                           CLIENTE: ${targetList.cliente}
                         </div>
                       </div>
-                      <div style="text-align:right;background:#fbbf24;color:#0f172a;padding:4px 9px;border-radius:6px;white-space:nowrap;">
-                        <div style="font-size:11pt;font-weight:900;line-height:1.05;">${tipo} #${numPadded}</div>
-                        <div style="font-size:7.5pt;font-weight:900;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
+                      <div style="text-align:right;background:#fbbf24;color:#0f172a;padding:3px 8px;border-radius:5px;white-space:nowrap;">
+                        <div style="font-size:10.5pt;font-weight:900;line-height:1.05;">${tipo} #${numPadded}</div>
+                        <div style="font-size:7pt;font-weight:900;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
                       </div>
                     </div>
                   </td>
                 </tr>
-                <tr style="height:58%;">
-                  <td style="width:32%;padding:5px;border-right:1.5px solid #0f172a;text-align:center;vertical-align:middle;background:#f8fafc;">
+                <tr>
+                  <td style="width:106px;padding:4px;border-right:1.5px solid #0f172a;text-align:center;vertical-align:middle;background:#f8fafc;">
                     <div style="display:inline-block;border:1.5px solid #0f172a;border-radius:6px;padding:3px;background:#fff;">
                       ${qrSvg}
                     </div>
-                    <div style="font-size:7pt;font-weight:900;font-family:monospace;margin-top:2px;color:#0f172a;">
+                    <div style="font-size:6.8pt;font-weight:900;font-family:monospace;margin-top:2px;color:#0f172a;">
                       #${targetList.pedidoNum}-B${numPadded}
                     </div>
                   </td>
-                  <td style="width:68%;padding:5px 7px;vertical-align:middle;">
-                    <div style="font-size:7pt;font-weight:900;text-transform:uppercase;color:#334155;margin-bottom:3px;">
+                  <td style="padding:4px 7px;vertical-align:middle;">
+                    <div style="font-size:6.8pt;font-weight:900;text-transform:uppercase;color:#334155;margin-bottom:2px;">
                       CONTENIDO EXACTO DE ESTE BULTO FÍSICO:
                     </div>
                     ${itemsRows}
                   </td>
                 </tr>
-                <tr style="height:16%;">
+                <tr>
                   <td colspan="2" style="padding:3px 7px;border-top:1.5px solid #0f172a;background:#fef3c7;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:7pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:6.8pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
                       <span>${pkg.observaciones ? `OBS: ${pkg.observaciones}` : 'TRAZABILIDAD OFICIAL QR PLANTA CDI'}</span>
                       <span>FECHA: ${new Date().toLocaleDateString('es-CO')}</span>
                     </div>
@@ -1562,8 +1592,16 @@ const PackingListsModal = () => {
             <title>Etiquetas QR - Pedido #${targetList.pedidoNum}</title>
             <style id="dynamic-page-style">
               @page {
-                size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
-                margin: ${cfg.marginMm}mm !important;
+                size: auto;
+                margin: 0mm !important;
+              }
+            </style>
+            <style id="dynamic-screen-style">
+              @media screen {
+                .qr-label-card {
+                  width: ${cfg.pageWidthMm}mm;
+                  min-height: ${Math.max(44, cfg.pageHeightMm - 6)}mm;
+                }
               }
             </style>
             <style>
@@ -1611,8 +1649,6 @@ const PackingListsModal = () => {
                 zoom: ${(cfg.scalePct / 100).toFixed(2)};
               }
               .qr-label-card {
-                width: ${cfg.pageWidthMm}mm;
-                height: ${cfg.pageHeightMm}mm;
                 background: #ffffff;
                 border: 2px solid #0f172a;
                 border-radius: 6px;
@@ -1626,14 +1662,31 @@ const PackingListsModal = () => {
                 break-after: auto;
               }
               @media print {
-                html, body { background: #ffffff !important; }
+                html, body {
+                  background: #ffffff !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
                 .no-print-bar { display: none !important; }
-                .preview-stage { padding: 0 !important; gap: 0 !important; display: block !important; }
+                .preview-stage {
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  gap: 0 !important;
+                  width: 100% !important;
+                  display: block !important;
+                }
                 .qr-label-card {
-                  width: 100vw !important;
-                  height: 100vh !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  height: auto !important;
+                  max-height: 98vh !important;
                   box-shadow: none !important;
                   margin: 0 !important;
+                  padding: 0 !important;
+                  overflow: hidden !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
                 }
               }
             </style>
@@ -1642,24 +1695,25 @@ const PackingListsModal = () => {
             <div class="no-print-bar">
               <div>
                 <div style="font-size:13px;font-weight:900;color:#fbbf24;">
-                  📦 ETIQUETAS QR DE EMPAQUE — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+                  📦 ETIQUETAS QR DE EMPAQUE (ANCHO 100% REAL SIN VENTANA) — <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
                 </div>
                 <div style="font-size:11px;color:#cbd5e1;">
-                  Puedes alternar aquí mismo entre Impresora Térmica (100×80 mm) o Impresora Láser (Hoja Carta / A4).
+                  Se expande al 100% real de la etiqueta en la impresora sin recortarse • QR con enlace directo al bulto.
                 </div>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                 <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
-                  <option value="100x80" ${cfg.presetId === '100x80' ? 'selected' : ''}>🏷️ Térmica 100×80 mm</option>
-                  <option value="100x50" ${cfg.presetId === '100x50' ? 'selected' : ''}>🏷️ Térmica 100×50 mm</option>
-                  <option value="80x50" ${cfg.presetId === '80x50' ? 'selected' : ''}>🏷️ Térmica 80×50 mm</option>
-                  <option value="half_letter" ${cfg.presetId === 'half_letter' ? 'selected' : ''}>📄 Media Carta (216×140)</option>
-                  <option value="letter" ${cfg.presetId === 'letter' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
-                  <option value="a4" ${cfg.presetId === 'a4' ? 'selected' : ''}>📄 Hoja A4 (Láser)</option>
+                  <option value="auto_100x80" selected>🏷️ Auto 100% Etiqueta Térmica (100×80)</option>
+                  <option value="100x80">🏷️ Medida Fija 100×80 mm</option>
+                  <option value="100x50">🏷️ Térmica 100×50 mm</option>
+                  <option value="80x50">🏷️ Térmica 80×50 mm</option>
+                  <option value="half_letter">📄 Media Carta (216×140)</option>
+                  <option value="letter">📄 Hoja Carta (Láser)</option>
+                  <option value="a4">📄 Hoja A4 (Láser)</option>
                 </select>
-                <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
+                <button onclick="adjustZoom(-0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
                 <button onclick="resetZoom()" style="background:#0284c7;color:#ffffff;">⛶ 100%</button>
-                <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
+                <button onclick="adjustZoom(0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
                 <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">🔄 Girar</button>
                 <button onclick="window.print()" style="background:#10b981;color:#052e16;font-size:12.5px;padding:8px 16px;">🖨️ Imprimir</button>
                 <button onclick="window.close()" style="background:#334155;color:#ffffff;">✕ Cerrar</button>
@@ -1672,28 +1726,34 @@ const PackingListsModal = () => {
               var currentW = ${cfg.pageWidthMm};
               var currentH = ${cfg.pageHeightMm};
               var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+              var useAutoPageSize = true;
 
               function applyPageSize(w, h) {
                 currentW = w;
                 currentH = h;
-                var cards = document.querySelectorAll('.qr-label-card');
-                cards.forEach(function(el) {
-                  el.style.width = currentW + 'mm';
-                  el.style.height = currentH + 'mm';
-                });
+                var screenStyle = document.getElementById('dynamic-screen-style');
+                if (screenStyle) {
+                  screenStyle.innerHTML = '@media screen { .qr-label-card { width: ' + currentW + 'mm; min-height: ' + Math.max(40, currentH - 6) + 'mm; } }';
+                }
                 var styleTag = document.getElementById('dynamic-page-style');
                 if (styleTag) {
-                  styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 1.5mm !important; }';
+                  if (useAutoPageSize) {
+                    styleTag.innerHTML = '@page { size: auto; margin: 0mm !important; }';
+                  } else {
+                    styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
+                  }
                 }
                 var dimInd = document.getElementById('dim-indicator');
                 if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
               }
 
               function changePaperSize(preset) {
+                useAutoPageSize = (preset === 'auto_100x80');
                 var map = {
+                  'auto_100x80': [100, 80, 1.0],
                   '100x80': [100, 80, 1.0],
                   '100x50': [100, 50, 0.85],
-                  '80x50': [80, 50, 0.78],
+                  '80x50': [80, 50, 0.8],
                   'half_letter': [216, 140, 1.2],
                   'letter': [216, 279, 1.25],
                   'a4': [210, 297, 1.25]
@@ -1706,7 +1766,7 @@ const PackingListsModal = () => {
               }
 
               function adjustZoom(delta) {
-                currentZoom = Math.min(1.8, Math.max(0.55, Number(currentZoom) + delta));
+                currentZoom = Math.min(1.5, Math.max(0.6, Number(currentZoom) + delta));
                 var stage = document.getElementById('packing-print-stage');
                 if (stage) stage.style.zoom = currentZoom.toFixed(2);
               }

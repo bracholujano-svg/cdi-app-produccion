@@ -374,58 +374,234 @@ export const normalizeColorSheetData = (raw = {}) => {
 };
 
 /**
- * Construye el payload estructurado del Código QR para una Muestra / Ficha Técnica de Color
+ * Construye el payload estructurado del Código QR para una Muestra / Ficha Técnica de Color.
+ * Codifica un enlace directo a la aplicación (?qr=COLOR&...) para que al escanearlo con el
+ * Lector de Google de la cámara o con el Lector QR interno de la barra lateral, redireccione
+ * directamente a la Ficha Técnica de ese color.
  */
 export const buildColorQRPayload = (rawInput = {}) => {
   const {
+    id,
     idFichaTecnica,
     codigoColor,
     nombreColor,
     sistemaCatalogo,
-    cliente,
-    sistemaPintura,
-    sustratoBase,
-    acabadoProduccion,
-    glossLevel,
-    coordenadasColor,
-    aprobadoPor,
-    fechaAprobacion,
-    catalizador,
-    esEnsayo
+    cliente
   } = normalizeColorSheetData(rawInput);
 
   const cod = String(codigoColor || nombreColor || 'S/C').trim().toUpperCase();
-  const nom = String(nombreColor || codigoColor || 'COLOR OFICIAL').trim().toUpperCase();
-  const cli = String(cliente || 'ESTÁNDAR CDI').trim().toUpperCase();
-  const sisPint = String(sistemaPintura || 'POLIURETANO (PU)').trim().toUpperCase();
-  const sust = String(sustratoBase || 'MDF RH').trim().toUpperCase();
-  const acabProd = String(acabadoProduccion || 'SATINADO').trim().toUpperCase();
-  const glossTxt = glossLevel ? ` (${glossLevel}% Brillo 60°)` : '';
-  const fechaStr = fechaAprobacion
-    ? new Date(fechaAprobacion).toLocaleDateString('es-CO')
-    : new Date().toLocaleDateString('es-CO');
-  const sup = String(aprobadoPor || 'SUPERVISOR PLANTA').trim().toUpperCase();
+  const sys = String(sistemaCatalogo || 'INTERNO').trim().toUpperCase();
+  const cli = String(cliente || 'CDI').trim().toUpperCase().slice(0, 28);
 
-  const L = coordenadasColor?.L ? `L*:${coordenadasColor.L} ` : '';
-  const a = coordenadasColor?.a ? `a*:${coordenadasColor.a} ` : '';
-  const b = coordenadasColor?.b ? `b*:${coordenadasColor.b} ` : '';
-  const dE = coordenadasColor?.deltaE || 'ΔE < 0.8';
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://cdi-app.vercel.app';
 
-  const lines = [
-    `CDI EXHIBICIONES - LAB. COLOR${esEnsayo ? ' [ENSAYO/PRUEBA]' : ''}`,
-    `ID FICHA: ${idFichaTecnica}`,
-    `SISTEMA: ${sistemaCatalogo || 'INTERNO'} | CODIGO: ${cod}`,
-    nom !== cod ? `NOMBRE: ${nom}` : null,
-    `CLIENTE: ${cli.slice(0, 38)}`,
-    `BRILLO / ACABADO: ${acabProd}${glossTxt}`,
-    `PINTURA: ${sisPint} | CAT: ${catalizador || 'ESTANDAR'}`,
-    `SUSTRATO: ${sust}`,
-    `PATRON FISICO: BRILLANTE (SELLADO ESPECTROFOTOMETRO)`,
-    `LAB: ${L}${a}${b}${dE}`,
-    `APROBADO: ${sup} (${fechaStr})`
-  ].filter(Boolean);
+  const params = new URLSearchParams();
+  params.set('qr', 'COLOR');
+  if (idFichaTecnica) params.set('ficha', idFichaTecnica);
+  if (id) params.set('id', String(id));
+  params.set('sys', sys);
+  params.set('code', cod);
+  if (cli) params.set('cli', cli);
 
-  return lines.join('\n');
+  return `${origin}/?${params.toString()}`;
+};
+
+/**
+ * Construye el enlace directo QR para una Etiqueta de Empaque (Bulto / Paquete)
+ */
+export const buildPackingQRUrl = ({ pedidoNum, codigoPaquete, bultoNum, totalBultos, cliente }) => {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://cdi-app.vercel.app';
+
+  const params = new URLSearchParams();
+  params.set('qr', 'EMPAQUE');
+  params.set('ped', String(pedidoNum || '').trim().toUpperCase());
+  if (codigoPaquete) params.set('pkg', String(codigoPaquete).trim().toUpperCase());
+  if (bultoNum) params.set('bulto', String(bultoNum));
+  if (totalBultos) params.set('total', String(totalBultos));
+  if (cliente) params.set('cli', String(cliente).trim().toUpperCase().slice(0, 28));
+
+  return `${origin}/?${params.toString()}`;
+};
+
+/**
+ * Construye el enlace directo QR para una Etiqueta o Remisión de Despachos
+ */
+export const buildDispatchQRUrl = ({ orderNo, remisionNo, clientName, partName, qty, plate }) => {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://cdi-app.vercel.app';
+
+  const params = new URLSearchParams();
+  params.set('qr', 'DESPACHO');
+  params.set('ped', String(orderNo || '').trim().toUpperCase());
+  if (remisionNo) params.set('rem', String(remisionNo).trim().toUpperCase());
+  if (clientName) params.set('cli', String(clientName).trim().toUpperCase().slice(0, 28));
+  if (partName) params.set('item', String(partName).trim().toUpperCase().slice(0, 32));
+  if (qty) params.set('qty', String(qty));
+  if (plate) params.set('placa', String(plate).trim().toUpperCase());
+
+  return `${origin}/?${params.toString()}`;
+};
+
+/**
+ * Analizador Universal de Códigos QR de Planta CDI:
+ * Reconoce tanto los enlaces directos (?qr=COLOR | EMPAQUE | DESPACHO) leídos por cámara de Google
+ * o por el escáner interno, como todas las etiquetas QR antiguas en texto plano ya impresas en planta.
+ */
+export const parseCdiQRCodePayload = (rawScannedText = '') => {
+  const text = String(rawScannedText || '').trim();
+  if (!text) return null;
+
+  // 1. Verificar si contiene una URL con parámetros ?qr=...
+  try {
+    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+    const candidateUrl = urlMatch ? urlMatch[0] : text.startsWith('?qr=') ? `https://cdi.local/${text}` : null;
+    if (candidateUrl) {
+      const parsedUrl = new URL(candidateUrl);
+      const qrType = String(parsedUrl.searchParams.get('qr') || '').trim().toUpperCase();
+      if (qrType === 'COLOR') {
+        return {
+          type: 'COLOR',
+          id: parsedUrl.searchParams.get('id') || '',
+          idFicha: parsedUrl.searchParams.get('ficha') || '',
+          sistema: parsedUrl.searchParams.get('sys') || '',
+          codigo: parsedUrl.searchParams.get('code') || '',
+          cliente: parsedUrl.searchParams.get('cli') || '',
+          raw: text
+        };
+      }
+      if (qrType === 'EMPAQUE') {
+        return {
+          type: 'EMPAQUE',
+          pedidoNum: (parsedUrl.searchParams.get('ped') || '').replace(/^#/, '').trim().toUpperCase(),
+          codigoPaquete: parsedUrl.searchParams.get('pkg') || '',
+          bultoNum: Number(parsedUrl.searchParams.get('bulto')) || 1,
+          totalBultos: Number(parsedUrl.searchParams.get('total')) || 1,
+          cliente: parsedUrl.searchParams.get('cli') || '',
+          raw: text
+        };
+      }
+      if (qrType === 'DESPACHO') {
+        return {
+          type: 'DESPACHO',
+          pedidoNum: (parsedUrl.searchParams.get('ped') || '').replace(/^#/, '').trim().toUpperCase(),
+          remision: parsedUrl.searchParams.get('rem') || '',
+          cliente: parsedUrl.searchParams.get('cli') || '',
+          pieza: parsedUrl.searchParams.get('item') || '',
+          cantidad: parsedUrl.searchParams.get('qty') || '',
+          placa: parsedUrl.searchParams.get('placa') || '',
+          raw: text
+        };
+      }
+    }
+  } catch (_) {}
+
+  const upper = text.toUpperCase();
+
+  // 2. Reconocer QR de Laboratorio de Color en texto plano
+  if (
+    upper.includes('LAB. COLOR') ||
+    upper.includes('ID FICHA:') ||
+    upper.startsWith('ETP-')
+  ) {
+    const fichaMatch = text.match(/ID\s*FICHA:\s*([^\n|]+)/i) || text.match(/(ETP-[A-Z0-9-]+)/i);
+    const sysMatch = text.match(/SISTEMA:\s*([^|\n]+)/i);
+    const codMatch = text.match(/CODIGO:\s*([^\n|]+)/i);
+    const cliMatch = text.match(/CLIENTE:\s*([^\n|]+)/i);
+    return {
+      type: 'COLOR',
+      idFicha: fichaMatch ? fichaMatch[1].trim().toUpperCase() : '',
+      sistema: sysMatch ? sysMatch[1].trim().toUpperCase() : '',
+      codigo: codMatch ? codMatch[1].trim().toUpperCase() : '',
+      cliente: cliMatch ? cliMatch[1].trim().toUpperCase() : '',
+      raw: text
+    };
+  }
+
+  // 3. Reconocer QR de Empaque / Bulto en texto plano
+  if (
+    upper.includes('ETIQUETA DE EMPAQUE') ||
+    upper.includes('ORIGEN: EMPAQUE') ||
+    upper.includes('DETALLE DE ESTE BULTO') ||
+    /^\d{3,8}-B\d{1,3}$/i.test(upper.replace(/^#/, ''))
+  ) {
+    const shortBulto = upper.replace(/^#/, '').match(/^(\d{3,8})-B(\d{1,3})$/i);
+    if (shortBulto) {
+      return {
+        type: 'EMPAQUE',
+        pedidoNum: shortBulto[1].toUpperCase(),
+        bultoNum: Number(shortBulto[2]) || 1,
+        codigoPaquete: `PAQUETE #${String(shortBulto[2]).padStart(2, '0')}`,
+        raw: text
+      };
+    }
+
+    const pedMatch = text.match(/PEDIDO:\s*#?([A-Za-z0-9-]+)/i);
+    const cliMatch = text.match(/CLIENTE:\s*([^\n|]+)/i);
+    const consecMatch = text.match(/CONSECUTIVO:\s*([^\n(]+)/i);
+    const bultoNumMatch =
+      text.match(/Bulto\s+(\d+)\s+de\s+(\d+)/i) || text.match(/#(\d+)/);
+
+    return {
+      type: 'EMPAQUE',
+      pedidoNum: pedMatch ? pedMatch[1].trim().toUpperCase() : '',
+      cliente: cliMatch ? cliMatch[1].trim().toUpperCase() : '',
+      codigoPaquete: consecMatch ? consecMatch[1].trim().toUpperCase() : '',
+      bultoNum: bultoNumMatch ? Number(bultoNumMatch[1]) || 1 : 1,
+      totalBultos: bultoNumMatch && bultoNumMatch[2] ? Number(bultoNumMatch[2]) : undefined,
+      raw: text
+    };
+  }
+
+  // 4. Reconocer QR de Despachos / Remisión en texto plano
+  if (
+    upper.includes('CDI DESPACHO OFICIAL') ||
+    upper.includes('CDI REMISION DESPACHO') ||
+    upper.includes('REM:') ||
+    upper.startsWith('REM-')
+  ) {
+    const remMatch = text.match(/REM:\s*([^|\n]+)/i) || text.match(/(REM-[A-Z0-9-]+)/i);
+    const opMatch =
+      text.match(/OP:\s*#?([^|\n]+)/i) ||
+      text.match(/PEDIDO:\s*#?([^|\n]+)/i) ||
+      (remMatch ? [null, remMatch[1].replace(/^REM-/i, '')] : null);
+    const cliMatch = text.match(/CLIENTE:\s*([^|\n]+)/i);
+    const piezaMatch = text.match(/PIEZA:\s*([^|\n]+)/i);
+    const placaMatch = text.match(/PLACA:\s*([^|\n]+)/i);
+
+    return {
+      type: 'DESPACHO',
+      pedidoNum: opMatch && opMatch[1] ? opMatch[1].trim().toUpperCase() : '',
+      remision: remMatch && remMatch[1] ? remMatch[1].trim().toUpperCase() : '',
+      cliente: cliMatch && cliMatch[1] ? cliMatch[1].trim().toUpperCase() : '',
+      pieza: piezaMatch && piezaMatch[1] ? piezaMatch[1].trim().toUpperCase() : '',
+      placa: placaMatch && placaMatch[1] ? placaMatch[1].trim().toUpperCase() : '',
+      raw: text
+    };
+  }
+
+  // 5. Fallback inteligente si escanean directamente un número de OP / Pedido (ej. "64077" o "#64077")
+  const cleanNum = upper.replace(/^#/, '').trim();
+  if (/^\d{4,8}$/.test(cleanNum)) {
+    return {
+      type: 'DESPACHO',
+      pedidoNum: cleanNum,
+      remision: `REM-${cleanNum}`,
+      raw: text
+    };
+  }
+
+  return {
+    type: 'UNKNOWN',
+    raw: text
+  };
 };
 
 /**
@@ -528,7 +704,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
   const isMini = cfg.density === 'mini_qr' || cfg.pageHeightMm <= 45 || cfg.pageWidthMm <= 65;
   const isLargeSheet = cfg.pageWidthMm >= 140 || cfg.pageHeightMm >= 140;
 
-  const qrPixelSize = isMini ? 68 : isLargeSheet ? 148 : 96;
+  const qrPixelSize = isMini ? 64 : isLargeSheet ? 136 : 86;
   const qrSvgMarkup = buildQRSvgMarkup(qrPayload, qrPixelSize);
 
   const fechaFmt = fechaAprobacion
@@ -539,10 +715,10 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
     coordenadasColor?.L ? `L*:${coordenadasColor.L}` : null,
     coordenadasColor?.a ? `a*:${coordenadasColor.a}` : null,
     coordenadasColor?.b ? `b*:${coordenadasColor.b}` : null,
-    coordenadasColor?.deltaE ? `ΔE: ${coordenadasColor.deltaE}` : null
+    coordenadasColor?.deltaE ? `ΔE:${coordenadasColor.deltaE}` : null
   ]
     .filter(Boolean)
-    .join(' | ');
+    .join(' ');
 
   const acabadoUpper = String(acabadoProduccion || 'SATINADO').trim().toUpperCase();
   const glossStr = String(glossLevel || '').trim();
@@ -567,63 +743,63 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
     bodyContentHtml = `
       <table class="label-table">
         <tr>
-          <td style="width: 38%; text-align: center; vertical-align: middle; padding-right: 4px;">
+          <td style="width: 34%; text-align: center; vertical-align: middle; padding-right: 4px;">
             <div style="border: 1.5px solid #000; border-radius: 4px; padding: 2px; background: #fff; display: inline-block;">
               ${qrSvgMarkup}
             </div>
           </td>
-          <td style="width: 62%; vertical-align: middle;">
+          <td style="width: 66%; vertical-align: middle;">
             <div style="font-size: 7pt; font-weight: 900; text-transform: uppercase; color: #334155;">
               ${sistemaCatalogo} ${esEnsayo ? '[ENSAYO]' : ''}
             </div>
             <div style="font-size: 12pt; font-weight: 900; color: #000; line-height: 1.05;">
               ${codigoDisplay}
             </div>
-            <div style="margin-top: 3px; background: #000; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 8pt; font-weight: 900; display: inline-block;">
+            <div style="margin-top: 2px; background: #000; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 8pt; font-weight: 900; display: inline-block;">
               ${acabadoUpper} ${glossStr ? `(${glossStr}%)` : ''}
             </div>
             <div style="font-size: 6.5pt; font-weight: 800; color: #0f172a; margin-top: 2px;">
-              ${(cliente || 'CDI').slice(0, 22)} • ${fechaFmt}
+              ${(cliente || 'CDI').slice(0, 24)} • ${fechaFmt}
             </div>
           </td>
         </tr>
       </table>
     `;
   } else {
-    // Maquetación Tabular Estricta de 3 Filas: CERO superposición garantizada en cualquier tamaño de hoja/etiqueta
-    const titlePt = isLargeSheet ? '20pt' : '13.5pt';
-    const subPt = isLargeSheet ? '11pt' : '8.5pt';
-    const specLabelPt = isLargeSheet ? '8.5pt' : '6.5pt';
-    const specValPt = isLargeSheet ? '12.5pt' : '9.5pt';
-    const footPt = isLargeSheet ? '10pt' : '7.5pt';
+    // Maquetación Horizontal Compacta de 1 Sola Etiqueta: ocupa 100% del ancho físico y NUNCA se desborda a 2 hojas
+    const titlePt = isLargeSheet ? '18pt' : '12.5pt';
+    const subPt = isLargeSheet ? '10pt' : '8pt';
+    const specLabelPt = isLargeSheet ? '8pt' : '6pt';
+    const specValPt = isLargeSheet ? '11pt' : '8.5pt';
+    const footPt = isLargeSheet ? '9pt' : '6.8pt';
 
     bodyContentHtml = `
       <table class="label-table">
-        <!-- FILA 1: CABECERA SUPERIOR (SISTEMA DE COLOR, CÓDIGO DE PINTURA Y BRILLO) -->
-        <tr class="row-header">
-          <td colspan="2" style="border-bottom: 2px solid #000000; padding-bottom: 2mm; vertical-align: top;">
+        <!-- FILA 1: CABECERA COMPACTA DE ANCHO COMPLETO -->
+        <tr>
+          <td colspan="2" style="border-bottom: 2px solid #000000; padding-bottom: 3px; vertical-align: middle;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="vertical-align: top; padding-right: 6px;">
-                  <div style="font-size: ${isLargeSheet ? '9.5pt' : '7pt'}; font-weight: 900; color: #334155; text-transform: uppercase; letter-spacing: 0.3px;">
+                <td style="vertical-align: middle; padding-right: 6px;">
+                  <div style="font-size: ${isLargeSheet ? '8.5pt' : '6.5pt'}; font-weight: 900; color: #334155; text-transform: uppercase;">
                     CDI • LAB. COLOR • ID: ${idFichaTecnica} ${esEnsayo ? '• [ENSAYO]' : ''}
                   </div>
-                  <div style="font-size: ${titlePt}; font-weight: 900; color: #000000; line-height: 1.08; text-transform: uppercase; margin-top: 1px;">
+                  <div style="font-size: ${titlePt}; font-weight: 900; color: #000000; line-height: 1.05; text-transform: uppercase;">
                     ${sistemaCatalogo}: ${codigoDisplay}${nombreExtra}
                   </div>
-                  <div style="font-size: ${subPt}; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-top: 1.5px;">
-                    CLIENTE: ${(cliente || 'USO GENERAL PLANTA').slice(0, 40)}
+                  <div style="font-size: ${subPt}; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-top: 1px;">
+                    CLIENTE: ${(cliente || 'USO GENERAL PLANTA').slice(0, 44)}
                   </div>
                 </td>
-                <td style="width: ${isLargeSheet ? '165px' : '118px'}; vertical-align: top; text-align: right;">
-                  <div style="background: #000000; color: #ffffff; padding: ${isLargeSheet ? '6px 12px' : '4px 8px'}; border-radius: 6px; text-align: center;">
-                    <div style="font-size: ${isLargeSheet ? '7.5pt' : '5.8pt'}; font-weight: 900; color: #fde047; letter-spacing: 0.4px;">
+                <td style="width: ${isLargeSheet ? '155px' : '112px'}; vertical-align: middle; text-align: right;">
+                  <div style="background: #000000; color: #ffffff; padding: 3px 7px; border-radius: 5px; text-align: center;">
+                    <div style="font-size: ${isLargeSheet ? '7pt' : '5.5pt'}; font-weight: 900; color: #fde047;">
                       ACABADO / BRILLO
                     </div>
-                    <div style="font-size: ${isLargeSheet ? '15pt' : '11pt'}; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.1; margin-top: 1px;">
+                    <div style="font-size: ${isLargeSheet ? '13.5pt' : '10pt'}; font-weight: 900; color: #ffffff; text-transform: uppercase; line-height: 1.05;">
                       ${acabadoUpper}
                     </div>
-                    <div style="font-size: ${isLargeSheet ? '10.5pt' : '8pt'}; font-weight: 900; color: #f8fafc; margin-top: 1px;">
+                    <div style="font-size: ${isLargeSheet ? '9.5pt' : '7.5pt'}; font-weight: 900; color: #f8fafc;">
                       ${brilloBadgeText}
                     </div>
                   </div>
@@ -633,50 +809,54 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           </td>
         </tr>
 
-        <!-- FILA 2: CUERPO CENTRAL (CÓDIGO QR A LA IZQUIERDA + ESPECIFICACIONES DE LA MUESTRA A LA DERECHA) -->
-        <tr class="row-body">
-          <td style="width: ${isLargeSheet ? '170px' : '114px'}; vertical-align: middle; padding: 2mm 2.5mm 2mm 0;">
-            <div style="border: 1.8px solid #000000; border-radius: 6px; padding: 4px; text-align: center; background: #ffffff;">
+        <!-- FILA 2: CUERPO CENTRAL EN 2 COLUMNAS COMPACTAS (QR A LA IZQUIERDA + CUADRÍCULA DE ESPECIFICACIONES A LA DERECHA) -->
+        <tr>
+          <td style="width: ${isLargeSheet ? '150px' : '102px'}; vertical-align: middle; padding: 4px 6px 4px 0;">
+            <div style="border: 1.6px solid #000000; border-radius: 5px; padding: 3px; text-align: center; background: #ffffff;">
               ${qrSvgMarkup}
-              <div style="font-size: ${isLargeSheet ? '8pt' : '6.5pt'}; font-weight: 900; color: #000000; margin-top: 2px; line-height: 1.05;">
-                ESCANEAR QR OFICIAL
+              <div style="font-size: ${isLargeSheet ? '7.5pt' : '5.8pt'}; font-weight: 900; color: #000000; margin-top: 1px; line-height: 1;">
+                ESCANEAR FICHA QR
               </div>
               ${
                 coordsText
-                  ? `<div style="font-size: ${isLargeSheet ? '7.5pt' : '6pt'}; font-weight: 900; color: #334155; margin-top: 1px;">${coordsText}</div>`
+                  ? `<div style="font-size: ${isLargeSheet ? '7pt' : '5.5pt'}; font-weight: 900; color: #334155; margin-top: 1px;">${coordsText}</div>`
                   : ''
               }
             </div>
           </td>
-          <td style="vertical-align: middle; padding: 2mm 0;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0 ${isLargeSheet ? '6px' : '3.5px'};">
+          <td style="vertical-align: middle; padding: 4px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="border: 1.6px solid #000000; border-radius: 5px; padding: ${isLargeSheet ? '6px 10px' : '3px 6px'}; background: #f8fafc;">
-                  <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
-                    BRILLO DE LA PINTURA / ACABADO EN PLANTA
-                  </div>
-                  <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; text-transform: uppercase; line-height: 1.15;">
-                    ${acabadoUpper}${glossStr ? ` — AL ${glossStr}% (Brillo 60°)` : ''}
+                <td colspan="2" style="padding-bottom: 4px;">
+                  <div style="border: 1.6px solid #000000; border-radius: 4px; padding: 3px 6px; background: #f8fafc;">
+                    <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
+                      BRILLO DE LA PINTURA / ACABADO EN PLANTA
+                    </div>
+                    <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; text-transform: uppercase; line-height: 1.1;">
+                      ${acabadoUpper}${glossStr ? ` — AL ${glossStr}% (Brillo 60°)` : ''}
+                    </div>
                   </div>
                 </td>
               </tr>
               <tr>
-                <td style="border: 1.5px solid #000000; border-radius: 5px; padding: ${isLargeSheet ? '6px 10px' : '3px 6px'}; background: #ffffff;">
-                  <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
-                    SISTEMA DE PINTURA Y CATALIZADOR
-                  </div>
-                  <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; line-height: 1.15;">
-                    ${sistemaPintura || 'Poliuretano (PU)'} • Cat: ${catalizador || 'Estándar'}
+                <td style="width: 50%; padding-right: 2px; vertical-align: stretch;">
+                  <div style="border: 1.4px solid #000000; border-radius: 4px; padding: 3px 6px; background: #ffffff; height: 100%;">
+                    <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
+                      SISTEMA Y CATALIZADOR
+                    </div>
+                    <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; line-height: 1.1;">
+                      ${sistemaPintura || 'Poliuretano (PU)'} • Cat: ${catalizador || 'Estándar'}
+                    </div>
                   </div>
                 </td>
-              </tr>
-              <tr>
-                <td style="border: 1.5px solid #000000; border-radius: 5px; padding: ${isLargeSheet ? '6px 10px' : '3px 6px'}; background: #ffffff;">
-                  <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
-                    SUSTRATO BASE / PROTECCIÓN DE MUESTRA
-                  </div>
-                  <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; line-height: 1.15;">
-                    ${sustratoBase || 'MDF RH'} • Muestra sellada en Brillante
+                <td style="width: 50%; padding-left: 2px; vertical-align: stretch;">
+                  <div style="border: 1.4px solid #000000; border-radius: 4px; padding: 3px 6px; background: #ffffff; height: 100%;">
+                    <div style="font-size: ${specLabelPt}; font-weight: 900; color: #475569; text-transform: uppercase;">
+                      SUSTRATO / MUESTRA
+                    </div>
+                    <div style="font-size: ${specValPt}; font-weight: 900; color: #000000; line-height: 1.1;">
+                      ${sustratoBase || 'MDF RH'} • Sellada Brillante
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -684,24 +864,15 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           </td>
         </tr>
 
-        <!-- FILA 3: NOTAS INFERIORES Y FIRMA DEL SUPERVISOR -->
-        <tr class="row-footer">
-          <td colspan="2" style="vertical-align: bottom; padding-top: 1mm;">
-            <div style="padding: ${isLargeSheet ? '6px 10px' : '3px 6px'}; background: #fef3c7; border: 1.6px solid #000000; border-radius: 5px; font-size: ${footPt}; font-weight: 900; color: #000000; text-align: center; line-height: 1.15;">
-              ⚠️ MUESTRA EN BRILLANTE (Protección Espectrofotómetro). En planta aplicar en <u>${acabadoUpper}${
+        <!-- FILA 3: PIE COMPACTO UNIFICADO EN 1 SOLA LÍNEA (CERO DESBORDE A SEGUNDA HOJA) -->
+        <tr>
+          <td colspan="2" style="vertical-align: bottom; padding-top: 2px;">
+            <div style="padding: 3px 6px; background: #fef3c7; border: 1.5px solid #000000; border-radius: 4px; font-size: ${footPt}; font-weight: 900; color: #000000; display: flex; justify-content: space-between; align-items: center; gap: 6px; line-height: 1.1;">
+              <span>⚠️ MUESTRA SELLADA EN BRILLANTE. En planta aplicar: <u>${acabadoUpper}${
       glossStr ? ` (${glossStr}%)` : ''
-    }</u>.
+    }</u></span>
+              <span style="white-space: nowrap;">SUP: ${(aprobadoPor || 'SUPERVISOR').slice(0, 16).toUpperCase()} • ${fechaFmt}</span>
             </div>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1.5mm; border-top: 1.2px dashed #000000;">
-              <tr>
-                <td style="padding-top: 1mm; font-size: ${footPt}; font-weight: 900; color: #000000; text-align: left;">
-                  SUPERVISOR: ${(aprobadoPor || 'SUPERVISOR').toUpperCase()}
-                </td>
-                <td style="padding-top: 1mm; font-size: ${footPt}; font-weight: 900; color: #000000; text-align: right; white-space: nowrap;">
-                  FECHA: ${fechaFmt}
-                </td>
-              </tr>
-            </table>
           </td>
         </tr>
       </table>
@@ -716,8 +887,16 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
         <title>Etiqueta Muestra (${cfg.pageWidthMm}x${cfg.pageHeightMm}mm) - ${codigoDisplay}</title>
         <style id="dynamic-page-style">
           @page {
-            size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
+            size: auto;
             margin: 0mm !important;
+          }
+        </style>
+        <style id="dynamic-screen-style">
+          @media screen {
+            .label-print-card {
+              width: ${cfg.pageWidthMm}mm;
+              min-height: ${Math.max(42, cfg.pageHeightMm - 6)}mm;
+            }
           }
         </style>
         <style>
@@ -762,34 +941,25 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
             align-items: center;
             min-height: calc(100vh - 70px);
           }
-          .page-box {
-            width: ${cfg.pageWidthMm}mm;
-            height: ${cfg.pageHeightMm}mm;
-            padding: ${cfg.marginMm}mm;
+          .label-print-card {
             background: #ffffff;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-          }
-          .label-surface {
-            width: 100%;
-            height: 100%;
-            border: 2.2px solid #000000;
+            border: 2px solid #000000;
             border-radius: 6px;
-            padding: 2mm 2.8mm;
-            background: #ffffff;
+            padding: 2mm 2.5mm;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             zoom: ${(cfg.scalePct / 100).toFixed(2)};
           }
           .label-table {
             width: 100%;
-            height: 100%;
             border-collapse: collapse;
           }
           @media print {
             html, body {
               background: #ffffff !important;
               width: 100% !important;
-              height: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
+              overflow: hidden !important;
             }
             .no-print-bar {
               display: none !important;
@@ -799,17 +969,21 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
               margin: 0 !important;
               min-height: 0 !important;
               width: 100% !important;
-              height: 100% !important;
               display: block !important;
             }
-            .page-box {
+            .label-print-card {
               box-shadow: none !important;
-              width: 100vw !important;
-              height: 100vh !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 98vh !important;
               margin: 0 !important;
-              padding: ${cfg.marginMm}mm !important;
+              padding: 1.5mm 2mm !important;
+              overflow: hidden !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
             }
           }
         </style>
@@ -818,32 +992,33 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
         <div class="no-print-bar">
           <div>
             <div style="font-size:13px;font-weight:900;color:#34d399;">
-              🏷️ ETIQUETA DE MUESTRA — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${
+              🏷️ ETIQUETA DE MUESTRA (ANCHO 100% REAL SIN VENTANA) — <span id="dim-indicator">${cfg.pageWidthMm} × ${
     cfg.pageHeightMm
   } mm</span> (<span id="orient-indicator">${
     cfg.orientation === 'landscape' ? 'Horizontal' : 'Vertical'
   }</span>)
             </div>
             <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">
-              Sin receta de pastas • Maquetación tabular sin textos superpuestos • Lista para Impresora Térmica o Láser.
+              Se adapta automáticamente al 100% del ancho de la etiqueta en la impresora y en 1 sola hoja • QR con enlace directo.
             </div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
-              <option value="100x80" ${cfg.presetId === '100x80' ? 'selected' : ''}>🏷️ Térmica 100×80 mm</option>
-              <option value="100x50" ${cfg.presetId === '100x50' ? 'selected' : ''}>🏷️ Térmica 100×50 mm</option>
-              <option value="80x50" ${cfg.presetId === '80x50' ? 'selected' : ''}>🏷️ Térmica 80×50 mm</option>
-              <option value="half_letter" ${cfg.presetId === 'half_letter' ? 'selected' : ''}>📄 Media Carta (216×140)</option>
-              <option value="letter" ${cfg.presetId === 'letter' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
-              <option value="a4" ${cfg.presetId === 'a4' ? 'selected' : ''}>📄 Hoja A4 (Láser)</option>
+              <option value="auto_100x80" selected>🏷️ Auto 100% Etiqueta Térmica (100×80 mm)</option>
+              <option value="100x80">🏷️ Medida Fija 100×80 mm</option>
+              <option value="100x50">🏷️ Térmica 100×50 mm</option>
+              <option value="80x50">🏷️ Térmica 80×50 mm</option>
+              <option value="half_letter">📄 Media Carta (216×140)</option>
+              <option value="letter">📄 Hoja Carta (Láser)</option>
+              <option value="a4">📄 Hoja A4 (Láser)</option>
             </select>
-            <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
+            <button onclick="adjustZoom(-0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
               ➖ Letra
             </button>
             <button onclick="resetFullSize()" style="background:#0284c7;color:#ffffff;">
               ⛶ 100%
             </button>
-            <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
+            <button onclick="adjustZoom(0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">
               ➕ Letra
             </button>
             <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">
@@ -858,28 +1033,30 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           </div>
         </div>
         <div class="preview-stage">
-          <div class="page-box" id="label-page-box">
-            <div class="label-surface" id="label-surface-box">
-              ${bodyContentHtml}
-            </div>
+          <div class="label-print-card" id="label-surface-box">
+            ${bodyContentHtml}
           </div>
         </div>
         <script>
           var currentW = ${cfg.pageWidthMm};
           var currentH = ${cfg.pageHeightMm};
           var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+          var useAutoPageSize = true;
 
           function applyPageSize(w, h) {
             currentW = w;
             currentH = h;
-            var box = document.getElementById('label-page-box');
-            if (box) {
-              box.style.width = currentW + 'mm';
-              box.style.height = currentH + 'mm';
+            var screenStyle = document.getElementById('dynamic-screen-style');
+            if (screenStyle) {
+              screenStyle.innerHTML = '@media screen { .label-print-card { width: ' + currentW + 'mm; min-height: ' + Math.max(40, currentH - 6) + 'mm; } }';
             }
             var styleTag = document.getElementById('dynamic-page-style');
             if (styleTag) {
-              styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
+              if (useAutoPageSize) {
+                styleTag.innerHTML = '@page { size: auto; margin: 0mm !important; }';
+              } else {
+                styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
+              }
             }
             var dimInd = document.getElementById('dim-indicator');
             if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
@@ -888,13 +1065,15 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           }
 
           function changePaperSize(preset) {
+            useAutoPageSize = (preset === 'auto_100x80');
             var map = {
+              'auto_100x80': [100, 80, 1.0],
               '100x80': [100, 80, 1.0],
-              '100x50': [100, 50, 0.82],
-              '80x50': [80, 50, 0.78],
-              'half_letter': [216, 140, 1.35],
-              'letter': [216, 279, 1.45],
-              'a4': [210, 297, 1.45]
+              '100x50': [100, 50, 0.85],
+              '80x50': [80, 50, 0.8],
+              'half_letter': [216, 140, 1.25],
+              'letter': [216, 279, 1.35],
+              'a4': [210, 297, 1.35]
             };
             var target = map[preset] || [100, 80, 1.0];
             applyPageSize(target[0], target[1]);
@@ -904,7 +1083,7 @@ export const printColorSampleBackLabel = (rawData, customOptions = {}) => {
           }
 
           function adjustZoom(delta) {
-            currentZoom = Math.min(1.8, Math.max(0.55, Number(currentZoom) + delta));
+            currentZoom = Math.min(1.5, Math.max(0.6, Number(currentZoom) + delta));
             var surf = document.getElementById('label-surface-box');
             if (surf) surf.style.zoom = currentZoom.toFixed(2);
           }
@@ -1424,80 +1603,84 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
         const partName = it.part_description || it.item_code || it.descripcion || `ÍTEM #${idx + 1}`;
         const itemCode = it.item_code || it.referencia || `REF-${idx + 1}`;
         const qty = Number(it.quantity || it.cantidad || 1);
-        const qrText = [
-          'CDI DESPACHO OFICIAL',
-          `REM:${remisionNo}`,
-          `OP:${orderNo}`,
-          `CLIENTE:${clientName}`,
-          `PIEZA:${partName}`,
-          `CANT:${qty}`,
-          `PLACA:${plate}`,
-          `DESTINO:${destination}`
-        ].join(' | ');
-        const qrSvg = buildQRSvgMarkup(qrText, isThermal ? 92 : 112);
+        const qrText = buildDispatchQRUrl({
+          orderNo,
+          remisionNo,
+          clientName,
+          partName,
+          qty,
+          plate
+        });
+        const qrSvg = buildQRSvgMarkup(qrText, isThermal ? 86 : 108);
 
         return `
           <div class="dispatch-label-card">
-            <table style="width:100%;height:100%;border-collapse:collapse;">
-              <tr style="height:26%;">
-                <td colspan="2" style="background:#0f172a;color:#ffffff;padding:5px 8px;border-bottom:2px solid #0f172a;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr>
+                <td colspan="2" style="background:#0f172a;color:#ffffff;padding:4px 8px;border-bottom:2px solid #0f172a;">
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                     <div>
-                      <div style="font-size:7.5pt;font-weight:900;color:#38bdf8;letter-spacing:0.06em;text-transform:uppercase;">
+                      <div style="font-size:7pt;font-weight:900;color:#38bdf8;letter-spacing:0.04em;text-transform:uppercase;">
                         🚚 CDI LOGÍSTICA • ETIQUETA DE DESPACHO (${idx + 1}/${items.length})
                       </div>
-                      <div style="font-size:12.5pt;font-weight:900;line-height:1.05;text-transform:uppercase;color:#ffffff;">
+                      <div style="font-size:12pt;font-weight:900;line-height:1.05;text-transform:uppercase;color:#ffffff;">
                         ${clientName}
                       </div>
                     </div>
-                    <div style="background:#fbbf24;color:#0f172a;padding:3px 7px;border-radius:4px;text-align:right;white-space:nowrap;">
-                      <div style="font-size:6.5pt;font-weight:900;text-transform:uppercase;">OP / ORDEN</div>
+                    <div style="background:#fbbf24;color:#0f172a;padding:3px 8px;border-radius:4px;text-align:right;white-space:nowrap;">
+                      <div style="font-size:6pt;font-weight:900;text-transform:uppercase;">OP / ORDEN</div>
                       <div style="font-size:11pt;font-weight:900;line-height:1;">#${orderNo}</div>
                     </div>
                   </div>
                 </td>
               </tr>
-              <tr style="height:54%;">
-                <td style="width:32%;padding:5px;border-right:1.5px solid #0f172a;text-align:center;vertical-align:middle;background:#f8fafc;">
+              <tr>
+                <td style="width:106px;padding:4px;border-right:1.5px solid #0f172a;text-align:center;vertical-align:middle;background:#f8fafc;">
                   <div style="display:inline-block;padding:3px;border:1.5px solid #0f172a;border-radius:5px;background:#ffffff;">
                     ${qrSvg}
                   </div>
-                  <div style="font-size:6.5pt;font-weight:900;margin-top:2px;color:#0f172a;text-transform:uppercase;">
+                  <div style="font-size:6pt;font-weight:900;margin-top:2px;color:#0f172a;text-transform:uppercase;">
                     REM: ${remisionNo}
                   </div>
                 </td>
-                <td style="width:68%;padding:5px 7px;vertical-align:middle;">
+                <td style="padding:4px 7px;vertical-align:middle;">
                   <div style="border:1.5px solid #0f172a;border-radius:4px;padding:3px 6px;margin-bottom:4px;background:#f8fafc;">
-                    <div style="font-size:6.5pt;font-weight:800;color:#475569;text-transform:uppercase;">DESCRIPCIÓN DE PIEZA / PRODUCTO</div>
-                    <div style="font-size:10.5pt;font-weight:900;color:#0f172a;line-height:1.1;text-transform:uppercase;">
+                    <div style="font-size:6pt;font-weight:800;color:#475569;text-transform:uppercase;">DESCRIPCIÓN DE PIEZA / PRODUCTO</div>
+                    <div style="font-size:10pt;font-weight:900;color:#0f172a;line-height:1.1;text-transform:uppercase;">
                       ${partName}
                     </div>
                     <div style="font-size:7.5pt;font-weight:900;color:#334155;">
                       Cód: ${itemCode} • Cant: <strong>${qty} UND</strong>
                     </div>
                   </div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-                    <div style="border:1px solid #64748b;border-radius:4px;padding:2.5px 5px;">
-                      <div style="font-size:6pt;font-weight:800;color:#475569;text-transform:uppercase;">DESTINO / OBRA</div>
-                      <div style="font-size:8pt;font-weight:900;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${destination}
-                      </div>
-                    </div>
-                    <div style="border:1px solid #64748b;border-radius:4px;padding:2.5px 5px;">
-                      <div style="font-size:6pt;font-weight:800;color:#475569;text-transform:uppercase;">TRANSPORTE / PLACA</div>
-                      <div style="font-size:8pt;font-weight:900;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${carrier} (${plate})
-                      </div>
-                    </div>
-                  </div>
+                  <table style="width:100%;border-collapse:collapse;">
+                    <tr>
+                      <td style="width:50%;padding-right:2px;">
+                        <div style="border:1px solid #64748b;border-radius:4px;padding:2.5px 5px;">
+                          <div style="font-size:5.8pt;font-weight:800;color:#475569;text-transform:uppercase;">DESTINO / OBRA</div>
+                          <div style="font-size:7.8pt;font-weight:900;color:#0f172a;line-height:1.1;">
+                            ${destination.slice(0, 26)}
+                          </div>
+                        </div>
+                      </td>
+                      <td style="width:50%;padding-left:2px;">
+                        <div style="border:1px solid #64748b;border-radius:4px;padding:2.5px 5px;">
+                          <div style="font-size:5.8pt;font-weight:800;color:#475569;text-transform:uppercase;">TRANSPORTE / PLACA</div>
+                          <div style="font-size:7.8pt;font-weight:900;color:#0f172a;line-height:1.1;">
+                            ${carrier.slice(0, 16)} (${plate})
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
-              <tr style="height:20%;">
-                <td colspan="2" style="padding:4px 7px;border-top:1.5px solid #0f172a;background:#fef3c7;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:7pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
-                    <span>RECIBE: ${receiverName}</span>
-                    <span>CONDUCTOR: ${driverName}</span>
-                    <span>FECHA: ${dispatchDate}</span>
+              <tr>
+                <td colspan="2" style="padding:3px 7px;border-top:1.5px solid #0f172a;background:#fef3c7;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:6.8pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
+                    <span>RECIBE: ${receiverName.slice(0, 22)}</span>
+                    <span>CONDUCTOR: ${driverName.slice(0, 20)}</span>
+                    <span>${dispatchDate}</span>
                   </div>
                 </td>
               </tr>
@@ -1510,10 +1693,15 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
     pagesMarkup = `<div class="labels-wrapper" id="dispatch-print-surface">${labelCards}</div>`;
   } else {
     const totalUnits = items.reduce((acc, it) => acc + Number(it.quantity || it.cantidad || 1), 0);
-    const qrRemision = buildQRSvgMarkup(
-      `CDI REMISION DESPACHO | REM:${remisionNo} | OP:${orderNo} | CLIENTE:${clientName} | ITEMS:${items.length} | UNIDADES:${totalUnits}`,
-      90
-    );
+    const qrRemisionUrl = buildDispatchQRUrl({
+      orderNo,
+      remisionNo,
+      clientName,
+      partName: `${items.length} ITEMS`,
+      qty: totalUnits,
+      plate
+    });
+    const qrRemision = buildQRSvgMarkup(qrRemisionUrl, 90);
 
     const rowsHtml = items
       .map(
@@ -1629,8 +1817,20 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
         <title>Despacho CDI - ${remisionNo}</title>
         <style id="dynamic-page-style">
           @page {
-            size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
-            margin: ${cfg.marginMm}mm !important;
+            size: auto;
+            margin: 0mm !important;
+          }
+        </style>
+        <style id="dynamic-screen-style">
+          @media screen {
+            .dispatch-label-card {
+              width: ${cfg.pageWidthMm}mm;
+              min-height: ${Math.max(44, cfg.pageHeightMm - 6)}mm;
+            }
+            .sheet-wrapper {
+              width: ${cfg.pageWidthMm}mm;
+              min-height: ${cfg.pageHeightMm}mm;
+            }
           }
         </style>
         <style>
@@ -1684,8 +1884,6 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
             zoom: ${(cfg.scalePct / 100).toFixed(2)};
           }
           .dispatch-label-card {
-            width: ${cfg.pageWidthMm}mm;
-            height: ${cfg.pageHeightMm}mm;
             background: #ffffff;
             border: 2px solid #0f172a;
             border-radius: 6px;
@@ -1699,8 +1897,6 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
             break-after: auto;
           }
           .sheet-wrapper {
-            width: ${cfg.pageWidthMm}mm;
-            min-height: ${cfg.pageHeightMm}mm;
             background: #ffffff;
             padding: 8mm;
             box-shadow: 0 12px 30px rgba(0,0,0,0.45);
@@ -1709,29 +1905,42 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
           @media print {
             html, body {
               background: #ffffff !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             .no-print-bar {
               display: none !important;
             }
             .preview-stage {
               padding: 0 !important;
+              margin: 0 !important;
               min-height: 0 !important;
+              width: 100% !important;
               display: block !important;
             }
             .labels-wrapper {
               gap: 0 !important;
+              width: 100% !important;
               display: block !important;
             }
             .dispatch-label-card {
-              width: 100vw !important;
-              height: 100vh !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 98vh !important;
               box-shadow: none !important;
               margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sheet-wrapper {
               width: 100% !important;
+              max-width: 100% !important;
               min-height: 0 !important;
-              padding: 0 !important;
+              padding: 3mm !important;
               box-shadow: none !important;
             }
           }
@@ -1741,24 +1950,25 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
         <div class="no-print-bar">
           <div>
             <div style="font-size:13px;font-weight:900;color:#38bdf8;">
-              🚚 IMPRESIÓN DE DESPACHOS — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+              🚚 IMPRESIÓN DE DESPACHOS (ANCHO 100% REAL SIN VENTANA) — <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
             </div>
             <div style="font-size:11px;color:#cbd5e1;">
-              Selecciona en vivo si vas a imprimir en Etiqueta Térmica (100×80 mm) o en Hoja Carta / A4 (Impresora Láser).
+              Se expande al 100% del ancho de la etiqueta o de la hoja Carta / A4 sin recortar bordes • QR con enlace directo.
             </div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
-              <option value="100x80" ${cfg.presetId === '100x80' ? 'selected' : ''}>🏷️ Térmica 100×80 mm</option>
-              <option value="100x50" ${cfg.presetId === '100x50' ? 'selected' : ''}>🏷️ Térmica 100×50 mm</option>
-              <option value="80x50" ${cfg.presetId === '80x50' ? 'selected' : ''}>🏷️ Térmica 80×50 mm</option>
-              <option value="half_letter" ${cfg.presetId === 'half_letter' ? 'selected' : ''}>📄 Media Carta (216×140)</option>
-              <option value="letter" ${cfg.presetId === 'letter' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
-              <option value="a4" ${cfg.presetId === 'a4' ? 'selected' : ''}>📄 Hoja A4 (Láser)</option>
+              <option value="auto_100x80" ${mode === 'ETIQUETAS_DESPACHO' ? 'selected' : ''}>🏷️ Auto 100% Etiqueta Térmica (100×80)</option>
+              <option value="100x80">🏷️ Medida Fija 100×80 mm</option>
+              <option value="100x50">🏷️ Térmica 100×50 mm</option>
+              <option value="80x50">🏷️ Térmica 80×50 mm</option>
+              <option value="half_letter">📄 Media Carta (216×140)</option>
+              <option value="letter" ${mode === 'REMISION_DESPACHO' ? 'selected' : ''}>📄 Hoja Carta (Láser)</option>
+              <option value="a4">📄 Hoja A4 (Láser)</option>
             </select>
-            <button onclick="adjustZoom(-0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
+            <button onclick="adjustZoom(-0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➖ Escala</button>
             <button onclick="resetZoom()" style="background:#0284c7;color:#ffffff;">⛶ 100%</button>
-            <button onclick="adjustZoom(0.08)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
+            <button onclick="adjustZoom(0.06)" style="background:#1e293b;color:#e2e8f0;border:1px solid #475569;">➕ Escala</button>
             <button onclick="toggleOrientation()" style="background:#4f46e5;color:#ffffff;">🔄 Girar</button>
             <button onclick="window.print()" style="background:#10b981;color:#052e16;font-size:12.5px;padding:8px 16px;">🖨️ Imprimir</button>
             <button onclick="window.close()" style="background:#334155;color:#ffffff;">✕ Cerrar</button>
@@ -1771,30 +1981,34 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
           var currentW = ${cfg.pageWidthMm};
           var currentH = ${cfg.pageHeightMm};
           var currentZoom = ${(cfg.scalePct / 100).toFixed(2)};
+          var useAutoPageSize = true;
 
           function applyPageSize(w, h) {
             currentW = w;
             currentH = h;
-            var cards = document.querySelectorAll('.dispatch-label-card, .sheet-wrapper');
-            cards.forEach(function(el) {
-              el.style.width = currentW + 'mm';
-              if (el.classList.contains('dispatch-label-card')) {
-                el.style.height = currentH + 'mm';
-              }
-            });
+            var screenStyle = document.getElementById('dynamic-screen-style');
+            if (screenStyle) {
+              screenStyle.innerHTML = '@media screen { .dispatch-label-card { width: ' + currentW + 'mm; min-height: ' + Math.max(40, currentH - 6) + 'mm; } .sheet-wrapper { width: ' + currentW + 'mm; min-height: ' + currentH + 'mm; } }';
+            }
             var styleTag = document.getElementById('dynamic-page-style');
             if (styleTag) {
-              styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 1.5mm !important; }';
+              if (useAutoPageSize) {
+                styleTag.innerHTML = '@page { size: auto; margin: 0mm !important; }';
+              } else {
+                styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
+              }
             }
             var dimInd = document.getElementById('dim-indicator');
             if (dimInd) dimInd.textContent = currentW + ' × ' + currentH + ' mm';
           }
 
           function changePaperSize(preset) {
+            useAutoPageSize = (preset === 'auto_100x80');
             var map = {
+              'auto_100x80': [100, 80, 1.0],
               '100x80': [100, 80, 1.0],
-              '100x50': [100, 50, 0.84],
-              '80x50': [80, 50, 0.78],
+              '100x50': [100, 50, 0.85],
+              '80x50': [80, 50, 0.8],
               'half_letter': [216, 140, 1.15],
               'letter': [216, 279, 1.0],
               'a4': [210, 297, 1.0]
@@ -1807,7 +2021,7 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
           }
 
           function adjustZoom(delta) {
-            currentZoom = Math.min(1.75, Math.max(0.55, Number(currentZoom) + delta));
+            currentZoom = Math.min(1.5, Math.max(0.6, Number(currentZoom) + delta));
             var surf = document.getElementById('dispatch-print-surface');
             if (surf) surf.style.zoom = currentZoom.toFixed(2);
           }

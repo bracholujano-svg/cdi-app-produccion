@@ -25,6 +25,8 @@ import CoordViewModal from './components/modals/CoordViewModal';
 import ReportConfigModal from './components/modals/ReportConfigModal';
 import PlantPlannerModal from './components/modals/PlantPlannerModal';
 import PackingListsModal from './components/modals/PackingListsModal';
+import QRScannerModal from './components/modals/QRScannerModal';
+import { parseCdiQRCodePayload } from './utils/colorQrHelper';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -129,7 +131,59 @@ const {
     selectedBulkOrders, setSelectedBulkOrders,
     showBulkModal, setShowBulkModal,
     showDossierModal,
+    setScannedQrTarget,
   } = useAppContext();
+
+  // Redirección automática cuando se escanea un código QR con el lector de Google del teléfono (?qr=COLOR | EMPAQUE | DESPACHO)
+  useEffect(() => {
+    if (!supervisorProfile) return;
+    if (typeof window === 'undefined' || !window.location?.search) return;
+    if (!window.location.search.includes('qr=')) return;
+
+    const parsed = parseCdiQRCodePayload(window.location.href);
+    if (!parsed || parsed.type === 'UNKNOWN') return;
+
+    if (parsed.type === 'COLOR') {
+      setScannedQrTarget(parsed);
+      setShowRecetarioModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (parsed.type === 'EMPAQUE') {
+      setScannedQrTarget(parsed);
+      setShowPackingListsModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (parsed.type === 'DESPACHO') {
+      if (!Array.isArray(orders) || orders.length === 0) return;
+      const targetPed = String(parsed.pedidoNum || '').trim().toUpperCase();
+      const matching = orders.filter(
+        (o) => o && String(o.pedidoNum || '').trim().toUpperCase() === targetPed
+      );
+      if (matching.length > 0) {
+        const first = matching[0];
+        setAreaFilter('Despachos');
+        setSelectedGroupPedido({
+          pedido: first.pedidoNum,
+          cliente: first.cliente || parsed.cliente || 'CLIENTE CDI',
+          items: matching,
+          scannedRemision: parsed.remision || first.guia_despacho || `REM-${first.pedidoNum}`
+        });
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [
+    supervisorProfile,
+    orders,
+    setScannedQrTarget,
+    setShowRecetarioModal,
+    setShowPackingListsModal,
+    setAreaFilter,
+    setSelectedGroupPedido
+  ]);
   const { isListening, toggleMic, activeDictationTarget } = useVoiceInput(React.useCallback((target, text) => {
     if (target === 'transfer') setTransferNota(prev => (prev ? prev + ' ' : '') + text.trim());
     else if (target === 'planta' || target === 'shift') setShiftNoteText(prev => (prev ? prev + ' ' : '') + text.trim());
@@ -940,6 +994,8 @@ const {
       <CoordinationModal addItemToCoordList={addItemToCoordList} saveBatchCoordination={saveBatchCoordination} />
 
       <ReportPreviewModal />
+
+      <QRScannerModal />
 
       {showCoordViewModal && <CoordViewModal deleteAlert={deleteAlert} />}
 

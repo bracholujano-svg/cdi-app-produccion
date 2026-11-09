@@ -173,6 +173,8 @@ export const AppContextProvider = ({ children }) => {
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [dispatchOrders, setDispatchOrders] = useState([]);
+  const [showQRScannerModal, setShowQRScannerModal] = useState(false);
+  const [scannedQrTarget, setScannedQrTarget] = useState(null);
 
   const openDispatchModal = (ordersToDispatch) => {
     if (!ordersToDispatch) return;
@@ -354,7 +356,9 @@ export const AppContextProvider = ({ children }) => {
     generatedReportData, setGeneratedReportData,
     showDispatchModal, setShowDispatchModal,
     dispatchOrders, setDispatchOrders,
-    openDispatchModal, closeDispatchModal
+    openDispatchModal, closeDispatchModal,
+    showQRScannerModal, setShowQRScannerModal,
+    scannedQrTarget, setScannedQrTarget
   };
 
   return (

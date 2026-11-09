@@ -12,7 +12,9 @@ const RecetarioModal = () => {
     supabase,
     supabaseData,
     supervisorProfile,
-    setShowRecetarioModal
+    setShowRecetarioModal,
+    scannedQrTarget,
+    setScannedQrTarget
   } = useAppContext();
 
   const [isMinimized, setIsMinimized] = useState(false);
@@ -79,6 +81,8 @@ const RecetarioModal = () => {
               inventario={supabaseData.inventario}
               onClose={() => setShowRecetarioModal(false)}
               supervisorProfile={supervisorProfile}
+              scannedQrTarget={scannedQrTarget}
+              setScannedQrTarget={setScannedQrTarget}
             />
           </div>
         </div>

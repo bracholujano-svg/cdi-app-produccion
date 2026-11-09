@@ -41,7 +41,13 @@ import {
 
 const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v3';
 
-export default function SCEntonacion({ inventario, onClose, supervisorProfile }) {
+export default function SCEntonacion({
+  inventario,
+  onClose,
+  supervisorProfile,
+  scannedQrTarget,
+  setScannedQrTarget
+}) {
   // Estados para la Vista 1 (Buscador)
   const [sistemaColor, setSistemaColor] = useState('PANTONE');
   const [codigoObjetivo, setCodigoObjetivo] = useState('');
@@ -250,6 +256,64 @@ export default function SCEntonacion({ inventario, onClose, supervisorProfile })
       setIsSearching(false);
     }
   };
+
+  // Si se abre SCEntonacion desde el Lector QR (o enlace directo ?qr=COLOR), buscar y abrir ese color y su Ficha Técnica
+  useEffect(() => {
+    if (!scannedQrTarget || scannedQrTarget.type !== 'COLOR') return;
+    let isMounted = true;
+
+    const loadScannedColor = async () => {
+      try {
+        setIsSearching(true);
+        const { data: allColors } = await supabase
+          .from('colores_aprobados')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!isMounted || !Array.isArray(allColors)) return;
+
+        const targetId = String(scannedQrTarget.id || '').trim();
+        const targetFicha = String(scannedQrTarget.idFicha || '').trim().toUpperCase();
+        const targetCode = String(scannedQrTarget.codigo || '').trim().toUpperCase();
+        const targetSys = String(scannedQrTarget.sistema || '').trim().toUpperCase();
+
+        const matched =
+          allColors.find((c) => targetId && String(c.id) === targetId) ||
+          allColors.find((c) => targetFicha && buildTechnicalSheetId(c) === targetFicha) ||
+          allColors.find(
+            (c) =>
+              targetCode &&
+              String(c.codigo_objetivo || '').trim().toUpperCase() === targetCode &&
+              (!targetSys || String(c.sistema_color || '').trim().toUpperCase() === targetSys)
+          ) ||
+          allColors.find(
+            (c) =>
+              targetCode &&
+              String(c.codigo_objetivo || '')
+                .trim()
+                .toUpperCase()
+                .includes(targetCode)
+          );
+
+        if (matched) {
+          await handleSelectFromCatalog(matched);
+          setShowViewSheetModal(true);
+        }
+      } catch (err) {
+        console.error('Error abriendo color desde QR:', err);
+      } finally {
+        if (isMounted) {
+          setIsSearching(false);
+          if (setScannedQrTarget) setScannedQrTarget(null);
+        }
+      }
+    };
+
+    loadScannedColor();
+    return () => {
+      isMounted = false;
+    };
+  }, [scannedQrTarget]);
 
   // Memorizar opciones de inventario (Busca POL- en la DESCRIPCION)
   const ppgOptions = useMemo(() => {
