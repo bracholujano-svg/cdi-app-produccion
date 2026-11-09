@@ -21,20 +21,30 @@ const LoginScreen = () => {
   const handleVirtualLogin = async (e) => {
     e.preventDefault(); 
     setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE..."); 
-    const userCheck = validateSafeText(e.target.username.value, { maxLength: 100, fieldName: 'Usuario' });
-    if (!userCheck.valid) {
-      setAuthError(userCheck.error);
+    const userStr = validateSafeText(e.target.username?.value || '', 100).toLowerCase();
+    const passStr = String(e.target.password?.value || '').trim();
+
+    if (!userStr) {
+      setAuthError("⚠️ INGRESA TU USUARIO CORPORATIVO.");
       return;
     }
-    const userStr = userCheck.value.toLowerCase();
-    const passStr = e.target.password.value.trim();
+    if (!passStr) {
+      setAuthError("⚠️ INGRESA TU CLAVE DE ACCESO.");
+      return;
+    }
+
     const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
 
     const res = await loginEnGoogle(emailFull, passStr);
     
     if (res.success) {
       setAuthError("");
-      const newProfile = { name: res.result.nombre, email: emailFull, area: res.result.rol };
+      const newProfile = {
+        id: res.result.id || undefined,
+        name: res.result.nombre,
+        email: res.result.email || emailFull,
+        area: res.result.rol
+      };
       const signature = CryptoJS.SHA256(JSON.stringify(newProfile) + SESSION_SECRET).toString();
       
       setSupervisorProfile(newProfile);
@@ -48,33 +58,30 @@ const LoginScreen = () => {
         setAreaFilter(newProfile.area);
       }
     } else {
-      setAuthError(res.error);
+      setAuthError(res.error || "❌ NO SE PUDO INICIAR SESIÓN. VERIFICA TUS DATOS.");
     }
   };
 
   const handleVirtualRegister = async (e) => {
     e.preventDefault(); 
     setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
-    const nameCheck = validateSafeText(e.target.name.value, { maxLength: 80, fieldName: 'Nombre Completo' });
-    if (!nameCheck.valid) {
-      setAuthError(nameCheck.error);
-      return;
-    }
-    const name = nameCheck.value.toUpperCase();
-    const userCheck = validateSafeText(e.target.username.value, { maxLength: 100, fieldName: 'Usuario' });
-    if (!userCheck.valid) {
-      setAuthError(userCheck.error);
-      return;
-    }
-    const userStr = userCheck.value.toLowerCase();
-    const pass = e.target.password.value.trim();
+    const name = validateSafeText(e.target.name?.value || '', 80).toUpperCase();
+    const userStr = validateSafeText(e.target.username?.value || '', 100).toLowerCase();
+    const pass = String(e.target.password?.value || '').trim();
     const area = e.target.area ? e.target.area.value : 'Pendiente';
-    
+
+    if (!name || name.length < 2) {
+      setAuthError("⚠️ INGRESA TU NOMBRE COMPLETO.");
+      return;
+    }
+    if (!userStr) {
+      setAuthError("⚠️ INGRESA TU USUARIO CORPORATIVO.");
+      return;
+    }
     if (area === 'Administrador / Todos') {
       setAuthError("❌ El rol de Administrador general no puede asignarse por auto-registro.");
       return;
     }
-
     if (pass.length < 6) {
       setAuthError("La clave debe tener un mínimo de 6 caracteres."); 
       return;
@@ -87,7 +94,7 @@ const LoginScreen = () => {
       setAuthError("✅ Registro Exitoso. Ahora puedes Iniciar Sesión.");
       setTimeout(() => { setIsRegistering(false); setAuthError(""); }, 3000);
     } else {
-      setAuthError(res.error);
+      setAuthError(res.error || "❌ NO SE PUDO COMPLETAR EL REGISTRO.");
     }
   };
 

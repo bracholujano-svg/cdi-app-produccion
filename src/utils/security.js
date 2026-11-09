@@ -25,8 +25,12 @@ export const deepSanitize = (obj) => {
 /**
  * 1. VALIDACIÓN ESTRICTA DE INPUTS DE USUARIO
  */
-export const validateSafeText = (value, maxLength = 250) => {
+export const validateSafeText = (value, maxLengthOrOptions = 250) => {
   if (value === null || value === undefined) return '';
+  const maxLength =
+    typeof maxLengthOrOptions === 'number'
+      ? maxLengthOrOptions
+      : Number(maxLengthOrOptions?.maxLength) || 250;
   const cleaned = sanitizeInput(String(value))
     // Eliminar caracteres de control invisibles excepto saltos de línea básicos
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
@@ -43,17 +47,17 @@ export const escapePostgrestFilter = (value, maxLength = 60) => {
 };
 
 export const validateCorporateEmail = (rawInput = '') => {
-  const clean = validateSafeText(rawInput, 120).toLowerCase();
+  const clean = validateSafeText(rawInput, 120).toLowerCase().replace(/\s+/g, '');
   if (!clean) {
     return { valid: false, email: '', error: 'Ingresa tu usuario corporativo.' };
   }
   const emailFull = clean.includes('@') ? clean : `${clean}@cdiexhibiciones.co`;
-  const emailRegex = /^[a-z0-9._%+-]+@cdiexhibiciones\.co$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(emailFull)) {
     return {
       valid: false,
       email: emailFull,
-      error: 'Solo se permiten cuentas corporativas válidas (@cdiexhibiciones.co).'
+      error: 'Formato de usuario o correo inválido.'
     };
   }
   return { valid: true, email: emailFull, error: null };
