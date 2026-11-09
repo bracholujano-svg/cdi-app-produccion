@@ -394,6 +394,13 @@ export const executeDispatch = (ids, {
             isTerminado: true,
             fechaDespacho: date || new Date().toISOString(),
             datos_logistica: logisticaData || null,
+            resumenEmpaque: order.resumenEmpaque
+                ? {
+                    ...order.resumenEmpaque,
+                    numeroEmpaque: logisticaData?.numeroEmpaque || order.resumenEmpaque.numeroEmpaque,
+                    codigoRemision: logisticaData?.guiaRemesa || order.resumenEmpaque.codigoRemision
+                }
+                : order.resumenEmpaque,
             transferenciaPendiente: null,
             historial: [...(order.historial || []), historyEntry]
         };

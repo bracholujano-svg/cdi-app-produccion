@@ -1359,12 +1359,12 @@ export default function SCEntonacion({
                   {isLabel ? (
                     <div className="pt-1">
                       <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
-                        Diseño de Etiqueta de Muestra (Sin Receta de Pastas):
+                        Diseño de Etiqueta de Muestra (Sin Receta y Sin QR para Mayor Claridad):
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: 'compacta', label: '⭐ Tamaño Completo 100×80 (Sistema + Código + Brillo + QR + Notas)' },
-                          { id: 'mini_qr', label: 'Mini Compacta (Solo QR + Código + Brillo)' }
+                          { id: 'compacta', label: '⭐ Tamaño Completo 100×80 (Sistema + Código + Brillo + Notas)' },
+                          { id: 'mini_qr', label: 'Mini Compacta (60×40 / 50×25 mm)' }
                         ].map((d) => (
                           <button
                             key={d.id}
@@ -1422,13 +1422,13 @@ export default function SCEntonacion({
                   </div>
                 </div>
 
-                {/* Representación a escala de la etiqueta o página */}
+                {/* Representación a escala de la etiqueta (Sin QR, ocupando 100% del ancho) */}
                 <div className="flex-1 flex items-center justify-center py-2">
                   <div
                     style={{
                       width:
                         resolved.pageWidthMm >= resolved.pageHeightMm
-                          ? '210px'
+                          ? '216px'
                           : `${Math.max(
                               110,
                               Math.round((resolved.pageWidthMm / resolved.pageHeightMm) * 195)
@@ -1437,60 +1437,73 @@ export default function SCEntonacion({
                         resolved.pageHeightMm > resolved.pageWidthMm
                           ? '195px'
                           : `${Math.max(
-                              95,
-                              Math.round((resolved.pageHeightMm / resolved.pageWidthMm) * 210)
+                              105,
+                              Math.round((resolved.pageHeightMm / resolved.pageWidthMm) * 216)
                             )}px`
                     }}
                     className="bg-white text-slate-900 rounded-xl border-2 border-slate-900 shadow-lg p-3 flex flex-col justify-between text-left overflow-hidden relative"
                   >
-                    <div className="border-b-2 border-slate-900 pb-1 flex justify-between items-start gap-1">
+                    <div className="border-b-2 border-slate-900 pb-1.5 flex justify-between items-start gap-1">
                       <div className="min-w-0">
                         <div className="text-[7.5px] font-black uppercase text-slate-600 truncate">
-                          {dataObj.sistema_color || dataObj.sistemaCatalogo || 'SISTEMA COLOR'}
+                          CDI • {dataObj.sistema_color || dataObj.sistemaCatalogo || 'SISTEMA COLOR'}
                         </div>
-                        <div className="text-[11px] font-black uppercase truncate max-w-[115px] text-slate-950">
+                        <div className="text-[12.5px] font-black uppercase truncate max-w-[130px] text-slate-950 leading-tight">
                           {dataObj.codigo_color || dataObj.codigoColor || 'CÓDIGO'}
                         </div>
+                        <div className="text-[7px] font-black uppercase text-slate-700 truncate">
+                          CLIENTE: {dataObj.cliente || 'PLANTA CDI'}
+                        </div>
                       </div>
-                      <div className="bg-slate-950 text-white px-1.5 py-0.5 rounded text-right shrink-0">
-                        <div className="text-[7.5px] font-black uppercase text-amber-300 leading-none">
+                      <div className="bg-slate-950 text-white px-2 py-1 rounded text-center shrink-0">
+                        <div className="text-[6px] font-black uppercase text-amber-300 leading-none">
+                          ACABADO REAL
+                        </div>
+                        <div className="text-[8.5px] font-black uppercase text-white leading-tight">
                           {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'}
                         </div>
-                        <div className="text-[7px] font-black text-white leading-tight">
+                        <div className="text-[7px] font-black text-slate-200 leading-tight">
                           Brillo: {dataObj.brillo || dataObj.glossLevel || '40'}%
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 my-auto py-1">
-                      <div className="p-1 border-2 border-slate-900 rounded bg-white shrink-0">
-                        <ColorQRCodeSVG value={qrPayloadActual || 'CDI'} size={48} />
+                    <div className="my-auto py-1 space-y-1">
+                      <div className="border border-slate-900 rounded px-2 py-1 truncate bg-slate-50">
+                        <span className="text-[6.5px] font-black text-slate-500 block">
+                          BRILLO DE LA PINTURA / ACABADO EN PLANTA
+                        </span>
+                        <span className="text-[9px] font-black text-slate-950 uppercase">
+                          {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'} — AL{' '}
+                          {dataObj.brillo || dataObj.glossLevel || '40'}% (BRILLO 60°)
+                        </span>
                       </div>
-                      <div className="text-[8px] font-black text-slate-800 leading-tight space-y-1 min-w-0 flex-1">
-                        <div className="border border-slate-400 rounded px-1.5 py-0.5 truncate bg-slate-50">
-                          <span className="text-[6.5px] text-slate-500 block">ACABADO / BRILLO</span>
-                          {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'} (
-                          {dataObj.brillo || dataObj.glossLevel || '40'}%)
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="border border-slate-900 rounded px-1.5 py-0.5 truncate">
+                          <span className="text-[6px] font-black text-slate-500 block">SISTEMA / CAT.</span>
+                          <span className="text-[7.5px] font-black text-slate-900">
+                            {dataObj.sistema_pintura || dataObj.sistemaPintura || 'Poliuretano (PU)'}
+                          </span>
                         </div>
-                        <div className="border border-slate-400 rounded px-1.5 py-0.5 truncate">
-                          <span className="text-[6.5px] text-slate-500 block">SISTEMA PINTURA</span>
-                          {dataObj.sistema_pintura || dataObj.sistemaPintura || 'Poliuretano (PU)'}
+                        <div className="border border-slate-900 rounded px-1.5 py-0.5 truncate">
+                          <span className="text-[6px] font-black text-slate-500 block">SUSTRATO</span>
+                          <span className="text-[7.5px] font-black text-slate-900">
+                            {dataObj.sustrato_base || dataObj.sustratoBase || 'MDF RH'}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border-t border-dashed border-slate-400 pt-1 text-[7.5px] font-black text-amber-900 truncate">
-                      ⚠️ Muestra Brillante • Sin Receta • 100% Etiqueta
+                    <div className="border border-slate-900 bg-amber-100 rounded px-1.5 py-0.5 text-[7px] font-black text-slate-950 truncate">
+                      ⚠️ Muestra Sellada Brillante • Aplicar:{' '}
+                      {dataObj.acabado_produccion || dataObj.acabadoProduccion || 'SATINADO'} (
+                      {dataObj.brillo || dataObj.glossLevel || '40'}%)
                     </div>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] font-bold text-amber-950 dark:text-amber-200 leading-snug">
-                  💡 <strong>Selección de Impresora:</strong> Al pulsar el botón verde abajo, se abrirá el cuadro de impresión con el tamaño{' '}
-                  <strong>
-                    {resolved.pageWidthMm}×{resolved.pageHeightMm} mm
-                  </strong>{' '}
-                  ya configurado para que escojas tu <strong>Impresora Térmica o de Red</strong>.
+                  💡 <strong>Tip Impresora Térmica:</strong> En el cuadro de impresión de Windows/Chrome deja <strong>Orientación: Vertical</strong> y <strong>Márgenes: Ninguno</strong> para que el rollo térmico 100×80 mm salga al 100% sin girarse.
                 </div>
               </div>
             </div>

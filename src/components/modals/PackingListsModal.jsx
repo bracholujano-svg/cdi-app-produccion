@@ -30,7 +30,13 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
-import { LABEL_PAGE_PRESETS, resolvePrintDimensions, buildPackingQRUrl } from '../../utils/colorQrHelper';
+import {
+  LABEL_PAGE_PRESETS,
+  resolvePrintDimensions,
+  buildPackingQRUrl,
+  getNextPackingAndRemisionConsecutives
+} from '../../utils/colorQrHelper';
+import { buildCdiLogoHtml } from '../../utils/cdiLogo';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
 import { supabase } from '../../supabaseClient';
 
@@ -819,10 +825,15 @@ const PackingListsModal = () => {
       return;
     }
 
+    const consecInfo = getNextPackingAndRemisionConsecutives(packingLists, orders, pedNum);
+
     const newList = {
       id: `PACKLIST_PED_${pedNum}`,
       tipoRegistro: 'PACKING_LIST',
       pedidoNum: pedNum,
+      consecutivoEmpaqueNum: consecInfo.consecutivoNum,
+      numeroEmpaque: consecInfo.numeroEmpaque,
+      codigoRemision: consecInfo.codigoRemision,
       cliente: clienteRaw || eligibleSummary.cliente || 'CLIENTE GENERAL',
       proyecto: eligibleSummary.proyecto || '',
       estadoLista: 'ACTIVA',
@@ -1264,6 +1275,15 @@ const PackingListsModal = () => {
 
     const targetOrderIds = new Set(validItems.map((i) => i.orderId));
     const nowIso = new Date().toISOString();
+    const consecInfo = getNextPackingAndRemisionConsecutives(
+      packingLists,
+      orders,
+      activePackingList?.pedidoNum
+    );
+    const resolvedNumeroEmpaque =
+      activePackingList?.numeroEmpaque || consecInfo.numeroEmpaque;
+    const resolvedCodigoRemision =
+      activePackingList?.codigoRemision || consecInfo.codigoRemision;
 
     let updatedListSnapshot = null;
     if (activePackingList) {
@@ -1288,6 +1308,10 @@ const PackingListsModal = () => {
       updatedListSnapshot = {
         ...activePackingList,
         id: `PACKLIST_PED_${String(activePackingList.pedidoNum || '').trim().toUpperCase()}`,
+        consecutivoEmpaqueNum:
+          activePackingList.consecutivoEmpaqueNum || consecInfo.consecutivoNum,
+        numeroEmpaque: resolvedNumeroEmpaque,
+        codigoRemision: resolvedCodigoRemision,
         estadoLista: isCompleteNow ? 'TERMINADA' : activePackingList.estadoLista,
         reabiertaManual: isCompleteNow ? false : activePackingList.reabiertaManual,
         fechaCierre: isCompleteNow ? nowIso : activePackingList.fechaCierre,
@@ -1311,10 +1335,10 @@ const PackingListsModal = () => {
       const historyEntry = {
         fecha: nowIso,
         supervisor: supervisorProfile?.nombre || 'EMPAQUE',
-        accion: `Lista de Empaque Completada (${bultosDeEsteItem.join(', ') || `${totalPackagesOrder} bultos`}) -> Transferido a Despachos (EN ESPERA)`,
+        accion: `Lista de Empaque Completada (${resolvedNumeroEmpaque} / ${resolvedCodigoRemision} • ${bultosDeEsteItem.join(', ') || `${totalPackagesOrder} bultos`}) -> Transferido a Despachos (EN ESPERA)`,
         entrega: 'EMPAQUE',
         recibe: 'DESPACHOS',
-        nota: `Empaque 100% verificado con QR (${ord.cantidad} unds)`
+        nota: `Empaque 100% verificado (${ord.cantidad} unds) • ${resolvedNumeroEmpaque} • ${resolvedCodigoRemision}`
       };
 
       const updatedOrd = {
@@ -1323,8 +1347,11 @@ const PackingListsModal = () => {
         estadoInterno: 'EN ESPERA',
         transferenciaPendiente: null,
         packingListCompletada: true,
+        guia_despacho: resolvedCodigoRemision,
         resumenEmpaque: {
           pedidoNum: activePackingList?.pedidoNum,
+          numeroEmpaque: resolvedNumeroEmpaque,
+          codigoRemision: resolvedCodigoRemision,
           totalBultosPedido: totalPackagesOrder,
           bultosProducto: bultosDeEsteItem,
           fechaTransferenciaDespachos: nowIso
@@ -1472,6 +1499,15 @@ const PackingListsModal = () => {
 
     const isThermalLabel = cfg.pageWidthMm <= 125 && cfg.pageHeightMm <= 125;
     const totalPackagesCount = allPackages.length;
+    const consecPrintInfo = getNextPackingAndRemisionConsecutives(
+      packingLists,
+      orders,
+      targetList.pedidoNum
+    );
+    const numeroEmpaqueDoc =
+      targetList.numeroEmpaque || consecPrintInfo.numeroEmpaque || 'EMP-0001';
+    const codigoRemisionDoc =
+      targetList.codigoRemision || consecPrintInfo.codigoRemision || 'REM-0001';
 
     const renderQRInlineSVG = (text, pxSize = 110) => {
       const mat = generateQRMatrix(text || 'CDI');
@@ -1501,7 +1537,7 @@ const PackingListsModal = () => {
           const realIdx = allPackages.findIndex((p) => p.id === pkg.id);
           const idxToUse = realIdx >= 0 ? realIdx : 0;
           const qrText = buildPackageQRText(targetList, pkg, idxToUse, totalPackagesCount);
-          const qrSvg = renderQRInlineSVG(qrText, isThermalLabel ? 88 : 124);
+          const qrSvg = renderQRInlineSVG(qrText, isThermalLabel ? 84 : 118);
           const tipo = String(pkg.tipoEmpaque || 'PAQUETE').toUpperCase();
           const numPadded = String(pkg.consecutivo || idxToUse + 1).padStart(2, '0');
 
@@ -1532,24 +1568,30 @@ const PackingListsModal = () => {
 
           return `
             <div class="qr-label-card">
-              <table style="width:100%;border-collapse:collapse;">
+              <table style="width:100%;height:100%;border-collapse:collapse;">
                 <tr>
                   <td colspan="2" style="background:#0f172a;color:#ffffff;padding:4px 8px;border-bottom:2px solid #0f172a;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                      <div>
-                        <div style="font-size:6.8pt;font-weight:900;letter-spacing:0.04em;color:#38bdf8;text-transform:uppercase;">
-                          📦 CDI EXHIBICIONES • CONTROL DE EMPAQUE Y DESPACHOS
+                      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                        <div style="background:#ffffff;padding:2px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                          ${buildCdiLogoHtml(32)}
                         </div>
-                        <div style="font-size:12.5pt;font-weight:900;color:#ffffff;line-height:1.05;">
-                          PEDIDO #${targetList.pedidoNum}
-                        </div>
-                        <div style="font-size:8pt;font-weight:800;color:#cbd5e1;text-transform:uppercase;">
-                          CLIENTE: ${targetList.cliente}
+                        <div style="min-width:0;">
+                          <div style="font-size:6.5pt;font-weight:900;letter-spacing:0.03em;color:#38bdf8;text-transform:uppercase;">
+                            REMISIÓN DEL PAQUETE • ${numeroEmpaqueDoc} • ${codigoRemisionDoc}
+                          </div>
+                          <div style="font-size:12pt;font-weight:900;color:#ffffff;line-height:1.05;">
+                            PEDIDO #${targetList.pedidoNum}
+                          </div>
+                          <div style="font-size:7.8pt;font-weight:800;color:#cbd5e1;text-transform:uppercase;">
+                            CLIENTE: ${targetList.cliente}
+                          </div>
                         </div>
                       </div>
                       <div style="text-align:right;background:#fbbf24;color:#0f172a;padding:3px 8px;border-radius:5px;white-space:nowrap;">
-                        <div style="font-size:10.5pt;font-weight:900;line-height:1.05;">${tipo} #${numPadded}</div>
-                        <div style="font-size:7pt;font-weight:900;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
+                        <div style="font-size:10pt;font-weight:900;line-height:1.05;">${tipo} #${numPadded}</div>
+                        <div style="font-size:6.8pt;font-weight:900;">BULTO ${idxToUse + 1} DE ${totalPackagesCount}</div>
+                        <div style="font-size:6pt;font-weight:900;color:#1e293b;">${numeroEmpaqueDoc}</div>
                       </div>
                     </div>
                   </td>
@@ -1559,13 +1601,13 @@ const PackingListsModal = () => {
                     <div style="display:inline-block;border:1.5px solid #0f172a;border-radius:6px;padding:3px;background:#fff;">
                       ${qrSvg}
                     </div>
-                    <div style="font-size:6.8pt;font-weight:900;font-family:monospace;margin-top:2px;color:#0f172a;">
-                      #${targetList.pedidoNum}-B${numPadded}
+                    <div style="font-size:6.2pt;font-weight:900;font-family:monospace;margin-top:2px;color:#0f172a;line-height:1.1;">
+                      ${codigoRemisionDoc}<br/>#${targetList.pedidoNum}-B${numPadded}
                     </div>
                   </td>
                   <td style="padding:4px 7px;vertical-align:middle;">
                     <div style="font-size:6.8pt;font-weight:900;text-transform:uppercase;color:#334155;margin-bottom:2px;">
-                      CONTENIDO EXACTO DE ESTE BULTO FÍSICO:
+                      CONTENIDO EXACTO DE ESTE PAQUETE (${numeroEmpaqueDoc}):
                     </div>
                     ${itemsRows}
                   </td>
@@ -1573,7 +1615,7 @@ const PackingListsModal = () => {
                 <tr>
                   <td colspan="2" style="padding:3px 7px;border-top:1.5px solid #0f172a;background:#fef3c7;">
                     <div style="display:flex;justify-content:space-between;align-items:center;font-size:6.8pt;font-weight:900;color:#0f172a;text-transform:uppercase;">
-                      <span>${pkg.observaciones ? `OBS: ${pkg.observaciones}` : 'TRAZABILIDAD OFICIAL QR PLANTA CDI'}</span>
+                      <span>${pkg.observaciones ? `OBS: ${pkg.observaciones}` : `${numeroEmpaqueDoc} • ${codigoRemisionDoc} • TRAZABILIDAD CDI`}</span>
                       <span>FECHA: ${new Date().toLocaleDateString('es-CO')}</span>
                     </div>
                   </td>
@@ -1589,10 +1631,9 @@ const PackingListsModal = () => {
         <html lang="es">
           <head>
             <meta charset="utf-8" />
-            <title>Etiquetas QR - Pedido #${targetList.pedidoNum}</title>
+            <title>Remisión de Paquete (${numeroEmpaqueDoc}) - Pedido #${targetList.pedidoNum}</title>
             <style id="dynamic-page-style">
               @page {
-                size: auto;
                 margin: 0mm !important;
               }
             </style>
@@ -1600,7 +1641,7 @@ const PackingListsModal = () => {
               @media screen {
                 .qr-label-card {
                   width: ${cfg.pageWidthMm}mm;
-                  min-height: ${Math.max(44, cfg.pageHeightMm - 6)}mm;
+                  min-height: ${Math.max(44, cfg.pageHeightMm - 4)}mm;
                 }
               }
             </style>
@@ -1679,8 +1720,8 @@ const PackingListsModal = () => {
                 .qr-label-card {
                   width: 100% !important;
                   max-width: 100% !important;
-                  height: auto !important;
-                  max-height: 98vh !important;
+                  height: 96vh !important;
+                  max-height: 96vh !important;
                   box-shadow: none !important;
                   margin: 0 !important;
                   padding: 0 !important;
@@ -1695,15 +1736,15 @@ const PackingListsModal = () => {
             <div class="no-print-bar">
               <div>
                 <div style="font-size:13px;font-weight:900;color:#fbbf24;">
-                  📦 ETIQUETAS QR DE EMPAQUE (ANCHO 100% REAL SIN VENTANA) — <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+                  📦 HOJA DE REMISIÓN DEL PAQUETE (${numeroEmpaqueDoc} • ${codigoRemisionDoc}) — <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
                 </div>
                 <div style="font-size:11px;color:#cbd5e1;">
-                  Se expande al 100% real de la etiqueta en la impresora sin recortarse • QR con enlace directo al bulto.
+                  Con Logo Oficial CDI y consecutivos automáticos • Se expande al 100% de la etiqueta o página.
                 </div>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                 <select onchange="changePaperSize(this.value)" style="background:#1e293b;color:#38bdf8;border:1px solid #475569;">
-                  <option value="auto_100x80" selected>🏷️ Auto 100% Etiqueta Térmica (100×80)</option>
+                  <option value="auto_100x80" selected>🏷️ Rollo Térmico Nativo 100×80 (100%)</option>
                   <option value="100x80">🏷️ Medida Fija 100×80 mm</option>
                   <option value="100x50">🏷️ Térmica 100×50 mm</option>
                   <option value="80x50">🏷️ Térmica 80×50 mm</option>
@@ -1738,7 +1779,7 @@ const PackingListsModal = () => {
                 var styleTag = document.getElementById('dynamic-page-style');
                 if (styleTag) {
                   if (useAutoPageSize) {
-                    styleTag.innerHTML = '@page { size: auto; margin: 0mm !important; }';
+                    styleTag.innerHTML = '@page { margin: 0mm !important; }';
                   } else {
                     styleTag.innerHTML = '@page { size: ' + currentW + 'mm ' + currentH + 'mm; margin: 0mm !important; }';
                   }
@@ -1778,6 +1819,7 @@ const PackingListsModal = () => {
               }
 
               function toggleOrientation() {
+                useAutoPageSize = false;
                 applyPageSize(currentH, currentW);
               }
 
@@ -1818,6 +1860,7 @@ const PackingListsModal = () => {
                     ? `<td rowspan="${rowSpan}" style="border: 1px solid #94a3b8; padding: 8px; text-align: center; vertical-align: middle; background: #f8fafc;">
                         <div style="font-size: 14px; font-weight: 900; color: #0f172a;">${tipo} #${numPadded}</div>
                         <div style="font-size: 11px; font-weight: 800; color: #0284c7; margin-top: 2px;">Bulto ${pkgIdx + 1} de ${totalPackagesCount}</div>
+                        <div style="font-size: 10px; font-weight: 900; color: #334155; margin-top: 2px;">${numeroEmpaqueDoc}</div>
                         ${pkg.observaciones ? `<div style="font-size: 10px; color: #b45309; margin-top: 4px; font-weight: 700;">Obs: ${pkg.observaciones}</div>` : ''}
                       </td>`
                     : ''
@@ -1832,7 +1875,7 @@ const PackingListsModal = () => {
                   isFirstRow
                     ? `<td rowspan="${rowSpan}" style="border: 1px solid #94a3b8; padding: 6px; text-align: center; vertical-align: middle;">
                         ${qrSvg}
-                        <div style="font-size: 9px; font-family: monospace; font-weight: 800;">#${targetList.pedidoNum}-B${numPadded}</div>
+                        <div style="font-size: 9px; font-family: monospace; font-weight: 800;">${codigoRemisionDoc} • #${targetList.pedidoNum}-B${numPadded}</div>
                       </td>`
                     : ''
                 }
@@ -1848,7 +1891,7 @@ const PackingListsModal = () => {
       <html lang="es">
         <head>
           <meta charset="utf-8" />
-          <title>Lista de Empaque Oficial - Pedido #${targetList.pedidoNum}</title>
+          <title>Remisión Lista de Empaque (${numeroEmpaqueDoc} / ${codigoRemisionDoc}) - Pedido #${targetList.pedidoNum}</title>
           <style id="dynamic-page-style">
             @page {
               size: ${cfg.pageWidthMm}mm ${cfg.pageHeightMm}mm;
@@ -1890,7 +1933,7 @@ const PackingListsModal = () => {
               min-height: ${cfg.pageHeightMm}mm;
               margin: 18px auto;
               background: #ffffff;
-              padding: 12mm;
+              padding: 10mm;
               box-shadow: 0 12px 30px rgba(0,0,0,0.45);
               zoom: ${(cfg.scalePct / 100).toFixed(2)};
             }
@@ -1913,10 +1956,10 @@ const PackingListsModal = () => {
           <div class="no-print-bar">
             <div>
               <div style="font-size:13px;font-weight:900;color:#38bdf8;">
-                📄 LISTA DE EMPAQUE OFICIAL — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
+                📄 REMISIÓN Y LISTA DE EMPAQUE OFICIAL (${numeroEmpaqueDoc} • ${codigoRemisionDoc}) — FORMATO: <span id="dim-indicator">${cfg.pageWidthMm} × ${cfg.pageHeightMm} mm</span>
               </div>
               <div style="font-size:11px;color:#cbd5e1;">
-                Selecciona el tipo de hoja (Carta, Media Carta, A4 o Térmica) y tu impresora.
+                Con Logo Oficial CDI, Código de Remisión (${codigoRemisionDoc}) y Número de Empaque (${numeroEmpaqueDoc}).
               </div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
@@ -1934,16 +1977,35 @@ const PackingListsModal = () => {
             </div>
           </div>
           <div class="sheet-stage" id="packing-sheet-stage">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px;">
-              <div>
-                <div style="font-size: 12px; font-weight: 900; color: #475569;">CDI EXHIBICIONES • LISTA DE EMPAQUE OFICIAL CON TRAZABILIDAD QR</div>
-                <div style="font-size: 24px; font-weight: 900; margin-top: 2px;">PEDIDO #${targetList.pedidoNum}</div>
-                <div style="font-size: 14px; font-weight: 800; color: #1e293b;">CLIENTE: ${targetList.cliente}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px; gap: 14px;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="flex-shrink: 0;">
+                  ${buildCdiLogoHtml(72)}
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 900; color: #475569; letter-spacing: 0.04em;">
+                    CDI DISEÑO EN EXHIBICIÓN • HOJA DE REMISIÓN Y LISTA DE EMPAQUE OFICIAL
+                  </div>
+                  <div style="font-size: 22px; font-weight: 900; margin-top: 2px; color: #0f172a;">
+                    PEDIDO #${targetList.pedidoNum}
+                  </div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #1e293b;">
+                    CLIENTE: ${targetList.cliente}
+                  </div>
+                </div>
               </div>
-              <div style="text-align: right; font-size: 12px; font-weight: 700;">
-                <div>TOTAL BULTOS FÍSICOS GENERADOS: <strong>${totalPackagesCount}</strong></div>
-                <div>ESTADO LISTA: <strong>${targetList.estadoLista === 'TERMINADA' ? 'TERMINADA / COMPLETA' : 'ACTIVA / EN CURSO'}</strong></div>
-                <div>FECHA: ${new Date().toLocaleDateString('es-CO')}</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="background: #0f172a; color: #ffffff; padding: 8px 12px; border-radius: 8px; text-align: right;">
+                  <div style="font-size: 10px; font-weight: 900; color: #38bdf8; text-transform: uppercase;">
+                    CÓDIGO DE REMISIÓN: <span style="color: #ffffff; font-size: 13px;">${codigoRemisionDoc}</span>
+                  </div>
+                  <div style="font-size: 10px; font-weight: 900; color: #fde047; text-transform: uppercase; margin-top: 3px;">
+                    N° DE EMPAQUE: <span style="color: #ffffff; font-size: 13px;">${numeroEmpaqueDoc}</span>
+                  </div>
+                  <div style="font-size: 10px; font-weight: 800; color: #cbd5e1; margin-top: 3px;">
+                    BULTOS FÍSICOS: <strong>${totalPackagesCount}</strong> • FECHA: ${new Date().toLocaleDateString('es-CO')}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2439,6 +2501,12 @@ const PackingListsModal = () => {
                                 <span className="text-xl font-black text-amber-700 dark:text-amber-400">
                                   PEDIDO #{list.pedidoNum}
                                 </span>
+                                <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-900 text-amber-300 border border-indigo-400/50">
+                                  {list.numeroEmpaque || 'EMP-0001'}
+                                </span>
+                                <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-sky-900 text-sky-200 border border-sky-400/50">
+                                  {list.codigoRemision || 'REM-0001'}
+                                </span>
                                 {list.isTerminada ? (
                                   <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-600 text-white border border-emerald-400">
                                     ✓ Lista Terminada
@@ -2726,6 +2794,12 @@ const PackingListsModal = () => {
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-2xl md:text-3xl font-black text-amber-700 dark:text-amber-400">
                             PEDIDO #{activePackingList.pedidoNum}
+                          </span>
+                          <span className="px-3 py-1 rounded-xl text-xs md:text-sm font-black uppercase bg-indigo-900 text-amber-300 border-2 border-indigo-400">
+                            📦 N° EMPAQUE: {activePackingList.numeroEmpaque || 'EMP-0001'}
+                          </span>
+                          <span className="px-3 py-1 rounded-xl text-xs md:text-sm font-black uppercase bg-sky-900 text-sky-200 border-2 border-sky-400">
+                            📄 REMISIÓN: {activePackingList.codigoRemision || 'REM-0001'}
                           </span>
                           <span className="text-base md:text-lg font-black theme-text-main uppercase">
                             • {activePackingList.cliente}

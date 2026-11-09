@@ -130,6 +130,8 @@ const reconstructPackingListsFromOrders = (plantOrders = []) => {
 
         const reconstructedPackages = Array.from(pkgMap.values());
         const timestamp = latestTransferDate || new Date().toISOString();
+        const existingRes = firstOrd?.resumenEmpaque || {};
+        const existingLog = firstOrd?.datos_logistica || {};
 
         reconstructed.push({
             id: `PACKLIST_PED_${pedNum}`,
@@ -137,6 +139,9 @@ const reconstructPackingListsFromOrders = (plantOrders = []) => {
             pedidoNum: pedNum,
             cliente,
             proyecto,
+            consecutivoEmpaqueNum: existingRes.consecutivoEmpaqueNum || undefined,
+            numeroEmpaque: existingRes.numeroEmpaque || existingLog.numeroEmpaque || undefined,
+            codigoRemision: existingRes.codigoRemision || existingLog.guiaRemesa || undefined,
             estadoLista: allFinishedEmpaque ? 'TERMINADA' : 'ACTIVA',
             creadoEn: timestamp,
             actualizadoEn: timestamp,
@@ -152,10 +157,25 @@ const reconstructPackingListsFromOrders = (plantOrders = []) => {
 };
 
 /**
+ * Extrae el número entero de un código consecutivo tipo EMP-0005 o REM-0005
+ */
+const extractConsecutiveNumber = (val) => {
+    if (typeof val === 'number' && Number.isFinite(val) && val > 0) return Math.floor(val);
+    const str = String(val || '').trim();
+    const match = str.match(/^(?:EMP|REM)-0*(\d+)$/i);
+    if (match && match[1]) {
+        const parsed = parseInt(match[1], 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    }
+    return 0;
+};
+
+/**
  * Fusiona y deduplica listas de empaque por `pedidoNum`, priorizando siempre:
  * 1) Las listas reales sobre las reconstruidas
  * 2) Entre dos listas reales del mismo pedido, la que tenga fecha `actualizadoEn` / `fechaCierre` más reciente
  *    (o estado `TERMINADA` más reciente)
+ * 3) Garantiza que toda lista de empaque tenga su consecutivo automático `numeroEmpaque` (EMP-XXXX) y `codigoRemision` (REM-XXXX)
  */
 const mergeAndDeduplicatePackingLists = (localLists = [], remoteLists = [], reconstructedLists = []) => {
     const byPedido = new Map();
@@ -167,32 +187,55 @@ const mergeAndDeduplicatePackingLists = (localLists = [], remoteLists = [], reco
         return Number.isNaN(parsed) ? 0 : parsed;
     };
 
+    const getCreationTimestamp = (item) => {
+        if (!item) return 0;
+        const raw = item.creadoEn || item.actualizadoEn || item.fechaCierre || 0;
+        const parsed = new Date(raw).getTime();
+        return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
     const pickBetterList = (curr, candidate) => {
         if (!curr) return candidate;
         if (!candidate) return curr;
 
+        const preservedConsec =
+            curr.consecutivoEmpaqueNum ||
+            candidate.consecutivoEmpaqueNum ||
+            extractConsecutiveNumber(curr.numeroEmpaque) ||
+            extractConsecutiveNumber(candidate.numeroEmpaque) ||
+            undefined;
+        const preservedNumEmp = curr.numeroEmpaque || candidate.numeroEmpaque || undefined;
+        const preservedCodRem = curr.codigoRemision || candidate.codigoRemision || undefined;
+
+        const withPreservedSeq = (winner) => ({
+            ...winner,
+            consecutivoEmpaqueNum: winner.consecutivoEmpaqueNum || preservedConsec,
+            numeroEmpaque: winner.numeroEmpaque || preservedNumEmp,
+            codigoRemision: winner.codigoRemision || preservedCodRem
+        });
+
         // Preferir lista real sobre lista reconstruida automáticamente
-        if (curr.esReconstruida && !candidate.esReconstruida) return candidate;
-        if (!curr.esReconstruida && candidate.esReconstruida) return curr;
+        if (curr.esReconstruida && !candidate.esReconstruida) return withPreservedSeq(candidate);
+        if (!curr.esReconstruida && candidate.esReconstruida) return withPreservedSeq(curr);
 
         const currTime = getTimestamp(curr);
         const candTime = getTimestamp(candidate);
 
         // Si una está TERMINADA y su timestamp es mayor o igual, gana TERMINADA
         if (candidate.estadoLista === 'TERMINADA' && curr.estadoLista !== 'TERMINADA' && candTime >= currTime) {
-            return candidate;
+            return withPreservedSeq(candidate);
         }
         if (curr.estadoLista === 'TERMINADA' && candidate.estadoLista !== 'TERMINADA' && currTime >= candTime) {
-            return curr;
+            return withPreservedSeq(curr);
         }
 
-        if (candTime > currTime) return candidate;
-        if (currTime > candTime) return curr;
+        if (candTime > currTime) return withPreservedSeq(candidate);
+        if (currTime > candTime) return withPreservedSeq(curr);
 
         // En caso de empate de fecha, preferir la que tenga más bultos registrados
         const currPkgs = Array.isArray(curr.packages) ? curr.packages.length : 0;
         const candPkgs = Array.isArray(candidate.packages) ? candidate.packages.length : 0;
-        return candPkgs >= currPkgs ? candidate : curr;
+        return withPreservedSeq(candPkgs >= currPkgs ? candidate : curr);
     };
 
     const ingest = (listArr) => {
@@ -215,7 +258,45 @@ const mergeAndDeduplicatePackingLists = (localLists = [], remoteLists = [], reco
     ingest(localLists);
     ingest(remoteLists);
 
-    return Array.from(byPedido.values()).sort((a, b) => getTimestamp(b) - getTimestamp(a));
+    const mergedArr = Array.from(byPedido.values());
+
+    // Asignación determinística de consecutivo de Número de Empaque (EMP-XXXX) y Código de Remisión (REM-XXXX)
+    const usedNumbers = new Set();
+    mergedArr.forEach((item) => {
+        const num =
+            extractConsecutiveNumber(item.consecutivoEmpaqueNum) ||
+            extractConsecutiveNumber(item.numeroEmpaque) ||
+            extractConsecutiveNumber(item.codigoRemision);
+        if (num > 0) {
+            usedNumbers.add(num);
+            item.consecutivoEmpaqueNum = num;
+            if (!item.numeroEmpaque) item.numeroEmpaque = `EMP-${String(num).padStart(4, '0')}`;
+            if (!item.codigoRemision) item.codigoRemision = `REM-${String(num).padStart(4, '0')}`;
+        }
+    });
+
+    // Ordenar cronológicamente (más antiguo primero) las listas que aún no tenían consecutivo asignado
+    const missingSeqLists = mergedArr
+        .filter((item) => !item.consecutivoEmpaqueNum || !item.numeroEmpaque || !item.codigoRemision)
+        .sort((a, b) => {
+            const diff = getCreationTimestamp(a) - getCreationTimestamp(b);
+            if (diff !== 0) return diff;
+            return String(a.pedidoNum).localeCompare(String(b.pedidoNum), undefined, { numeric: true });
+        });
+
+    let nextCandidate = 1;
+    missingSeqLists.forEach((item) => {
+        while (usedNumbers.has(nextCandidate)) {
+            nextCandidate += 1;
+        }
+        usedNumbers.add(nextCandidate);
+        item.consecutivoEmpaqueNum = nextCandidate;
+        item.numeroEmpaque = item.numeroEmpaque || `EMP-${String(nextCandidate).padStart(4, '0')}`;
+        item.codigoRemision = item.codigoRemision || `REM-${String(nextCandidate).padStart(4, '0')}`;
+        nextCandidate += 1;
+    });
+
+    return mergedArr.sort((a, b) => getTimestamp(b) - getTimestamp(a));
 };
 
 /**
