@@ -20,9 +20,18 @@ const Header = () => {
     setIsSidebarOpen
   } = useAppContext();
 
+  const alertsMap = React.useMemo(() => {
+    const m = new Map();
+    (coordinationAlerts || []).forEach(a => {
+      const k = String(a?.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
+      if (k && !m.has(k)) m.set(k, a);
+    });
+    return m;
+  }, [coordinationAlerts]);
+
   const totalOrders = orders.length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
-  const neutralBacklogCount = orders.filter(o => isOrderInNeutralBacklog(o)).length;
+  const neutralBacklogCount = orders.filter(o => isOrderInNeutralBacklog(o, alertsMap)).length;
 
   const getEffectiveDate = (o) => {
     if (!o) return null;

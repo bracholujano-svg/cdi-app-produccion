@@ -444,7 +444,12 @@ export const deduplicateErpTables = async (onProgress) => {
       const d = r?.data_completa || {};
       const hist = Array.isArray(d.historial) ? d.historial : [];
       const firstHist = hist[0] || {};
+      const isNeutralItem =
+        d.area === 'AREA_NEUTRA' ||
+        String(d.areaActual || '').toUpperCase().includes('NEUTRA') ||
+        String(r.id || '').toUpperCase().startsWith('NEUTRAL_');
       const isAutoErpDump =
+        !isNeutralItem &&
         (firstHist.entrega === 'ERP RIBISOFT' ||
           firstHist.accion === 'Importación ERP Ribisoft (Ingreso Inicial)') &&
         hist.length <= 1 &&

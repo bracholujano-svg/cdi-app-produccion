@@ -309,6 +309,16 @@ export const isUnassignedErpBulkImport = (orderObj) => {
     if (isPackingListRecord(orderObj)) return false;
 
     const rawArea = String(orderObj.areaActual || '').trim().toUpperCase();
+    const rawAreaField = String(orderObj.area || '').trim().toUpperCase();
+    const rawId = String(orderObj.id || '').trim().toUpperCase();
+    if (
+        rawAreaField === 'AREA_NEUTRA' ||
+        rawArea.includes('NEUTRA') ||
+        rawArea.includes('BACKLOG') ||
+        rawId.startsWith('NEUTRAL_')
+    ) {
+        return false;
+    }
     if (
         rawArea.includes('PROGRAMACIÓN Y DISEÑO') ||
         rawArea.includes('PROGRAMACION Y DISENO') ||

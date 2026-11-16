@@ -50,7 +50,8 @@ import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import DispatchHistoryTable from './components/views/DispatchHistoryTable';
 import PublicPdfViewer from './components/views/PublicPdfViewer';
-import NeutralAreaBacklogView from './components/views/NeutralAreaBacklogView';
+import NeutralAreaBacklogView, { isOrderInNeutralBacklog } from './components/views/NeutralAreaBacklogView';
+import { syncNov2026And2027OrdersToNeutralArea } from './services/neutralBacklogSyncService';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
 
@@ -654,7 +655,49 @@ const {
     setOrders(updatedOrders); updatedOrders.filter(o => coordList.some(c => c.pedidoNum === o.pedidoNum)).forEach(o => syncOrderToSupabase(o));
     
     setCoordList([]); setShowCoordinationModal(false);
+
+    // Sincronizar automáticamente al Área Neutra si alguno de los pedidos coordinados corresponde a Noviembre 2026 en adelante o 2027
+    setTimeout(() => {
+      syncNov2026And2027OrdersToNeutralArea({
+        currentOrders: updatedOrders,
+        currentAlerts: newAlerts,
+        silent: false,
+        onComplete: (newOrUpdatedMap) => {
+          setOrders((prev) => {
+            const byId = new Map((prev || []).map((o) => [o.id, o]));
+            for (const [id, ord] of newOrUpdatedMap.entries()) {
+              byId.set(id, ord);
+            }
+            return Array.from(byId.values());
+          });
+        }
+      });
+    }, 400);
   };
+
+  // Sincronización automática inicial de todos los pedidos con fecha de entrega comercial de Noviembre 2026 en adelante y 2027 hacia el Área Neutra
+  const initialBacklogSyncDoneRef = useRef(false);
+  useEffect(() => {
+    if (!supervisorProfile || initialBacklogSyncDoneRef.current) return;
+    const timer = setTimeout(() => {
+      initialBacklogSyncDoneRef.current = true;
+      syncNov2026And2027OrdersToNeutralArea({
+        currentOrders: orders,
+        currentAlerts: coordinationAlerts,
+        silent: true,
+        onComplete: (newOrUpdatedMap) => {
+          setOrders((prev) => {
+            const byId = new Map((prev || []).map((o) => [o.id, o]));
+            for (const [id, ord] of newOrUpdatedMap.entries()) {
+              byId.set(id, ord);
+            }
+            return Array.from(byId.values());
+          });
+        }
+      });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [supervisorProfile, coordinationAlerts.length]);
 
   const shareToWhatsApp = (type, savedLog = null) => {
     if (!selectedOrder) return;
@@ -798,6 +841,11 @@ const {
 
       // Para cualquier otra vista (Producción activa, Atrasos, Cumplidos), excluir estrictamente DESPACHADO
       if (isDespachado) return false;
+
+      // Mantener los pedidos del Área Neutra / Backlog en su vista dedicada a menos que se filtre explícitamente esa área
+      if (areaFilter !== 'Área Neutra / Backlog' && isOrderInNeutralBacklog(o, alertsByPedidoMap)) {
+        return false;
+      }
 
       const matchArea = areaFilter === 'Todas' || 
                         areaFilter === 'Administrador / Todos' || 

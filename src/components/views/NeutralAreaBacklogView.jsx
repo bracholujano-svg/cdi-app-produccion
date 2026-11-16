@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Layers,
   Search,
@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Clock,
   FileCode2,
-  FolderKanban
+  FolderKanban,
+  RefreshCw
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS_RECEPCION, CONFIG_PROCESOS } from '../../utils/constants';
@@ -23,15 +24,20 @@ import {
   buildProductBlueprintQrPayload,
   showCdiBlueprintToast
 } from '../../utils/colorQrHelper';
+import {
+  syncNov2026And2027OrdersToNeutralArea,
+  isTargetBacklogDeliveryDate,
+  parseCommercialDeliveryDate
+} from '../../services/neutralBacklogSyncService';
 
-export const isOrderInNeutralBacklog = (o) => {
+export const isOrderInNeutralBacklog = (o, alertsMap = null) => {
   if (!o || o.estadoInterno === 'DESPACHADO' || o.isTerminado) return false;
   const areaAct = String(o.areaActual || '').trim().toUpperCase();
   const areaRaw = String(o.area || '').trim().toUpperCase();
   const estInt = String(o.estadoInterno || '').trim().toUpperCase();
   const estRaw = String(o.estado || '').trim().toUpperCase();
 
-  return (
+  if (
     areaAct === 'ÁREA NEUTRA / BACKLOG' ||
     areaAct === 'AREA NEUTRA / BACKLOG' ||
     areaAct === 'AREA_NEUTRA' ||
@@ -39,7 +45,26 @@ export const isOrderInNeutralBacklog = (o) => {
     estInt === 'PENDIENTE_INGENIERIA' ||
     estRaw === 'PENDIENTE_INGENIERIA' ||
     areaAct === 'COMERCIAL / VENTAS'
-  );
+  ) {
+    return true;
+  }
+
+  // También incluir cualquier pedido con fecha de entrega comercial de Noviembre 2026 en adelante o 2027 que aún no haya iniciado avance en planta
+  const hasPlantWork =
+    (Array.isArray(o.bitacoraTurnos) && o.bitacoraTurnos.length > 0) ||
+    (Array.isArray(o.bitacoraCalidad) && o.bitacoraCalidad.length > 0) ||
+    (Array.isArray(o.historial) && o.historial.length > 1);
+
+  if (!hasPlantWork) {
+    const pedKey = String(o.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
+    const alertDate = alertsMap && pedKey ? alertsMap.get(pedKey)?.fechaEntrega : null;
+    const candidateDate = o.fechaEntregaPrometida || alertDate;
+    if (candidateDate && isTargetBacklogDeliveryDate(candidateDate)) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 export default function NeutralAreaBacklogView() {
@@ -57,10 +82,13 @@ export default function NeutralAreaBacklogView() {
   } = useAppContext();
 
   const [backlogSearch, setBacklogSearch] = useState('');
+  const [periodFilter, setPeriodFilter] = useState('TODOS'); // 'TODOS' | 'NOV_DIC_2026' | 'ANIO_2027'
   const [expandedPedidos, setExpandedPedidos] = useState({});
   const [targetAreaByPedido, setTargetAreaByPedido] = useState({});
   const [targetAreaByItem, setTargetAreaByItem] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+  const [isSyncingCommercial, setIsSyncingCommercial] = useState(false);
+  const hasAutoSyncedRef = useRef(false);
 
   const productionTargetAreas = useMemo(() => {
     return AREAS_RECEPCION.filter(
@@ -71,16 +99,60 @@ export default function NeutralAreaBacklogView() {
   const alertsMap = useMemo(() => {
     const map = new Map();
     (coordinationAlerts || []).forEach((a) => {
-      const k = String(a?.pedidoNum || '').trim().toUpperCase();
+      const k = String(a?.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
       if (k && !map.has(k)) map.set(k, a);
     });
     return map;
   }, [coordinationAlerts]);
 
+  const handleRunCommercialBacklogSync = async (silent = false) => {
+    if (isSyncingCommercial) return;
+    setIsSyncingCommercial(true);
+    try {
+      await syncNov2026And2027OrdersToNeutralArea({
+        currentOrders: orders,
+        currentAlerts: coordinationAlerts,
+        silent,
+        onComplete: (newOrUpdatedMap) => {
+          setOrders((prev) => {
+            const byId = new Map((prev || []).map((o) => [o.id, o]));
+            for (const [id, ord] of newOrUpdatedMap.entries()) {
+              byId.set(id, ord);
+            }
+            return Array.from(byId.values());
+          });
+        }
+      });
+    } finally {
+      setIsSyncingCommercial(false);
+    }
+  };
+
+  // Sincronización automática al abrir el Área Neutra
+  useEffect(() => {
+    if (hasAutoSyncedRef.current) return;
+    hasAutoSyncedRef.current = true;
+    handleRunCommercialBacklogSync(true);
+  }, []);
+
   const backlogOrders = useMemo(() => {
     const q = backlogSearch.trim().toLowerCase();
     return (orders || []).filter((o) => {
-      if (!isOrderInNeutralBacklog(o)) return false;
+      if (!isOrderInNeutralBacklog(o, alertsMap)) return false;
+
+      if (periodFilter !== 'TODOS') {
+        const pedKey = String(o.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
+        const effDate = alertsMap.get(pedKey)?.fechaEntrega || o.fechaEntregaPrometida;
+        const parsed = parseCommercialDeliveryDate(effDate);
+        if (!parsed) return false;
+        if (periodFilter === 'NOV_DIC_2026' && !(parsed.year === 2026 && parsed.month >= 11)) {
+          return false;
+        }
+        if (periodFilter === 'ANIO_2027' && parsed.year < 2027) {
+          return false;
+        }
+      }
+
       if (!q) return true;
       return (
         String(o.pedidoNum || '').toLowerCase().includes(q) ||
@@ -89,17 +161,17 @@ export default function NeutralAreaBacklogView() {
         String(o.nombre || '').toLowerCase().includes(q)
       );
     });
-  }, [orders, backlogSearch]);
+  }, [orders, backlogSearch, periodFilter, alertsMap]);
 
   const groupedBacklogPedidos = useMemo(() => {
     const map = new Map();
     backlogOrders.forEach((ord) => {
-      const ped = String(ord.pedidoNum || 'S/N').trim().toUpperCase();
+      const ped = String(ord.pedidoNum || 'S/N').replace(/^#/, '').trim().toUpperCase();
       if (!map.has(ped)) {
         const alertObj = alertsMap.get(ped);
         map.set(ped, {
           pedidoNum: ped,
-          cliente: ord.cliente || 'CLIENTE GENERAL',
+          cliente: ord.cliente || alertObj?.cliente || 'CLIENTE GENERAL',
           fechaEntrega: alertObj?.fechaEntrega || ord.fechaEntregaPrometida || null,
           fechaIngreso: ord.fechaIngresoArea || null,
           items: []
@@ -108,9 +180,12 @@ export default function NeutralAreaBacklogView() {
       map.get(ped).items.push(ord);
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true })
-    );
+    return Array.from(map.values()).sort((a, b) => {
+      const dA = parseCommercialDeliveryDate(a.fechaEntrega)?.isoDate || '9999-12-31';
+      const dB = parseCommercialDeliveryDate(b.fechaEntrega)?.isoDate || '9999-12-31';
+      if (dA !== dB) return dA.localeCompare(dB);
+      return String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true });
+    });
   }, [backlogOrders, alertsMap]);
 
   const totalUnitsCount = useMemo(
@@ -244,6 +319,21 @@ export default function NeutralAreaBacklogView() {
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <button
               type="button"
+              disabled={isSyncingCommercial}
+              onClick={() => handleRunCommercialBacklogSync(false)}
+              className="px-4 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer"
+              title="Sincronizar automáticamente desde Supabase todos los pedidos con fecha de entrega comercial de Noviembre 2026 en adelante y 2027"
+            >
+              <RefreshCw size={18} className={isSyncingCommercial ? 'animate-spin' : ''} />
+              <span>
+                {isSyncingCommercial
+                  ? 'Sincronizando Nov 2026 / 2027...'
+                  : 'Sincronizar Nov 2026 y 2027'}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setSearchResults([]);
                 setShowSearchSelector(false);
@@ -256,6 +346,46 @@ export default function NeutralAreaBacklogView() {
               <span>Cargar Pedido a Área Neutra</span>
             </button>
           </div>
+        </div>
+
+        {/* FILTROS RÁPIDOS DE HORIZONTE COMERCIAL (NOVIEMBRE 2026 EN ADELANTE Y 2027) */}
+        <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-slate-800">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
+            Horizonte de Entrega Comercial:
+          </span>
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('TODOS')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+              periodFilter === 'TODOS'
+                ? 'bg-indigo-600 text-white shadow'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            Todos en Área Neutra
+          </button>
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('NOV_DIC_2026')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+              periodFilter === 'NOV_DIC_2026'
+                ? 'bg-amber-500 text-slate-950 shadow'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            📅 Noviembre - Diciembre 2026
+          </button>
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('ANIO_2027')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+              periodFilter === 'ANIO_2027'
+                ? 'bg-emerald-500 text-slate-950 shadow'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            📅 Entregas Año 2027
+          </button>
         </div>
 
         {/* KPIs RÁPIDOS + BUSCADOR */}
