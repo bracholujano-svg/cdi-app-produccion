@@ -1293,7 +1293,7 @@ export default function EtpCopilotForm({
                 disabled={isLocked}
                 value={colorSystem}
                 onChange={(e) => setColorSystem(e.target.value)}
-                className={`w-28 px-2 py-2 rounded-xl text-xs font-bold ${
+                className={`shrink-0 w-24 px-2 py-2 rounded-xl text-xs font-bold ${
                   isLocked
                     ? 'bg-stone-100 border-transparent text-slate-800'
                     : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
@@ -1312,7 +1312,7 @@ export default function EtpCopilotForm({
                 value={colorRef}
                 onChange={(e) => setColorRef(e.target.value.toUpperCase())}
                 placeholder="Código (ej. 7005 C)"
-                className={`flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase ${
+                className={`min-w-0 flex-1 px-3 py-2 rounded-xl text-xs font-black uppercase ${
                   isLocked
                     ? 'bg-stone-100 border-transparent text-slate-800'
                     : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
@@ -1378,7 +1378,7 @@ export default function EtpCopilotForm({
             <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
               Acabado de Producción + Gloss 60° *
             </label>
-            <div className="flex gap-1.5">
+            <div className="flex items-center gap-2">
               <select
                 disabled={isLocked}
                 value={acabadoProduccion}
@@ -1390,7 +1390,7 @@ export default function EtpCopilotForm({
                   else if (val === 'Satinado') setGlossLevel('40');
                   else if (val === 'Brillante') setGlossLevel('90');
                 }}
-                className={`flex-1 px-2.5 py-2 rounded-xl text-xs font-bold ${
+                className={`min-w-0 flex-1 px-2.5 py-2 rounded-xl text-xs font-bold ${
                   isLocked
                     ? 'bg-stone-100 border-transparent text-slate-800'
                     : 'bg-stone-50 border border-stone-300 focus:border-amber-500 text-slate-900'
@@ -1400,18 +1400,23 @@ export default function EtpCopilotForm({
                 <option value="Semimate">Semimate</option>
                 <option value="Satinado">Satinado</option>
                 <option value="Brillante">Brillante</option>
-                <option value="Texturizado / Microtextura">Texturizado / Microtextura</option>
+                <option value="Texturizado / Microtextura">Texturizado</option>
               </select>
-              <div className="flex items-center bg-stone-50 border border-stone-300 rounded-xl px-2 w-20">
+              <div className="shrink-0 flex items-center justify-between gap-1 bg-amber-50 border-2 border-amber-400 rounded-xl px-2.5 py-1 w-32 shadow-sm">
+                <span className="text-[10px] font-black uppercase text-amber-800 shrink-0">
+                  Brillo:
+                </span>
                 <input
                   type="number"
+                  min="0"
+                  max="100"
                   disabled={isLocked}
                   value={glossLevel}
                   onChange={(e) => setGlossLevel(e.target.value)}
-                  className="w-full bg-transparent text-xs font-black text-center outline-none"
+                  className="w-12 bg-white border border-amber-300 rounded-lg py-0.5 px-1 text-sm font-black text-slate-950 text-center outline-none focus:ring-2 focus:ring-amber-500"
                   title="% Brillo / Unidades Gloss a 60°"
                 />
-                <span className="text-[10px] font-bold text-slate-500">%</span>
+                <span className="text-xs font-black text-amber-900 shrink-0">%</span>
               </div>
             </div>
           </div>
