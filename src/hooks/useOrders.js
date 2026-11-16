@@ -315,6 +315,7 @@ export const isUnassignedErpBulkImport = (orderObj) => {
         rawAreaField === 'AREA_NEUTRA' ||
         rawArea.includes('NEUTRA') ||
         rawArea.includes('BACKLOG') ||
+        rawArea.includes('CONSULTA GENERAL') ||
         rawId.startsWith('NEUTRAL_')
     ) {
         return false;

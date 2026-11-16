@@ -315,8 +315,8 @@ const {
     
     const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
 
-    const isNeutralArea = !areaIni || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
-    const targetAreaIni = areaIni || 'Área Neutra / Backlog';
+    const isNeutralArea = !areaIni || areaIni === 'Área de Consulta General' || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
+    const targetAreaIni = areaIni || 'Área de Consulta General';
     const newId = generateUUID();
     const newOrder = {
       id: newId,
@@ -387,8 +387,8 @@ const {
 
       const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
 
-      const isNeutralArea = !areaIni || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
-      const targetAreaIni = areaIni || 'Área Neutra / Backlog';
+      const isNeutralArea = !areaIni || areaIni === 'Área de Consulta General' || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
+      const targetAreaIni = areaIni || 'Área de Consulta General';
       const newId = generateUUID();
       const newOrder = {
         id: newId,
@@ -842,8 +842,8 @@ const {
       // Para cualquier otra vista (Producción activa, Atrasos, Cumplidos), excluir estrictamente DESPACHADO
       if (isDespachado) return false;
 
-      // Mantener los pedidos del Área Neutra / Backlog en su vista dedicada a menos que se filtre explícitamente esa área
-      if (areaFilter !== 'Área Neutra / Backlog' && isOrderInNeutralBacklog(o, alertsByPedidoMap)) {
+      // Mantener los pedidos del Área de Consulta General en su vista dedicada a menos que se filtre explícitamente esa área
+      if (areaFilter !== 'Área de Consulta General' && areaFilter !== 'Área Neutra / Backlog' && isOrderInNeutralBacklog(o, alertsByPedidoMap)) {
         return false;
       }
 

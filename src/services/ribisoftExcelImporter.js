@@ -447,6 +447,7 @@ export const deduplicateErpTables = async (onProgress) => {
       const isNeutralItem =
         d.area === 'AREA_NEUTRA' ||
         String(d.areaActual || '').toUpperCase().includes('NEUTRA') ||
+        String(d.areaActual || '').toUpperCase().includes('CONSULTA GENERAL') ||
         String(r.id || '').toUpperCase().startsWith('NEUTRAL_');
       const isAutoErpDump =
         !isNeutralItem &&
@@ -997,7 +998,9 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       notas: item.notas,
       observaciones_erp: item.observaciones_erp,
       fecha_asigna: item.fecha_asigna,
-      fecha_genera_ped: item.fecha_genera_ped
+      fecha_genera_ped: item.fecha_genera_ped,
+      fecha_entrega: item.fecha_entrega,
+      "Fecha Entrega": item.fecha_entrega
     });
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Layers,
   Search,
@@ -7,16 +7,16 @@ import {
   Copy,
   Download,
   ArrowRight,
-  Plus,
   CheckCircle2,
   Clock,
   FileCode2,
-  FolderKanban,
-  RefreshCw
+  FolderKanban
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { supabase } from '../../supabaseClient';
 import { AREAS_RECEPCION, CONFIG_PROCESOS } from '../../utils/constants';
 import { getDaysLeft, formatLocalDate } from '../../utils/helpers';
+import { cleanErpCode, normalizeProductName } from '../../services/ribisoftExcelImporter';
 import {
   SolidWorksStampPreview,
   copyBlueprintQrToClipboard,
@@ -25,7 +25,6 @@ import {
   showCdiBlueprintToast
 } from '../../utils/colorQrHelper';
 import {
-  syncNov2026And2027OrdersToNeutralArea,
   isTargetBacklogDeliveryDate,
   parseCommercialDeliveryDate
 } from '../../services/neutralBacklogSyncService';
@@ -38,6 +37,8 @@ export const isOrderInNeutralBacklog = (o, alertsMap = null) => {
   const estRaw = String(o.estado || '').trim().toUpperCase();
 
   if (
+    areaAct === 'ÁREA DE CONSULTA GENERAL' ||
+    areaAct === 'AREA DE CONSULTA GENERAL' ||
     areaAct === 'ÁREA NEUTRA / BACKLOG' ||
     areaAct === 'AREA NEUTRA / BACKLOG' ||
     areaAct === 'AREA_NEUTRA' ||
@@ -49,7 +50,6 @@ export const isOrderInNeutralBacklog = (o, alertsMap = null) => {
     return true;
   }
 
-  // También incluir cualquier pedido con fecha de entrega comercial de Noviembre 2026 en adelante o 2027 que aún no haya iniciado avance en planta
   const hasPlantWork =
     (Array.isArray(o.bitacoraTurnos) && o.bitacoraTurnos.length > 0) ||
     (Array.isArray(o.bitacoraCalidad) && o.bitacoraCalidad.length > 0) ||
@@ -74,25 +74,26 @@ export default function NeutralAreaBacklogView() {
     syncOrderToSupabase,
     coordinationAlerts,
     supervisorProfile,
-    setShowAddModal,
     setSelectedOrder,
-    setSearchResults,
-    setShowSearchSelector,
-    setDuplicateError
+    supabaseData
   } = useAppContext();
 
+  const [ribisoftRows, setRibisoftRows] = useState([]);
+  const [loadingRibi, setLoadingRibi] = useState(true);
   const [backlogSearch, setBacklogSearch] = useState('');
-  const [periodFilter, setPeriodFilter] = useState('TODOS'); // 'TODOS' | 'NOV_DIC_2026' | 'ANIO_2027'
+  const [viewModeFilter, setViewModeFilter] = useState('TODOS'); // 'TODOS' | 'NOV2026_2027' | 'SIN_TOCAR'
+  const [minPedidoNum, setMinPedidoNum] = useState(63500);
   const [expandedPedidos, setExpandedPedidos] = useState({});
   const [targetAreaByPedido, setTargetAreaByPedido] = useState({});
   const [targetAreaByItem, setTargetAreaByItem] = useState({});
   const [copiedId, setCopiedId] = useState(null);
-  const [isSyncingCommercial, setIsSyncingCommercial] = useState(false);
-  const hasAutoSyncedRef = useRef(false);
 
   const productionTargetAreas = useMemo(() => {
     return AREAS_RECEPCION.filter(
-      (a) => a !== 'Área Neutra / Backlog' && a !== 'Comercial / Ventas'
+      (a) =>
+        a !== 'Área de Consulta General' &&
+        a !== 'Área Neutra / Backlog' &&
+        a !== 'Comercial / Ventas'
     );
   }, []);
 
@@ -105,92 +106,264 @@ export default function NeutralAreaBacklogView() {
     return map;
   }, [coordinationAlerts]);
 
-  const handleRunCommercialBacklogSync = async (silent = false) => {
-    if (isSyncingCommercial) return;
-    setIsSyncingCommercial(true);
-    try {
-      await syncNov2026And2027OrdersToNeutralArea({
-        currentOrders: orders,
-        currentAlerts: coordinationAlerts,
-        silent,
-        onComplete: (newOrUpdatedMap) => {
-          setOrders((prev) => {
-            const byId = new Map((prev || []).map((o) => [o.id, o]));
-            for (const [id, ord] of newOrUpdatedMap.entries()) {
-              byId.set(id, ord);
-            }
-            return Array.from(byId.values());
-          });
-        }
-      });
-    } finally {
-      setIsSyncingCommercial(false);
-    }
-  };
+  // Mapa (pedido_sin + producto) -> codpt desde requerimientos_pedido para enriquecer códigos 3300xxxx
+  const prodToCodptMap = useMemo(() => {
+    const map = new Map();
+    const reqList = supabaseData?.requerimientos || [];
+    reqList.forEach((r) => {
+      const pSin = cleanErpCode(r.pedido_sin ?? r.pedidosin);
+      const codpt = cleanErpCode(r.codpt);
+      const prod = normalizeProductName(r.producto);
+      if (pSin && codpt && prod) {
+        map.set(`${pSin}__${prod}`, codpt);
+      }
+    });
+    return map;
+  }, [supabaseData]);
 
-  // Sincronización automática al abrir el Área Neutra
+  // Cargar automáticamente todas las filas de `ribisoft_pedidos` y escuchar cuando se sincronice un nuevo Excel en "+ Nuevo"
   useEffect(() => {
-    if (hasAutoSyncedRef.current) return;
-    hasAutoSyncedRef.current = true;
-    handleRunCommercialBacklogSync(true);
+    let isMounted = true;
+
+    const loadRibisoftPedidos = async () => {
+      setLoadingRibi(true);
+      try {
+        await supabase.auth.getSession();
+        let allRows = [];
+        let from = 0;
+        const step = 1000;
+        let hasMore = true;
+
+        while (hasMore && isMounted) {
+          const { data, error } = await supabase
+            .from('ribisoft_pedidos')
+            .select('*')
+            .range(from, from + step - 1);
+
+          if (error || !data || data.length === 0) {
+            hasMore = false;
+          } else {
+            allRows = allRows.concat(data);
+            from += step;
+            if (data.length < step) hasMore = false;
+          }
+        }
+
+        if (isMounted) {
+          setRibisoftRows(allRows);
+        }
+      } catch (err) {
+        console.error('Error cargando pedidos desde ribisoft_pedidos:', err);
+      } finally {
+        if (isMounted) setLoadingRibi(false);
+      }
+    };
+
+    loadRibisoftPedidos();
+
+    const handleErpSynced = () => {
+      loadRibisoftPedidos();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cdi-erp-synced', handleErpSynced);
+    }
+
+    return () => {
+      isMounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('cdi-erp-synced', handleErpSynced);
+      }
+    };
   }, []);
 
-  const backlogOrders = useMemo(() => {
-    const q = backlogSearch.trim().toLowerCase();
-    return (orders || []).filter((o) => {
-      if (!isOrderInNeutralBacklog(o, alertsMap)) return false;
+  /**
+   * Unifica en una sola vista todos los pedidos que:
+   * 1) Fueron cargados a `Área de Consulta General` en `orders` (`produccion_pedidos`), Y
+   * 2) Todos los pedidos e ítems que entraron al RIBI por el archivo Excel (`ribisoft_pedidos`)
+   *    y que aún no han entrado en producción en las secciones de planta.
+   */
+  const unifiedConsultaItems = useMemo(() => {
+    const itemsMap = new Map();
+    const plantStartedSet = new Set();
 
-      if (periodFilter !== 'TODOS') {
-        const pedKey = String(o.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
-        const effDate = alertsMap.get(pedKey)?.fechaEntrega || o.fechaEntregaPrometida;
-        const parsed = parseCommercialDeliveryDate(effDate);
-        if (!parsed) return false;
-        if (periodFilter === 'NOV_DIC_2026' && !(parsed.year === 2026 && parsed.month >= 11)) {
-          return false;
-        }
-        if (periodFilter === 'ANIO_2027' && parsed.year < 2027) {
-          return false;
-        }
+    // 1. Clasificar órdenes existentes en `produccion_pedidos`
+    (orders || []).forEach((ord) => {
+      if (!ord || !ord.pedidoNum) return;
+      const ped = String(ord.pedidoNum).replace(/^#/, '').trim().toUpperCase();
+      const cod = cleanErpCode(ord.codArticulo || ord.codigo_item || '') || '';
+      const normName = normalizeProductName(ord.nombre || ord.descripcion || '');
+      const key = `${ped}__${normName || cod || ord.id}`;
+
+      if (isOrderInNeutralBacklog(ord, alertsMap)) {
+        itemsMap.set(key, {
+          ...ord,
+          pedidoNum: ped,
+          codArticulo: (cod || ord.codArticulo || 'S/C').toUpperCase(),
+          isFromPlantTable: true
+        });
+      } else {
+        // Ya está en producción activa en alguna sección de planta o despachado
+        if (cod) plantStartedSet.add(`${ped}__CODE__${cod.toUpperCase()}`);
+        if (normName) plantStartedSet.add(`${ped}__NAME__${normName}`);
+      }
+    });
+
+    // 2. Incorporar todos los pedidos de `ribisoft_pedidos` (Excel RIBI) que aún no están en secciones de planta
+    const minNumVal = Number(minPedidoNum) || 0;
+
+    (ribisoftRows || []).forEach((r, idx) => {
+      if (!r || typeof r !== 'object') return;
+      const rawPed = cleanErpCode(r['PedidoSIN'] ?? r['pedido_sin'] ?? r['pedidosin'] ?? r['Pedido']);
+      if (!rawPed) return;
+      const ped = String(rawPed).replace(/^#/, '').trim().toUpperCase();
+
+      const numMatch = ped.match(/\d+/);
+      const pedNumber = numMatch ? Number(numMatch[0]) : 0;
+
+      const rawFechaEntrega =
+        r['Fecha Entrega'] ??
+        r['fecha_entrega'] ??
+        r['Fecha de Entrega'] ??
+        alertsMap.get(ped)?.fechaEntrega ??
+        null;
+
+      const hasFutureDate = isTargetBacklogDeliveryDate(rawFechaEntrega);
+
+      // Si no tiene fecha futura explícita de Nov 2026 / 2027, aplicar el filtro de pedido mínimo (>= minPedidoNum)
+      if (!hasFutureDate && minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal) {
+        return;
+      }
+
+      const desc = String(
+        r['Descripción'] ?? r['Descripcion'] ?? r['descripcion'] ?? r['Producto'] ?? r['producto'] ?? ''
+      ).trim();
+      const normName = normalizeProductName(desc);
+      let cod = cleanErpCode(r['Código Ítem'] ?? r['codigo_item'] ?? r['codpt'] ?? '') || '';
+      if (!cod && normName && prodToCodptMap.has(`${ped}__${normName}`)) {
+        cod = prodToCodptMap.get(`${ped}__${normName}`);
+      }
+      const codUpper = (cod || 'S/C').toUpperCase();
+
+      if (!normName && codUpper === 'S/C') return;
+
+      // Si este ítem ya entró en una sección productiva de planta, no duplicarlo aquí
+      if (
+        (cod && plantStartedSet.has(`${ped}__CODE__${codUpper}`)) ||
+        (normName && plantStartedSet.has(`${ped}__NAME__${normName}`))
+      ) {
+        return;
+      }
+
+      const key = `${ped}__${normName || codUpper}`;
+      const existing = itemsMap.get(key);
+
+      if (!existing || (!existing.codArticulo || existing.codArticulo === 'S/C') && cod) {
+        const deterministicId = existing?.id || `RIBI_${ped}_${codUpper !== 'S/C' ? codUpper : idx + 1}`;
+        const parsedEntrega = parseCommercialDeliveryDate(rawFechaEntrega);
+        const parsedGenera = parseCommercialDeliveryDate(
+          r['fecha_genera_ped'] ?? r['Fecha Genera Ped.'] ?? r['fecha_asigna']
+        );
+
+        itemsMap.set(key, {
+          id: deterministicId,
+          pedidoNum: ped,
+          pedidoNumeric: pedNumber,
+          codArticulo: codUpper,
+          codigo_item: codUpper,
+          qr_plano_payload: buildProductBlueprintQrPayload({
+            id: deterministicId,
+            pedidoNum: ped,
+            codArticulo: codUpper
+          }),
+          nombre: normName || 'PRODUCTO RIBI',
+          cantidad: Number(r['Cantidad'] ?? r['cantidad']) || 1,
+          cliente: String(
+            r['Cliente'] ??
+              r['cliente'] ??
+              r['Nombre Proyecto'] ??
+              alertsMap.get(ped)?.cliente ??
+              'CLIENTE GENERAL'
+          )
+            .trim()
+            .toUpperCase(),
+          nombre_proyecto: String(r['Nombre Proyecto'] ?? r['nombre_proyecto'] ?? '')
+            .trim()
+            .toUpperCase(),
+          programador: String(r['Programador'] ?? r['programador'] ?? '')
+            .trim()
+            .toUpperCase(),
+          area: 'AREA_NEUTRA',
+          areaActual: 'Área de Consulta General',
+          estado: 'PENDIENTE_INGENIERIA',
+          estadoInterno: r['Estado'] || 'EN CONSULTA GENERAL (RIBI)',
+          fechaEntregaPrometida: parsedEntrega?.isoDate || existing?.fechaEntregaPrometida || null,
+          fechaGeneraPed: parsedGenera?.isoDate || null,
+          dim_1: r['dim_1'] ?? r['Dim.1'] ?? null,
+          dim_2: r['dim_2'] ?? r['Dim.2'] ?? null,
+          dim_3: r['dim_3'] ?? r['Dim.3'] ?? null,
+          acabado_1: r['acabado_1'] ?? r['Acabado1'] ?? null,
+          acabado_2: r['acabado_2'] ?? r['Acabado2'] ?? null,
+          acabado_3: r['acabado_3'] ?? r['Acabado3'] ?? null,
+          caracteristicas: r['caracteristicas'] ?? r['Características'] ?? null,
+          categoria: r['categoria'] ?? r['Categoria'] ?? null,
+          notas: r['notas'] ?? r['Notas'] ?? null,
+          observaciones_erp: r['observaciones_erp'] ?? r['Observaciones'] ?? null,
+          isFromPlantTable: Boolean(existing?.isFromPlantTable)
+        });
+      }
+    });
+
+    return Array.from(itemsMap.values());
+  }, [orders, ribisoftRows, alertsMap, prodToCodptMap, minPedidoNum]);
+
+  const filteredItems = useMemo(() => {
+    const q = backlogSearch.trim().toLowerCase();
+    return unifiedConsultaItems.filter((item) => {
+      const pedKey = String(item.pedidoNum || '').trim().toUpperCase();
+      const effDate = alertsMap.get(pedKey)?.fechaEntrega || item.fechaEntregaPrometida;
+
+      if (viewModeFilter === 'NOV2026_2027') {
+        if (!isTargetBacklogDeliveryDate(effDate)) return false;
       }
 
       if (!q) return true;
       return (
-        String(o.pedidoNum || '').toLowerCase().includes(q) ||
-        String(o.cliente || '').toLowerCase().includes(q) ||
-        String(o.codArticulo || '').toLowerCase().includes(q) ||
-        String(o.nombre || '').toLowerCase().includes(q)
+        String(item.pedidoNum || '').toLowerCase().includes(q) ||
+        String(item.cliente || '').toLowerCase().includes(q) ||
+        String(item.nombre_proyecto || '').toLowerCase().includes(q) ||
+        String(item.codArticulo || '').toLowerCase().includes(q) ||
+        String(item.nombre || '').toLowerCase().includes(q)
       );
     });
-  }, [orders, backlogSearch, periodFilter, alertsMap]);
+  }, [unifiedConsultaItems, backlogSearch, viewModeFilter, alertsMap]);
 
-  const groupedBacklogPedidos = useMemo(() => {
+  const groupedPedidos = useMemo(() => {
     const map = new Map();
-    backlogOrders.forEach((ord) => {
+    filteredItems.forEach((ord) => {
       const ped = String(ord.pedidoNum || 'S/N').replace(/^#/, '').trim().toUpperCase();
       if (!map.has(ped)) {
         const alertObj = alertsMap.get(ped);
         map.set(ped, {
           pedidoNum: ped,
           cliente: ord.cliente || alertObj?.cliente || 'CLIENTE GENERAL',
+          proyecto: ord.nombre_proyecto || '',
           fechaEntrega: alertObj?.fechaEntrega || ord.fechaEntregaPrometida || null,
-          fechaIngreso: ord.fechaIngresoArea || null,
+          fechaGenera: ord.fechaGeneraPed || null,
           items: []
         });
       }
       map.get(ped).items.push(ord);
     });
 
-    return Array.from(map.values()).sort((a, b) => {
-      const dA = parseCommercialDeliveryDate(a.fechaEntrega)?.isoDate || '9999-12-31';
-      const dB = parseCommercialDeliveryDate(b.fechaEntrega)?.isoDate || '9999-12-31';
-      if (dA !== dB) return dA.localeCompare(dB);
-      return String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true });
-    });
-  }, [backlogOrders, alertsMap]);
+    return Array.from(map.values()).sort((a, b) =>
+      String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true })
+    );
+  }, [filteredItems, alertsMap]);
 
   const totalUnitsCount = useMemo(
-    () => backlogOrders.reduce((acc, o) => acc + (Number(o.cantidad) || 1), 0),
-    [backlogOrders]
+    () => filteredItems.reduce((acc, o) => acc + (Number(o.cantidad) || 1), 0),
+    [filteredItems]
   );
 
   const handleCopyStamp = async (e, product) => {
@@ -216,82 +389,86 @@ export default function NeutralAreaBacklogView() {
     );
   };
 
-  const handleMoveItemToProduction = (product, destinationArea) => {
-    const targetArea = destinationArea || targetAreaByItem[product.id] || 'Diseño';
+  const buildPlantReadyOrder = (item, targetArea, nowIso) => {
     const nextState = CONFIG_PROCESOS[targetArea]?.[0] || 'En Espera';
-    const nowIso = new Date().toISOString();
+    const generateUUID = () =>
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `ORD_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-    const updatedOrder = {
-      ...product,
+    const finalId = item.isFromPlantTable ? item.id : generateUUID();
+
+    return {
+      ...item,
+      id: finalId,
+      isFromPlantTable: true,
       area: targetArea,
       areaActual: targetArea,
       estado: 'EN_ESPERA',
       estadoInterno: nextState,
-      qr_plano_payload:
-        product.qr_plano_payload || buildProductBlueprintQrPayload(product),
+      qr_plano_payload: buildProductBlueprintQrPayload({
+        id: finalId,
+        pedidoNum: item.pedidoNum,
+        codArticulo: item.codArticulo
+      }),
       fechaIngresoArea: nowIso,
+      bitacoraTurnos: Array.isArray(item.bitacoraTurnos) ? item.bitacoraTurnos : [],
+      bitacoraCalidad: Array.isArray(item.bitacoraCalidad) ? item.bitacoraCalidad : [],
       historial: [
-        ...(Array.isArray(product.historial) ? product.historial : []),
+        ...(Array.isArray(item.historial) ? item.historial : []),
         {
           fecha: nowIso,
-          accion: `Liberado desde Área Neutra / Backlog hacia ${targetArea}`,
-          entrega: (supervisorProfile?.name || 'INGENIERÍA').toUpperCase(),
+          accion: `Enviado desde Área de Consulta General hacia ${targetArea}`,
+          entrega: (supervisorProfile?.name || 'CONSULTA GENERAL').toUpperCase(),
           recibe: targetArea.toUpperCase()
         }
       ]
     };
+  };
 
-    setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
-    syncOrderToSupabase(updatedOrder);
-    showCdiBlueprintToast(
-      `Ítem ${product.codArticulo} enviado a ${targetArea}`
-    );
+  const handleMoveItemToProduction = (product, destinationArea) => {
+    const targetArea = destinationArea || targetAreaByItem[product.id] || 'Diseño';
+    const nowIso = new Date().toISOString();
+    const readyOrder = buildPlantReadyOrder(product, targetArea, nowIso);
+
+    setOrders((prev) => {
+      const exists = (prev || []).some((o) => o.id === readyOrder.id);
+      if (exists) {
+        return prev.map((o) => (o.id === readyOrder.id ? readyOrder : o));
+      }
+      return [...(prev || []), readyOrder];
+    });
+
+    syncOrderToSupabase(readyOrder);
+    showCdiBlueprintToast(`Ítem ${product.codArticulo} enviado a ${targetArea}`);
   };
 
   const handleMoveEntirePedidoToProduction = (pedidoGroup) => {
     if (!pedidoGroup || !Array.isArray(pedidoGroup.items)) return;
-    const targetArea =
-      targetAreaByPedido[pedidoGroup.pedidoNum] || 'Diseño';
-    const nextState = CONFIG_PROCESOS[targetArea]?.[0] || 'En Espera';
+    const targetArea = targetAreaByPedido[pedidoGroup.pedidoNum] || 'Diseño';
     const nowIso = new Date().toISOString();
-    const idsToMove = new Set(pedidoGroup.items.map((i) => i.id));
 
-    const updatedList = [];
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (!idsToMove.has(o.id)) return o;
-        const updated = {
-          ...o,
-          area: targetArea,
-          areaActual: targetArea,
-          estado: 'EN_ESPERA',
-          estadoInterno: nextState,
-          qr_plano_payload: o.qr_plano_payload || buildProductBlueprintQrPayload(o),
-          fechaIngresoArea: nowIso,
-          historial: [
-            ...(Array.isArray(o.historial) ? o.historial : []),
-            {
-              fecha: nowIso,
-              accion: `Liberación Masiva desde Área Neutra / Backlog hacia ${targetArea}`,
-              entrega: (supervisorProfile?.name || 'INGENIERÍA').toUpperCase(),
-              recibe: targetArea.toUpperCase()
-            }
-          ]
-        };
-        updatedList.push(updated);
-        return updated;
-      })
+    const preparedOrders = pedidoGroup.items.map((item) =>
+      buildPlantReadyOrder(item, targetArea, nowIso)
     );
 
-    updatedList.forEach((u) => syncOrderToSupabase(u));
+    setOrders((prev) => {
+      const byId = new Map((prev || []).map((o) => [o.id, o]));
+      preparedOrders.forEach((po) => {
+        byId.set(po.id, po);
+      });
+      return Array.from(byId.values());
+    });
+
+    preparedOrders.forEach((po) => syncOrderToSupabase(po));
     showCdiBlueprintToast(
-      `Pedido #${pedidoGroup.pedidoNum} (${pedidoGroup.items.length} ítems) liberado a ${targetArea}`
+      `Pedido #${pedidoGroup.pedidoNum} (${preparedOrders.length} ítems) enviado a ${targetArea}`
     );
   };
 
   return (
     <div className="max-w-[96vw] mx-auto px-2 sm:px-4 py-6 space-y-6 animate-in fade-in duration-200">
-      {/* CABECERA PANORÁMICA DEL ÁREA NEUTRA / BACKLOG */}
+      {/* CABECERA PANORÁMICA DEL ÁREA DE CONSULTA GENERAL */}
       <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-7 border-2 border-indigo-500/40 shadow-2xl">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
@@ -301,102 +478,78 @@ export default function NeutralAreaBacklogView() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-                  MES • Etapa Pre-Planta (Backlog Comercial e Ingeniería)
+                  Visualización Automática de Pedidos RIBI y Comercial
                 </span>
                 <span className="text-[11px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   Estampillas SolidWorks 220×96 px Calibradas
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight mt-1">
-                Área Neutra / Backlog de Ingeniería y Diseño
+                Área de Consulta General
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1 max-w-3xl">
-                Repositorio de pedidos comerciales pendientes por bajar a planta. Desde aquí el equipo de Diseño y Programación copia con 1 clic la estampilla QR horizontal para pegarla con <strong>Ctrl+V</strong> en los planos de <strong>SolidWorks (.SLDDRW)</strong> antes de liberar los ítems a producción.
+              <p className="text-xs sm:text-sm text-slate-300 font-medium mt-1 max-w-4xl">
+                Todos los pedidos comerciales que ingresan al RIBI al sincronizar el archivo de Excel o desde la herramienta <strong>+ Nuevo</strong> y que aún no han entrado en producción se visualizan automáticamente aquí para consultar, copiar su QR en <strong>SolidWorks (.SLDDRW)</strong> y enviarlos a planta.
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+        {/* FILTROS RÁPIDOS DE CONSULTA */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
+              Vista de Pedidos:
+            </span>
             <button
               type="button"
-              disabled={isSyncingCommercial}
-              onClick={() => handleRunCommercialBacklogSync(false)}
-              className="px-4 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer"
-              title="Sincronizar automáticamente desde Supabase todos los pedidos con fecha de entrega comercial de Noviembre 2026 en adelante y 2027"
+              onClick={() => setViewModeFilter('TODOS')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                viewModeFilter === 'TODOS'
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
             >
-              <RefreshCw size={18} className={isSyncingCommercial ? 'animate-spin' : ''} />
-              <span>
-                {isSyncingCommercial
-                  ? 'Sincronizando Nov 2026 / 2027...'
-                  : 'Sincronizar Nov 2026 y 2027'}
-              </span>
+              Todos los Pedidos en RIBI / Comercial
             </button>
-
             <button
               type="button"
-              onClick={() => {
-                setSearchResults([]);
-                setShowSearchSelector(false);
-                setDuplicateError('');
-                setShowAddModal(true);
-              }}
-              className="px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer"
+              onClick={() => setViewModeFilter('NOV2026_2027')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                viewModeFilter === 'NOV2026_2027'
+                  ? 'bg-amber-500 text-slate-950 shadow'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
             >
-              <Plus size={18} strokeWidth={3} />
-              <span>Cargar Pedido a Área Neutra</span>
+              📅 Entregas Nov 2026 en adelante y 2027
             </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-black uppercase text-slate-400">
+              Desde Pedido #:
+            </span>
+            <select
+              value={minPedidoNum}
+              onChange={(e) => setMinPedidoNum(Number(e.target.value))}
+              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-black text-xs outline-none cursor-pointer"
+            >
+              <option value={64000}>#64000 en adelante</option>
+              <option value={63500}>#63500 en adelante</option>
+              <option value={63000}>#63000 en adelante</option>
+              <option value={0}>Mostrar Histórico Completo RIBI</option>
+            </select>
           </div>
         </div>
 
-        {/* FILTROS RÁPIDOS DE HORIZONTE COMERCIAL (NOVIEMBRE 2026 EN ADELANTE Y 2027) */}
-        <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-slate-800">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
-            Horizonte de Entrega Comercial:
-          </span>
-          <button
-            type="button"
-            onClick={() => setPeriodFilter('TODOS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-              periodFilter === 'TODOS'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Todos en Área Neutra
-          </button>
-          <button
-            type="button"
-            onClick={() => setPeriodFilter('NOV_DIC_2026')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-              periodFilter === 'NOV_DIC_2026'
-                ? 'bg-amber-500 text-slate-950 shadow'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            📅 Noviembre - Diciembre 2026
-          </button>
-          <button
-            type="button"
-            onClick={() => setPeriodFilter('ANIO_2027')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-              periodFilter === 'ANIO_2027'
-                ? 'bg-emerald-500 text-slate-950 shadow'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            📅 Entregas Año 2027
-          </button>
-        </div>
-
         {/* KPIs RÁPIDOS + BUSCADOR */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800">
           <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Pedidos en Backlog
+                Pedidos en Consulta General
               </span>
               <span className="text-2xl font-black text-white">
-                {groupedBacklogPedidos.length}
+                {groupedPedidos.length}
               </span>
             </div>
             <Layers className="text-indigo-400" size={26} />
@@ -405,10 +558,10 @@ export default function NeutralAreaBacklogView() {
           <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Ítems Pendientes Ingeniería
+                Ítems Fuera de Planta
               </span>
               <span className="text-2xl font-black text-amber-400">
-                {backlogOrders.length}
+                {filteredItems.length}
               </span>
             </div>
             <FileCode2 className="text-amber-400" size={26} />
@@ -417,7 +570,7 @@ export default function NeutralAreaBacklogView() {
           <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Total Unidades Futuras
+                Total Unidades
               </span>
               <span className="text-2xl font-black text-emerald-400">
                 {totalUnitsCount}
@@ -439,21 +592,28 @@ export default function NeutralAreaBacklogView() {
         </div>
       </div>
 
-      {/* LISTADO DE PEDIDOS EN EL BACKLOG */}
-      {groupedBacklogPedidos.length === 0 ? (
+      {/* LISTADO DE PEDIDOS EN EL ÁREA DE CONSULTA GENERAL */}
+      {loadingRibi && groupedPedidos.length === 0 ? (
+        <div className="theme-bg-card border-2 theme-border rounded-3xl p-12 text-center space-y-3">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h3 className="text-base font-black uppercase theme-text-main">
+            Cargando pedidos del RIBI y Área Comercial desde Supabase...
+          </h3>
+        </div>
+      ) : groupedPedidos.length === 0 ? (
         <div className="theme-bg-card border-2 border-dashed theme-border rounded-3xl p-12 text-center space-y-3">
           <FolderKanban size={48} className="mx-auto text-indigo-500 opacity-60" />
           <h3 className="text-lg font-black uppercase theme-text-main">
-            No hay pedidos pendientes en el Área Neutra / Backlog
+            No se encontraron pedidos con el filtro seleccionado
           </h3>
           <p className="text-sm font-medium theme-text-muted max-w-lg mx-auto">
-            Usa el botón <strong>"Cargar Pedido a Área Neutra"</strong> para ingresar nuevos pedidos comerciales antes de enviarlos a producción y generar sus códigos QR para SolidWorks.
+            Al sincronizar el archivo Excel del RIBI desde el botón <strong>"+ Nuevo"</strong> del menú lateral, todos los pedidos aparecerán automáticamente en esta Área de Consulta General.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
-          {groupedBacklogPedidos.map((group) => {
-            const isExpanded = expandedPedidos[group.pedidoNum] !== false;
+          {groupedPedidos.map((group) => {
+            const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
             const dLeft = getDaysLeft(group.fechaEntrega);
             const selectedDestArea =
               targetAreaByPedido[group.pedidoNum] || 'Diseño';
@@ -466,7 +626,7 @@ export default function NeutralAreaBacklogView() {
                 {/* CABECERA DEL PEDIDO */}
                 <div className="p-4 sm:p-5 theme-bg-header border-b theme-border flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                   <div
-                    className="flex flex-wrap items-center gap-3 cursor-pointer"
+                    className="flex flex-wrap items-center gap-3 cursor-pointer flex-1"
                     onClick={() =>
                       setExpandedPedidos((prev) => ({
                         ...prev,
@@ -480,10 +640,13 @@ export default function NeutralAreaBacklogView() {
                     <div>
                       <h3 className="text-base sm:text-lg font-black uppercase theme-text-main leading-tight">
                         {group.cliente}
+                        {group.proyecto && group.proyecto !== group.cliente
+                          ? ` — ${group.proyecto}`
+                          : ''}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1 text-xs font-bold theme-text-muted">
                         <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black">
-                          {group.items.length} ÍTEM(S) EN BACKLOG
+                          {group.items.length} ÍTEM(S)
                         </span>
                         {group.fechaEntrega ? (
                           <span
@@ -497,11 +660,14 @@ export default function NeutralAreaBacklogView() {
                             Entrega: {formatLocalDate(group.fechaEntrega)}
                             {dLeft !== null && ` (${dLeft} días)`}
                           </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-slate-500/10 text-slate-500 flex items-center gap-1">
-                            <Clock size={12} /> Fecha por coordinar
+                        ) : group.fechaGenera ? (
+                          <span className="px-2 py-0.5 rounded bg-slate-500/15 text-slate-600 dark:text-slate-300 flex items-center gap-1 font-bold">
+                            <Clock size={12} /> Fecha RIBI: {formatLocalDate(group.fechaGenera)}
                           </span>
-                        )}
+                        ) : null}
+                        <span className="text-[11px] underline text-indigo-600 dark:text-indigo-400 font-black ml-1">
+                          {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs para SolidWorks'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -515,7 +681,7 @@ export default function NeutralAreaBacklogView() {
                       title="Descargar todas las estampillas PNG (440x192px) de este pedido"
                     >
                       <Download size={15} />
-                      <span>Descargar Todos los QRs ({group.items.length})</span>
+                      <span>Descargar QRs ({group.items.length})</span>
                     </button>
 
                     <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl border theme-border">
@@ -541,7 +707,7 @@ export default function NeutralAreaBacklogView() {
                         onClick={() => handleMoveEntirePedidoToProduction(group)}
                         className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase flex items-center gap-1.5 shadow cursor-pointer"
                       >
-                        <span>Liberar Pedido</span>
+                        <span>Enviar Pedido</span>
                         <ArrowRight size={14} />
                       </button>
                     </div>
@@ -559,15 +725,19 @@ export default function NeutralAreaBacklogView() {
                       return (
                         <div
                           key={item.id}
-                          onClick={() => setSelectedOrder(item)}
-                          className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-indigo-500/60 transition-all flex flex-col justify-between gap-3 shadow-sm cursor-pointer"
+                          onClick={() => {
+                            if (item.isFromPlantTable) {
+                              setSelectedOrder(item);
+                            }
+                          }}
+                          className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-indigo-500/60 transition-all flex flex-col justify-between gap-3 shadow-sm"
                         >
                           <div className="space-y-2">
                             <div className="flex items-center justify-between gap-2">
                               <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono font-black text-xs">
                                 CÓD: {item.codArticulo || 'S/C'}
                               </span>
-                              <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-black text-xs">
+                              <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black text-xs">
                                 CANT: {item.cantidad || 1}
                               </span>
                             </div>
@@ -576,9 +746,11 @@ export default function NeutralAreaBacklogView() {
                               {item.nombre}
                             </h4>
 
-                            <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-                              Estado: {item.estadoInterno || 'PENDIENTE_INGENIERIA'}
-                            </div>
+                            {item.programador && (
+                              <div className="text-[11px] font-bold theme-text-muted uppercase">
+                                Programador: {item.programador}
+                              </div>
+                            )}
                           </div>
 
                           {/* VISTA PREVIA FIEL 1:1 (220x96px) DE LA ESTAMPILLA DE SOLIDWORKS */}

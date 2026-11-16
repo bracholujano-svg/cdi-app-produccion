@@ -95,7 +95,7 @@ const Header = () => {
                Producción ({totalOrders - despachadosCount})
              </button>
              <button type="button" onClick={() => setViewFilter('AREA_NEUTRA')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 ${viewFilter === 'AREA_NEUTRA' ? 'bg-indigo-600 text-white border border-indigo-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               <FolderKanban size={"1.1em"} /> Área Neutra / Backlog ({neutralBacklogCount})
+               <FolderKanban size={"1.1em"} /> Área de Consulta General {neutralBacklogCount > 0 ? `(${neutralBacklogCount})` : ''}
              </button>
              <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors shrink-0 ${viewFilter === 'ATRASADOS' ? 'bg-red-600 text-white border border-red-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                Atrasos ({atrasadosCount})

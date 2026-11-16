@@ -100,8 +100,8 @@ const Sidebar = () => {
               <QrCode size={"1.8em"} strokeWidth={2.2} /><span className="text-[11px] md:text-xs font-black uppercase tracking-wider text-center leading-tight truncate w-full px-1">Lector QR</span>
             </button>
 
-            <button title="Área Neutra / Backlog Comercial e Ingeniería (QRs para SolidWorks)" type="button" onClick={() => { setIsSidebarOpen(false); setViewFilter('AREA_NEUTRA'); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-400 border border-indigo-500/40 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">
-              <FolderKanban size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Área Neutra</span>
+            <button title="Área de Consulta General (Pedidos RIBI y QRs para SolidWorks)" type="button" onClick={() => { setIsSidebarOpen(false); setViewFilter('AREA_NEUTRA'); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-400 border border-indigo-500/40 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">
+              <FolderKanban size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Consulta Gral.</span>
             </button>
 
             <button title="Planificador" type="button" onClick={() => { setIsSidebarOpen(false); setShowPlantPlannerModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-500 border border-indigo-500/30 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">

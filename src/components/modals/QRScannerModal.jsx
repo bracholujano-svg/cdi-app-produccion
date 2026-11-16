@@ -21,10 +21,12 @@ import {
   Clock
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { supabase } from '../../supabaseClient';
 import {
   parseCdiQRCodePayload,
   printDispatchLabelsOrSheet,
   findProductByBlueprintQr,
+  buildProductBlueprintQrPayload,
   showCdiBlueprintToast
 } from '../../utils/colorQrHelper';
 import { AREAS_RECEPCION } from '../../utils/constants';
@@ -164,12 +166,111 @@ const QRScannerModal = () => {
     }
     if (
       matchedBlueprintOrder?.areaActual &&
+      matchedBlueprintOrder.areaActual !== 'Área de Consulta General' &&
       matchedBlueprintOrder.areaActual !== 'Área Neutra / Backlog'
     ) {
       return matchedBlueprintOrder.areaActual;
     }
     return 'Corte y Mecanizado CNC de Madera';
   }, [isAdminUser, supervisorProfile, selectedAdminCheckInArea, matchedBlueprintOrder]);
+
+  // Si se escanea en planta un plano cuyo producto solo existía en `ribisoft_pedidos` (Área de Consulta General),
+  // rescatarlo automáticamente de `ribisoft_pedidos` e ingresarlo a `produccion_pedidos` en la sección actual
+  useEffect(() => {
+    if (
+      !scannedResult ||
+      scannedResult.type !== 'PLANO_PRODUCTO' ||
+      matchedBlueprintOrder ||
+      !scannedResult.pedidoNum
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const autoPromoteFromRibisoft = async () => {
+      try {
+        const ped = String(scannedResult.pedidoNum).trim();
+        const cod = String(scannedResult.codArticulo || '').trim().toUpperCase();
+        const { data: ribiMatches } = await supabase
+          .from('ribisoft_pedidos')
+          .select('*')
+          .ilike('PedidoSIN', `%${ped}%`)
+          .limit(60);
+
+        if (isCancelled || !Array.isArray(ribiMatches) || ribiMatches.length === 0) return;
+
+        const foundRow =
+          ribiMatches.find((r) => {
+            const rCod = String(r['Código Ítem'] ?? r['codigo_item'] ?? '')
+              .replace(/\.0+$/, '')
+              .trim()
+              .toUpperCase();
+            return cod && cod !== 'S/C' && rCod === cod;
+          }) || ribiMatches[0];
+
+        if (!foundRow) return;
+
+        const nowIso = new Date().toISOString();
+        const newId =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `ORD_${Date.now()}`;
+        const itemCod =
+          String(foundRow['Código Ítem'] ?? foundRow['codigo_item'] ?? cod ?? 'S/C')
+            .replace(/\.0+$/, '')
+            .trim()
+            .toUpperCase() || 'S/C';
+
+        const promotedOrder = {
+          id: newId,
+          pedidoNum: ped.toUpperCase(),
+          codArticulo: itemCod,
+          codigo_item: itemCod,
+          qr_plano_payload: buildProductBlueprintQrPayload({
+            id: newId,
+            pedidoNum: ped.toUpperCase(),
+            codArticulo: itemCod
+          }),
+          nombre: String(foundRow['Descripción'] ?? foundRow['descripcion'] ?? 'PRODUCTO RIBI')
+            .trim()
+            .toUpperCase(),
+          cantidad: Number(foundRow['Cantidad'] ?? foundRow['cantidad']) || 1,
+          cliente: String(foundRow['Cliente'] ?? foundRow['Nombre Proyecto'] ?? 'CLIENTE CDI')
+            .trim()
+            .toUpperCase(),
+          area: effectiveCheckInArea,
+          areaActual: effectiveCheckInArea,
+          estado: 'EN_ESPERA',
+          estadoInterno: 'En Espera',
+          fechaIngresoArea: nowIso,
+          bitacoraTurnos: [],
+          bitacoraCalidad: [],
+          historial: [
+            {
+              fecha: nowIso,
+              accion: `Ingreso Automático a Planta por Escaneo QR desde Área de Consulta General en ${effectiveCheckInArea}`,
+              entrega: 'ÁREA DE CONSULTA GENERAL (RIBI)',
+              recibe: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase()
+            }
+          ]
+        };
+
+        autoCheckedInRef.current = `${promotedOrder.id}__${effectiveCheckInArea}`;
+        setOrders((prev) => [...(prev || []), promotedOrder]);
+        syncOrderToSupabase(promotedOrder);
+        setCheckInNotice(
+          `📍 Producto activado desde Área de Consulta General y ubicado en ${effectiveCheckInArea}.`
+        );
+      } catch (e) {
+        console.warn('Error rescatando producto desde ribisoft_pedidos:', e);
+      }
+    };
+
+    autoPromoteFromRibisoft();
+    return () => {
+      isCancelled = true;
+    };
+  }, [scannedResult, matchedBlueprintOrder, effectiveCheckInArea]);
 
   // Asignación automática de área y conciliación de transferencia en tránsito al escanear plano
   useEffect(() => {
