@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap, Truck, Printer } from 'lucide-react';
+import { Search, MapPin, Clock, Camera, ImageIcon, Mic, MicOff, History, ChevronUp, ChevronDown, UserCheck, ArrowRightLeft, MessageSquare, Download, AlertCircle, CheckCircle, Package, FileText, CheckSquare, Square, Zap, Truck, Printer, Copy, QrCode } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
-import { printDispatchLabelsOrSheet } from '../../utils/colorQrHelper';
+import { printDispatchLabelsOrSheet, copyBlueprintQrToClipboard, downloadBlueprintQrPng } from '../../utils/colorQrHelper';
 
 const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, toggleMic, isListening, activeDictationTarget }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -325,8 +325,40 @@ const GroupDetailsModal = ({ activeGroupObj, handleImageUpload, addShiftNote, to
                       )}
                     </div>
 
-                    {/* Botón Ver Planos */}
-                    <div className="mt-3">
+                    {/* Botones de Estampilla QR para Plano SolidWorks (.SLDDRW) y Ver Planos */}
+                    <div className="mt-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await copyBlueprintQrToClipboard(p);
+                              } catch (err) {
+                                alert(err.message || 'No se pudo copiar la estampilla QR.');
+                              }
+                            }}
+                            className="col-span-2 bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase shadow-sm active:scale-95 transition-all cursor-pointer"
+                            title="Copiar estampilla QR horizontal (220×96 px) al portapapeles para pegar con Ctrl+V en SolidWorks (.SLDDRW)"
+                          >
+                            <Copy size={13} className="shrink-0" />
+                            <span className="truncate">Copiar QR para Plano (SolidWorks)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadBlueprintQrPng(p);
+                            }}
+                            className="col-span-1 bg-slate-800 hover:bg-slate-700 text-white py-2 px-2 rounded-xl flex items-center justify-center gap-1 font-black text-[11px] uppercase shadow-sm active:scale-95 transition-all cursor-pointer"
+                            title="Descargar PNG en alta resolución (440×192 px)"
+                          >
+                            <Download size={13} className="shrink-0" />
+                            <span className="truncate">PNG</span>
+                          </button>
+                        </div>
+
                         <button 
                             type="button" 
                             onClick={(e) => { 

@@ -6,7 +6,8 @@ export const SUPERVISORES = [
 
 export const CONFIG_PROCESOS = {
     "Administrador / Todos": ["Control Total"],
-    "Comercial / Ventas": ["Ingreso de Pedido", "Validación Técnica"],
+    "Área Neutra / Backlog": ["PENDIENTE_INGENIERIA", "En Espera de Planos", "Listo para Planta"],
+    "Comercial / Ventas": ["Ingreso de Pedido", "Validación Técnica", "PENDIENTE_INGENIERIA"],
     "Diseño": ["En Espera", "Diseño", "Elaboración de Planos"],
     "Programación CNC": ["En Espera", "Programación de Máquinas CNC"],
     "Corte y Mecanizado CNC de Madera": ["En Espera", "Corte Seccionadora", "Corte Escuadradora", "Mecanizado Venture", "Mecanizado BMG", "Mecanizado 612", "Enchape de Cantos"],
@@ -26,6 +27,7 @@ export const AREAS_RECEPCION = Object.keys(CONFIG_PROCESOS).filter(a => a !== "A
 export const AREAS = Object.keys(CONFIG_PROCESOS);
 
 export const AREAS_ADMIN = [
+    "Área Neutra / Backlog",
     "Comercial / Ventas",
     "Diseño",
     "Programación CNC"
@@ -57,7 +59,8 @@ export const PERSONAL_DISENO = ["Ana Gómez", "Carlos Ruiz", "Sofía Vargas"];
 export const PERSONAL_CNC = ["Luis Martínez", "Pedro Sánchez", "Miguel Torres", "Jorge Díaz", "Raúl Castro"];
 
 export const ROUTING_MAP = {
-    "Comercial / Ventas": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
+    "Área Neutra / Backlog": ["Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
+    "Comercial / Ventas": ["Área Neutra / Backlog", "Diseño", "Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
     "Diseño": ["Programación CNC", "Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
     "Programación CNC": ["Corte y Mecanizado CNC de Madera", "Corte y Dobles de Lámina y Tubería CNC", "Corte y Mecanizado de Vidrio", "Área de Torno", "Ebanistería", "Área de Soldadura", "Pintura en Polvo", "Pintura Líquida", "Ensamble"],
     "Corte y Mecanizado CNC de Madera": ["Ebanistería", "Pintura Líquida", "Pintura en Polvo", "Corte y Dobles de Lámina y Tubería CNC", "Área de Soldadura", "Área de Torno", "Corte y Mecanizado de Vidrio", "Ensamble", "Empaque"],

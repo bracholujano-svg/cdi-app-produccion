@@ -188,7 +188,7 @@ export default function PublicPdfViewer() {
     autoDownloadTriggered.current = true;
     const timer = setTimeout(() => {
       handleDownloadPdf();
-    }, 850);
+    }, 800);
     return () => clearTimeout(timer);
   }, [docData, loading]);
 
@@ -281,7 +281,7 @@ export default function PublicPdfViewer() {
               ) : (
                 <>
                   <span>⬇️</span>
-                  <span>Descargar PDF</span>
+                  <span>DESCARGAR PDF OFICIAL</span>
                 </>
               )}
             </button>

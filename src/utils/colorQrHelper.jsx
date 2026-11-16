@@ -862,8 +862,8 @@ export const buildPackingQRUrl = ({
   params.set('cdi_doc', '1');
   params.set('tipo', 'EMPAQUE');
   params.set('ped', pedClean);
+  params.set('bulto', String(bultoNum || 'ALL'));
   if (codigoPaquete) params.set('pkg', String(codigoPaquete).trim().toUpperCase());
-  if (bultoNum) params.set('bulto', String(bultoNum));
   if (totalBultos) params.set('total', String(totalBultos));
   if (numeroEmpaque) params.set('emp', String(numeroEmpaque).trim().toUpperCase());
   if (codigoRemision) params.set('rem', String(codigoRemision).trim().toUpperCase());
@@ -930,6 +930,7 @@ export const buildDispatchQRUrl = ({
   params.set('cdi_doc', '1');
   params.set('tipo', 'DESPACHO');
   params.set('ped', pedClean);
+  params.set('bulto', 'ALL');
   if (remisionNo) params.set('rem', String(remisionNo).trim().toUpperCase());
   if (numeroEmpaque) params.set('emp', String(numeroEmpaque).trim().toUpperCase());
   if (clientName) params.set('cli', String(clientName).trim().toUpperCase().slice(0, 32));

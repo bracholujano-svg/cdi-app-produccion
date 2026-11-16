@@ -50,6 +50,7 @@ import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import DispatchHistoryTable from './components/views/DispatchHistoryTable';
 import PublicPdfViewer from './components/views/PublicPdfViewer';
+import NeutralAreaBacklogView from './components/views/NeutralAreaBacklogView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
 
@@ -313,6 +314,8 @@ const {
     
     const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
 
+    const isNeutralArea = !areaIni || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
+    const targetAreaIni = areaIni || 'Área Neutra / Backlog';
     const newId = generateUUID();
     const newOrder = {
       id: newId,
@@ -326,8 +329,10 @@ const {
       nombre: (form.nombre.value || "").trim().toUpperCase(),
       cantidad: Number(form.cantidad.value) || 1,
       cliente: (form.cliente.value || "").trim().toUpperCase(),
-      areaActual: areaIni,
-      estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
+      area: isNeutralArea ? 'AREA_NEUTRA' : targetAreaIni,
+      areaActual: targetAreaIni,
+      estado: isNeutralArea ? 'PENDIENTE_INGENIERIA' : (CONFIG_PROCESOS[targetAreaIni]?.[0] || "En Espera"),
+      estadoInterno: isNeutralArea ? 'PENDIENTE_INGENIERIA' : (CONFIG_PROCESOS[targetAreaIni]?.[0] || "En Espera"),
       prioridad: existingAlert ? 'ALTA' : 'NORMAL',
       fechaIngresoArea: new Date().toISOString(), 
       fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : (form.fechaEntrega?.value || null),
@@ -338,7 +343,7 @@ const {
       bitacoraCalidad: [],
       historial: [{
           fecha: new Date().toISOString(),
-          accion: `Ingreso Inicial en ${areaIni}`,
+          accion: `Ingreso Inicial en ${targetAreaIni}`,
           entrega: (form.entregaPersona.value || "S/N").toUpperCase(),
           recibe: (form.recibePersona.value || "S/N").toUpperCase()
       }]
@@ -381,6 +386,8 @@ const {
 
       const existingAlert = coordinationAlerts.find(a => (a?.pedidoNum || "").toUpperCase() === pedNum);
 
+      const isNeutralArea = !areaIni || areaIni === 'Área Neutra / Backlog' || areaIni === 'AREA_NEUTRA';
+      const targetAreaIni = areaIni || 'Área Neutra / Backlog';
       const newId = generateUUID();
       const newOrder = {
         id: newId,
@@ -395,8 +402,10 @@ const {
         nombre: (res.nombre || "").trim().toUpperCase(),
         cantidad: Number(res.cantidad) || 1,
         cliente: (res.cliente || "").trim().toUpperCase(),
-        areaActual: areaIni,
-        estadoInterno: CONFIG_PROCESOS[areaIni]?.[0] || "En Espera",
+        area: isNeutralArea ? 'AREA_NEUTRA' : targetAreaIni,
+        areaActual: targetAreaIni,
+        estado: isNeutralArea ? 'PENDIENTE_INGENIERIA' : (CONFIG_PROCESOS[targetAreaIni]?.[0] || "En Espera"),
+        estadoInterno: isNeutralArea ? 'PENDIENTE_INGENIERIA' : (CONFIG_PROCESOS[targetAreaIni]?.[0] || "En Espera"),
         prioridad: existingAlert ? 'ALTA' : 'NORMAL',
         fechaIngresoArea: new Date().toISOString(), 
         fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : null,
@@ -416,7 +425,7 @@ const {
         bitacoraCalidad: [],
         historial: [{
             fecha: new Date().toISOString(),
-            accion: `Ingreso Masivo en ${areaIni}`,
+            accion: `Ingreso Masivo en ${targetAreaIni}`,
             entrega: (entregaPersona || "S/N").toUpperCase(),
             recibe: (recibePersona || "S/N").toUpperCase()
         }]
@@ -891,7 +900,9 @@ const {
 
       
 
-      {viewFilter === 'DESPACHADOS' ? (
+      {viewFilter === 'AREA_NEUTRA' ? (
+        <NeutralAreaBacklogView />
+      ) : viewFilter === 'DESPACHADOS' ? (
         <DispatchHistoryTable 
           filteredOrders={filteredOrders}
           groupedArray={groupedArray}

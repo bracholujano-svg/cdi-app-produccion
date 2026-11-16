@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers, Truck, CheckCircle2 
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers, Truck, CheckCircle2, Copy, Download, QrCode
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
+import { SolidWorksStampPreview, copyBlueprintQrToClipboard, downloadBlueprintQrPng } from '../../utils/colorQrHelper';
 
 const OrderDetailsModal = ({
   handleImageUpload,
@@ -163,6 +164,49 @@ const OrderDetailsModal = ({
               >
                   <FileText size={"1.3em"} /> Ver Planos del Producto
               </button>
+
+              {/* TARJETA DE ESTAMPILLA QR CALIBRADA PARA SOLIDWORKS (.SLDDRW) */}
+              <div className="p-3.5 rounded-2xl theme-bg-card border-2 border-indigo-500/40 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
+                    <QrCode size={16} />
+                    <span>Estampilla QR Oficial para SolidWorks (.SLDDRW)</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-emerald-400 font-mono">
+                    220×96 px • Nivel H
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-200/60 dark:bg-slate-950/70 p-2.5 rounded-xl border theme-border">
+                  <SolidWorksStampPreview product={selectedOrder} />
+
+                  <div className="flex flex-col gap-2 w-full sm:flex-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await copyBlueprintQrToClipboard(selectedOrder);
+                        } catch (err) {
+                          alert(err.message || 'No se pudo copiar la estampilla QR.');
+                        }
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Copy size={15} />
+                      <span>Copiar QR para Plano (SolidWorks)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => downloadBlueprintQrPng(selectedOrder)}
+                      className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Download size={15} />
+                      <span>Descargar PNG (440×192 px)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               {/* ALERTA NIVEL 1: ESTADO DE MATERIAS PRIMAS DE ESTE PRODUCTO (codpt) */}
               {prodMatInfo && prodMatInfo.status !== 'SIN_REQUERIMIENTOS' && (

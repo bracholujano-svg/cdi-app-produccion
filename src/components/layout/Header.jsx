@@ -1,8 +1,9 @@
 import React from 'react';
-import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck } from 'lucide-react';
+import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck, FolderKanban } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import CDILogo from '../ui/CDILogo';
+import { isOrderInNeutralBacklog } from '../views/NeutralAreaBacklogView';
 
 const Header = () => {
   const {
@@ -21,6 +22,7 @@ const Header = () => {
 
   const totalOrders = orders.length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
+  const neutralBacklogCount = orders.filter(o => isOrderInNeutralBacklog(o)).length;
 
   const getEffectiveDate = (o) => {
     if (!o) return null;
@@ -79,14 +81,17 @@ const Header = () => {
           </div>
           
           {/* CENTRO: BOTONES DE FILTRO */}
-          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar w-full md:w-auto md:max-w-[50vw] order-last md:order-none mt-2 md:mt-0">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border border-[var(--color-primary)] shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
+          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar w-full md:w-auto md:max-w-[60vw] order-last md:order-none mt-2 md:mt-0 gap-1">
+             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors shrink-0 ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border border-[var(--color-primary)] shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                Producción ({totalOrders - despachadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors ${viewFilter === 'ATRASADOS' ? 'bg-red-600 text-white border border-red-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
+             <button type="button" onClick={() => setViewFilter('AREA_NEUTRA')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 ${viewFilter === 'AREA_NEUTRA' ? 'bg-indigo-600 text-white border border-indigo-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
+               <FolderKanban size={"1.1em"} /> Área Neutra / Backlog ({neutralBacklogCount})
+             </button>
+             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors shrink-0 ${viewFilter === 'ATRASADOS' ? 'bg-red-600 text-white border border-red-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                Atrasos ({atrasadosCount})
              </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 ${viewFilter === 'DESPACHADOS' ? 'bg-emerald-600 text-white border border-emerald-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
+             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 ${viewFilter === 'DESPACHADOS' ? 'bg-emerald-600 text-white border border-emerald-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                <Truck size={"1.1em"} /> Historial de Despachos ({despachadosCount})
              </button>
              <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1 ${coordinationAlerts.length > 0 ? 'bg-orange-500 text-white border border-orange-600 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>

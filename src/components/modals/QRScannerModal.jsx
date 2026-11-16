@@ -13,24 +13,38 @@ import {
   Printer,
   Search,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Play,
+  ShieldCheck,
+  ArrowRightLeft,
+  MapPin,
+  Clock
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import {
   parseCdiQRCodePayload,
-  printDispatchLabelsOrSheet
+  printDispatchLabelsOrSheet,
+  findProductByBlueprintQr,
+  showCdiBlueprintToast
 } from '../../utils/colorQrHelper';
+import { AREAS_RECEPCION } from '../../utils/constants';
 
 const QRScannerModal = () => {
   const {
     showQRScannerModal,
     setShowQRScannerModal,
+    scannedQrTarget,
     setScannedQrTarget,
     setShowRecetarioModal,
     setShowPackingListsModal,
     orders,
+    setOrders,
+    syncOrderToSupabase,
+    supervisorProfile,
     packingLists,
     setSelectedGroupPedido,
+    setSelectedOrder,
+    setOpenSection,
     setAreaFilter
   } = useAppContext();
 
@@ -39,9 +53,15 @@ const QRScannerModal = () => {
   const [manualInput, setManualInput] = useState('');
   const [scannedResult, setScannedResult] = useState(null);
   const [autoRedirectEnabled, setAutoRedirectEnabled] = useState(true);
+  const [selectedAdminCheckInArea, setSelectedAdminCheckInArea] = useState('');
+  const [checkInNotice, setCheckInNotice] = useState('');
+  const [showQuickTransferPanel, setShowQuickTransferPanel] = useState(false);
+  const [quickTransferTargetArea, setQuickTransferTargetArea] = useState('Ensamble');
+  const [quickTransferNote, setQuickTransferNote] = useState('');
 
   const html5QrCodeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const autoCheckedInRef = useRef(null);
 
   const stopCameraScanner = async () => {
     if (html5QrCodeRef.current) {
@@ -106,10 +126,17 @@ const QRScannerModal = () => {
 
   useEffect(() => {
     if (showQRScannerModal) {
-      setScannedResult(null);
+      if (scannedQrTarget && scannedQrTarget.type === 'PLANO_PRODUCTO') {
+        setScannedResult(scannedQrTarget);
+        setScannedQrTarget(null);
+      } else {
+        setScannedResult(null);
+        startCameraScanner();
+      }
       setCameraError('');
       setManualInput('');
-      startCameraScanner();
+      setCheckInNotice('');
+      setShowQuickTransferPanel(false);
     } else {
       stopCameraScanner();
     }
@@ -118,6 +145,204 @@ const QRScannerModal = () => {
       stopCameraScanner();
     };
   }, [showQRScannerModal]);
+
+  const matchedBlueprintOrder = useMemo(() => {
+    if (!scannedResult || scannedResult.type !== 'PLANO_PRODUCTO') return null;
+    return findProductByBlueprintQr(scannedResult, orders);
+  }, [scannedResult, orders]);
+
+  const isAdminUser =
+    !supervisorProfile?.area ||
+    supervisorProfile.area === 'Administrador / Todos' ||
+    supervisorProfile.area === 'GENERAL';
+
+  const effectiveCheckInArea = useMemo(() => {
+    if (!isAdminUser) return supervisorProfile.area;
+    if (selectedAdminCheckInArea) return selectedAdminCheckInArea;
+    if (matchedBlueprintOrder?.transferenciaPendiente?.haciaArea) {
+      return matchedBlueprintOrder.transferenciaPendiente.haciaArea;
+    }
+    if (
+      matchedBlueprintOrder?.areaActual &&
+      matchedBlueprintOrder.areaActual !== 'Área Neutra / Backlog'
+    ) {
+      return matchedBlueprintOrder.areaActual;
+    }
+    return 'Corte y Mecanizado CNC de Madera';
+  }, [isAdminUser, supervisorProfile, selectedAdminCheckInArea, matchedBlueprintOrder]);
+
+  // Asignación automática de área y conciliación de transferencia en tránsito al escanear plano
+  useEffect(() => {
+    if (
+      !scannedResult ||
+      scannedResult.type !== 'PLANO_PRODUCTO' ||
+      !matchedBlueprintOrder ||
+      !effectiveCheckInArea
+    ) {
+      return;
+    }
+
+    const checkKey = `${matchedBlueprintOrder.id}__${effectiveCheckInArea}`;
+    if (autoCheckedInRef.current === checkKey) return;
+
+    const hadPendingTransfer = Boolean(matchedBlueprintOrder.transferenciaPendiente);
+    const prevArea = matchedBlueprintOrder.areaActual || 'Área Neutra / Backlog';
+    const needsRelocation = prevArea !== effectiveCheckInArea || hadPendingTransfer;
+
+    if (!needsRelocation) {
+      autoCheckedInRef.current = checkKey;
+      setCheckInNotice(`✅ Producto ubicado activamente en ${effectiveCheckInArea}`);
+      return;
+    }
+
+    autoCheckedInRef.current = checkKey;
+    const nowIso = new Date().toISOString();
+    const updatedOrder = {
+      ...matchedBlueprintOrder,
+      area: effectiveCheckInArea,
+      areaActual: effectiveCheckInArea,
+      estado: 'EN_ESPERA',
+      estadoInterno:
+        matchedBlueprintOrder.estadoInterno === 'EN PROCESO'
+          ? 'EN PROCESO'
+          : 'En Espera',
+      transferenciaPendiente: null,
+      fechaIngresoArea: nowIso,
+      historial: [
+        ...(Array.isArray(matchedBlueprintOrder.historial)
+          ? matchedBlueprintOrder.historial
+          : []),
+        {
+          fecha: nowIso,
+          accion: hadPendingTransfer
+            ? `Check-In por Escaneo QR en ${effectiveCheckInArea} (Transferencia en tránsito desde ${prevArea} aprobada y conciliada automáticamente)`
+            : `Check-In y Asignación Automática por Escaneo QR en ${effectiveCheckInArea} (Desde ${prevArea})`,
+          entrega: prevArea.toUpperCase(),
+          recibe: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase()
+        }
+      ]
+    };
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+    );
+    syncOrderToSupabase(updatedOrder);
+
+    setCheckInNotice(
+      hadPendingTransfer
+        ? `🔄 Transferencia en tránsito desde ${prevArea} aprobada y conciliada automáticamente en ${effectiveCheckInArea}.`
+        : `📍 Check-In automático: Producto reubicado en ${effectiveCheckInArea}.`
+    );
+  }, [scannedResult, matchedBlueprintOrder, effectiveCheckInArea]);
+
+  // Acción 1 del Menú Operativo: ▶️ INICIAR TRABAJO (En Proceso)
+  const handleStartWorkInProcess = () => {
+    if (!matchedBlueprintOrder) return;
+    const nowIso = new Date().toISOString();
+    const timeLabel = new Date().toLocaleTimeString('es-CO', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newShiftNote = {
+      id: Date.now(),
+      area: effectiveCheckInArea,
+      supervisor: supervisorProfile?.name || 'PLANTA CDI',
+      operario: supervisorProfile?.name || 'OPERARIO EN SECCIÓN',
+      actividad: 'EN PROCESO',
+      nota: `▶️ Trabajo iniciado por escaneo QR de plano a las ${timeLabel}`,
+      foto: null,
+      fecha: nowIso
+    };
+
+    const updatedOrder = {
+      ...matchedBlueprintOrder,
+      area: effectiveCheckInArea,
+      areaActual: effectiveCheckInArea,
+      estado: 'EN_PROCESO',
+      estadoInterno: 'EN PROCESO',
+      transferenciaPendiente: null,
+      fechaInicioTrabajo: nowIso,
+      bitacoraTurnos: [
+        ...(Array.isArray(matchedBlueprintOrder.bitacoraTurnos)
+          ? matchedBlueprintOrder.bitacoraTurnos
+          : []),
+        newShiftNote
+      ],
+      historial: [
+        ...(Array.isArray(matchedBlueprintOrder.historial)
+          ? matchedBlueprintOrder.historial
+          : []),
+        {
+          fecha: nowIso,
+          accion: `▶️ INICIAR TRABAJO (EN_PROCESO) registrado por escaneo QR en ${effectiveCheckInArea} (${timeLabel})`,
+          entrega: effectiveCheckInArea.toUpperCase(),
+          recibe: (supervisorProfile?.name || 'OPERARIO').toUpperCase()
+        }
+      ]
+    };
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+    );
+    syncOrderToSupabase(updatedOrder);
+    showCdiBlueprintToast(
+      `▶️ Trabajo iniciado (EN PROCESO) en ${effectiveCheckInArea} • ${matchedBlueprintOrder.codArticulo}`
+    );
+    setCheckInNotice(
+      `▶️ Producto en estado EN PROCESO en ${effectiveCheckInArea} (Inicio: ${timeLabel})`
+    );
+  };
+
+  // Acción 2 del Menú Operativo: 🔍 INSPECCIÓN DE CALIDAD (QC)
+  const handleOpenQualityInspection = () => {
+    if (!matchedBlueprintOrder) return;
+    stopCameraScanner();
+    setSelectedOrder(matchedBlueprintOrder);
+    setOpenSection('calidad');
+    setShowQRScannerModal(false);
+  };
+
+  // Acción 3 del Menú Operativo: 📦 ENTREGA ENTRE SECCIONES
+  const handleConfirmQuickTransfer = () => {
+    if (!matchedBlueprintOrder || !quickTransferTargetArea) return;
+    const nowIso = new Date().toISOString();
+    const updatedOrder = {
+      ...matchedBlueprintOrder,
+      area: effectiveCheckInArea,
+      areaActual: effectiveCheckInArea,
+      estadoInterno: `EN TRÁNSITO HACIA ${quickTransferTargetArea.toUpperCase()}`,
+      transferenciaPendiente: {
+        desdeArea: effectiveCheckInArea,
+        haciaArea: quickTransferTargetArea,
+        entregadoPor: supervisorProfile?.name || effectiveCheckInArea,
+        fecha: nowIso,
+        nota: quickTransferNote || 'Transferencia iniciada desde Check-In QR'
+      },
+      historial: [
+        ...(Array.isArray(matchedBlueprintOrder.historial)
+          ? matchedBlueprintOrder.historial
+          : []),
+        {
+          fecha: nowIso,
+          accion: `Entrega a ${quickTransferTargetArea} (En tránsito desde Check-In QR)`,
+          entrega: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase(),
+          recibe: quickTransferTargetArea.toUpperCase(),
+          nota: quickTransferNote || 'Sin observaciones'
+        }
+      ]
+    };
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+    );
+    syncOrderToSupabase(updatedOrder);
+    showCdiBlueprintToast(
+      `📦 Producto enviado en tránsito hacia ${quickTransferTargetArea}`
+    );
+    setShowQuickTransferPanel(false);
+    setShowQRScannerModal(false);
+  };
 
   const matchedDispatchOrders = useMemo(() => {
     if (!scannedResult || scannedResult.type !== 'DESPACHO') return [];
@@ -370,6 +595,8 @@ const QRScannerModal = () => {
                       Código QR Identificado Correctamente
                     </div>
                     <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase">
+                      {scannedResult.type === 'PLANO_PRODUCTO' &&
+                        `📐 Plano SolidWorks: PED #${scannedResult.pedidoNum} • CÓD: ${scannedResult.codArticulo}`}
                       {scannedResult.type === 'COLOR' &&
                         `🎨 Ficha de Color: ${scannedResult.sistema || ''} ${scannedResult.codigo || scannedResult.idFicha}`}
                       {scannedResult.type === 'EMPAQUE' &&
@@ -381,6 +608,189 @@ const QRScannerModal = () => {
                   </div>
                 </div>
               </div>
+
+              {/* CHECK-IN EN SECCIÓN Y MENÚ OPERATIVO RÁPIDO PARA QR DE PLANO SOLIDWORKS */}
+              {scannedResult.type === 'PLANO_PRODUCTO' && (
+                <div className="space-y-3">
+                  {matchedBlueprintOrder ? (
+                    <>
+                      {/* Ficha Resumen del Producto y Check-In */}
+                      <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs uppercase">
+                            PED #{matchedBlueprintOrder.pedidoNum}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 font-mono font-black text-xs">
+                            CÓD: {matchedBlueprintOrder.codArticulo}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black text-xs">
+                            CANT: {matchedBlueprintOrder.cantidad || 1} UNDS
+                          </span>
+                        </div>
+
+                        <div className="text-sm sm:text-base font-black uppercase text-slate-900 dark:text-white">
+                          {matchedBlueprintOrder.nombre}
+                        </div>
+
+                        <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                          Cliente: {matchedBlueprintOrder.cliente || 'CLIENTE CDI'}
+                        </div>
+
+                        {/* Sección Física de Check-In */}
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-black uppercase text-emerald-700 dark:text-emerald-400">
+                            <MapPin size={15} />
+                            <span>Sección de Check-In: {effectiveCheckInArea}</span>
+                          </div>
+
+                          {isAdminUser && (
+                            <select
+                              value={effectiveCheckInArea}
+                              onChange={(e) => {
+                                autoCheckedInRef.current = null;
+                                setSelectedAdminCheckInArea(e.target.value);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black text-xs uppercase border border-slate-300 dark:border-slate-700 outline-none"
+                            >
+                              {AREAS_RECEPCION.map((a) => (
+                                <option key={a} value={a}>
+                                  Reubicar en: {a}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        {checkInNotice && (
+                          <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-black uppercase flex items-center gap-1.5">
+                            <CheckCircle2 size={15} className="shrink-0" />
+                            <span>{checkInNotice}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* MENÚ OPERATIVO RÁPIDO (3 BOTONES TÁCTILES GRANDES) */}
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          ⚡ Menú Operativo Rápido de Planta (Selecciona 1 toque):
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          {/* 1. INICIAR TRABAJO (En Proceso) */}
+                          <button
+                            type="button"
+                            onClick={handleStartWorkInProcess}
+                            className="p-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase flex flex-col items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer text-center"
+                          >
+                            <Play size={22} className="fill-slate-950" />
+                            <span>▶️ INICIAR TRABAJO</span>
+                            <span className="text-[10px] font-bold opacity-85">
+                              (En Proceso)
+                            </span>
+                          </button>
+
+                          {/* 2. INSPECCIÓN DE CALIDAD */}
+                          <button
+                            type="button"
+                            onClick={handleOpenQualityInspection}
+                            className="p-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase flex flex-col items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer text-center"
+                          >
+                            <ShieldCheck size={22} />
+                            <span>🔍 INSPECCIÓN DE CALIDAD</span>
+                            <span className="text-[10px] font-bold opacity-90">
+                              (Abrir Formulario QC)
+                            </span>
+                          </button>
+
+                          {/* 3. ENTREGA ENTRE SECCIONES */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowQuickTransferPanel((prev) => !prev)
+                            }
+                            className="p-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase flex flex-col items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer text-center"
+                          >
+                            <ArrowRightLeft size={22} />
+                            <span>📦 ENTREGA ENTRE SECCIONES</span>
+                            <span className="text-[10px] font-bold opacity-90">
+                              (Transferir Producto)
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* PANEL DESPLEGABLE DE TRANSFERENCIA RÁPIDA ENTRE SECCIONES */}
+                      {showQuickTransferPanel && (
+                        <div className="p-3.5 rounded-2xl bg-indigo-950/80 border-2 border-indigo-500 text-white space-y-3 animate-fade-in">
+                          <div className="text-xs font-black uppercase text-indigo-300 flex items-center justify-between">
+                            <span>📦 Selector de Destino para Transferir Producto</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                stopCameraScanner();
+                                setSelectedOrder(matchedBlueprintOrder);
+                                setOpenSection('entrega');
+                                setShowQRScannerModal(false);
+                              }}
+                              className="text-[10px] underline text-amber-300 cursor-pointer"
+                            >
+                              Abrir Formulario Avanzado (Parciales/Fotos)
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select
+                              value={quickTransferTargetArea}
+                              onChange={(e) =>
+                                setQuickTransferTargetArea(e.target.value)
+                              }
+                              className="p-2.5 rounded-xl bg-slate-900 border border-indigo-400/50 text-white font-black text-xs uppercase outline-none"
+                            >
+                              {AREAS_RECEPCION.filter(
+                                (a) => a !== effectiveCheckInArea
+                              ).map((a) => (
+                                <option key={a} value={a}>
+                                  Enviar hacia: {a}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="text"
+                              value={quickTransferNote}
+                              onChange={(e) =>
+                                setQuickTransferNote(e.target.value)
+                              }
+                              placeholder="Observación opcional..."
+                              className="p-2.5 rounded-xl bg-slate-900 border border-indigo-400/50 text-white font-bold text-xs outline-none"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleConfirmQuickTransfer}
+                            className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase flex items-center justify-center gap-2 shadow cursor-pointer"
+                          >
+                            <ArrowRight size={16} />
+                            <span>
+                              Confirmar Transferencia hacia {quickTransferTargetArea}
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2">
+                      <AlertTriangle size={18} className="shrink-0" />
+                      <span>
+                        No se encontró activo en planta el producto CÓD:{' '}
+                        <strong>{scannedResult.codArticulo}</strong> del Pedido{' '}
+                        <strong>#{scannedResult.pedidoNum}</strong>. Verifica que el pedido haya sido cargado.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Acciones según el tipo de QR */}
               {scannedResult.type === 'COLOR' && (

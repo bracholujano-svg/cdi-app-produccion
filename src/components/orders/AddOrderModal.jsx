@@ -66,9 +66,9 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
     cantidad: 1,
     acabado: '',
     fechaEntrega: '',
-    areaRecibe: AREAS_RECEPCION[0] || 'CORTE',
-    entregaPersona: supervisorProfile?.name || '',
-    recibePersona: ''
+    areaRecibe: 'Área Neutra / Backlog',
+    entregaPersona: supervisorProfile?.name || 'COMERCIAL / ADMIN',
+    recibePersona: 'INGENIERÍA / DISEÑO'
   });
 
   if (!showAddModal) return null;
