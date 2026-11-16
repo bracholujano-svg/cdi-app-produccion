@@ -49,6 +49,7 @@ import AdvancedExecutiveDashboard from './components/modals/AdvancedExecutiveDas
 import DossierDashboard from './components/views/DossierDashboard';
 import TVMonitorBoard from './components/views/TVMonitorBoard';
 import DispatchHistoryTable from './components/views/DispatchHistoryTable';
+import PublicPdfViewer from './components/views/PublicPdfViewer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 function MainApp() {
 
@@ -1074,6 +1075,16 @@ const {
 }
 
 export default function App() {
+  // Interceptor para escaneo de Códigos QR con enlace web público (?cdi_doc=1)
+  // Permite abrir directamente el documento oficial CDI y descargar el PDF sin iniciar sesión
+  if (typeof window !== 'undefined' && window.location?.search?.includes('cdi_doc=1')) {
+    return (
+      <ErrorBoundary>
+        <PublicPdfViewer />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AppContextProvider>

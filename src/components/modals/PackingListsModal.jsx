@@ -146,8 +146,9 @@ const QRCodeSVG = ({ value, size = 128, className = '' }) => {
 
 /**
  * Construye el payload oficial del Código QR de un bulto físico individual.
- * Genera un enlace directo (?qr=EMPAQUE&ped=...&pkg=...&bulto=...) para que tanto
- * el lector de Google del celular como el Lector QR de la barra lateral abran directamente ese bulto.
+ * Genera un enlace directo (?cdi_doc=1&tipo=EMPAQUE&ped=...&pkg=...&bulto=...) para que cualquier
+ * persona con su teléfono externo abra el visor limpio y descargue el PDF oficial CDI sin requerir login,
+ * y para que el escáner interno de planta lo abra de inmediato dentro de la aplicación.
  */
 export const buildPackageQRText = (packingList, pkg, pkgIndex, totalPackages) => {
   const pedNum = String(packingList?.pedidoNum || '').trim();
@@ -161,7 +162,10 @@ export const buildPackageQRText = (packingList, pkg, pkgIndex, totalPackages) =>
     codigoPaquete,
     bultoNum: pkgIndex + 1,
     totalBultos: totalPackages,
-    cliente
+    cliente,
+    numeroEmpaque: packingList?.numeroEmpaque,
+    codigoRemision: packingList?.codigoRemision,
+    items: pkg?.items || []
   });
 };
 
@@ -1510,9 +1514,9 @@ const PackingListsModal = () => {
       targetList.codigoRemision || consecPrintInfo.codigoRemision || 'REM-0001';
 
     const renderQRInlineSVG = (text, pxSize = 110) => {
-      const mat = generateQRMatrix(text || 'CDI');
+      const mat = generateQRMatrix(text || 'CDI', { ecl: 'M' });
       const N = mat.length;
-      const qz = 3;
+      const qz = 2;
       const tot = N + qz * 2;
       let rects = '';
       for (let r = 0; r < N; r++) {

@@ -810,42 +810,163 @@ export const buildColorQRPayload = (rawInput = {}) => {
 };
 
 /**
- * Construye el enlace directo QR para una Etiqueta de Empaque (Bulto / Paquete)
+ * Codifica de manera segura en Base64 compatible con UTF-8 para incrustar datos en URLs
  */
-export const buildPackingQRUrl = ({ pedidoNum, codigoPaquete, bultoNum, totalBultos, cliente }) => {
+export const encodeCompactDocData = (obj) => {
+  try {
+    if (!obj || typeof obj !== 'object') return '';
+    const jsonStr = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(jsonStr)));
+  } catch (e) {
+    console.warn('Error codificando datos compactos para QR:', e);
+    return '';
+  }
+};
+
+/**
+ * Decodifica de manera segura un string Base64 con soporte UTF-8
+ */
+export const decodeCompactDocData = (base64Str) => {
+  try {
+    if (!base64Str) return null;
+    const decodedStr = decodeURIComponent(escape(atob(base64Str)));
+    return JSON.parse(decodedStr);
+  } catch (e) {
+    console.warn('Error decodificando datos compactos de QR:', e);
+    return null;
+  }
+};
+
+/**
+ * Construye el enlace directo QR para una Etiqueta de Empaque (Bulto / Paquete)
+ * Genera una URL pública (?cdi_doc=1&tipo=EMPAQUE&...) que abre directamente
+ * el documento oficial y descarga el PDF en cualquier teléfono o computador sin sesión iniciada.
+ */
+export const buildPackingQRUrl = ({
+  pedidoNum,
+  codigoPaquete,
+  bultoNum,
+  totalBultos,
+  cliente,
+  numeroEmpaque,
+  codigoRemision,
+  items = []
+}) => {
   const origin =
     typeof window !== 'undefined' && window.location?.origin
       ? window.location.origin
       : 'https://cdi-app.vercel.app';
 
+  const pedClean = String(pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
   const params = new URLSearchParams();
-  params.set('qr', 'EMPAQUE');
-  params.set('ped', String(pedidoNum || '').trim().toUpperCase());
+  params.set('cdi_doc', '1');
+  params.set('tipo', 'EMPAQUE');
+  params.set('ped', pedClean);
   if (codigoPaquete) params.set('pkg', String(codigoPaquete).trim().toUpperCase());
   if (bultoNum) params.set('bulto', String(bultoNum));
   if (totalBultos) params.set('total', String(totalBultos));
-  if (cliente) params.set('cli', String(cliente).trim().toUpperCase().slice(0, 28));
+  if (numeroEmpaque) params.set('emp', String(numeroEmpaque).trim().toUpperCase());
+  if (codigoRemision) params.set('rem', String(codigoRemision).trim().toUpperCase());
+  if (cliente) params.set('cli', String(cliente).trim().toUpperCase().slice(0, 32));
+
+  // Snapshot compacto incrustado en el QR
+  const compactPayload = {
+    tipo: 'EMPAQUE',
+    ped: pedClean,
+    pkg: codigoPaquete || '',
+    bulto: bultoNum || 1,
+    tot: totalBultos || 1,
+    cli: String(cliente || '').slice(0, 36),
+    emp: numeroEmpaque || '',
+    rem: codigoRemision || '',
+    f: new Date().toLocaleDateString('es-CO'),
+    it: (Array.isArray(items) ? items : []).slice(0, 16).map((it) => ({
+      c: String(it.codArticulo || it.item_code || it.codigo || 'S/C').slice(0, 18),
+      n: String(it.nombre || it.descripcion || it.part_description || 'ÍTEM').slice(0, 42),
+      q: Number(
+        it.cantidadMostradaBulto ??
+          it.cantidadEnEsteBulto ??
+          it.cantidadEmpacada ??
+          it.cantidad ??
+          1
+      ) || 1
+    }))
+  };
+
+  const encoded = encodeCompactDocData(compactPayload);
+  if (encoded && encoded.length < 1800) {
+    params.set('data', encoded);
+  }
 
   return `${origin}/?${params.toString()}`;
 };
 
 /**
  * Construye el enlace directo QR para una Etiqueta o Remisión de Despachos
+ * Genera una URL pública (?cdi_doc=1&tipo=DESPACHO&...) para abrir y descargar
+ * el documento oficial oficial en formato PDF.
  */
-export const buildDispatchQRUrl = ({ orderNo, remisionNo, clientName, partName, qty, plate }) => {
+export const buildDispatchQRUrl = ({
+  orderNo,
+  remisionNo,
+  numeroEmpaque,
+  clientName,
+  partName,
+  qty,
+  plate,
+  carrier,
+  driverName,
+  receiverName,
+  destination,
+  items = []
+}) => {
   const origin =
     typeof window !== 'undefined' && window.location?.origin
       ? window.location.origin
       : 'https://cdi-app.vercel.app';
 
+  const pedClean = String(orderNo || '').replace(/^#/, '').trim().toUpperCase();
   const params = new URLSearchParams();
-  params.set('qr', 'DESPACHO');
-  params.set('ped', String(orderNo || '').trim().toUpperCase());
+  params.set('cdi_doc', '1');
+  params.set('tipo', 'DESPACHO');
+  params.set('ped', pedClean);
   if (remisionNo) params.set('rem', String(remisionNo).trim().toUpperCase());
-  if (clientName) params.set('cli', String(clientName).trim().toUpperCase().slice(0, 28));
+  if (numeroEmpaque) params.set('emp', String(numeroEmpaque).trim().toUpperCase());
+  if (clientName) params.set('cli', String(clientName).trim().toUpperCase().slice(0, 32));
   if (partName) params.set('item', String(partName).trim().toUpperCase().slice(0, 32));
   if (qty) params.set('qty', String(qty));
   if (plate) params.set('placa', String(plate).trim().toUpperCase());
+
+  const compactPayload = {
+    tipo: 'DESPACHO',
+    ped: pedClean,
+    rem: remisionNo || '',
+    emp: numeroEmpaque || '',
+    cli: String(clientName || '').slice(0, 36),
+    placa: plate || '',
+    tra: String(carrier || '').slice(0, 24),
+    con: String(driverName || '').slice(0, 24),
+    rec: String(receiverName || '').slice(0, 24),
+    des: String(destination || '').slice(0, 30),
+    f: new Date().toLocaleDateString('es-CO'),
+    it: (Array.isArray(items) && items.length > 0
+      ? items
+      : [{ part_description: partName, quantity: qty }]
+    )
+      .slice(0, 18)
+      .map((it, idx) => ({
+        c: String(it.item_code || it.codArticulo || it.referencia || `REF-${idx + 1}`).slice(0, 18),
+        n: String(
+          it.part_description || it.nombre || it.descripcion || partName || 'PIEZA DESPACHADA'
+        ).slice(0, 42),
+        q: Number(it.quantity || it.cantidad || qty || 1) || 1
+      }))
+  };
+
+  const encoded = encodeCompactDocData(compactPayload);
+  if (encoded && encoded.length < 1800) {
+    params.set('data', encoded);
+  }
 
   return `${origin}/?${params.toString()}`;
 };
@@ -862,9 +983,41 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
   // 1. Verificar si contiene una URL con parámetros ?qr=...
   try {
     const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-    const candidateUrl = urlMatch ? urlMatch[0] : text.startsWith('?qr=') ? `https://cdi.local/${text}` : null;
+    const candidateUrl = urlMatch ? urlMatch[0] : text.startsWith('?qr=') || text.startsWith('?cdi_doc=') ? `https://cdi.local/${text}` : null;
     if (candidateUrl) {
       const parsedUrl = new URL(candidateUrl);
+
+      // 1.1 Reconocer enlace directo web público a Documento Oficial (?cdi_doc=1&tipo=...)
+      if (parsedUrl.searchParams.get('cdi_doc') === '1') {
+        const docTipo = String(parsedUrl.searchParams.get('tipo') || '').toUpperCase();
+        if (docTipo === 'EMPAQUE') {
+          return {
+            type: 'EMPAQUE',
+            pedidoNum: (parsedUrl.searchParams.get('ped') || '').replace(/^#/, '').trim().toUpperCase(),
+            codigoPaquete: parsedUrl.searchParams.get('pkg') || '',
+            bultoNum: Number(parsedUrl.searchParams.get('bulto')) || 1,
+            totalBultos: Number(parsedUrl.searchParams.get('total')) || 1,
+            numeroEmpaque: parsedUrl.searchParams.get('emp') || '',
+            remision: parsedUrl.searchParams.get('rem') || '',
+            cliente: parsedUrl.searchParams.get('cli') || '',
+            raw: text
+          };
+        }
+        if (docTipo === 'DESPACHO') {
+          return {
+            type: 'DESPACHO',
+            pedidoNum: (parsedUrl.searchParams.get('ped') || '').replace(/^#/, '').trim().toUpperCase(),
+            remision: parsedUrl.searchParams.get('rem') || '',
+            numeroEmpaque: parsedUrl.searchParams.get('emp') || '',
+            cliente: parsedUrl.searchParams.get('cli') || '',
+            pieza: parsedUrl.searchParams.get('item') || '',
+            cantidad: parsedUrl.searchParams.get('qty') || '',
+            placa: parsedUrl.searchParams.get('placa') || '',
+            raw: text
+          };
+        }
+      }
+
       const qrType = String(parsedUrl.searchParams.get('qr') || '').trim().toUpperCase();
       if (qrType === 'COLOR') {
         return {
@@ -1094,8 +1247,8 @@ export const findProductByBlueprintQr = (parsed, orders = []) => {
 /**
  * Genera el SVG en texto plano con dimensiones explícitas en píxeles para que SIEMPRE sea visible en impresión y PDF
  */
-export const buildQRSvgMarkup = (qrPayload, pixelSize = 115) => {
-  const matrix = generateQRMatrix(qrPayload || 'CDI');
+export const buildQRSvgMarkup = (qrPayload, pixelSize = 115, ecl = 'M') => {
+  const matrix = generateQRMatrix(qrPayload || 'CDI', { ecl });
   const mCount = matrix.length;
   const qz = 2;
   const tot = mCount + qz * 2;
@@ -2108,12 +2261,18 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
         const qrText = buildDispatchQRUrl({
           orderNo,
           remisionNo,
+          numeroEmpaque,
           clientName,
           partName,
           qty,
-          plate
+          plate,
+          carrier,
+          driverName,
+          receiverName,
+          destination,
+          items: [it]
         });
-        const qrSvg = buildQRSvgMarkup(qrText, isThermal ? 84 : 106);
+        const qrSvg = buildQRSvgMarkup(qrText, isThermal ? 84 : 106, 'M');
 
         return `
           <div class="dispatch-label-card">
@@ -2203,12 +2362,18 @@ export const printDispatchLabelsOrSheet = (dispatchPayload = {}, customOptions =
     const qrRemisionUrl = buildDispatchQRUrl({
       orderNo,
       remisionNo,
+      numeroEmpaque,
       clientName,
       partName: `${items.length} ITEMS`,
       qty: totalUnits,
-      plate
+      plate,
+      carrier,
+      driverName,
+      receiverName,
+      destination,
+      items
     });
-    const qrRemision = buildQRSvgMarkup(qrRemisionUrl, 86);
+    const qrRemision = buildQRSvgMarkup(qrRemisionUrl, 86, 'M');
 
     const rowsHtml = items
       .map(
