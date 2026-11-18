@@ -11,15 +11,17 @@ import {
   Clock,
   FileCode2,
   FolderKanban,
-  LayoutList,
-  ArrowUpDown
+  ArrowUpDown,
+  AlertTriangle,
+  Truck
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../supabaseClient';
 import { AREAS_RECEPCION, CONFIG_PROCESOS } from '../../utils/constants';
-import { getDaysLeft, formatLocalDate } from '../../utils/helpers';
+import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
 import { cleanErpCode, normalizeProductName } from '../../services/ribisoftExcelImporter';
+import CDILogo from '../ui/CDILogo';
 import {
   SolidWorksStampPreview,
   copyBlueprintQrToClipboard,
@@ -108,9 +110,15 @@ export default function NeutralAreaBacklogView() {
   const [ribisoftRows, setRibisoftRows] = useState([]);
   const [loadingRibi, setLoadingRibi] = useState(true);
   const [backlogSearch, setBacklogSearch] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('TODOS'); // 'TODOS' | '1'..'12' | 'YYYY-MM'
-  const [selectedYear, setSelectedYear] = useState('TODOS'); // 'TODOS' | '2026' | '2027'
-  const [minPedidoNum, setMinPedidoNum] = useState(63500);
+
+  // 3 Modos de filtrado por fecha/origen:
+  // 'GENERACION' -> Fecha de Generación (RIBI)
+  // 'DESPACHO' -> Fecha de Despacho (Comercial)
+  // 'ALERTAS_COORD' -> Alertas de Coordinación de Planta (Coordinador / Jefe de Planta)
+  const [filterMode, setFilterMode] = useState('GENERACION');
+  const [selectedMonth, setSelectedMonth] = useState('TODOS'); // 'TODOS' | 'YYYY-MM'
+  const [selectedYear, setSelectedYear] = useState('TODOS'); // 'TODOS' | '2025' | '2026' | '2027'
+  const [minPedidoNum, setMinPedidoNum] = useState(0); // 0 = Todos los pedidos (para incluir Enero, Febrero, Marzo y Diciembre sin excluir por número)
   const [expandedPedidos, setExpandedPedidos] = useState({});
   const [targetAreaByPedido, setTargetAreaByPedido] = useState({});
   const [targetAreaByItem, setTargetAreaByItem] = useState({});
@@ -128,6 +136,7 @@ export default function NeutralAreaBacklogView() {
   const alertsMap = useMemo(() => {
     const map = new Map();
     (coordinationAlerts || []).forEach((a) => {
+      if (!a || a.tipoRegistro === 'PACKING_LIST') return;
       const k = String(a?.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
       if (k && !map.has(k)) map.set(k, a);
     });
@@ -204,16 +213,18 @@ export default function NeutralAreaBacklogView() {
   }, []);
 
   /**
-   * Unifica en una sola vista todos los pedidos que:
-   * 1) Fueron cargados a `Área de Consulta General` en `orders` (`produccion_pedidos`), Y
-   * 2) Todos los pedidos e ítems que entraron al RIBI por el archivo Excel (`ribisoft_pedidos`)
-   *    y que aún no han entrado en producción en las secciones de planta.
+   * Unifica en una sola estructura los ítems de Consulta General, RIBI (`ribisoft_pedidos`)
+   * y Alertas de Coordinación (`coordinacion_alertas`), conservando de manera explícita:
+   * - fechaGeneracion (fecha de generación RIBI / registro)
+   * - fechaDespacho (fecha de entrega comercial)
+   * - coordAlert / coordFechaEntrega (alerta de coordinación de planta)
    */
   const unifiedConsultaItems = useMemo(() => {
     const itemsMap = new Map();
     const plantStartedSet = new Set();
+    const touchedPedidosSet = new Set();
 
-    // 1. Clasificar órdenes existentes en `produccion_pedidos`
+    // 1. Procesar órdenes existentes en `produccion_pedidos`
     (orders || []).forEach((ord) => {
       if (!ord || !ord.pedidoNum) return;
       const ped = String(ord.pedidoNum).replace(/^#/, '').trim().toUpperCase();
@@ -221,20 +232,40 @@ export default function NeutralAreaBacklogView() {
       const normName = normalizeProductName(ord.nombre || ord.descripcion || '');
       const key = `${ped}__${normName || cod || ord.id}`;
 
-      if (isOrderInNeutralBacklog(ord, alertsMap)) {
+      const coordAlert = alertsMap.get(ped) || null;
+      const isNeutral = isOrderInNeutralBacklog(ord, alertsMap);
+
+      const parsedGen = parseCommercialDeliveryDate(
+        ord.fecha_genera_ped || ord.fechaGeneraPed || ord.fecha_asigna || ord.fechaIngresoArea
+      );
+      const parsedDesp = parseCommercialDeliveryDate(
+        ord.fechaEntregaPrometida || ord.fecha_entrega || coordAlert?.fechaEntrega
+      );
+      const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
+
+      if (isNeutral || (coordAlert && ord.estadoInterno !== 'DESPACHADO')) {
+        touchedPedidosSet.add(ped);
         itemsMap.set(key, {
           ...ord,
           pedidoNum: ped,
           codArticulo: (cod || ord.codArticulo || 'S/C').toUpperCase(),
+          fechaGeneracion: parsedGen?.isoDate || null,
+          fechaDespacho: parsedDesp?.isoDate || null,
+          coordFechaEntrega: parsedCoordDate?.isoDate || null,
+          hasCoordAlert: Boolean(coordAlert),
+          coordAlertNota: coordAlert?.notas || coordAlert?.detalle || null,
+          isInActivePlantArea: !isNeutral,
           isFromPlantTable: true
         });
-      } else {
+      }
+
+      if (!isNeutral) {
         if (cod) plantStartedSet.add(`${ped}__CODE__${cod.toUpperCase()}`);
         if (normName) plantStartedSet.add(`${ped}__NAME__${normName}`);
       }
     });
 
-    // 2. Incorporar todos los pedidos de `ribisoft_pedidos` (Excel RIBI) que aún no están en secciones de planta
+    // 2. Incorporar todos los pedidos de `ribisoft_pedidos` (Excel RIBI)
     const minNumVal = Number(minPedidoNum) || 0;
 
     (ribisoftRows || []).forEach((r, idx) => {
@@ -246,16 +277,9 @@ export default function NeutralAreaBacklogView() {
       const numMatch = ped.match(/\d+/);
       const pedNumber = numMatch ? Number(numMatch[0]) : 0;
 
-      const rawFechaEntrega =
-        r['Fecha Entrega'] ??
-        r['fecha_entrega'] ??
-        r['Fecha de Entrega'] ??
-        alertsMap.get(ped)?.fechaEntrega ??
-        null;
+      const coordAlert = alertsMap.get(ped) || null;
 
-      const hasFutureDate = isTargetBacklogDeliveryDate(rawFechaEntrega);
-
-      if (!hasFutureDate && minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal) {
+      if (minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal && !coordAlert) {
         return;
       }
 
@@ -271,105 +295,221 @@ export default function NeutralAreaBacklogView() {
 
       if (!normName && codUpper === 'S/C') return;
 
-      if (
+      const alreadyStartedInPlant =
         (cod && plantStartedSet.has(`${ped}__CODE__${codUpper}`)) ||
-        (normName && plantStartedSet.has(`${ped}__NAME__${normName}`))
-      ) {
+        (normName && plantStartedSet.has(`${ped}__NAME__${normName}`));
+
+      // Si ya entró a una sección productiva de planta y no tiene alerta de coordinación pendiente, omitirlo de Consulta General
+      if (alreadyStartedInPlant) {
         return;
       }
+
+      const rawFechaGen =
+        r['fecha_genera_ped'] ??
+        r['Fecha Genera Ped.'] ??
+        r['Fecha Genera Ped'] ??
+        r['Fecha Genera'] ??
+        r['fecha_asigna'] ??
+        r['Fecha asigna'] ??
+        r['Fecha Asigna'] ??
+        r['created_at'] ??
+        null;
+
+      const rawFechaDespacho =
+        r['Fecha Entrega'] ??
+        r['fecha_entrega'] ??
+        r['Fecha de Entrega'] ??
+        r['fecha_entrega_prometida'] ??
+        coordAlert?.fechaEntrega ??
+        null;
+
+      const parsedGen = parseCommercialDeliveryDate(rawFechaGen);
+      const parsedDesp = parseCommercialDeliveryDate(rawFechaDespacho);
+      const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
 
       const key = `${ped}__${normName || codUpper}`;
       const existing = itemsMap.get(key);
 
-      if (!existing || ((!existing.codArticulo || existing.codArticulo === 'S/C') && cod)) {
+      if (
+        !existing ||
+        ((!existing.codArticulo || existing.codArticulo === 'S/C') && cod) ||
+        (!existing.fechaGeneracion && parsedGen?.isoDate) ||
+        (!existing.fechaDespacho && parsedDesp?.isoDate)
+      ) {
         const deterministicId = existing?.id || `RIBI_${ped}_${codUpper !== 'S/C' ? codUpper : idx + 1}`;
-        const parsedEntrega = parseCommercialDeliveryDate(rawFechaEntrega);
-        const parsedGenera = parseCommercialDeliveryDate(
-          r['fecha_genera_ped'] ?? r['Fecha Genera Ped.'] ?? r['fecha_asigna']
-        );
+        touchedPedidosSet.add(ped);
 
         itemsMap.set(key, {
+          ...(existing || {}),
           id: deterministicId,
           pedidoNum: ped,
           pedidoNumeric: pedNumber,
-          codArticulo: codUpper,
-          codigo_item: codUpper,
-          qr_plano_payload: buildProductBlueprintQrPayload({
-            id: deterministicId,
-            pedidoNum: ped,
-            codArticulo: codUpper
-          }),
-          nombre: normName || 'PRODUCTO RIBI',
-          cantidad: Number(r['Cantidad'] ?? r['cantidad']) || 1,
+          codArticulo: codUpper !== 'S/C' ? codUpper : existing?.codArticulo || 'S/C',
+          codigo_item: codUpper !== 'S/C' ? codUpper : existing?.codigo_item || 'S/C',
+          qr_plano_payload:
+            existing?.qr_plano_payload ||
+            buildProductBlueprintQrPayload({
+              id: deterministicId,
+              pedidoNum: ped,
+              codArticulo: codUpper
+            }),
+          nombre: normName || existing?.nombre || 'PRODUCTO RIBI',
+          cantidad: Number(r['Cantidad'] ?? r['cantidad']) || existing?.cantidad || 1,
           cliente: String(
             r['Cliente'] ??
               r['cliente'] ??
               r['Nombre Proyecto'] ??
-              alertsMap.get(ped)?.cliente ??
+              existing?.cliente ??
+              coordAlert?.cliente ??
               'CLIENTE GENERAL'
           )
             .trim()
             .toUpperCase(),
-          nombre_proyecto: String(r['Nombre Proyecto'] ?? r['nombre_proyecto'] ?? '')
+          nombre_proyecto: String(r['Nombre Proyecto'] ?? r['nombre_proyecto'] ?? existing?.nombre_proyecto ?? '')
             .trim()
             .toUpperCase(),
-          programador: String(r['Programador'] ?? r['programador'] ?? '')
+          programador: String(r['Programador'] ?? r['programador'] ?? existing?.programador ?? '')
             .trim()
             .toUpperCase(),
-          area: 'AREA_NEUTRA',
-          areaActual: 'Área de Consulta General',
-          estado: 'PENDIENTE_INGENIERIA',
-          estadoInterno: r['Estado'] || 'EN CONSULTA GENERAL (RIBI)',
-          fechaEntregaPrometida: parsedEntrega?.isoDate || existing?.fechaEntregaPrometida || null,
-          fechaGeneraPed: parsedGenera?.isoDate || null,
-          dim_1: r['dim_1'] ?? r['Dim.1'] ?? null,
-          dim_2: r['dim_2'] ?? r['Dim.2'] ?? null,
-          dim_3: r['dim_3'] ?? r['Dim.3'] ?? null,
-          acabado_1: r['acabado_1'] ?? r['Acabado1'] ?? null,
-          acabado_2: r['acabado_2'] ?? r['Acabado2'] ?? null,
-          acabado_3: r['acabado_3'] ?? r['Acabado3'] ?? null,
-          caracteristicas: r['caracteristicas'] ?? r['Características'] ?? null,
-          categoria: r['categoria'] ?? r['Categoria'] ?? null,
-          notas: r['notas'] ?? r['Notas'] ?? null,
-          observaciones_erp: r['observaciones_erp'] ?? r['Observaciones'] ?? null,
+          area: existing?.area || 'AREA_NEUTRA',
+          areaActual: existing?.areaActual || 'Área de Consulta General',
+          estado: existing?.estado || 'PENDIENTE_INGENIERIA',
+          estadoInterno: existing?.estadoInterno || r['Estado'] || 'EN CONSULTA GENERAL (RIBI)',
+          fechaGeneracion: parsedGen?.isoDate || existing?.fechaGeneracion || null,
+          fechaDespacho: parsedDesp?.isoDate || existing?.fechaDespacho || null,
+          fechaEntregaPrometida: parsedDesp?.isoDate || existing?.fechaEntregaPrometida || null,
+          fechaGeneraPed: parsedGen?.isoDate || existing?.fechaGeneraPed || null,
+          hasCoordAlert: Boolean(coordAlert) || Boolean(existing?.hasCoordAlert),
+          coordFechaEntrega: parsedCoordDate?.isoDate || existing?.coordFechaEntrega || null,
+          coordAlertNota: coordAlert?.notas || coordAlert?.detalle || existing?.coordAlertNota || null,
+          dim_1: r['dim_1'] ?? r['Dim.1'] ?? existing?.dim_1 ?? null,
+          dim_2: r['dim_2'] ?? r['Dim.2'] ?? existing?.dim_2 ?? null,
+          dim_3: r['dim_3'] ?? r['Dim.3'] ?? existing?.dim_3 ?? null,
+          acabado_1: r['acabado_1'] ?? r['Acabado1'] ?? existing?.acabado_1 ?? null,
+          acabado_2: r['acabado_2'] ?? r['Acabado2'] ?? existing?.acabado_2 ?? null,
+          acabado_3: r['acabado_3'] ?? r['Acabado3'] ?? existing?.acabado_3 ?? null,
+          caracteristicas: r['caracteristicas'] ?? r['Características'] ?? existing?.caracteristicas ?? null,
+          categoria: r['categoria'] ?? r['Categoria'] ?? existing?.categoria ?? null,
+          notas: r['notas'] ?? r['Notas'] ?? existing?.notas ?? null,
+          observaciones_erp: r['observaciones_erp'] ?? r['Observaciones'] ?? existing?.observaciones_erp ?? null,
+          isInActivePlantArea: Boolean(existing?.isInActivePlantArea),
           isFromPlantTable: Boolean(existing?.isFromPlantTable)
         });
       }
     });
 
+    // 3. Garantizar que cualquier Alerta de Coordinación en `coordinacion_alertas` sin filas en RIBI/Planta también sea visible
+    alertsMap.forEach((alertObj, pedKey) => {
+      if (touchedPedidosSet.has(pedKey)) return;
+      const parsedCoordDate = parseCommercialDeliveryDate(alertObj.fechaEntrega || alertObj.creadoEn);
+      const parsedCreated = parseCommercialDeliveryDate(alertObj.creadoEn);
+      const deterministicId = `COORD_${pedKey}`;
+      itemsMap.set(`${pedKey}__COORD_ONLY`, {
+        id: deterministicId,
+        pedidoNum: pedKey,
+        codArticulo: `PED-${pedKey}`,
+        codigo_item: `PED-${pedKey}`,
+        qr_plano_payload: buildProductBlueprintQrPayload({
+          id: deterministicId,
+          pedidoNum: pedKey,
+          codArticulo: `PED-${pedKey}`
+        }),
+        nombre: String(alertObj.notas || alertObj.detalle || `PEDIDO EN COORDINACIÓN #${pedKey}`).toUpperCase(),
+        cantidad: 1,
+        cliente: String(alertObj.cliente || 'CLIENTE COMERCIAL').trim().toUpperCase(),
+        nombre_proyecto: '',
+        programador: '',
+        area: 'AREA_NEUTRA',
+        areaActual: 'Área de Consulta General',
+        estado: 'PENDIENTE_INGENIERIA',
+        estadoInterno: 'ALERTA DE COORDINACIÓN DE PLANTA',
+        fechaGeneracion: parsedCreated?.isoDate || parsedCoordDate?.isoDate || null,
+        fechaDespacho: parsedCoordDate?.isoDate || null,
+        fechaEntregaPrometida: parsedCoordDate?.isoDate || null,
+        fechaGeneraPed: parsedCreated?.isoDate || null,
+        hasCoordAlert: true,
+        coordFechaEntrega: parsedCoordDate?.isoDate || null,
+        coordAlertNota: alertObj.notas || alertObj.detalle || null,
+        isInActivePlantArea: false,
+        isFromPlantTable: false
+      });
+    });
+
     return Array.from(itemsMap.values());
   }, [orders, ribisoftRows, alertsMap, prodToCodptMap, minPedidoNum]);
 
-  // Detectar meses disponibles dinámicamente en los pedidos cargados para mostrar píldoras rápidas de mes
-  const availableYearMonths = useMemo(() => {
-    const ymMap = new Map();
-    unifiedConsultaItems.forEach((item) => {
-      const pedKey = String(item.pedidoNum || '').trim().toUpperCase();
-      const rawDate =
-        alertsMap.get(pedKey)?.fechaEntrega ||
-        item.fechaEntregaPrometida ||
-        item.fechaGeneraPed;
-      const parsed = parseCommercialDeliveryDate(rawDate);
-      if (parsed) {
-        const ymKey = `${parsed.year}-${String(parsed.month).padStart(2, '0')}`;
-        if (!ymMap.has(ymKey)) {
-          const mInfo = MONTH_NAMES.find((m) => m.num === parsed.month);
-          ymMap.set(ymKey, {
-            key: ymKey,
-            year: parsed.year,
-            month: parsed.month,
-            label: `${mInfo ? mInfo.name : parsed.month} ${parsed.year}`,
-            pedidosSet: new Set()
-          });
-        }
-        ymMap.get(ymKey).pedidosSet.add(pedKey);
+  /**
+   * Extrae la fecha activa del ítem según el `filterMode` seleccionado por el usuario:
+   * - 'GENERACION' -> fechaGeneracion (RIBI)
+   * - 'DESPACHO' -> fechaDespacho (Comercial)
+   * - 'ALERTAS_COORD' -> coordFechaEntrega (solo ítems con hasCoordAlert === true)
+   */
+  const getFilterModeDateInfo = (item) => {
+    if (!item) return null;
+    if (filterMode === 'ALERTAS_COORD') {
+      if (!item.hasCoordAlert) return null;
+      return parseCommercialDeliveryDate(item.coordFechaEntrega || item.fechaDespacho || item.fechaGeneracion);
+    }
+    if (filterMode === 'DESPACHO') {
+      return parseCommercialDeliveryDate(item.fechaDespacho);
+    }
+    return parseCommercialDeliveryDate(item.fechaGeneracion);
+  };
+
+  // Lista base según el modo seleccionado (en GENERACION/DESPACHO excluye lo que ya está activo en secciones de planta salvo en ALERTAS_COORD)
+  const modeScopedItems = useMemo(() => {
+    return unifiedConsultaItems.filter((item) => {
+      if (filterMode === 'ALERTAS_COORD') {
+        return Boolean(item.hasCoordAlert);
       }
+      return !item.isInActivePlantArea;
+    });
+  }, [unifiedConsultaItems, filterMode]);
+
+  // Años disponibles dinámicamente según los pedidos realmente existentes en el modo actual
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set();
+    modeScopedItems.forEach((item) => {
+      const parsed = getFilterModeDateInfo(item);
+      if (parsed?.year) yearsSet.add(parsed.year);
+    });
+    return Array.from(yearsSet).sort((a, b) => a - b);
+  }, [modeScopedItems, filterMode]);
+
+  // Meses disponibles dinámicamente: SOLO son visibles los meses donde realmente existen pedidos en la fecha seleccionada
+  const availableMonthsList = useMemo(() => {
+    const ymMap = new Map();
+    modeScopedItems.forEach((item) => {
+      const parsed = getFilterModeDateInfo(item);
+      if (!parsed) return;
+      if (selectedYear !== 'TODOS' && String(parsed.year) !== String(selectedYear)) {
+        return;
+      }
+      const ymKey = `${parsed.year}-${String(parsed.month).padStart(2, '0')}`;
+      if (!ymMap.has(ymKey)) {
+        const mInfo = MONTH_NAMES.find((m) => m.num === parsed.month);
+        ymMap.set(ymKey, {
+          key: ymKey,
+          year: parsed.year,
+          month: parsed.month,
+          label: `${mInfo ? mInfo.name : parsed.month} ${parsed.year}`,
+          pedidosSet: new Set()
+        });
+      }
+      ymMap.get(ymKey).pedidosSet.add(String(item.pedidoNum || '').trim().toUpperCase());
     });
 
     return Array.from(ymMap.values()).sort((a, b) => a.key.localeCompare(b.key));
-  }, [unifiedConsultaItems, alertsMap]);
+  }, [modeScopedItems, filterMode, selectedYear]);
 
-  // Filtrado por buscador (global + local), filtro de cliente global, mes y año
+  // Resetear mes si el mes seleccionado deja de existir al cambiar de año o modo
+  useEffect(() => {
+    if (selectedMonth !== 'TODOS' && !availableMonthsList.some((m) => m.key === selectedMonth)) {
+      setSelectedMonth('TODOS');
+    }
+  }, [availableMonthsList, selectedMonth]);
+
+  // Filtrado completo por buscador, cliente, año, mes y modo
   const filteredItems = useMemo(() => {
     const qLocal = backlogSearch.trim().toLowerCase();
     const qGlobal = (globalSearchTerm || '').trim().toLowerCase();
@@ -378,33 +518,21 @@ export default function NeutralAreaBacklogView() {
         ? globalClientFilter.trim().toUpperCase()
         : '';
 
-    return unifiedConsultaItems.filter((item) => {
-      const pedKey = String(item.pedidoNum || '').trim().toUpperCase();
-      const effDate =
-        alertsMap.get(pedKey)?.fechaEntrega ||
-        item.fechaEntregaPrometida ||
-        item.fechaGeneraPed;
-      const parsedDate = parseCommercialDeliveryDate(effDate);
+    return modeScopedItems.filter((item) => {
+      const parsedDate = getFilterModeDateInfo(item);
 
-      // Filtro por Año
       if (selectedYear !== 'TODOS') {
         if (!parsedDate || String(parsedDate.year) !== String(selectedYear)) {
           return false;
         }
       }
 
-      // Filtro por Mes ('1'..'12' o 'YYYY-MM')
       if (selectedMonth !== 'TODOS') {
         if (!parsedDate) return false;
-        if (selectedMonth.includes('-')) {
-          const ym = `${parsedDate.year}-${String(parsedDate.month).padStart(2, '0')}`;
-          if (ym !== selectedMonth) return false;
-        } else if (Number(parsedDate.month) !== Number(selectedMonth)) {
-          return false;
-        }
+        const ymKey = `${parsedDate.year}-${String(parsedDate.month).padStart(2, '0')}`;
+        if (ymKey !== selectedMonth) return false;
       }
 
-      // Filtro de Cliente de la barra superior
       if (clientUpper) {
         const cliStr = String(item.cliente || '').toUpperCase();
         const proyStr = String(item.nombre_proyecto || '').toUpperCase();
@@ -413,7 +541,6 @@ export default function NeutralAreaBacklogView() {
         }
       }
 
-      // Filtro por texto (buscador global y buscador local)
       const matchesQuery = (q) => {
         if (!q) return true;
         return (
@@ -428,16 +555,16 @@ export default function NeutralAreaBacklogView() {
       return matchesQuery(qLocal) && matchesQuery(qGlobal);
     });
   }, [
-    unifiedConsultaItems,
+    modeScopedItems,
     backlogSearch,
     globalSearchTerm,
     globalClientFilter,
     selectedMonth,
     selectedYear,
-    alertsMap
+    filterMode
   ]);
 
-  // Agrupación por Pedido y Ordenamiento dinámico conectado con `sortBy` (Pedido Asc/Desc y Fecha Asc/Desc)
+  // Agrupación por Pedido y Ordenamiento dinámico conectado con `sortBy`
   const groupedPedidos = useMemo(() => {
     const map = new Map();
     filteredItems.forEach((ord) => {
@@ -448,8 +575,12 @@ export default function NeutralAreaBacklogView() {
           pedidoNum: ped,
           cliente: ord.cliente || alertObj?.cliente || 'CLIENTE GENERAL',
           proyecto: ord.nombre_proyecto || '',
-          fechaEntrega: alertObj?.fechaEntrega || ord.fechaEntregaPrometida || null,
-          fechaGenera: ord.fechaGeneraPed || null,
+          fechaGeneracion: ord.fechaGeneracion || null,
+          fechaDespacho: ord.fechaDespacho || alertObj?.fechaEntrega || null,
+          hasCoordAlert: Boolean(ord.hasCoordAlert || alertObj),
+          coordFechaEntrega: ord.coordFechaEntrega || alertObj?.fechaEntrega || null,
+          coordAlertNota: ord.coordAlertNota || alertObj?.notas || alertObj?.detalle || null,
+          areaActual: ord.isInActivePlantArea ? ord.areaActual : null,
           items: []
         });
       }
@@ -459,8 +590,13 @@ export default function NeutralAreaBacklogView() {
     const list = Array.from(map.values());
 
     const getEffectiveIsoDate = (group) => {
-      const parsed = parseCommercialDeliveryDate(group.fechaEntrega || group.fechaGenera);
-      return parsed ? parsed.isoDate : null;
+      if (filterMode === 'ALERTAS_COORD') {
+        return parseCommercialDeliveryDate(group.coordFechaEntrega || group.fechaDespacho)?.isoDate || null;
+      }
+      if (filterMode === 'DESPACHO') {
+        return parseCommercialDeliveryDate(group.fechaDespacho)?.isoDate || null;
+      }
+      return parseCommercialDeliveryDate(group.fechaGeneracion)?.isoDate || null;
     };
 
     if (sortBy === 'pedido_asc') {
@@ -498,27 +634,26 @@ export default function NeutralAreaBacklogView() {
         return String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true });
       });
     } else {
-      // Orden por defecto: Pedido más reciente primero
       list.sort((a, b) =>
         String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true })
       );
     }
 
     return list;
-  }, [filteredItems, alertsMap, sortBy]);
+  }, [filteredItems, alertsMap, sortBy, filterMode]);
 
   const totalUnitsCount = useMemo(
     () => filteredItems.reduce((acc, o) => acc + (Number(o.cantidad) || 1), 0),
     [filteredItems]
   );
 
-  // Clases dinámicas de cuadrícula sincronizadas con `gridColumns` (1, 2, 3, 4 o 5 columnas)
+  // Cuadrícula dinámica sincronizada con `gridColumns` (1, 2, 3, 4 o 5 columnas)
   const pedidosGridClass = useMemo(() => {
     if (gridColumns === 1) return 'grid grid-cols-1 gap-4';
     if (gridColumns === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-4';
     if (gridColumns === 4) return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
     if (gridColumns === 5) return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4';
-    return 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'; // Por defecto 3 columnas
+    return 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4';
   }, [gridColumns]);
 
   const handleCopyStamp = async (e, product) => {
@@ -622,37 +757,29 @@ export default function NeutralAreaBacklogView() {
   };
 
   return (
-    <div className="max-w-[96vw] mx-auto px-2 sm:px-4 py-5 space-y-5 animate-in fade-in duration-200">
-      {/* CABECERA PANORÁMICA DEL ÁREA DE CONSULTA GENERAL */}
-      <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border-2 border-indigo-500/40 shadow-2xl">
+    <div className="max-w-[96vw] mx-auto px-2 sm:px-4 py-4 space-y-5 animate-in fade-in duration-200">
+      {/* CABECERA CONGRUENTE CON LOS TEMAS DE LA APLICACIÓN Y CON EL NUEVO LOGO OFICIAL CDI */}
+      <div className="theme-bg-card border-2 theme-border rounded-3xl p-4 sm:p-6 shadow-xl">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 shrink-0">
-              <FolderKanban size={28} />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
-                  Visualización Automática de Pedidos RIBI y Comercial
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  Estampillas SolidWorks 220×96 px Calibradas
-                </span>
+          {/* Lado Izquierdo: Logo Oficial Nuevo sin fondo + Título Limpio */}
+          <div className="flex flex-wrap items-center gap-4">
+            <CDILogo heightClass="h-9 sm:h-11" />
+            <div className="h-8 w-[2px] bg-[var(--color-border)] hidden sm:block" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm shrink-0">
+                <FolderKanban size={22} />
               </div>
-              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight mt-1">
+              <h2 className="text-lg sm:text-2xl font-black uppercase tracking-tight theme-text-main">
                 Área de Consulta General
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5 max-w-4xl">
-                Todos los pedidos cargados al sincronizar el archivo de Excel del RIBI o desde <strong>+ Nuevo</strong> que aún no han entrado en producción se visualizan aquí automáticamente.
-              </p>
+              </h2>
             </div>
           </div>
 
-          {/* SELECTOR RÁPIDO DE COLUMNAS DE CUADRÍCULA Y RANGO DE PEDIDO */}
+          {/* Selector Rápido de Columnas de Cuadrícula y Rango de Pedido */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1">
-              <span className="text-[10px] font-black uppercase text-slate-400 px-2">
-                Vista:
+            <div className="flex items-center gap-1 theme-bg-main border theme-border rounded-xl p-1">
+              <span className="text-[10px] font-black uppercase theme-text-muted px-2">
+                Cuadrícula:
               </span>
               {[1, 2, 3, 4, 5].map((cols) => (
                 <button
@@ -661,8 +788,8 @@ export default function NeutralAreaBacklogView() {
                   onClick={() => setGridColumns(cols)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
                     gridColumns === cols
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm'
+                      : 'theme-text-muted hover:bg-black/10 dark:hover:bg-white/10'
                   }`}
                   title={cols === 1 ? 'Vista Tipo Lista (1 columna)' : `Cuadrícula de ${cols} Columnas`}
                 >
@@ -674,48 +801,134 @@ export default function NeutralAreaBacklogView() {
             <select
               value={minPedidoNum}
               onChange={(e) => setMinPedidoNum(Number(e.target.value))}
-              className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-black text-xs outline-none cursor-pointer"
+              className="px-3 py-2 rounded-xl theme-bg-card theme-text-main border theme-border font-black text-xs uppercase outline-none cursor-pointer"
             >
+              <option value={0}>Todos los Pedidos RIBI</option>
               <option value={64000}>Desde Pedido #64000</option>
               <option value={63500}>Desde Pedido #63500</option>
               <option value={63000}>Desde Pedido #63000</option>
-              <option value={0}>Histórico Completo RIBI</option>
             </select>
           </div>
         </div>
 
-        {/* BARRA DE FILTRADO POR MESES, AÑO Y ORDENAMIENTO */}
-        <div className="mt-4 pt-4 border-t border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          {/* Selector de Mes y Año + Píldoras Rápidas por Mes */}
+        {/* MODO DE FILTRADO DE FECHAS Y ALERTAS DE COORDINACIÓN */}
+        <div className="mt-4 pt-4 border-t theme-border flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* 3 Modos de Filtro */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-black uppercase tracking-wider theme-text-muted mr-1">
+                Criterio de Filtrado:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode('GENERACION');
+                  setSelectedMonth('TODOS');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  filterMode === 'GENERACION'
+                    ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border-[var(--color-primary)] shadow-sm'
+                    : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
+                }`}
+              >
+                <Calendar size={14} />
+                <span>Fecha de Generación (RIBI)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode('DESPACHO');
+                  setSelectedMonth('TODOS');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  filterMode === 'DESPACHO'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                    : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
+                }`}
+              >
+                <Truck size={14} />
+                <span>Fecha de Despacho (Comercial)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMode('ALERTAS_COORD');
+                  setSelectedMonth('TODOS');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  filterMode === 'ALERTAS_COORD'
+                    ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
+                    : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
+                }`}
+              >
+                <AlertTriangle size={14} />
+                <span>Alertas de Coordinación ({alertsMap.size})</span>
+              </button>
+            </div>
+
+            {/* Selector directo de Ordenamiento sincronizado con `sortBy` */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] font-black uppercase theme-text-muted flex items-center gap-1">
+                <ArrowUpDown size={13} /> Ordenar:
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1.5 rounded-xl theme-bg-card theme-text-main border theme-border font-black text-xs uppercase outline-none cursor-pointer"
+              >
+                <option value="ninguno">Pedido Más Reciente (Desc)</option>
+                <option value="pedido_desc">Nº Pedido (Descendente)</option>
+                <option value="pedido_asc">Nº Pedido (Ascendente)</option>
+                <option value="fecha_asc">Fecha Activa (Ascendente)</option>
+                <option value="fecha_desc">Fecha Activa (Descendente)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Filtro por Año y Meses (SOLO muestra meses con pedidos existentes) */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1 mr-1">
-              <Calendar size={14} /> Filtrar por Mes:
+            <span className="text-[11px] font-black uppercase tracking-wider theme-text-main flex items-center gap-1 mr-1">
+              <Calendar size={14} />
+              {filterMode === 'DESPACHO'
+                ? 'Meses con Fecha de Despacho:'
+                : filterMode === 'ALERTAS_COORD'
+                ? 'Meses con Alertas de Coordinación:'
+                : 'Meses con Pedidos Generados:'}
             </span>
 
             <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-black text-xs uppercase outline-none cursor-pointer focus:border-amber-400"
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                setSelectedMonth('TODOS');
+              }}
+              className="px-3 py-1.5 rounded-xl theme-bg-card theme-text-main border theme-border font-black text-xs uppercase outline-none cursor-pointer"
             >
-              <option value="TODOS">🗓️ Todos los Meses</option>
-              {MONTH_NAMES.map((m) => (
-                <option key={m.num} value={String(m.num)}>
-                  Mes de {m.name}
+              <option value="TODOS">Todos los Años</option>
+              {availableYears.map((y) => (
+                <option key={y} value={String(y)}>
+                  Año {y}
                 </option>
               ))}
             </select>
 
             <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-black text-xs uppercase outline-none cursor-pointer focus:border-amber-400"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-1.5 rounded-xl theme-bg-card theme-text-main border theme-border font-black text-xs uppercase outline-none cursor-pointer"
             >
-              <option value="TODOS">Todos los Años</option>
-              <option value="2026">Año 2026</option>
-              <option value="2027">Año 2027</option>
+              <option value="TODOS">🗓️ Todos los Meses ({availableMonthsList.length})</option>
+              {availableMonthsList.map((ym) => (
+                <option key={ym.key} value={ym.key}>
+                  {ym.label} ({ym.pedidosSet.size} pedidos)
+                </option>
+              ))}
             </select>
 
-            {/* Píldoras rápidas de los meses detectados con pedidos */}
+            {/* Píldoras dinámicas: únicamente meses con pedidos existentes */}
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
@@ -723,26 +936,23 @@ export default function NeutralAreaBacklogView() {
                   setSelectedMonth('TODOS');
                   setSelectedYear('TODOS');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-all cursor-pointer ${
                   selectedMonth === 'TODOS' && selectedYear === 'TODOS'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border-[var(--color-primary)]'
+                    : 'theme-bg-main theme-text-muted theme-border hover:brightness-95'
                 }`}
               >
                 Todos
               </button>
-              {availableYearMonths.map((ym) => (
+              {availableMonthsList.map((ym) => (
                 <button
                   key={ym.key}
                   type="button"
-                  onClick={() => {
-                    setSelectedYear('TODOS');
-                    setSelectedMonth(ym.key);
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer ${
+                  onClick={() => setSelectedMonth(ym.key)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-all cursor-pointer ${
                     selectedMonth === ym.key
-                      ? 'bg-amber-400 text-slate-950 shadow'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border-[var(--color-primary)] shadow-sm'
+                      : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
                   }`}
                 >
                   {ym.label} ({ym.pedidosSet.size})
@@ -750,112 +960,95 @@ export default function NeutralAreaBacklogView() {
               ))}
             </div>
           </div>
-
-          {/* Selector directo de Ordenamiento sincronizado con la barra superior */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-black uppercase text-slate-400 flex items-center gap-1">
-              <ArrowUpDown size={13} /> Ordenar:
-            </span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-black text-xs uppercase outline-none cursor-pointer"
-            >
-              <option value="ninguno">Pedido Más Reciente (Desc)</option>
-              <option value="pedido_desc">Nº Pedido (Descendente)</option>
-              <option value="pedido_asc">Nº Pedido (Ascendente)</option>
-              <option value="fecha_asc">Fecha Entrega / RIBI (Ascendente)</option>
-              <option value="fecha_desc">Fecha Entrega / RIBI (Descendente)</option>
-            </select>
-          </div>
         </div>
 
-        {/* KPIs RÁPIDOS + BUSCADOR */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800">
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+        {/* KPIs RÁPIDOS + BUSCADOR (Adaptados a los temas) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t theme-border">
+          <div className="theme-bg-main border theme-border rounded-2xl p-3 flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              <span className="text-[10px] font-black uppercase tracking-wider theme-text-muted block">
                 Pedidos Filtrados
               </span>
-              <span className="text-2xl font-black text-white">
+              <span className="text-2xl font-black theme-text-main">
                 {groupedPedidos.length}
               </span>
             </div>
-            <Layers className="text-indigo-400" size={24} />
+            <Layers className="theme-text-primary opacity-80" size={24} />
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+          <div className="theme-bg-main border theme-border rounded-2xl p-3 flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Ítems en Consulta General
+              <span className="text-[10px] font-black uppercase tracking-wider theme-text-muted block">
+                Ítems Listados
               </span>
-              <span className="text-2xl font-black text-amber-400">
+              <span className="text-2xl font-black theme-text-main">
                 {filteredItems.length}
               </span>
             </div>
-            <FileCode2 className="text-amber-400" size={24} />
+            <FileCode2 className="theme-text-primary opacity-80" size={24} />
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+          <div className="theme-bg-main border theme-border rounded-2xl p-3 flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              <span className="text-[10px] font-black uppercase tracking-wider theme-text-muted block">
                 Total Unidades
               </span>
-              <span className="text-2xl font-black text-emerald-400">
+              <span className="text-2xl font-black theme-text-main">
                 {totalUnitsCount}
               </span>
             </div>
-            <Package className="text-emerald-400" size={24} />
+            <Package className="theme-text-primary opacity-80" size={24} />
           </div>
 
           <div className="relative flex items-center">
-            <Search className="absolute left-3.5 text-slate-400" size={18} />
+            <Search className="absolute left-3.5 theme-text-muted" size={18} />
             <input
               type="text"
               value={backlogSearch}
               onChange={(e) => setBacklogSearch(e.target.value)}
-              placeholder="Filtrar pedido, cliente o código..."
-              className="w-full h-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-700 text-white font-bold text-sm outline-none focus:border-indigo-500 placeholder:text-slate-500"
+              placeholder="Buscar pedido, cliente o código..."
+              className="w-full h-full pl-10 pr-4 py-2.5 rounded-2xl theme-bg-main border theme-border theme-text-main font-bold text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)] placeholder:theme-text-muted"
             />
           </div>
         </div>
       </div>
 
-      {/* LISTADO / CUADRÍCULA DE PEDIDOS EN EL ÁREA DE CONSULTA GENERAL */}
+      {/* LISTADO / CUADRÍCULA DE PEDIDOS */}
       {loadingRibi && groupedPedidos.length === 0 ? (
         <div className="theme-bg-card border-2 theme-border rounded-3xl p-12 text-center space-y-3">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
           <h3 className="text-base font-black uppercase theme-text-main">
-            Cargando pedidos del RIBI y Área Comercial desde Supabase...
+            Cargando pedidos del RIBI y Área Comercial...
           </h3>
         </div>
       ) : groupedPedidos.length === 0 ? (
         <div className="theme-bg-card border-2 border-dashed theme-border rounded-3xl p-12 text-center space-y-3">
-          <FolderKanban size={48} className="mx-auto text-indigo-500 opacity-60" />
+          <FolderKanban size={48} className="mx-auto theme-text-muted opacity-60" />
           <h3 className="text-lg font-black uppercase theme-text-main">
-            No se encontraron pedidos con el filtro de mes o búsqueda actual
+            No se encontraron pedidos con el filtro actual
           </h3>
           <p className="text-sm font-medium theme-text-muted max-w-lg mx-auto">
-            Puedes cambiar el filtro de mes a <strong>"Todos los Meses"</strong> o sincronizar el archivo Excel del RIBI desde el botón <strong>"+ Nuevo"</strong>.
+            Prueba seleccionar <strong>"Todos los Meses"</strong> o cambiar el criterio entre Fecha de Generación, Fecha de Despacho o Alertas de Coordinación.
           </p>
         </div>
       ) : (
         <div className={pedidosGridClass}>
           {groupedPedidos.map((group) => {
             const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
-            const dLeft = getDaysLeft(group.fechaEntrega);
-            const selectedDestArea =
-              targetAreaByPedido[group.pedidoNum] || 'Diseño';
+            const dLeft = getDaysLeft(group.fechaDespacho || group.coordFechaEntrega);
+            const selectedDestArea = targetAreaByPedido[group.pedidoNum] || 'Diseño';
             const isGridCompact = gridColumns > 1 && !isExpanded;
 
             return (
               <div
                 key={group.pedidoNum}
-                className={`theme-bg-card border-2 theme-border rounded-3xl shadow-xl overflow-hidden flex flex-col justify-between transition-all hover:border-indigo-500/60 ${
+                className={`theme-bg-card border-2 ${
+                  group.hasCoordAlert ? 'border-orange-500/70' : 'theme-border'
+                } rounded-3xl shadow-lg overflow-hidden flex flex-col justify-between transition-all hover:border-[var(--color-primary)] ${
                   isExpanded ? 'col-span-full' : ''
                 }`}
               >
-                {/* CABECERA DEL PEDIDO (ADAPTABLE A MODO CUADRÍCULA O MODO LISTA) */}
+                {/* CABECERA DEL PEDIDO */}
                 <div
                   className={`p-4 sm:p-5 theme-bg-header ${
                     isExpanded ? 'border-b theme-border' : ''
@@ -873,13 +1066,20 @@ export default function NeutralAreaBacklogView() {
                     }
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="px-3.5 py-1 rounded-xl bg-indigo-600 text-white font-black text-sm sm:text-base tracking-wide shadow">
+                      <span className="px-3.5 py-1 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] font-black text-sm sm:text-base tracking-wide shadow">
                         PED #{group.pedidoNum}
                       </span>
 
-                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black text-xs">
-                        {group.items.length} ÍTEM(S)
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {group.hasCoordAlert && (
+                          <span className="px-2 py-0.5 rounded-lg bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/40 font-black text-[10px] uppercase flex items-center gap-1">
+                            <AlertTriangle size={11} /> Coord.
+                          </span>
+                        )}
+                        <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black text-xs">
+                          {group.items.length} ÍTEM(S)
+                        </span>
+                      </div>
                     </div>
 
                     <h3 className="text-sm sm:text-base font-black uppercase theme-text-main leading-snug line-clamp-2">
@@ -889,32 +1089,46 @@ export default function NeutralAreaBacklogView() {
                         : ''}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-bold theme-text-muted">
-                      {group.fechaEntrega ? (
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold theme-text-muted">
+                      {group.fechaGeneracion && (
+                        <span className="px-2 py-0.5 rounded theme-bg-main border theme-border flex items-center gap-1 font-bold">
+                          <Clock size={12} /> Gen: {formatLocalDate(group.fechaGeneracion)}
+                        </span>
+                      )}
+
+                      {(group.fechaDespacho || group.coordFechaEntrega) && (
                         <span
                           className={`px-2 py-0.5 rounded flex items-center gap-1 font-black ${
                             dLeft !== null && dLeft < 0
                               ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                              : 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                           }`}
                         >
                           <Calendar size={12} />
-                          Entrega: {formatLocalDate(group.fechaEntrega)}
+                          Desp: {formatLocalDate(group.fechaDespacho || group.coordFechaEntrega)}
                           {dLeft !== null && ` (${dLeft}d)`}
                         </span>
-                      ) : group.fechaGenera ? (
-                        <span className="px-2 py-0.5 rounded bg-slate-500/15 text-slate-600 dark:text-slate-300 flex items-center gap-1 font-bold">
-                          <Clock size={12} /> Fecha RIBI: {formatLocalDate(group.fechaGenera)}
-                        </span>
-                      ) : null}
+                      )}
 
-                      <span className="text-[11px] underline text-indigo-600 dark:text-indigo-400 font-black">
-                        {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs SolidWorks'}
-                      </span>
+                      {group.areaActual && (
+                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black text-[11px] uppercase">
+                          En: {group.areaActual}
+                        </span>
+                      )}
                     </div>
+
+                    {group.coordAlertNota && (
+                      <div className="text-[11px] font-bold text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg px-2 py-1 line-clamp-2">
+                        Nota Coord.: {group.coordAlertNota}
+                      </div>
+                    )}
+
+                    <span className="text-[11px] underline theme-text-primary font-black">
+                      {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs SolidWorks'}
+                    </span>
                   </div>
 
-                  {/* ACCIONES MASIVAS DEL PEDIDO (DESCARGAR QRs + ENVIAR A PLANTA) */}
+                  {/* ACCIONES MASIVAS DEL PEDIDO */}
                   <div
                     className={`flex flex-wrap items-center gap-2 ${
                       isGridCompact ? 'pt-2 border-t theme-border justify-between' : ''
@@ -923,40 +1137,42 @@ export default function NeutralAreaBacklogView() {
                     <button
                       type="button"
                       onClick={() => handleDownloadAllPedidoQrs(group)}
-                      className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black uppercase flex items-center gap-1.5 border border-slate-700 shadow cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] text-[11px] font-black uppercase flex items-center gap-1.5 shadow cursor-pointer hover:brightness-110"
                       title="Descargar todas las estampillas PNG (440x192px) de este pedido"
                     >
                       <Download size={14} />
                       <span>QRs ({group.items.length})</span>
                     </button>
 
-                    <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl border theme-border flex-1 sm:flex-initial justify-end">
-                      <select
-                        value={selectedDestArea}
-                        onChange={(e) =>
-                          setTargetAreaByPedido((prev) => ({
-                            ...prev,
-                            [group.pedidoNum]: e.target.value
-                          }))
-                        }
-                        className="px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-black text-[11px] uppercase border theme-border outline-none cursor-pointer max-w-[150px] truncate"
-                      >
-                        {productionTargetAreas.map((area) => (
-                          <option key={area} value={area}>
-                            Hacia: {area}
-                          </option>
-                        ))}
-                      </select>
+                    {!group.areaActual && (
+                      <div className="flex items-center gap-1 theme-bg-main p-1 rounded-xl border theme-border flex-1 sm:flex-initial justify-end">
+                        <select
+                          value={selectedDestArea}
+                          onChange={(e) =>
+                            setTargetAreaByPedido((prev) => ({
+                              ...prev,
+                              [group.pedidoNum]: e.target.value
+                            }))
+                          }
+                          className="px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-black text-[11px] uppercase border theme-border outline-none cursor-pointer max-w-[150px] truncate"
+                        >
+                          {productionTargetAreas.map((area) => (
+                            <option key={area} value={area}>
+                              Hacia: {area}
+                            </option>
+                          ))}
+                        </select>
 
-                      <button
-                        type="button"
-                        onClick={() => handleMoveEntirePedidoToProduction(group)}
-                        className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase flex items-center gap-1 shadow cursor-pointer shrink-0"
-                      >
-                        <span>Enviar</span>
-                        <ArrowRight size={13} />
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveEntirePedidoToProduction(group)}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase flex items-center gap-1 shadow cursor-pointer shrink-0"
+                        >
+                          <span>Enviar</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -964,8 +1180,7 @@ export default function NeutralAreaBacklogView() {
                 {isExpanded && (
                   <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 bg-black/5 dark:bg-black/20">
                     {group.items.map((item) => {
-                      const itemDestArea =
-                        targetAreaByItem[item.id] || 'Diseño';
+                      const itemDestArea = targetAreaByItem[item.id] || 'Diseño';
                       const isCopied = copiedId === item.id;
 
                       return (
@@ -976,7 +1191,7 @@ export default function NeutralAreaBacklogView() {
                               setSelectedOrder(item);
                             }
                           }}
-                          className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-indigo-500/60 transition-all flex flex-col justify-between gap-3 shadow-sm"
+                          className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-sm"
                         >
                           <div className="space-y-2">
                             <div className="flex items-center justify-between gap-2">
@@ -1001,7 +1216,7 @@ export default function NeutralAreaBacklogView() {
 
                           {/* VISTA PREVIA FIEL 1:1 (220x96px) DE LA ESTAMPILLA DE SOLIDWORKS */}
                           <div
-                            className="bg-slate-200/70 dark:bg-slate-950/70 p-2.5 rounded-xl border theme-border flex flex-col items-center gap-2"
+                            className="theme-bg-card p-2.5 rounded-xl border theme-border flex flex-col items-center gap-2"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="text-[10px] font-black uppercase tracking-wider theme-text-muted">
@@ -1016,7 +1231,7 @@ export default function NeutralAreaBacklogView() {
                                 className={`py-2 px-2.5 rounded-xl font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer ${
                                   isCopied
                                     ? 'bg-emerald-600 text-white'
-                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
+                                    : 'bg-[var(--color-primary)] text-[var(--color-surface)] hover:brightness-110 active:scale-95'
                                 }`}
                                 title="Copiar imagen PNG al portapapeles para pegar con Ctrl+V en SolidWorks (.SLDDRW)"
                               >
@@ -1039,7 +1254,7 @@ export default function NeutralAreaBacklogView() {
                                   e.stopPropagation();
                                   downloadBlueprintQrPng(item);
                                 }}
-                                className="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                                className="py-2 px-2.5 rounded-xl theme-bg-main border theme-border theme-text-main hover:brightness-95 font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
                                 title="Descargar PNG en alta resolución (440x192 px)"
                               >
                                 <Download size={14} />
@@ -1049,38 +1264,38 @@ export default function NeutralAreaBacklogView() {
                           </div>
 
                           {/* ENVIAR ÍTEM INDIVIDUAL A PRODUCCIÓN */}
-                          <div
-                            className="pt-2 border-t theme-border flex items-center gap-1.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <select
-                              value={itemDestArea}
-                              onChange={(e) =>
-                                setTargetAreaByItem((prev) => ({
-                                  ...prev,
-                                  [item.id]: e.target.value
-                                }))
-                              }
-                              className="flex-1 px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-bold text-[11px] uppercase border theme-border outline-none"
+                          {!item.isInActivePlantArea && (
+                            <div
+                              className="pt-2 border-t theme-border flex items-center gap-1.5"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {productionTargetAreas.map((a) => (
-                                <option key={a} value={a}>
-                                  {a}
-                                </option>
-                              ))}
-                            </select>
+                              <select
+                                value={itemDestArea}
+                                onChange={(e) =>
+                                  setTargetAreaByItem((prev) => ({
+                                    ...prev,
+                                    [item.id]: e.target.value
+                                  }))
+                                }
+                                className="flex-1 px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-bold text-[11px] uppercase border theme-border outline-none"
+                              >
+                                {productionTargetAreas.map((a) => (
+                                  <option key={a} value={a}>
+                                    {a}
+                                  </option>
+                                ))}
+                              </select>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleMoveItemToProduction(item, itemDestArea)
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase flex items-center gap-1 shrink-0 cursor-pointer"
-                            >
-                              <span>Enviar</span>
-                              <ArrowRight size={12} />
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveItemToProduction(item, itemDestArea)}
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase flex items-center gap-1 shrink-0 cursor-pointer"
+                              >
+                                <span>Enviar</span>
+                                <ArrowRight size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

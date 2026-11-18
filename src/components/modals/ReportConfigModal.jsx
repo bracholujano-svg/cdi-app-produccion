@@ -1,5 +1,6 @@
 import React from 'react';
 import { SUPERVISORES } from '../../utils/constants';
+import CDILogo from '../ui/CDILogo';
 
 export default function ReportConfigModal({
     repSupervisor, setRepSupervisor,
@@ -13,7 +14,7 @@ export default function ReportConfigModal({
     return (
         <div className="fixed inset-0 bg-black/80  z-[120] flex items-center justify-center p-4">
           <div className="theme-bg-card w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl border theme-border">
-            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><h2 className="font-black uppercase text-base text-[var(--color-primary)]">Reporte de Turno</h2><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--color-primary)]">✕</button></div>
+            <div className="p-5 theme-bg-header flex justify-between items-center border-b theme-border"><div className="flex items-center gap-2.5"><CDILogo heightClass="h-6 sm:h-7" className="shrink-0" /><h2 className="font-black uppercase text-base text-[var(--color-primary)]">Reporte de Turno</h2></div><button type="button" onClick={() => setShowReportConfigModal(false)} className="p-2 bg-black/10 rounded-xl text-[var(--color-primary)]">✕</button></div>
             <div className="p-6 space-y-4">
               <div className="space-y-1"><label className="text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest">Supervisor</label><select value={repSupervisor} onChange={e=>setRepSupervisor(e.target.value)} className="w-full p-3.5 rounded-xl theme-bg-input border theme-border font-black text-base lg:text-lg uppercase outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-primary)]"><option value="">Seleccione...</option><option value="TODOS">TODOS LOS SUPERVISORES</option>{SUPERVISORES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               

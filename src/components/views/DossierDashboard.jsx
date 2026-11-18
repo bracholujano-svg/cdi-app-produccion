@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS_PLANTA } from '../../utils/constants';
+import CDILogo from '../ui/CDILogo';
 
 // Helper local 
 const msToTimeStrLocal = (ms) => {
@@ -348,6 +349,7 @@ export default function DossierDashboard() {
         {/* ENCABEZADO SUPERIOR */}
         <div className="p-4 md:p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-base)]">
           <div className="flex items-center gap-3">
+            <CDILogo heightClass="h-8 md:h-10" />
             <div className="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl border border-purple-500/20">
               <Activity size={28} />
             </div>

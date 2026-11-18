@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutList, Trash2 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import CDILogo from '../ui/CDILogo';
 
 export default function CoordViewModal({ deleteAlert }) {
     const { 
@@ -35,6 +36,8 @@ export default function CoordViewModal({ deleteAlert }) {
             <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
                 <div className="p-5 bg-[var(--color-primary)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10">
                     <div className="flex items-center gap-3">
+                        <CDILogo heightClass="h-7 sm:h-8" className="shrink-0" />
+                        <span className="h-5 w-px bg-current opacity-20 hidden sm:block"></span>
                         <LayoutList size={20}/>
                         <h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2>
                     </div>

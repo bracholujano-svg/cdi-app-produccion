@@ -17,6 +17,7 @@ import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_RECEPCION } from '../../utils/constants';
 import { analizarCajetinConGemini } from '../../services/cajetinScannerService';
 import { importRibisoftExcelFile, deduplicateErpTables } from '../../services/ribisoftExcelImporter';
+import CDILogo from '../ui/CDILogo';
 
 const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   const { 
@@ -167,7 +168,8 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
         
         {/* Cabecera del Modal */}
         <div className="p-4 md:p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
+            <CDILogo heightClass="h-8 md:h-9" />
             <div className="p-2 bg-[var(--color-primary)]/20 rounded-xl text-[var(--color-primary)]">
               <Plus size={20} />
             </div>

@@ -15,8 +15,8 @@ export const parseCommercialDeliveryDate = (rawVal) => {
     return null;
   }
 
-  // 1. Formato directo YYYY-MM-DD (o inicio de ISO YYYY-MM-DDTHH:mm...)
-  const ymdMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  // 1. Formato directo YYYY-MM-DD o YYYY/MM/DD (o inicio de ISO YYYY-MM-DDTHH:mm...)
+  const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (ymdMatch) {
     const year = Number(ymdMatch[1]);
     const month = Number(ymdMatch[2]);
@@ -27,12 +27,17 @@ export const parseCommercialDeliveryDate = (rawVal) => {
     }
   }
 
-  // 2. Formato DD/MM/YYYY o DD-MM-YYYY
+  // 2. Formato DD/MM/YYYY o DD-MM-YYYY (con autocorrección si viene MM/DD/YYYY con día > 12)
   const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if (dmyMatch) {
-    const day = Number(dmyMatch[1]);
-    const month = Number(dmyMatch[2]);
+    let day = Number(dmyMatch[1]);
+    let month = Number(dmyMatch[2]);
     const year = Number(dmyMatch[3]);
+    if (month > 12 && day >= 1 && day <= 12) {
+      const tmp = day;
+      day = month;
+      month = tmp;
+    }
     if (year >= 2020 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       return { isoDate, year, month, day };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Beaker, AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
 import EtpCopilotForm from '../forms/EtpCopilotForm';
+import CDILogo from '../ui/CDILogo';
 
 export default function EtpSupervisorDashboard({ supervisorProfile }) {
     const [pendientes, setPendientes] = useState([]);
@@ -76,7 +77,9 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-black theme-text-main mb-6 flex items-center gap-3">
+            <h1 className="text-3xl font-black theme-text-main mb-6 flex items-center gap-3 flex-wrap">
+                <CDILogo heightClass="h-9 md:h-11" />
+                <span className="h-7 w-px bg-current opacity-20 hidden sm:block"></span>
                 <Beaker className="w-8 h-8 text-blue-500" />
                 Auditoría ETP (Pintura Líquida)
             </h1>

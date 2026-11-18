@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, X, Calendar, User, FileText, CheckCircle2, AlertCircle, Shield, Package, Printer } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import CDILogo from '../ui/CDILogo';
 import {
   LABEL_PAGE_PRESETS,
   printDispatchLabelsOrSheet,
@@ -148,6 +149,7 @@ export default function LogisticsDispatchModal({
         {/* Cabecera del Modal */}
         <div className="p-4 sm:p-5 border-b theme-border flex items-center justify-between bg-gradient-to-r from-purple-900/40 to-slate-900/60">
           <div className="flex items-center gap-3">
+            <CDILogo heightClass="h-8 sm:h-9" className="shrink-0 hidden sm:block" />
             <div className="p-3 bg-purple-600 text-white rounded-2xl shadow-lg shadow-purple-600/30">
               <Truck size={26} />
             </div>

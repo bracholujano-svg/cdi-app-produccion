@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { supabase } from '../../supabaseClient';
+import CDILogo from '../ui/CDILogo';
 import {
   parseCdiQRCodePayload,
   printDispatchLabelsOrSheet,
@@ -554,8 +555,9 @@ const QRScannerModal = () => {
         {/* Cabecera */}
         <div className="p-4 sm:p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
-              <QrCode size={24} />
+            <CDILogo heightClass="h-7 sm:h-9" />
+            <div className="p-2 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 shrink-0">
+              <QrCode size={22} />
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">

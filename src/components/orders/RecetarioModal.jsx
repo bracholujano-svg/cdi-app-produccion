@@ -3,6 +3,7 @@ import { FlaskConical } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import SCEntonacion from '../SCEntonacion';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
+import CDILogo from '../ui/CDILogo';
 
 const RecetarioModal = () => {
   const {
@@ -57,7 +58,8 @@ const RecetarioModal = () => {
         >
           {/* Barra Superior Unificada de Ventana (Sin botones inferiores flotantes) */}
           <div className="px-4 md:px-6 py-2.5 bg-slate-100/90 dark:bg-slate-900/95 border-b theme-border flex items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <CDILogo heightClass="h-7 md:h-9" />
               <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-sm shrink-0">
                 <FlaskConical size={16} />
               </div>

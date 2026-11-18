@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { generateQRMatrix } from '../../utils/qrGenerator';
+import CDILogo from '../ui/CDILogo';
 import {
   LABEL_PAGE_PRESETS,
   resolvePrintDimensions,
@@ -2240,8 +2241,9 @@ const PackingListsModal = () => {
             {/* FILA SUPERIOR: TÍTULO A LA IZQUIERDA + PESTAÑAS Y CONTROLES DE VENTANA EN ESQUINA SUPERIOR DERECHA */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner shrink-0">
-                  <Package size={26} strokeWidth={2.4} />
+                <CDILogo heightClass="h-8 md:h-10" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner shrink-0">
+                  <Package size={22} strokeWidth={2.4} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">

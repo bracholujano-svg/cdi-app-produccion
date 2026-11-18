@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { AREAS } from '../../utils/constants';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
+import CDILogo from '../ui/CDILogo';
 
 const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = [], onClose }) => {
     const [startDate, setStartDate] = useState('');
@@ -216,6 +217,7 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
                 {/* Cabecera Principal */}
                 <div className="p-4 md:p-5 theme-bg-header border-b theme-border flex flex-wrap items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-3">
+                        <CDILogo heightClass="h-8 md:h-10" />
                         <div className="p-2.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/30">
                             <ShieldCheck size={24} />
                         </div>

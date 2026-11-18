@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { 
     X, Map, AlertTriangle, CheckCircle2, Clock, ChevronDown, ChevronUp, 
     Package, LayoutGrid, AlertCircle, Info, BarChart2, Megaphone, Trash2, 
-    Plus, Search, Calendar, ArrowUpDown 
+    Plus, Search, Calendar, ArrowUpDown, FolderKanban 
 } from 'lucide-react';
 import { calculatePlantMatrix, calculateUnstartedErpOrders } from '../../services/PlantPlannerService';
 import IndicatorsDrawer from '../layout/IndicatorsDrawer';
@@ -11,6 +11,8 @@ import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import { supabase } from '../../supabaseClient';
 import { isUnassignedErpBulkImport } from '../../hooks/useOrders';
+import NeutralAreaBacklogView from '../views/NeutralAreaBacklogView';
+import CDILogo from '../ui/CDILogo';
 
 const PlantPlannerModal = ({ 
     orders, 
@@ -293,6 +295,7 @@ const PlantPlannerModal = ({
                 {/* Header Principal */}
                 <div className="p-3 md:p-4 border-b theme-border flex flex-wrap items-center justify-between gap-3 theme-bg-secondary sticky top-0 z-20">
                     <div className="flex items-center gap-3">
+                        <CDILogo heightClass="h-8 md:h-10" />
                         <div className="p-2.5 bg-indigo-500/20 rounded-xl shadow-inner border border-indigo-500/30">
                             <LayoutGrid className="w-6 h-6 text-indigo-500" />
                         </div>
@@ -306,12 +309,12 @@ const PlantPlannerModal = ({
                         </div>
                     </div>
 
-                    {/* Selector de Pestañas: Matriz de Planta vs Coordinación */}
-                    <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800/70 p-1 rounded-xl border theme-border">
+                    {/* Selector de Pestañas: Matriz de Áreas | Área de Consulta General | Coordinación */}
+                    <div className="flex flex-wrap items-center gap-1 bg-slate-200/70 dark:bg-slate-800/70 p-1 rounded-xl border theme-border">
                         <button
                             type="button"
                             onClick={() => setActiveTab('matriz')}
-                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-black uppercase transition-all ${
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-black uppercase transition-all cursor-pointer ${
                                 activeTab === 'matriz' 
                                     ? 'bg-indigo-600 text-white shadow-sm' 
                                     : 'theme-text-secondary hover:text-indigo-500'
@@ -322,8 +325,20 @@ const PlantPlannerModal = ({
                         </button>
                         <button
                             type="button"
+                            onClick={() => setActiveTab('consulta_general')}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-black uppercase transition-all cursor-pointer ${
+                                activeTab === 'consulta_general' 
+                                    ? 'bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm' 
+                                    : 'theme-text-secondary hover:text-[var(--color-primary)]'
+                            }`}
+                        >
+                            <FolderKanban className="w-4 h-4" />
+                            <span>Área de Consulta General</span>
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setActiveTab('coordinacion')}
-                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-black uppercase transition-all ${
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-black uppercase transition-all cursor-pointer ${
                                 activeTab === 'coordinacion' 
                                     ? 'bg-orange-600 text-white shadow-sm' 
                                     : 'theme-text-secondary hover:text-orange-500'
@@ -940,7 +955,14 @@ const PlantPlannerModal = ({
                     </div>
                 )}
 
-                {/* VISTA 2: COORDINACIÓN LOGÍSTICA INTEGRADA (DIRECTIVA 1) */}
+                {/* VISTA 2: ÁREA DE CONSULTA GENERAL */}
+                {activeTab === 'consulta_general' && (
+                    <div className="flex-1 overflow-y-auto theme-bg-main custom-scrollbar pl-8 sm:pl-10">
+                        <NeutralAreaBacklogView />
+                    </div>
+                )}
+
+                {/* VISTA 3: COORDINACIÓN LOGÍSTICA INTEGRADA (DIRECTIVA 1) */}
                 {activeTab === 'coordinacion' && (
                     <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 dark:bg-[#0f172a] custom-scrollbar space-y-6 pl-8 sm:pl-10">
                         

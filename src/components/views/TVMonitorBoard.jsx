@@ -4,6 +4,7 @@ import { getDaysLeft } from '../../utils/helpers';
 import { useAppContext } from '../../context/AppContext';
 import { AREAS } from '../../utils/constants';
 import { WindowControls, MinimizedWindowDock } from '../ui/WindowControls';
+import CDILogo from '../ui/CDILogo';
 
 const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) => {
     const { supervisorProfile } = useAppContext();
@@ -197,8 +198,8 @@ const TVMonitorBoard = ({ allOrders = [], coordinationAlerts = [], onClose }) =>
                 
                 {/* Lado Izquierdo: Título y Área */}
                 <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0 flex items-center justify-center transition-transform hover:scale-105 duration-500 theme-bg-card rounded-2xl p-2 shadow-lg">
-                        <img src="/logo.png" alt="CDI Logo" className="w-full h-full object-contain" />
+                    <div className="flex-shrink-0 flex items-center justify-center transition-transform hover:scale-105 duration-500 p-1">
+                        <CDILogo heightClass="h-12 md:h-16" />
                     </div>
                     <div>
                         <h1 className="text-xl md:text-2xl font-bold theme-text-main tracking-widest uppercase flex items-center gap-2">

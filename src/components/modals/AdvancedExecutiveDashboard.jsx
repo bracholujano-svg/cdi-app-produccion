@@ -6,6 +6,7 @@ import InformeInteligenteIA from './InformeInteligenteIA';
 import OrderHistoryModal from '../orders/OrderHistoryModal';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
+import CDILogo from '../ui/CDILogo';
 
 const AdvancedExecutiveDashboard = ({ 
     orders: rawOrders = [], 
@@ -219,7 +220,7 @@ const AdvancedExecutiveDashboard = ({
                 <div className="w-full px-4 sm:px-6">
                     <div className="flex justify-between h-16 items-center gap-2">
                         <div className="flex items-center gap-2">
-                            <span style={{ fontFamily: "\"Space Grotesk\", sans-serif" }} className="text-2xl md:text-3xl font-black theme-text-main tracking-tighter">CDI</span>
+                            <CDILogo heightClass="h-8 md:h-10" />
                             <div className="w-px h-6 bg-gray-300 mx-1 md:mx-2"></div>
                             <div className="flex flex-col leading-none">
                                 <span className="text-xs md:text-sm font-bold tracking-widest theme-text-muted">INFORME</span>
