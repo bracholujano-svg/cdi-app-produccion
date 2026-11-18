@@ -900,9 +900,29 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
 
   const uniqueCandidates = Array.from(uniqueExcelItemsMap.values());
 
+  // Guardar en caché local (`localforage`) el mapa { [PedidoSIN]: 'YYYY-MM-DD' } de Fecha Entrega comercial
+  const deliveryDatesDict = {};
+  for (const cand of uniqueCandidates) {
+    if (cand.pedido_sin && cand.fecha_entrega) {
+      deliveryDatesDict[cand.pedido_sin] = String(cand.fecha_entrega).slice(0, 10);
+    }
+  }
+  if (Object.keys(deliveryDatesDict).length > 0) {
+    try {
+      const prevMap = (await localforage.getItem('cdi_ribisoft_delivery_dates_v1')) || {};
+      await localforage.setItem('cdi_ribisoft_delivery_dates_v1', {
+        ...prevMap,
+        ...deliveryDatesDict
+      });
+    } catch (e) {
+      console.warn('Aviso guardando caché de fechas comerciales:', e);
+    }
+  }
+
   // 1. Consultar qué existe actualmente en `ribisoft_pedidos`, limpiar duplicados existentes y SOLO insertar lo nuevo
   const existingRibisoftSet = new Set();
-  const ribiToUpdateFields = [];
+  const ribiToUpdateCode = [];
+  const pedidoDatesToUpdateMap = new Map();
   let ribisoftDuplicatesCleaned = 0;
 
   try {
@@ -953,35 +973,46 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       if (pSin && pName) existingRibisoftSet.add(`${pSin}__NAME__${pName}`);
 
       const candidate = pSin && pName ? uniqueExcelItemsMap.get(`${pSin}__${pName}`) : null;
-      const updatePatch = {};
 
       // Si el registro existente en ribisoft_pedidos no tenía Código Ítem pero ahora sí lo tenemos, actualizarlo sin duplicar
-      if (!cArt && pSin && pName) {
+      if (!cArt && pSin && pName && r.id) {
         const newCode = candidate?.codigo_item || prodToCodptMap.get(`${pSin}__${pName}`);
         if (newCode) {
-          updatePatch['Código Ítem'] = newCode;
+          ribiToUpdateCode.push({ id: r.id, code: newCode });
           existingRibisoftSet.add(`${pSin}_${newCode}`);
         }
       }
 
-      // Sincronizar fechas (`fecha_asigna` desde Fecha Entrega comercial y `fecha_genera_ped` desde Fecha Genera Ped.)
-      if (candidate?.fecha_asigna && toIsoDay(r.fecha_asigna) !== toIsoDay(candidate.fecha_asigna)) {
-        updatePatch.fecha_asigna = candidate.fecha_asigna;
-      }
-      if (candidate?.fecha_genera_ped && toIsoDay(r.fecha_genera_ped) !== toIsoDay(candidate.fecha_genera_ped)) {
-        updatePatch.fecha_genera_ped = candidate.fecha_genera_ped;
-      }
-
-      if (r.id && Object.keys(updatePatch).length > 0) {
-        ribiToUpdateFields.push({ id: r.id, patch: updatePatch });
+      // Agrupar actualización de fechas por `PedidoSIN` único para reducir drásticamente las llamadas a Supabase
+      if (pSin && candidate) {
+        const datePatch = pedidoDatesToUpdateMap.get(pSin) || {};
+        if (candidate.fecha_asigna && toIsoDay(r.fecha_asigna) !== toIsoDay(candidate.fecha_asigna)) {
+          datePatch.fecha_asigna = candidate.fecha_asigna;
+        }
+        if (candidate.fecha_genera_ped && toIsoDay(r.fecha_genera_ped) !== toIsoDay(candidate.fecha_genera_ped)) {
+          datePatch.fecha_genera_ped = candidate.fecha_genera_ped;
+        }
+        if (Object.keys(datePatch).length > 0) {
+          pedidoDatesToUpdateMap.set(pSin, datePatch);
+        }
       }
     }
 
-    for (let i = 0; i < ribiToUpdateFields.length; i += 40) {
-      const slice = ribiToUpdateFields.slice(i, i + 40);
+    for (let i = 0; i < ribiToUpdateCode.length; i += 40) {
+      const slice = ribiToUpdateCode.slice(i, i + 40);
       await Promise.all(
         slice.map(item =>
-          supabase.from('ribisoft_pedidos').update(item.patch).eq('id', item.id)
+          supabase.from('ribisoft_pedidos').update({ 'Código Ítem': item.code }).eq('id', item.id)
+        )
+      );
+    }
+
+    const pedidoDateEntries = Array.from(pedidoDatesToUpdateMap.entries());
+    for (let i = 0; i < pedidoDateEntries.length; i += 40) {
+      const slice = pedidoDateEntries.slice(i, i + 40);
+      await Promise.all(
+        slice.map(([pSin, datePatch]) =>
+          supabase.from('ribisoft_pedidos').update(datePatch).eq('PedidoSIN', pSin)
         )
       );
     }
@@ -1021,10 +1052,8 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       categoria: item.categoria,
       notas: item.notas,
       observaciones_erp: item.observaciones_erp,
-      fecha_asigna: item.fecha_asigna,
-      fecha_genera_ped: item.fecha_genera_ped,
-      fecha_entrega: item.fecha_entrega,
-      "Fecha Entrega": item.fecha_entrega
+      fecha_asigna: item.fecha_entrega || item.fecha_asigna,
+      fecha_genera_ped: item.fecha_genera_ped
     });
   }
 

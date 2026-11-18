@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import localforage from 'localforage';
 import {
   Layers,
   Search,
@@ -13,14 +14,20 @@ import {
   FolderKanban,
   ArrowUpDown,
   AlertTriangle,
-  Truck
+  Truck,
+  Database
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../supabaseClient';
 import { AREAS_RECEPCION, CONFIG_PROCESOS } from '../../utils/constants';
 import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
-import { cleanErpCode, normalizeProductName } from '../../services/ribisoftExcelImporter';
+import {
+  cleanErpCode,
+  normalizeProductName,
+  importRibisoftExcelFile
+} from '../../services/ribisoftExcelImporter';
+import erpDeliveryDatesMap from '../../utils/erpDeliveryDatesMap.json';
 import CDILogo from '../ui/CDILogo';
 import {
   SolidWorksStampPreview,
@@ -109,6 +116,10 @@ export default function NeutralAreaBacklogView() {
 
   const [ribisoftRows, setRibisoftRows] = useState([]);
   const [loadingRibi, setLoadingRibi] = useState(true);
+  const [customDeliveryDatesMap, setCustomDeliveryDatesMap] = useState({});
+  const [syncingExcel, setSyncingExcel] = useState(false);
+  const ribiExcelInputRef = useRef(null);
+  const hasSyncedDecMapRef = useRef(false);
   const [backlogSearch, setBacklogSearch] = useState('');
 
   // 3 Modos de filtrado por fecha/origen:
@@ -160,6 +171,17 @@ export default function NeutralAreaBacklogView() {
   useEffect(() => {
     let isMounted = true;
 
+    const loadCustomDeliveryDates = async () => {
+      try {
+        const cachedDates = await localforage.getItem('cdi_ribisoft_delivery_dates_v1');
+        if (isMounted && cachedDates && typeof cachedDates === 'object') {
+          setCustomDeliveryDatesMap(cachedDates);
+        }
+      } catch (err) {
+        console.warn('Aviso cargando fechas comerciales cacheadas:', err);
+      }
+    };
+
     const loadRibisoftPedidos = async () => {
       setLoadingRibi(true);
       try {
@@ -186,6 +208,40 @@ export default function NeutralAreaBacklogView() {
 
         if (isMounted) {
           setRibisoftRows(allRows);
+
+          // Sincronizar silenciosamente en Supabase una sola vez los pedidos de Diciembre 2026 / 2027
+          // presentes en `erpDeliveryDatesMap` cuya `fecha_asigna` aún no refleje esa fecha de entrega comercial
+          if (!hasSyncedDecMapRef.current && allRows.length > 0) {
+            hasSyncedDecMapRef.current = true;
+            const pendingPedUpdates = new Map();
+            allRows.forEach((row) => {
+              const ped = cleanErpCode(row['PedidoSIN'] ?? row['pedido_sin'] ?? row['Pedido']);
+              if (!ped) return;
+              const pedKey = String(ped).replace(/^#/, '').trim().toUpperCase();
+              const mappedIso = erpDeliveryDatesMap?.[pedKey];
+              if (!mappedIso) return;
+              if (!mappedIso.startsWith('2026-12') && !mappedIso.startsWith('2027')) return;
+              const currentDay = row.fecha_asigna ? String(row.fecha_asigna).slice(0, 10) : '';
+              if (currentDay !== mappedIso) {
+                pendingPedUpdates.set(pedKey, `${mappedIso}T12:00:00.000Z`);
+              }
+            });
+
+            if (pendingPedUpdates.size > 0) {
+              const entries = Array.from(pendingPedUpdates.entries());
+              for (let i = 0; i < entries.length; i += 10) {
+                const slice = entries.slice(i, i + 10);
+                await Promise.all(
+                  slice.map(([pedSin, isoTs]) =>
+                    supabase
+                      .from('ribisoft_pedidos')
+                      .update({ fecha_asigna: isoTs })
+                      .eq('PedidoSIN', pedSin)
+                  )
+                ).catch(() => {});
+              }
+            }
+          }
         }
       } catch (err) {
         console.error('Error cargando pedidos desde ribisoft_pedidos:', err);
@@ -194,9 +250,11 @@ export default function NeutralAreaBacklogView() {
       }
     };
 
+    loadCustomDeliveryDates();
     loadRibisoftPedidos();
 
     const handleErpSynced = () => {
+      loadCustomDeliveryDates();
       loadRibisoftPedidos();
     };
 
@@ -234,6 +292,7 @@ export default function NeutralAreaBacklogView() {
 
       const coordAlert = alertsMap.get(ped) || null;
       const isNeutral = isOrderInNeutralBacklog(ord, alertsMap);
+      const mappedCommercialDelivery = customDeliveryDatesMap?.[ped] ?? erpDeliveryDatesMap?.[ped] ?? null;
 
       const parsedGen = parseCommercialDeliveryDate(
         ord.fecha_genera_ped ?? ord['Fecha Genera Ped.'] ?? ord['Fecha Genera Ped'] ?? ord.fechaGeneraPed ?? null
@@ -257,6 +316,7 @@ export default function NeutralAreaBacklogView() {
         ord['Fecha Despacho'] ??
         ord.fecha_despacho ??
         (!isPrometidaFromCoordOnly ? ordPrometidaRaw : null) ??
+        mappedCommercialDelivery ??
         ord.fecha_asigna ??
         ord['Fecha asigna'] ??
         ord['Fecha Asigna'] ??
@@ -333,7 +393,8 @@ export default function NeutralAreaBacklogView() {
         r['fecha_creacion'] ??
         null;
 
-      // Fecha de Despacho Comercial: lee exclusivamente celdas de entrega/despacho del RIBI (nunca Alertas de Coordinación)
+      // Fecha de Despacho Comercial: prioriza columnas de entrega comercial y diccionario ERP (nunca Alertas de Coordinación)
+      const mappedCommercialDelivery = customDeliveryDatesMap?.[ped] ?? erpDeliveryDatesMap?.[ped] ?? null;
       const rawFechaDespacho =
         r['Fecha Entrega'] ??
         r['fecha_entrega'] ??
@@ -342,6 +403,7 @@ export default function NeutralAreaBacklogView() {
         r['fecha_despacho'] ??
         r['fecha_entrega_prometida'] ??
         r['fechaEntregaPrometida'] ??
+        mappedCommercialDelivery ??
         r['fecha_asigna'] ??
         r['Fecha asigna'] ??
         r['Fecha Asigna'] ??
@@ -459,7 +521,7 @@ export default function NeutralAreaBacklogView() {
     });
 
     return Array.from(itemsMap.values());
-  }, [orders, ribisoftRows, alertsMap, prodToCodptMap, minPedidoNum]);
+  }, [orders, ribisoftRows, alertsMap, prodToCodptMap, minPedidoNum, customDeliveryDatesMap]);
 
   /**
    * Extrae la fecha activa del ítem según el `filterMode` seleccionado por el usuario:
@@ -492,9 +554,9 @@ export default function NeutralAreaBacklogView() {
     });
   }, [unifiedConsultaItems, filterMode]);
 
-  // Años disponibles dinámicamente según los pedidos realmente existentes en el modo actual
+  // Años disponibles dinámicamente (incluyendo siempre 2026 y 2027 para planeación comercial)
   const availableYears = useMemo(() => {
-    const yearsSet = new Set();
+    const yearsSet = new Set([2026, 2027]);
     modeScopedItems.forEach((item) => {
       const parsed = getFilterModeDateInfo(item);
       if (parsed?.year) yearsSet.add(parsed.year);
@@ -786,6 +848,27 @@ export default function NeutralAreaBacklogView() {
     );
   };
 
+  const handleDirectExcelSync = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSyncingExcel(true);
+    try {
+      const res = await importRibisoftExcelFile(file);
+      if (res.type === 'produccion_pedidos') {
+        showCdiBlueprintToast(
+          `Excel RIBI sincronizado: ${res.ribisoftInserted || 0} nuevos y fechas de despacho actualizadas`
+        );
+      } else {
+        showCdiBlueprintToast('Archivo ERP sincronizado correctamente en Consulta General');
+      }
+    } catch (err) {
+      alert('Error sincronizando Excel RIBI: ' + (err?.message || err));
+    } finally {
+      setSyncingExcel(false);
+      if (ribiExcelInputRef.current) ribiExcelInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="max-w-[96vw] mx-auto px-2 sm:px-4 py-4 space-y-5 animate-in fade-in duration-200">
       {/* CABECERA CONGRUENTE CON LOS TEMAS DE LA APLICACIÓN Y CON EL NUEVO LOGO OFICIAL CDI */}
@@ -805,8 +888,26 @@ export default function NeutralAreaBacklogView() {
             </div>
           </div>
 
-          {/* Selector Rápido de Columnas de Cuadrícula y Rango de Pedido */}
+          {/* Selector Rápido de Columnas de Cuadrícula, Rango de Pedido y Sincronización Excel RIBI */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <input
+              ref={ribiExcelInputRef}
+              type="file"
+              accept=".xls,.xlsx"
+              className="hidden"
+              onChange={handleDirectExcelSync}
+            />
+            <button
+              type="button"
+              disabled={syncingExcel}
+              onClick={() => ribiExcelInputRef.current?.click()}
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase flex items-center gap-1.5 shadow cursor-pointer transition-colors disabled:opacity-50"
+              title="Subir archivo Excel actualizado del RIBI (lista de pedidos de produccion.xls) con las fechas de despacho de Diciembre 2026 y 2027"
+            >
+              <Database size={14} />
+              <span>{syncingExcel ? 'Sincronizando...' : '📥 Sincronizar Excel RIBI'}</span>
+            </button>
+
             <div className="flex items-center gap-1 theme-bg-main border theme-border rounded-xl p-1">
               <span className="text-[10px] font-black uppercase theme-text-muted px-2">
                 Cuadrícula:
