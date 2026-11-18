@@ -854,9 +854,17 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     const observaciones_erp = row['Observaciones'] ?? row['observaciones_erp'] ?? row['Observaciones ERP'] ?? row['observaciones'] ?? null;
 
     // Convertir números seriales de fecha de Excel a ISO 8601 TIMESTAMPTZ
-    const fecha_asigna = cleanExcelDate(row['Fecha asigna'] ?? row['Fecha Asigna'] ?? row['fecha_asigna']);
-    const fecha_genera_ped = cleanExcelDate(row['Fecha Genera Ped.'] ?? row['Fecha Genera Ped'] ?? row['fecha_genera_ped'] ?? row['Fecha Genera']);
-    const fecha_entrega = cleanExcelDate(row['Fecha Entrega'] ?? row['fecha_entrega']);
+    const fecha_entrega_comercial = cleanExcelDate(
+      row['Fecha Entrega'] ?? row['fecha_entrega'] ?? row['Fecha de Entrega'] ?? row['Fecha Despacho'] ?? row['fecha_despacho']
+    );
+    const fecha_asigna_raw = cleanExcelDate(row['Fecha asigna'] ?? row['Fecha Asigna'] ?? row['fecha_asigna']);
+    // En Supabase (`ribisoft_pedidos`) preservamos la fecha de entrega comercial en `fecha_asigna`
+    // si las columnas dinámicas `fecha_entrega` / `"Fecha Entrega"` no existen en el esquema.
+    const fecha_asigna = fecha_entrega_comercial || fecha_asigna_raw;
+    const fecha_genera_ped = cleanExcelDate(
+      row['Fecha Genera Ped.'] ?? row['Fecha Genera Ped'] ?? row['fecha_genera_ped'] ?? row['Fecha Genera']
+    );
+    const fecha_entrega = fecha_entrega_comercial;
 
     const normDesc = normalizeProductName(descripcion);
     const dedupKey = `${pedido_sin}__${normDesc || codigo_item || ''}`;
@@ -894,13 +902,13 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
 
   // 1. Consultar qué existe actualmente en `ribisoft_pedidos`, limpiar duplicados existentes y SOLO insertar lo nuevo
   const existingRibisoftSet = new Set();
-  const ribiToUpdateCode = [];
+  const ribiToUpdateFields = [];
   let ribisoftDuplicatesCleaned = 0;
 
   try {
     const existingRibiRows = await fetchAllTableRows(
       'ribisoft_pedidos',
-      'id, "PedidoSIN", "Código Ítem", "Descripción"'
+      'id, "PedidoSIN", "Código Ítem", "Descripción", fecha_asigna, fecha_genera_ped'
     );
 
     const seenRibiByDesc = new Map();
@@ -935,6 +943,8 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       ribisoftDuplicatesCleaned = await deleteIdsInBatches('ribisoft_pedidos', duplicateRibiIds);
     }
 
+    const toIsoDay = (val) => (val ? String(val).slice(0, 10) : '');
+
     for (const r of seenRibiByDesc.values()) {
       const pSin = cleanErpCode(r['PedidoSIN']);
       const cArt = cleanErpCode(r['Código Ítem']);
@@ -942,22 +952,36 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
       if (pSin && cArt) existingRibisoftSet.add(`${pSin}_${cArt}`);
       if (pSin && pName) existingRibisoftSet.add(`${pSin}__NAME__${pName}`);
 
+      const candidate = pSin && pName ? uniqueExcelItemsMap.get(`${pSin}__${pName}`) : null;
+      const updatePatch = {};
+
       // Si el registro existente en ribisoft_pedidos no tenía Código Ítem pero ahora sí lo tenemos, actualizarlo sin duplicar
       if (!cArt && pSin && pName) {
-        const candidate = uniqueExcelItemsMap.get(`${pSin}__${pName}`);
         const newCode = candidate?.codigo_item || prodToCodptMap.get(`${pSin}__${pName}`);
-        if (newCode && r.id) {
-          ribiToUpdateCode.push({ id: r.id, code: newCode });
+        if (newCode) {
+          updatePatch['Código Ítem'] = newCode;
           existingRibisoftSet.add(`${pSin}_${newCode}`);
         }
       }
+
+      // Sincronizar fechas (`fecha_asigna` desde Fecha Entrega comercial y `fecha_genera_ped` desde Fecha Genera Ped.)
+      if (candidate?.fecha_asigna && toIsoDay(r.fecha_asigna) !== toIsoDay(candidate.fecha_asigna)) {
+        updatePatch.fecha_asigna = candidate.fecha_asigna;
+      }
+      if (candidate?.fecha_genera_ped && toIsoDay(r.fecha_genera_ped) !== toIsoDay(candidate.fecha_genera_ped)) {
+        updatePatch.fecha_genera_ped = candidate.fecha_genera_ped;
+      }
+
+      if (r.id && Object.keys(updatePatch).length > 0) {
+        ribiToUpdateFields.push({ id: r.id, patch: updatePatch });
+      }
     }
 
-    for (let i = 0; i < ribiToUpdateCode.length; i += 25) {
-      const slice = ribiToUpdateCode.slice(i, i + 25);
+    for (let i = 0; i < ribiToUpdateFields.length; i += 40) {
+      const slice = ribiToUpdateFields.slice(i, i + 40);
       await Promise.all(
         slice.map(item =>
-          supabase.from('ribisoft_pedidos').update({ 'Código Ítem': item.code }).eq('id', item.id)
+          supabase.from('ribisoft_pedidos').update(item.patch).eq('id', item.id)
         )
       );
     }
@@ -1054,16 +1078,31 @@ export const importPedidosProduccionRows = async (rows, onProgress) => {
     const cArt = cleanErpCode(r?.codigo_item ?? d.codArticulo ?? d.codigo_item);
     const pName = normalizeProductName(d.nombre ?? d.descripcion);
 
-    if (!cArt && pNum && pName) {
+    if (pNum && pName && r.id) {
       const candidate = uniqueExcelItemsMap.get(`${pNum}__${pName}`);
-      const newCode = candidate?.codigo_item || prodToCodptMap.get(`${pNum}__${pName}`);
-      if (newCode && r.id) {
+      const newCode = !cArt ? (candidate?.codigo_item || prodToCodptMap.get(`${pNum}__${pName}`)) : null;
+      const candidateFechaEntrega = candidate?.fecha_entrega || null;
+      const candidateFechaGenera = candidate?.fecha_genera_ped || null;
+      const needsFechaEntrega = Boolean(candidateFechaEntrega && d.fecha_entrega !== candidateFechaEntrega);
+      const needsFechaGenera = Boolean(candidateFechaGenera && d.fecha_genera_ped !== candidateFechaGenera);
+
+      if (newCode || needsFechaEntrega || needsFechaGenera) {
         const updatedDataCompleta = {
           ...d,
-          codArticulo: newCode,
-          codigo_item: newCode
+          ...(newCode ? { codArticulo: newCode, codigo_item: newCode } : {}),
+          ...(needsFechaEntrega
+            ? {
+                fecha_entrega: candidateFechaEntrega,
+                fechaEntregaPrometida: d.fechaEntregaPrometida || candidateFechaEntrega
+              }
+            : {}),
+          ...(needsFechaGenera ? { fecha_genera_ped: candidateFechaGenera } : {})
         };
-        plantaToEnrich.push({ id: r.id, codigo_item: newCode, data_completa: updatedDataCompleta });
+        plantaToEnrich.push({
+          id: r.id,
+          codigo_item: newCode || r?.codigo_item || d.codArticulo || '',
+          data_completa: updatedDataCompleta
+        });
       }
     }
   });

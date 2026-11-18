@@ -236,11 +236,32 @@ export default function NeutralAreaBacklogView() {
       const isNeutral = isOrderInNeutralBacklog(ord, alertsMap);
 
       const parsedGen = parseCommercialDeliveryDate(
-        ord.fecha_genera_ped || ord.fechaGeneraPed || ord.fecha_asigna || ord.fechaIngresoArea
+        ord.fecha_genera_ped ?? ord['Fecha Genera Ped.'] ?? ord['Fecha Genera Ped'] ?? ord.fechaGeneraPed ?? null
       );
-      const parsedDesp = parseCommercialDeliveryDate(
-        ord.fechaEntregaPrometida || ord.fecha_entrega || coordAlert?.fechaEntrega
+
+      // Evitar que `fechaEntregaPrometida` inyectada por una alerta de coordinación contamine `fechaDespacho`
+      const coordRawDate = coordAlert?.fechaEntrega || null;
+      const ordPrometidaRaw = ord.fechaEntregaPrometida || null;
+      const isPrometidaFromCoordOnly = Boolean(
+        coordRawDate &&
+        ordPrometidaRaw &&
+        String(ordPrometidaRaw).trim() === String(coordRawDate).trim() &&
+        !ord.fecha_entrega &&
+        !ord['Fecha Entrega'] &&
+        !ord.fecha_despacho
       );
+      const rawDespOrd =
+        ord['Fecha Entrega'] ??
+        ord.fecha_entrega ??
+        ord['Fecha de Entrega'] ??
+        ord['Fecha Despacho'] ??
+        ord.fecha_despacho ??
+        (!isPrometidaFromCoordOnly ? ordPrometidaRaw : null) ??
+        ord.fecha_asigna ??
+        ord['Fecha asigna'] ??
+        ord['Fecha Asigna'] ??
+        null;
+      const parsedDesp = parseCommercialDeliveryDate(rawDespOrd);
       const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
 
       if (isNeutral || (coordAlert && ord.estadoInterno !== 'DESPACHADO')) {
@@ -309,18 +330,21 @@ export default function NeutralAreaBacklogView() {
         r['Fecha Genera Ped.'] ??
         r['Fecha Genera Ped'] ??
         r['Fecha Genera'] ??
-        r['fecha_asigna'] ??
-        r['Fecha asigna'] ??
-        r['Fecha Asigna'] ??
-        r['created_at'] ??
+        r['fecha_creacion'] ??
         null;
 
+      // Fecha de Despacho Comercial: lee exclusivamente celdas de entrega/despacho del RIBI (nunca Alertas de Coordinación)
       const rawFechaDespacho =
         r['Fecha Entrega'] ??
         r['fecha_entrega'] ??
         r['Fecha de Entrega'] ??
+        r['Fecha Despacho'] ??
+        r['fecha_despacho'] ??
         r['fecha_entrega_prometida'] ??
-        coordAlert?.fechaEntrega ??
+        r['fechaEntregaPrometida'] ??
+        r['fecha_asigna'] ??
+        r['Fecha asigna'] ??
+        r['Fecha Asigna'] ??
         null;
 
       const parsedGen = parseCommercialDeliveryDate(rawFechaGen);
@@ -398,11 +422,10 @@ export default function NeutralAreaBacklogView() {
       }
     });
 
-    // 3. Garantizar que cualquier Alerta de Coordinación en `coordinacion_alertas` sin filas en RIBI/Planta también sea visible
+    // 3. Garantizar que cualquier Alerta de Coordinación en `coordinacion_alertas` sin filas en RIBI/Planta también sea visible en ALERTAS_COORD
     alertsMap.forEach((alertObj, pedKey) => {
       if (touchedPedidosSet.has(pedKey)) return;
       const parsedCoordDate = parseCommercialDeliveryDate(alertObj.fechaEntrega || alertObj.creadoEn);
-      const parsedCreated = parseCommercialDeliveryDate(alertObj.creadoEn);
       const deterministicId = `COORD_${pedKey}`;
       itemsMap.set(`${pedKey}__COORD_ONLY`, {
         id: deterministicId,
@@ -423,12 +446,12 @@ export default function NeutralAreaBacklogView() {
         areaActual: 'Área de Consulta General',
         estado: 'PENDIENTE_INGENIERIA',
         estadoInterno: 'ALERTA DE COORDINACIÓN DE PLANTA',
-        fechaGeneracion: parsedCreated?.isoDate || parsedCoordDate?.isoDate || null,
-        fechaDespacho: parsedCoordDate?.isoDate || null,
-        fechaEntregaPrometida: parsedCoordDate?.isoDate || null,
-        fechaGeneraPed: parsedCreated?.isoDate || null,
+        fechaGeneracion: null,
+        fechaDespacho: null,
+        fechaEntregaPrometida: null,
+        fechaGeneraPed: null,
         hasCoordAlert: true,
-        coordFechaEntrega: parsedCoordDate?.isoDate || null,
+        coordFechaEntrega: parsedCoordDate?.isoDate || alertObj.fechaEntrega || null,
         coordAlertNota: alertObj.notas || alertObj.detalle || null,
         isInActivePlantArea: false,
         isFromPlantTable: false
@@ -444,25 +467,28 @@ export default function NeutralAreaBacklogView() {
    * - 'DESPACHO' -> fechaDespacho (Comercial)
    * - 'ALERTAS_COORD' -> coordFechaEntrega (solo ítems con hasCoordAlert === true)
    */
-  const getFilterModeDateInfo = (item) => {
+  const getFilterModeDateInfo = (item, mode = filterMode) => {
     if (!item) return null;
-    if (filterMode === 'ALERTAS_COORD') {
+    if (mode === 'ALERTAS_COORD') {
       if (!item.hasCoordAlert) return null;
-      return parseCommercialDeliveryDate(item.coordFechaEntrega || item.fechaDespacho || item.fechaGeneracion);
+      return parseCommercialDeliveryDate(item.coordFechaEntrega);
     }
-    if (filterMode === 'DESPACHO') {
+    if (mode === 'DESPACHO') {
       return parseCommercialDeliveryDate(item.fechaDespacho);
     }
     return parseCommercialDeliveryDate(item.fechaGeneracion);
   };
 
-  // Lista base según el modo seleccionado (en GENERACION/DESPACHO excluye lo que ya está activo en secciones de planta salvo en ALERTAS_COORD)
+  // Lista base según el modo seleccionado (estricto por fuente de fecha)
   const modeScopedItems = useMemo(() => {
     return unifiedConsultaItems.filter((item) => {
       if (filterMode === 'ALERTAS_COORD') {
         return Boolean(item.hasCoordAlert);
       }
-      return !item.isInActivePlantArea;
+      if (filterMode === 'DESPACHO') {
+        return !item.isInActivePlantArea && Boolean(item.fechaDespacho);
+      }
+      return !item.isInActivePlantArea && Boolean(item.fechaGeneracion);
     });
   }, [unifiedConsultaItems, filterMode]);
 
@@ -576,7 +602,7 @@ export default function NeutralAreaBacklogView() {
           cliente: ord.cliente || alertObj?.cliente || 'CLIENTE GENERAL',
           proyecto: ord.nombre_proyecto || '',
           fechaGeneracion: ord.fechaGeneracion || null,
-          fechaDespacho: ord.fechaDespacho || alertObj?.fechaEntrega || null,
+          fechaDespacho: ord.fechaDespacho || null,
           hasCoordAlert: Boolean(ord.hasCoordAlert || alertObj),
           coordFechaEntrega: ord.coordFechaEntrega || alertObj?.fechaEntrega || null,
           coordAlertNota: ord.coordAlertNota || alertObj?.notas || alertObj?.detalle || null,
@@ -584,14 +610,18 @@ export default function NeutralAreaBacklogView() {
           items: []
         });
       }
-      map.get(ped).items.push(ord);
+      const g = map.get(ped);
+      if (!g.fechaGeneracion && ord.fechaGeneracion) g.fechaGeneracion = ord.fechaGeneracion;
+      if (!g.fechaDespacho && ord.fechaDespacho) g.fechaDespacho = ord.fechaDespacho;
+      if (!g.coordFechaEntrega && ord.coordFechaEntrega) g.coordFechaEntrega = ord.coordFechaEntrega;
+      g.items.push(ord);
     });
 
     const list = Array.from(map.values());
 
     const getEffectiveIsoDate = (group) => {
       if (filterMode === 'ALERTAS_COORD') {
-        return parseCommercialDeliveryDate(group.coordFechaEntrega || group.fechaDespacho)?.isoDate || null;
+        return parseCommercialDeliveryDate(group.coordFechaEntrega)?.isoDate || null;
       }
       if (filterMode === 'DESPACHO') {
         return parseCommercialDeliveryDate(group.fechaDespacho)?.isoDate || null;
@@ -824,6 +854,7 @@ export default function NeutralAreaBacklogView() {
                 type="button"
                 onClick={() => {
                   setFilterMode('GENERACION');
+                  setSelectedYear('TODOS');
                   setSelectedMonth('TODOS');
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
@@ -833,13 +864,14 @@ export default function NeutralAreaBacklogView() {
                 }`}
               >
                 <Calendar size={14} />
-                <span>Fecha de Generación (RIBI)</span>
+                <span>Fecha de Generación</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setFilterMode('DESPACHO');
+                  setSelectedYear('TODOS');
                   setSelectedMonth('TODOS');
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
@@ -849,13 +881,14 @@ export default function NeutralAreaBacklogView() {
                 }`}
               >
                 <Truck size={14} />
-                <span>Fecha de Despacho (Comercial)</span>
+                <span>Fecha de Despacho</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setFilterMode('ALERTAS_COORD');
+                  setSelectedYear('TODOS');
                   setSelectedMonth('TODOS');
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
@@ -1035,7 +1068,8 @@ export default function NeutralAreaBacklogView() {
         <div className={pedidosGridClass}>
           {groupedPedidos.map((group) => {
             const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
-            const dLeft = getDaysLeft(group.fechaDespacho || group.coordFechaEntrega);
+            const dLeftDesp = group.fechaDespacho ? getDaysLeft(group.fechaDespacho) : null;
+            const dLeftCoord = group.coordFechaEntrega ? getDaysLeft(group.coordFechaEntrega) : null;
             const selectedDestArea = targetAreaByPedido[group.pedidoNum] || 'Diseño';
             const isGridCompact = gridColumns > 1 && !isExpanded;
 
@@ -1096,17 +1130,25 @@ export default function NeutralAreaBacklogView() {
                         </span>
                       )}
 
-                      {(group.fechaDespacho || group.coordFechaEntrega) && (
+                      {group.fechaDespacho && (
                         <span
                           className={`px-2 py-0.5 rounded flex items-center gap-1 font-black ${
-                            dLeft !== null && dLeft < 0
+                            dLeftDesp !== null && dLeftDesp < 0
                               ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
                               : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                           }`}
                         >
                           <Calendar size={12} />
-                          Desp: {formatLocalDate(group.fechaDespacho || group.coordFechaEntrega)}
-                          {dLeft !== null && ` (${dLeft}d)`}
+                          Desp: {formatLocalDate(group.fechaDespacho)}
+                          {dLeftDesp !== null && ` (${dLeftDesp}d)`}
+                        </span>
+                      )}
+
+                      {group.coordFechaEntrega && (filterMode === 'ALERTAS_COORD' || !group.fechaDespacho) && (
+                        <span className="px-2 py-0.5 rounded bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 flex items-center gap-1 font-black">
+                          <AlertTriangle size={12} />
+                          Coord: {formatLocalDate(group.coordFechaEntrega)}
+                          {dLeftCoord !== null && ` (${dLeftCoord}d)`}
                         </span>
                       )}
 
