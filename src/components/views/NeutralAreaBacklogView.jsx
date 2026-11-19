@@ -13,7 +13,10 @@ import {
   FolderKanban,
   ArrowUpDown,
   AlertTriangle,
-  Truck
+  Truck,
+  PieChart,
+  History,
+  Factory
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
@@ -22,6 +25,7 @@ import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
 import { cleanErpCode, normalizeProductName } from '../../services/ribisoftExcelImporter';
 import erpDeliveryDatesMap from '../../utils/erpDeliveryDatesMap.json';
 import CDILogo from '../ui/CDILogo';
+import { PedidoDashboardModal, ProductTraceabilityModal } from '../modals/PedidoConsultaModals';
 import {
   SolidWorksStampPreview,
   copyBlueprintQrToClipboard,
@@ -48,6 +52,156 @@ const MONTH_NAMES = [
   { num: 11, name: 'Noviembre', short: 'Nov' },
   { num: 12, name: 'Diciembre', short: 'Dic' }
 ];
+
+const DISENO_PROG_AREAS_UPPER = new Set([
+  'DISEÑO',
+  'DISENO',
+  'PROGRAMACIÓN',
+  'PROGRAMACION',
+  'PROGRAMACIÓN CNC',
+  'PROGRAMACION CNC',
+  'PROGRAMACIÓN Y DISEÑO',
+  'PROGRAMACION Y DISENO'
+]);
+
+const NEUTRAL_COMERCIAL_AREAS_UPPER = new Set([
+  'ÁREA DE CONSULTA GENERAL',
+  'AREA DE CONSULTA GENERAL',
+  'ÁREA NEUTRA / BACKLOG',
+  'AREA NEUTRA / BACKLOG',
+  'AREA_NEUTRA',
+  'COMERCIAL / VENTAS',
+  'COMERCIAL'
+]);
+
+const classifyOrderInstanceStage = (ord) => {
+  if (!ord) return 'COMERCIAL';
+  if (ord.estadoInterno === 'DESPACHADO' || ord.isTerminado) return 'PRODUCCION';
+  const areaAct = String(ord.areaActual || '').trim().toUpperCase();
+  if (areaAct && DISENO_PROG_AREAS_UPPER.has(areaAct)) return 'DISENO_PROG';
+  if (areaAct && !NEUTRAL_COMERCIAL_AREAS_UPPER.has(areaAct)) return 'PRODUCCION';
+  if (String(ord.programador || '').trim()) return 'DISENO_PROG';
+  return 'COMERCIAL';
+};
+
+const buildMergedPlantFamily = (matchedOrders = []) => {
+  const areaSet = new Set();
+  const histSeen = new Set();
+  const turnoSeen = new Set();
+  const calSeen = new Set();
+  const unifiedHistorial = [];
+  const unifiedBitacoraTurnos = [];
+  const unifiedBitacoraCalidad = [];
+  let hasProd = false;
+  let hasDisenoProg = false;
+  let allFinished = matchedOrders.length > 0;
+  let hasTurnos = false;
+  let primaryOrder = matchedOrders[0] || null;
+
+  matchedOrders.forEach((o) => {
+    if (!o) return;
+    const instStage = classifyOrderInstanceStage(o);
+    if (instStage === 'PRODUCCION') hasProd = true;
+    else if (instStage === 'DISENO_PROG') hasDisenoProg = true;
+
+    const isDone = o.estadoInterno === 'DESPACHADO' || Boolean(o.isTerminado) || String(o.areaActual || '').toUpperCase().includes('DESPACHO');
+    if (!isDone) allFinished = false;
+
+    if (o.estadoInterno === 'DESPACHADO') {
+      areaSet.add('Despachos (Despachado)');
+    } else if (o.areaActual && !NEUTRAL_COMERCIAL_AREAS_UPPER.has(String(o.areaActual).trim().toUpperCase())) {
+      areaSet.add(String(o.areaActual).trim());
+    }
+
+    (o.historial || []).forEach((h) => {
+      if (!h) return;
+      const sig = `${h.fecha || ''}|${h.accion || ''}|${h.entrega || ''}|${h.recibe || ''}`;
+      if (!histSeen.has(sig)) {
+        histSeen.add(sig);
+        unifiedHistorial.push(h);
+      }
+    });
+
+    (o.bitacoraTurnos || []).forEach((t) => {
+      if (!t) return;
+      hasTurnos = true;
+      const sig = `${t.fecha || ''}|${t.actividad || ''}|${t.operario || ''}|${t.area || ''}`;
+      if (!turnoSeen.has(sig)) {
+        turnoSeen.add(sig);
+        unifiedBitacoraTurnos.push(t);
+      }
+    });
+
+    (o.bitacoraCalidad || []).forEach((q) => {
+      if (!q) return;
+      const sig = `${q.fecha || ''}|${q.estado || ''}|${q.inspector || ''}`;
+      if (!calSeen.has(sig)) {
+        calSeen.add(sig);
+        unifiedBitacoraCalidad.push(q);
+      }
+    });
+
+    if (!primaryOrder || (classifyOrderInstanceStage(o) === 'PRODUCCION' && classifyOrderInstanceStage(primaryOrder) !== 'PRODUCCION')) {
+      primaryOrder = o;
+    }
+  });
+
+  return {
+    primaryOrder,
+    activePlantAreas: Array.from(areaSet),
+    unifiedHistorial,
+    unifiedBitacoraTurnos,
+    unifiedBitacoraCalidad,
+    hasProd,
+    hasDisenoProg,
+    allFinished,
+    hasTurnos
+  };
+};
+
+const resolveItemStageAndAreas = ({
+  plantFamily = null,
+  programador = '',
+  estadoErp = ''
+}) => {
+  const progClean = String(programador || plantFamily?.primaryOrder?.programador || '').trim();
+  const estadoUpper = String(estadoErp || '').trim().toUpperCase();
+  const areas = plantFamily?.activePlantAreas || [];
+
+  if (plantFamily?.hasProd) {
+    const pct = plantFamily.allFinished ? 100 : plantFamily.hasTurnos ? 85 : 70;
+    return {
+      stage: 'PRODUCCION',
+      stageLabel: 'En Producción',
+      stageAreaLabel: areas[0] || 'Producción en Planta',
+      activeAreas: areas.length > 0 ? areas : ['Producción en Planta'],
+      progressPct: pct
+    };
+  }
+
+  if (
+    plantFamily?.hasDisenoProg ||
+    Boolean(progClean) ||
+    ['ASIG', 'PROG', 'DISE', 'PRODUCCION', 'PRODUCCIÓN'].some((k) => estadoUpper.includes(k))
+  ) {
+    const defaultLabel = areas[0] || (progClean ? `Diseño / Prog. CNC (${progClean})` : 'Diseño / Prog. CNC');
+    return {
+      stage: 'DISENO_PROG',
+      stageLabel: 'Diseño y Prog. CNC',
+      stageAreaLabel: defaultLabel,
+      activeAreas: areas.length > 0 ? areas : ['Diseño / Prog. CNC'],
+      progressPct: 30
+    };
+  }
+
+  return {
+    stage: 'COMERCIAL',
+    stageLabel: 'En Comercial',
+    stageAreaLabel: 'Comercial',
+    activeAreas: ['Comercial'],
+    progressPct: 0
+  };
+};
 
 const getMonthWeekInfo = (isoDateStr) => {
   const parsed = parseCommercialDeliveryDate(isoDateStr);
@@ -141,12 +295,15 @@ export default function NeutralAreaBacklogView() {
   // 'DESPACHO' -> Fecha de Despacho
   // 'ALERTAS_COORD' -> Alertas de Coordinación
   const [filterMode, setFilterMode] = useState('GENERACION');
+  const [stageFilter, setStageFilter] = useState('TODOS'); // 'TODOS' | 'PRODUCCION' | 'DISENO_PROG' | 'COMERCIAL' | 'ALERTA_REZAGO'
   const [selectedMonth, setSelectedMonth] = useState('TODOS'); // 'TODOS' | 'YYYY-MM'
   const [selectedWeek, setSelectedWeek] = useState('TODAS'); // 'TODAS' | '1' | '2' | '3' | '4' | '5'
   const [selectedYear, setSelectedYear] = useState('TODOS'); // 'TODOS' | '2025' | '2026' | '2027'
   const [minPedidoNum, setMinPedidoNum] = useState(0); // 0 = Todos los pedidos (para incluir Enero, Febrero, Marzo y Diciembre sin excluir por número)
   const [expandedPedidos, setExpandedPedidos] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+  const [dashboardPedidoGroup, setDashboardPedidoGroup] = useState(null);
+  const [traceabilityItem, setTraceabilityItem] = useState(null);
 
   const alertsMap = useMemo(() => {
     const map = new Map();
@@ -300,84 +457,40 @@ export default function NeutralAreaBacklogView() {
   }, []);
 
   /**
-   * Unifica en una sola estructura los ítems de Consulta General, RIBI (`ribisoft_pedidos`)
-   * y Alertas de Coordinación (`coordinacion_alertas`), conservando de manera explícita:
-   * - fechaGeneracion (fecha de generación RIBI / registro)
-   * - fechaDespacho (fecha de entrega comercial)
-   * - coordAlert / coordFechaEntrega (alerta de coordinación de planta)
+   * Unifica en una sola estructura TODOS los ítems de la base de datos:
+   * `produccion_pedidos`, `ribisoft_pedidos` y `coordinacion_alertas`, sin excluir los que ya entraron a producción,
+   * clasificando cada ítem en VERDE (`PRODUCCION`), AMARILLO (`DISENO_PROG`) o ROJO (`COMERCIAL`)
+   * y consolidando sus áreas activas y su historial completo de trazabilidad.
    */
   const unifiedConsultaItems = useMemo(() => {
     const itemsMap = new Map();
-    const plantStartedSet = new Set();
+    const plantByPedCode = new Map();
+    const plantByPedName = new Map();
+    const touchedPlantOrderIds = new Set();
     const touchedPedidosSet = new Set();
 
-    // 1. Procesar órdenes existentes en `produccion_pedidos`
+    // 1. Indexar todas las órdenes de `produccion_pedidos` (incluidas bifurcaciones) por Pedido+Código y Pedido+Nombre
     (orders || []).forEach((ord) => {
       if (!ord || !ord.pedidoNum) return;
       const ped = String(ord.pedidoNum).replace(/^#/, '').trim().toUpperCase();
-      const cod = cleanErpCode(ord.codArticulo || ord.codigo_item || '') || '';
+      const cod = (cleanErpCode(ord.codArticulo || ord.codigo_item || '') || '').toUpperCase();
       const normName = normalizeProductName(ord.nombre || ord.descripcion || '');
-      const key = `${ped}__${normName || cod || ord.id}`;
 
-      const coordAlert = alertsMap.get(ped) || null;
-      const isNeutral = isOrderInNeutralBacklog(ord, alertsMap);
-      const mappedCommercialDelivery = customDeliveryDatesMap?.[ped] ?? erpDeliveryDatesMap?.[ped] ?? null;
-
-      const parsedGen = parseCommercialDeliveryDate(
-        ord.fecha_genera_ped ?? ord['Fecha Genera Ped.'] ?? ord['Fecha Genera Ped'] ?? ord.fechaGeneraPed ?? null
-      );
-
-      // Evitar que `fechaEntregaPrometida` inyectada por una alerta de coordinación contamine `fechaDespacho`
-      const coordRawDate = coordAlert?.fechaEntrega || null;
-      const ordPrometidaRaw = ord.fechaEntregaPrometida || null;
-      const isPrometidaFromCoordOnly = Boolean(
-        coordRawDate &&
-        ordPrometidaRaw &&
-        String(ordPrometidaRaw).trim() === String(coordRawDate).trim() &&
-        !ord.fecha_entrega &&
-        !ord['Fecha Entrega'] &&
-        !ord.fecha_despacho
-      );
-      const rawDespOrd =
-        ord['Fecha Entrega'] ??
-        ord.fecha_entrega ??
-        ord['Fecha de Entrega'] ??
-        ord['Fecha Despacho'] ??
-        ord.fecha_despacho ??
-        (!isPrometidaFromCoordOnly ? ordPrometidaRaw : null) ??
-        mappedCommercialDelivery ??
-        ord.fecha_asigna ??
-        ord['Fecha asigna'] ??
-        ord['Fecha Asigna'] ??
-        null;
-      const parsedDesp = parseCommercialDeliveryDate(rawDespOrd);
-      const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
-
-      if (isNeutral || (coordAlert && ord.estadoInterno !== 'DESPACHADO')) {
-        touchedPedidosSet.add(ped);
-        itemsMap.set(key, {
-          ...ord,
-          pedidoNum: ped,
-          codArticulo: (cod || ord.codArticulo || 'S/C').toUpperCase(),
-          fechaGeneracion: parsedGen?.isoDate || null,
-          fechaDespacho: parsedDesp?.isoDate || null,
-          coordFechaEntrega: parsedCoordDate?.isoDate || null,
-          hasCoordAlert: Boolean(coordAlert),
-          coordAlertNota: coordAlert?.notas || coordAlert?.detalle || null,
-          isInActivePlantArea: !isNeutral,
-          isFromPlantTable: true
-        });
+      if (cod && cod !== 'S/C') {
+        const kCode = `${ped}__CODE__${cod}`;
+        if (!plantByPedCode.has(kCode)) plantByPedCode.set(kCode, []);
+        plantByPedCode.get(kCode).push(ord);
       }
-
-      if (!isNeutral) {
-        if (cod) plantStartedSet.add(`${ped}__CODE__${cod.toUpperCase()}`);
-        if (normName) plantStartedSet.add(`${ped}__NAME__${normName}`);
+      if (normName) {
+        const kName = `${ped}__NAME__${normName}`;
+        if (!plantByPedName.has(kName)) plantByPedName.set(kName, []);
+        plantByPedName.get(kName).push(ord);
       }
     });
 
-    // 2. Incorporar todos los pedidos de `ribisoft_pedidos` (Excel RIBI)
     const minNumVal = Number(minPedidoNum) || 0;
 
+    // 2. Recorrer TODOS los registros de `ribisoft_pedidos` (sin excluir los que ya entraron a planta) y fusionar con `produccion_pedidos`
     (ribisoftRows || []).forEach((r, idx) => {
       if (!r || typeof r !== 'object') return;
       const rawPed = cleanErpCode(r['PedidoSIN'] ?? r['pedido_sin'] ?? r['pedidosin'] ?? r['Pedido']);
@@ -386,7 +499,6 @@ export default function NeutralAreaBacklogView() {
 
       const numMatch = ped.match(/\d+/);
       const pedNumber = numMatch ? Number(numMatch[0]) : 0;
-
       const coordAlert = alertsMap.get(ped) || null;
 
       if (minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal && !coordAlert) {
@@ -402,17 +514,21 @@ export default function NeutralAreaBacklogView() {
         cod = prodToCodptMap.get(`${ped}__${normName}`);
       }
       const codUpper = (cod || 'S/C').toUpperCase();
-
       if (!normName && codUpper === 'S/C') return;
 
-      const alreadyStartedInPlant =
-        (cod && plantStartedSet.has(`${ped}__CODE__${codUpper}`)) ||
-        (normName && plantStartedSet.has(`${ped}__NAME__${normName}`));
-
-      // Si ya entró a una sección productiva de planta y no tiene alerta de coordinación pendiente, omitirlo de Consulta General
-      if (alreadyStartedInPlant) {
-        return;
+      // Buscar coincidencias en `produccion_pedidos`
+      const matchedSet = new Map();
+      if (codUpper !== 'S/C' && plantByPedCode.has(`${ped}__CODE__${codUpper}`)) {
+        plantByPedCode.get(`${ped}__CODE__${codUpper}`).forEach((mo) => matchedSet.set(mo.id, mo));
       }
+      if (normName && plantByPedName.has(`${ped}__NAME__${normName}`)) {
+        plantByPedName.get(`${ped}__NAME__${normName}`).forEach((mo) => matchedSet.set(mo.id, mo));
+      }
+      const matchedPlantOrders = Array.from(matchedSet.values());
+      matchedPlantOrders.forEach((mo) => touchedPlantOrderIds.add(mo.id));
+
+      const plantFamily = matchedPlantOrders.length > 0 ? buildMergedPlantFamily(matchedPlantOrders) : null;
+      const primaryOrd = plantFamily?.primaryOrder || null;
 
       const rawFechaGen =
         r['fecha_genera_ped'] ??
@@ -420,10 +536,22 @@ export default function NeutralAreaBacklogView() {
         r['Fecha Genera Ped'] ??
         r['Fecha Genera'] ??
         r['fecha_creacion'] ??
+        primaryOrd?.fecha_genera_ped ??
+        primaryOrd?.fechaGeneraPed ??
         null;
 
-      // Fecha de Despacho Comercial: prioriza columnas de entrega comercial y diccionario ERP (nunca Alertas de Coordinación)
       const mappedCommercialDelivery = customDeliveryDatesMap?.[ped] ?? erpDeliveryDatesMap?.[ped] ?? null;
+      const coordRawDate = coordAlert?.fechaEntrega || null;
+      const ordPrometidaRaw = primaryOrd?.fechaEntregaPrometida || null;
+      const isPrometidaFromCoordOnly = Boolean(
+        coordRawDate &&
+        ordPrometidaRaw &&
+        String(ordPrometidaRaw).trim() === String(coordRawDate).trim() &&
+        !primaryOrd?.fecha_entrega &&
+        !primaryOrd?.['Fecha Entrega'] &&
+        !primaryOrd?.fecha_despacho
+      );
+
       const rawFechaDespacho =
         r['Fecha Entrega'] ??
         r['fecha_entrega'] ??
@@ -433,45 +561,64 @@ export default function NeutralAreaBacklogView() {
         r['fecha_entrega_prometida'] ??
         r['fechaEntregaPrometida'] ??
         mappedCommercialDelivery ??
+        (!isPrometidaFromCoordOnly ? ordPrometidaRaw : null) ??
         r['fecha_asigna'] ??
         r['Fecha asigna'] ??
         r['Fecha Asigna'] ??
+        primaryOrd?.fecha_asigna ??
         null;
 
       const parsedGen = parseCommercialDeliveryDate(rawFechaGen);
       const parsedDesp = parseCommercialDeliveryDate(rawFechaDespacho);
       const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
 
+      const progStr = String(r['Programador'] ?? r['programador'] ?? primaryOrd?.programador ?? '')
+        .trim()
+        .toUpperCase();
+      const estadoErpStr = String(r['Estado'] ?? r['estado'] ?? '').trim();
+
+      const stageInfo = resolveItemStageAndAreas({
+        plantFamily,
+        programador: progStr,
+        estadoErp: estadoErpStr
+      });
+
       const key = `${ped}__${normName || codUpper}`;
       const existing = itemsMap.get(key);
-
       if (
         !existing ||
-        ((!existing.codArticulo || existing.codArticulo === 'S/C') && cod) ||
+        ((!existing.codArticulo || existing.codArticulo === 'S/C') && codUpper !== 'S/C') ||
+        (!existing.isFromPlantTable && Boolean(primaryOrd)) ||
         (!existing.fechaGeneracion && parsedGen?.isoDate) ||
         (!existing.fechaDespacho && parsedDesp?.isoDate)
       ) {
-        const deterministicId = existing?.id || `RIBI_${ped}_${codUpper !== 'S/C' ? codUpper : idx + 1}`;
+        const deterministicId =
+          primaryOrd?.id ||
+          existing?.id ||
+          `RIBI_${ped}_${codUpper !== 'S/C' ? codUpper : idx + 1}`;
         touchedPedidosSet.add(ped);
 
         itemsMap.set(key, {
           ...(existing || {}),
+          ...(primaryOrd || {}),
           id: deterministicId,
           pedidoNum: ped,
           pedidoNumeric: pedNumber,
-          codArticulo: codUpper !== 'S/C' ? codUpper : existing?.codArticulo || 'S/C',
-          codigo_item: codUpper !== 'S/C' ? codUpper : existing?.codigo_item || 'S/C',
+          codArticulo: codUpper !== 'S/C' ? codUpper : existing?.codArticulo || primaryOrd?.codArticulo || 'S/C',
+          codigo_item: codUpper !== 'S/C' ? codUpper : existing?.codigo_item || primaryOrd?.codigo_item || 'S/C',
           qr_plano_payload:
+            primaryOrd?.qr_plano_payload ||
             existing?.qr_plano_payload ||
             buildProductBlueprintQrPayload({
               id: deterministicId,
               pedidoNum: ped,
               codArticulo: codUpper
             }),
-          nombre: normName || existing?.nombre || 'PRODUCTO RIBI',
-          cantidad: Number(r['Cantidad'] ?? r['cantidad']) || existing?.cantidad || 1,
+          nombre: normName || primaryOrd?.nombre || existing?.nombre || 'PRODUCTO RIBI',
+          cantidad: Number(r['Cantidad'] ?? r['cantidad'] ?? primaryOrd?.cantidad) || existing?.cantidad || 1,
           cliente: String(
-            r['Cliente'] ??
+            primaryOrd?.cliente ??
+              r['Cliente'] ??
               r['cliente'] ??
               r['Nombre Proyecto'] ??
               existing?.cliente ??
@@ -480,16 +627,17 @@ export default function NeutralAreaBacklogView() {
           )
             .trim()
             .toUpperCase(),
-          nombre_proyecto: String(r['Nombre Proyecto'] ?? r['nombre_proyecto'] ?? existing?.nombre_proyecto ?? '')
+          nombre_proyecto: String(
+            r['Nombre Proyecto'] ?? r['nombre_proyecto'] ?? primaryOrd?.nombre_proyecto ?? existing?.nombre_proyecto ?? ''
+          )
             .trim()
             .toUpperCase(),
-          programador: String(r['Programador'] ?? r['programador'] ?? existing?.programador ?? '')
-            .trim()
-            .toUpperCase(),
-          area: existing?.area || 'AREA_NEUTRA',
-          areaActual: existing?.areaActual || 'Área de Consulta General',
-          estado: existing?.estado || 'PENDIENTE_INGENIERIA',
-          estadoInterno: existing?.estadoInterno || r['Estado'] || 'EN CONSULTA GENERAL (RIBI)',
+          programador: progStr || existing?.programador || '',
+          fechaAsignaRaw: r['fecha_asigna'] ?? r['Fecha asigna'] ?? null,
+          area: primaryOrd?.area || (stageInfo.stage === 'PRODUCCION' ? stageInfo.stageAreaLabel : 'AREA_NEUTRA'),
+          areaActual: primaryOrd?.areaActual || stageInfo.stageAreaLabel,
+          estado: primaryOrd?.estado || (stageInfo.stage === 'PRODUCCION' ? 'EN_PRODUCCION' : 'PENDIENTE_INGENIERIA'),
+          estadoInterno: primaryOrd?.estadoInterno || estadoErpStr || stageInfo.stageLabel.toUpperCase(),
           fechaGeneracion: parsedGen?.isoDate || existing?.fechaGeneracion || null,
           fechaDespacho: parsedDesp?.isoDate || existing?.fechaDespacho || null,
           fechaEntregaPrometida: parsedDesp?.isoDate || existing?.fechaEntregaPrometida || null,
@@ -497,23 +645,101 @@ export default function NeutralAreaBacklogView() {
           hasCoordAlert: Boolean(coordAlert) || Boolean(existing?.hasCoordAlert),
           coordFechaEntrega: parsedCoordDate?.isoDate || existing?.coordFechaEntrega || null,
           coordAlertNota: coordAlert?.notas || coordAlert?.detalle || existing?.coordAlertNota || null,
-          dim_1: r['dim_1'] ?? r['Dim.1'] ?? existing?.dim_1 ?? null,
-          dim_2: r['dim_2'] ?? r['Dim.2'] ?? existing?.dim_2 ?? null,
-          dim_3: r['dim_3'] ?? r['Dim.3'] ?? existing?.dim_3 ?? null,
-          acabado_1: r['acabado_1'] ?? r['Acabado1'] ?? existing?.acabado_1 ?? null,
-          acabado_2: r['acabado_2'] ?? r['Acabado2'] ?? existing?.acabado_2 ?? null,
-          acabado_3: r['acabado_3'] ?? r['Acabado3'] ?? existing?.acabado_3 ?? null,
-          caracteristicas: r['caracteristicas'] ?? r['Características'] ?? existing?.caracteristicas ?? null,
-          categoria: r['categoria'] ?? r['Categoria'] ?? existing?.categoria ?? null,
-          notas: r['notas'] ?? r['Notas'] ?? existing?.notas ?? null,
-          observaciones_erp: r['observaciones_erp'] ?? r['Observaciones'] ?? existing?.observaciones_erp ?? null,
-          isInActivePlantArea: Boolean(existing?.isInActivePlantArea),
-          isFromPlantTable: Boolean(existing?.isFromPlantTable)
+          stage: stageInfo.stage,
+          stageLabel: stageInfo.stageLabel,
+          stageAreaLabel: stageInfo.stageAreaLabel,
+          activeAreas: stageInfo.activeAreas,
+          progressPct: stageInfo.progressPct,
+          unifiedHistorial: plantFamily?.unifiedHistorial || existing?.unifiedHistorial || [],
+          unifiedBitacoraTurnos: plantFamily?.unifiedBitacoraTurnos || existing?.unifiedBitacoraTurnos || [],
+          unifiedBitacoraCalidad: plantFamily?.unifiedBitacoraCalidad || existing?.unifiedBitacoraCalidad || [],
+          isInActivePlantArea: stageInfo.stage === 'PRODUCCION',
+          isFromPlantTable: Boolean(primaryOrd) || Boolean(existing?.isFromPlantTable)
         });
       }
     });
 
-    // 3. Garantizar que cualquier Alerta de Coordinación en `coordinacion_alertas` sin filas en RIBI/Planta también sea visible en ALERTAS_COORD
+    // 3. Incorporar órdenes creadas directamente en `produccion_pedidos` que no tuvieran fila en `ribisoft_pedidos`
+    const remainingByKey = new Map();
+    (orders || []).forEach((ord) => {
+      if (!ord || !ord.pedidoNum || touchedPlantOrderIds.has(ord.id)) return;
+      const ped = String(ord.pedidoNum).replace(/^#/, '').trim().toUpperCase();
+      const cod = (cleanErpCode(ord.codArticulo || ord.codigo_item || '') || '').toUpperCase();
+      const normName = normalizeProductName(ord.nombre || ord.descripcion || '');
+      const key = `${ped}__${normName || cod || ord.id}`;
+      if (!remainingByKey.has(key)) remainingByKey.set(key, []);
+      remainingByKey.get(key).push(ord);
+    });
+
+    remainingByKey.forEach((groupOrders, key) => {
+      const ord = groupOrders[0];
+      const ped = String(ord.pedidoNum).replace(/^#/, '').trim().toUpperCase();
+      const numMatch = ped.match(/\d+/);
+      const pedNumber = numMatch ? Number(numMatch[0]) : 0;
+      const coordAlert = alertsMap.get(ped) || null;
+      if (minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal && !coordAlert) return;
+
+      const plantFamily = buildMergedPlantFamily(groupOrders);
+      const primaryOrd = plantFamily.primaryOrder || ord;
+      const mappedCommercialDelivery = customDeliveryDatesMap?.[ped] ?? erpDeliveryDatesMap?.[ped] ?? null;
+
+      const parsedGen = parseCommercialDeliveryDate(
+        primaryOrd.fecha_genera_ped ?? primaryOrd['Fecha Genera Ped.'] ?? primaryOrd.fechaGeneraPed ?? primaryOrd.creadoEn ?? null
+      );
+      const coordRawDate = coordAlert?.fechaEntrega || null;
+      const ordPrometidaRaw = primaryOrd.fechaEntregaPrometida || null;
+      const isPrometidaFromCoordOnly = Boolean(
+        coordRawDate &&
+        ordPrometidaRaw &&
+        String(ordPrometidaRaw).trim() === String(coordRawDate).trim() &&
+        !primaryOrd.fecha_entrega &&
+        !primaryOrd['Fecha Entrega'] &&
+        !primaryOrd.fecha_despacho
+      );
+      const rawDespOrd =
+        primaryOrd['Fecha Entrega'] ??
+        primaryOrd.fecha_entrega ??
+        primaryOrd['Fecha de Entrega'] ??
+        primaryOrd['Fecha Despacho'] ??
+        primaryOrd.fecha_despacho ??
+        (!isPrometidaFromCoordOnly ? ordPrometidaRaw : null) ??
+        mappedCommercialDelivery ??
+        primaryOrd.fecha_asigna ??
+        null;
+      const parsedDesp = parseCommercialDeliveryDate(rawDespOrd);
+      const parsedCoordDate = parseCommercialDeliveryDate(coordAlert?.fechaEntrega || coordAlert?.creadoEn);
+
+      const stageInfo = resolveItemStageAndAreas({
+        plantFamily,
+        programador: primaryOrd.programador,
+        estadoErp: primaryOrd.estadoInterno || primaryOrd.estado
+      });
+
+      touchedPedidosSet.add(ped);
+      itemsMap.set(key, {
+        ...primaryOrd,
+        pedidoNum: ped,
+        pedidoNumeric: pedNumber,
+        codArticulo: (cleanErpCode(primaryOrd.codArticulo || primaryOrd.codigo_item || '') || 'S/C').toUpperCase(),
+        fechaGeneracion: parsedGen?.isoDate || null,
+        fechaDespacho: parsedDesp?.isoDate || null,
+        coordFechaEntrega: parsedCoordDate?.isoDate || null,
+        hasCoordAlert: Boolean(coordAlert),
+        coordAlertNota: coordAlert?.notas || coordAlert?.detalle || null,
+        stage: stageInfo.stage,
+        stageLabel: stageInfo.stageLabel,
+        stageAreaLabel: stageInfo.stageAreaLabel,
+        activeAreas: stageInfo.activeAreas,
+        progressPct: stageInfo.progressPct,
+        unifiedHistorial: plantFamily.unifiedHistorial,
+        unifiedBitacoraTurnos: plantFamily.unifiedBitacoraTurnos,
+        unifiedBitacoraCalidad: plantFamily.unifiedBitacoraCalidad,
+        isInActivePlantArea: stageInfo.stage === 'PRODUCCION',
+        isFromPlantTable: true
+      });
+    });
+
+    // 4. Garantizar que cualquier Alerta de Coordinación sin filas en RIBI/Planta también sea visible en ALERTAS_COORD
     alertsMap.forEach((alertObj, pedKey) => {
       if (touchedPedidosSet.has(pedKey)) return;
       const parsedCoordDate = parseCommercialDeliveryDate(alertObj.fechaEntrega || alertObj.creadoEn);
@@ -534,7 +760,7 @@ export default function NeutralAreaBacklogView() {
         nombre_proyecto: '',
         programador: '',
         area: 'AREA_NEUTRA',
-        areaActual: 'Área de Consulta General',
+        areaActual: 'Comercial',
         estado: 'PENDIENTE_INGENIERIA',
         estadoInterno: 'ALERTA DE COORDINACIÓN DE PLANTA',
         fechaGeneracion: null,
@@ -544,6 +770,14 @@ export default function NeutralAreaBacklogView() {
         hasCoordAlert: true,
         coordFechaEntrega: parsedCoordDate?.isoDate || alertObj.fechaEntrega || null,
         coordAlertNota: alertObj.notas || alertObj.detalle || null,
+        stage: 'COMERCIAL',
+        stageLabel: 'En Comercial',
+        stageAreaLabel: 'Comercial',
+        activeAreas: ['Comercial'],
+        progressPct: 0,
+        unifiedHistorial: [],
+        unifiedBitacoraTurnos: [],
+        unifiedBitacoraCalidad: [],
         isInActivePlantArea: false,
         isFromPlantTable: false
       });
@@ -567,19 +801,19 @@ export default function NeutralAreaBacklogView() {
     if (mode === 'DESPACHO') {
       return parseCommercialDeliveryDate(item.fechaDespacho);
     }
-    return parseCommercialDeliveryDate(item.fechaGeneracion);
+    return parseCommercialDeliveryDate(item.fechaGeneracion || item.fechaDespacho);
   };
 
-  // Lista base según el modo seleccionado (estricto por fuente de fecha)
+  // Lista base según el modo seleccionado: muestra TODOS los pedidos (Comercial + Diseño/CNC + Producción)
   const modeScopedItems = useMemo(() => {
     return unifiedConsultaItems.filter((item) => {
       if (filterMode === 'ALERTAS_COORD') {
         return Boolean(item.hasCoordAlert);
       }
       if (filterMode === 'DESPACHO') {
-        return !item.isInActivePlantArea && Boolean(item.fechaDespacho);
+        return Boolean(item.fechaDespacho);
       }
-      return !item.isInActivePlantArea && Boolean(item.fechaGeneracion);
+      return Boolean(item.fechaGeneracion || item.fechaDespacho);
     });
   }, [unifiedConsultaItems, filterMode]);
 
@@ -724,8 +958,8 @@ export default function NeutralAreaBacklogView() {
     filterMode
   ]);
 
-  // Agrupación por Pedido y Ordenamiento dinámico conectado con `sortBy`
-  const groupedPedidos = useMemo(() => {
+  // Agrupación por Pedido, cálculo de etapas semáforo, áreas activas, alertas de rezago y ordenamiento
+  const allGroupedPedidosBeforeStage = useMemo(() => {
     const map = new Map();
     filteredItems.forEach((ord) => {
       const ped = String(ord.pedidoNum || 'S/N').replace(/^#/, '').trim().toUpperCase();
@@ -761,11 +995,87 @@ export default function NeutralAreaBacklogView() {
       return parseCommercialDeliveryDate(group.fechaGeneracion)?.isoDate || null;
     };
 
+    const stageRank = { PRODUCCION: 0, DISENO_PROG: 1, COMERCIAL: 2 };
+
     const list = Array.from(map.values()).map((g) => {
       const firstItemIso = g.items?.[0] ? getFilterModeDateInfo(g.items[0])?.isoDate : null;
+      let prodCount = 0;
+      let disenoProgCount = 0;
+      let comercialCount = 0;
+      let progressSum = 0;
+      const rawLagging = [];
+      const areaMap = new Map();
+
+      g.items.forEach((it) => {
+        const st = it.stage || 'COMERCIAL';
+        const qty = Number(it.cantidad) || 1;
+        progressSum += Number(it.progressPct) || 0;
+
+        if (st === 'PRODUCCION') {
+          prodCount += 1;
+        } else if (st === 'DISENO_PROG') {
+          disenoProgCount += 1;
+          rawLagging.push(it);
+        } else {
+          comercialCount += 1;
+          rawLagging.push(it);
+        }
+
+        const areasForItem =
+          Array.isArray(it.activeAreas) && it.activeAreas.length > 0
+            ? it.activeAreas
+            : [it.stageAreaLabel || 'Comercial'];
+
+        areasForItem.forEach((arName) => {
+          const cleanName = String(arName || 'Comercial').trim();
+          const upperName = cleanName.toUpperCase();
+          let arStage = 'PRODUCCION';
+          if (st === 'COMERCIAL' || upperName === 'COMERCIAL') {
+            arStage = 'COMERCIAL';
+          } else if (
+            DISENO_PROG_AREAS_UPPER.has(upperName) ||
+            upperName.includes('DISEÑO') ||
+            upperName.includes('PROG')
+          ) {
+            arStage = 'DISENO_PROG';
+          }
+
+          if (!areaMap.has(cleanName)) {
+            areaMap.set(cleanName, {
+              areaName: cleanName,
+              itemsCount: 0,
+              unitsCount: 0,
+              stage: arStage
+            });
+          }
+          const entry = areaMap.get(cleanName);
+          entry.itemsCount += 1;
+          entry.unitsCount += qty;
+        });
+      });
+
+      const areaBreakdown = Array.from(areaMap.values()).sort((a, b) => {
+        const sr = (stageRank[a.stage] ?? 9) - (stageRank[b.stage] ?? 9);
+        if (sr !== 0) return sr;
+        return b.itemsCount - a.itemsCount;
+      });
+
+      const groupStage =
+        prodCount > 0 ? 'PRODUCCION' : disenoProgCount > 0 ? 'DISENO_PROG' : 'COMERCIAL';
+      const hasLaggingDesignItems = prodCount > 0 && (disenoProgCount > 0 || comercialCount > 0);
+      const productionProgressPct = Math.round(progressSum / Math.max(1, g.items.length));
+
       return {
         ...g,
-        effectiveIsoDate: firstItemIso || getEffectiveIsoDate(g)
+        effectiveIsoDate: firstItemIso || getEffectiveIsoDate(g),
+        prodCount,
+        disenoProgCount,
+        comercialCount,
+        groupStage,
+        hasLaggingDesignItems,
+        laggingItems: hasLaggingDesignItems ? rawLagging : [],
+        areaBreakdown,
+        productionProgressPct
       };
     });
 
@@ -812,6 +1122,31 @@ export default function NeutralAreaBacklogView() {
     return list;
   }, [filteredItems, alertsMap, sortBy, filterMode]);
 
+  const stageCounts = useMemo(() => {
+    const counts = {
+      todos: allGroupedPedidosBeforeStage.length,
+      produccion: 0,
+      disenoProg: 0,
+      comercial: 0,
+      alertaRezago: 0
+    };
+    allGroupedPedidosBeforeStage.forEach((g) => {
+      if (g.groupStage === 'PRODUCCION') counts.produccion += 1;
+      else if (g.groupStage === 'DISENO_PROG') counts.disenoProg += 1;
+      else counts.comercial += 1;
+      if (g.hasLaggingDesignItems) counts.alertaRezago += 1;
+    });
+    return counts;
+  }, [allGroupedPedidosBeforeStage]);
+
+  const groupedPedidos = useMemo(() => {
+    if (stageFilter === 'TODOS') return allGroupedPedidosBeforeStage;
+    if (stageFilter === 'ALERTA_REZAGO') {
+      return allGroupedPedidosBeforeStage.filter((g) => g.hasLaggingDesignItems);
+    }
+    return allGroupedPedidosBeforeStage.filter((g) => g.groupStage === stageFilter);
+  }, [allGroupedPedidosBeforeStage, stageFilter]);
+
   // Agrupación automática por semanas cuando el usuario selecciona un mes puntual
   const weeklySections = useMemo(() => {
     if (selectedMonth === 'TODOS') return [];
@@ -839,9 +1174,18 @@ export default function NeutralAreaBacklogView() {
     return Array.from(secMap.values()).sort((a, b) => a.weekNum - b.weekNum);
   }, [groupedPedidos, selectedMonth]);
 
+  const filteredItemsCount = useMemo(
+    () => groupedPedidos.reduce((acc, g) => acc + g.items.length, 0),
+    [groupedPedidos]
+  );
+
   const totalUnitsCount = useMemo(
-    () => filteredItems.reduce((acc, o) => acc + (Number(o.cantidad) || 1), 0),
-    [filteredItems]
+    () =>
+      groupedPedidos.reduce(
+        (acc, g) => acc + g.items.reduce((s, o) => s + (Number(o.cantidad) || 1), 0),
+        0
+      ),
+    [groupedPedidos]
   );
 
   // Cuadrícula dinámica sincronizada con `gridColumns` (1, 2, 3, 4 o 5 columnas)
@@ -883,25 +1227,57 @@ export default function NeutralAreaBacklogView() {
     const dLeftCoord = group.coordFechaEntrega ? getDaysLeft(group.coordFechaEntrega) : null;
     const isGridCompact = gridColumns > 1 && !isExpanded;
 
+    const stageStylesMap = {
+      PRODUCCION: {
+        border: group.hasLaggingDesignItems
+          ? 'border-emerald-500/80 ring-2 ring-amber-400/60'
+          : 'border-emerald-500/75',
+        headerTint: 'bg-emerald-500/[0.06]',
+        badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40',
+        dot: 'bg-emerald-500',
+        label: `En Producción (${group.productionProgressPct}%)`,
+        pedBg: 'bg-emerald-600 text-white'
+      },
+      DISENO_PROG: {
+        border: 'border-amber-500/80',
+        headerTint: 'bg-amber-500/[0.07]',
+        badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40',
+        dot: 'bg-amber-500',
+        label: 'Diseño y Prog. CNC',
+        pedBg: 'bg-amber-500 text-slate-950'
+      },
+      COMERCIAL: {
+        border: 'border-rose-500/75',
+        headerTint: 'bg-rose-500/[0.06]',
+        badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40',
+        dot: 'bg-rose-500',
+        label: 'En Comercial',
+        pedBg: 'bg-rose-600 text-white'
+      }
+    };
+    const stMeta = stageStylesMap[group.groupStage] || stageStylesMap.COMERCIAL;
+
     return (
       <div
         key={group.pedidoNum}
         className={`theme-bg-card border-2 ${
-          group.hasCoordAlert ? 'border-orange-500/70' : 'theme-border'
+          group.hasCoordAlert && !group.hasLaggingDesignItems
+            ? 'border-orange-500/80'
+            : stMeta.border
         } rounded-3xl shadow-lg overflow-hidden flex flex-col justify-between transition-all hover:border-[var(--color-primary)] ${
           isExpanded ? 'col-span-full' : ''
         }`}
       >
         {/* CABECERA DEL PEDIDO */}
         <div
-          className={`p-4 sm:p-5 theme-bg-header ${
+          className={`p-4 sm:p-5 theme-bg-header ${stMeta.headerTint} ${
             isExpanded ? 'border-b theme-border' : ''
           } flex flex-col ${
             isGridCompact ? 'gap-3 h-full justify-between' : 'xl:flex-row xl:items-center justify-between gap-4'
           }`}
         >
           <div
-            className="flex flex-col gap-2 cursor-pointer flex-1"
+            className="flex flex-col gap-2 cursor-pointer flex-1 min-w-0"
             onClick={() =>
               setExpandedPedidos((prev) => ({
                 ...prev,
@@ -910,9 +1286,18 @@ export default function NeutralAreaBacklogView() {
             }
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="px-3.5 py-1 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] font-black text-sm sm:text-base tracking-wide shadow">
-                PED #{group.pedidoNum}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`px-3.5 py-1 rounded-xl ${stMeta.pedBg} font-black text-sm sm:text-base tracking-wide shadow`}>
+                  PED #{group.pedidoNum}
+                </span>
+
+                <span
+                  className={`px-2.5 py-1 rounded-lg border font-black text-[10px] uppercase flex items-center gap-1.5 ${stMeta.badge}`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${stMeta.dot}`} />
+                  <span>{stMeta.label}</span>
+                </span>
+              </div>
 
               <div className="flex items-center gap-1.5 flex-wrap">
                 {group.hasCoordAlert && (
@@ -961,13 +1346,62 @@ export default function NeutralAreaBacklogView() {
                   {dLeftCoord !== null && ` (${dLeftCoord}d)`}
                 </span>
               )}
-
-              {group.areaActual && (
-                <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black text-[11px] uppercase">
-                  En: {group.areaActual}
-                </span>
-              )}
             </div>
+
+            {/* ALERTA DESTACADA: PEDIDO YA EN PRODUCCIÓN CON ÍTEMS REZAGADOS EN DISEÑO / PROG. CNC / COMERCIAL */}
+            {group.hasLaggingDesignItems && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedPedidos((prev) => ({ ...prev, [group.pedidoNum]: true }));
+                }}
+                className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/60 border-l-4 border-l-amber-500 text-amber-900 dark:text-amber-200 flex items-start gap-2 cursor-pointer hover:bg-amber-500/20 transition-colors"
+                title="Haz clic para expandir y revisar los productos rezagados"
+              >
+                <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-snug">
+                  <span className="font-black uppercase block">
+                    ¡Alerta de Rezago! {group.laggingItems.length} ítem(s) sin entrar a planta
+                  </span>
+                  <span className="font-semibold opacity-95 block mt-0.5">
+                    {group.disenoProgCount > 0 && `${group.disenoProgCount} en Diseño/Prog. CNC`}
+                    {group.disenoProgCount > 0 && group.comercialCount > 0 && ' · '}
+                    {group.comercialCount > 0 && `${group.comercialCount} aún en Comercial`}
+                    {' — '}
+                    <span className="underline font-bold">
+                      {group.laggingItems
+                        .slice(0, 2)
+                        .map((li) => `${li.codArticulo || 'S/C'} (${li.nombre})`)
+                        .join(', ')}
+                      {group.laggingItems.length > 2 ? ` +${group.laggingItems.length - 2} más` : ''}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* DISTRIBUCIÓN ACTUAL POR ÁREAS (ESTILO PRODUCCIÓN) */}
+            {group.areaBreakdown && group.areaBreakdown.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {group.areaBreakdown.map((ab) => {
+                  const areaBadgeStyle =
+                    ab.stage === 'PRODUCCION'
+                      ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35'
+                      : ab.stage === 'DISENO_PROG'
+                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35';
+                  return (
+                    <span
+                      key={ab.areaName}
+                      className={`px-2 py-0.5 rounded-md border text-[10px] font-black uppercase tracking-tight ${areaBadgeStyle}`}
+                      title={`${ab.itemsCount} ítem(s) / ${ab.unitsCount} und(s) en ${ab.areaName}`}
+                    >
+                      {ab.itemsCount} {ab.areaName}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             {group.coordAlertNota && (
               <div className="text-[11px] font-bold text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg px-2 py-1 line-clamp-2">
@@ -976,16 +1410,29 @@ export default function NeutralAreaBacklogView() {
             )}
 
             <span className="text-[11px] underline theme-text-primary font-black">
-              {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs SolidWorks'}
+              {isExpanded ? '▲ Ocultar ítems, trazabilidad y QRs' : '▼ Ver ítems, trazabilidad y QRs SolidWorks'}
             </span>
           </div>
 
-          {/* ACCIÓN SOLO DE CONSULTA: DESCARGA MASIVA DE QRs SOLIDWORKS */}
+          {/* ACCIONES DE CONSULTA: DASHBOARD TORTA + DESCARGA MASIVA DE QRs SOLIDWORKS */}
           <div
             className={`flex flex-wrap items-center gap-2 ${
               isGridCompact ? 'pt-2 border-t theme-border justify-between' : ''
             }`}
           >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDashboardPedidoGroup(group);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white border border-slate-700 dark:border-indigo-500 text-[11px] font-black uppercase flex items-center gap-1.5 shadow cursor-pointer hover:brightness-110 transition-all"
+              title="Abrir Dashboard del pedido con gráfico de torta y carga de planta"
+            >
+              <PieChart size={14} className="text-emerald-400 dark:text-emerald-200" />
+              <span>Dashboard</span>
+            </button>
+
             <button
               type="button"
               onClick={() => handleDownloadAllPedidoQrs(group)}
@@ -998,11 +1445,34 @@ export default function NeutralAreaBacklogView() {
           </div>
         </div>
 
-        {/* CUADRÍCULA DE ÍTEMS Y ESTAMPILLAS QR PARA SOLIDWORKS */}
+        {/* CUADRÍCULA DE ÍTEMS, ÁREAS ACTUALES, TRAZABILIDAD Y ESTAMPILLAS QR PARA SOLIDWORKS */}
         {isExpanded && (
           <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 bg-black/5 dark:bg-black/20">
             {group.items.map((item) => {
               const isCopied = copiedId === item.id;
+              const isLaggingItem = group.hasLaggingDesignItems && item.stage !== 'PRODUCCION';
+
+              const itemStageMap = {
+                PRODUCCION: {
+                  border: 'border-emerald-500/60',
+                  badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35',
+                  dot: 'bg-emerald-500',
+                  text: `En Producción (${item.progressPct || 70}%)`
+                },
+                DISENO_PROG: {
+                  border: isLaggingItem ? 'border-amber-500 ring-2 ring-amber-500/35' : 'border-amber-500/70',
+                  badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40',
+                  dot: 'bg-amber-500',
+                  text: 'Diseño / Prog. CNC'
+                },
+                COMERCIAL: {
+                  border: isLaggingItem ? 'border-rose-500 ring-2 ring-amber-500/35' : 'border-rose-500/65',
+                  badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40',
+                  dot: 'bg-rose-500',
+                  text: 'En Comercial'
+                }
+              };
+              const itMeta = itemStageMap[item.stage] || itemStageMap.COMERCIAL;
 
               return (
                 <div
@@ -1012,9 +1482,24 @@ export default function NeutralAreaBacklogView() {
                       setSelectedOrder(item);
                     }
                   }}
-                  className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-sm"
+                  className={`p-4 rounded-2xl theme-bg-main border-2 ${itMeta.border} hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-sm`}
                 >
                   <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span
+                        className={`px-2 py-0.5 rounded-lg border font-black text-[10px] uppercase flex items-center gap-1.5 ${itMeta.badge}`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${itMeta.dot}`} />
+                        <span>{itMeta.text}</span>
+                      </span>
+
+                      {isLaggingItem && (
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-black text-[10px] uppercase flex items-center gap-1 shadow-sm">
+                          <AlertTriangle size={11} /> Rezagado
+                        </span>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between gap-2">
                       <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono font-black text-xs">
                         CÓD: {item.codArticulo || 'S/C'}
@@ -1028,12 +1513,39 @@ export default function NeutralAreaBacklogView() {
                       {item.nombre}
                     </h4>
 
+                    {/* ÁREAS ACTUALES DEL PRODUCTO */}
+                    <div className="flex flex-wrap items-center gap-1">
+                      {(item.activeAreas || [item.stageAreaLabel || 'Comercial']).map((areaName) => (
+                        <span
+                          key={areaName}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border flex items-center gap-1 ${itMeta.badge}`}
+                        >
+                          <Factory size={10} />
+                          <span>{areaName}</span>
+                        </span>
+                      ))}
+                    </div>
+
                     {item.programador && (
                       <div className="text-[11px] font-bold theme-text-muted uppercase">
                         Programador: {item.programador}
                       </div>
                     )}
                   </div>
+
+                  {/* BOTÓN DE HISTORIAL / TRAZABILIDAD COMPLETA DEL PRODUCTO */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTraceabilityItem({ item, group });
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/40 font-black text-[11px] uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    title="Ver trazabilidad completa: Comercial → Diseño → Prog. CNC → Áreas de Producción"
+                  >
+                    <History size={14} />
+                    <span>Ver Trazabilidad Completa</span>
+                  </button>
 
                   {/* VISTA PREVIA FIEL 1:1 (220x96px) DE LA ESTAMPILLA DE SOLIDWORKS */}
                   <div
@@ -1338,6 +1850,65 @@ export default function NeutralAreaBacklogView() {
           )}
         </div>
 
+        {/* FILTRO SEMÁFORO POR ETAPA Y ALERTA DE ARTÍCULOS REZAGADOS */}
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t theme-border">
+          <span className="text-[11px] font-black uppercase tracking-wider theme-text-muted mr-1">
+            Estado Semáforo:
+          </span>
+          {[
+            {
+              id: 'TODOS',
+              label: `Todos (${stageCounts.todos})`,
+              dot: 'bg-slate-400',
+              active: 'bg-[var(--color-primary)] text-[var(--color-surface)] border-transparent shadow',
+              inactive: 'theme-bg-main theme-text-main theme-border hover:border-[var(--color-primary)]'
+            },
+            {
+              id: 'PRODUCCION',
+              label: `En Producción (${stageCounts.produccion})`,
+              dot: 'bg-emerald-500',
+              active: 'bg-emerald-600 text-white border-emerald-600 shadow',
+              inactive: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/20'
+            },
+            {
+              id: 'DISENO_PROG',
+              label: `Diseño y Prog. CNC (${stageCounts.disenoProg})`,
+              dot: 'bg-amber-500',
+              active: 'bg-amber-500 text-slate-950 border-amber-500 shadow',
+              inactive: 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/35 hover:bg-amber-500/20'
+            },
+            {
+              id: 'COMERCIAL',
+              label: `En Comercial (${stageCounts.comercial})`,
+              dot: 'bg-rose-500',
+              active: 'bg-rose-600 text-white border-rose-600 shadow',
+              inactive: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/35 hover:bg-rose-500/20'
+            },
+            {
+              id: 'ALERTA_REZAGO',
+              label: `Con Rezagados en Diseño/CNC (${stageCounts.alertaRezago})`,
+              dot: 'bg-amber-500 ring-2 ring-rose-500/60',
+              active: 'bg-amber-500 text-slate-950 border-amber-600 ring-2 ring-rose-500/60 shadow',
+              inactive:
+                stageCounts.alertaRezago > 0
+                  ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200 border-amber-500/60 hover:bg-amber-500/30 font-black'
+                  : 'theme-bg-main theme-text-muted theme-border opacity-60'
+            }
+          ].map((btn) => (
+            <button
+              key={btn.id}
+              type="button"
+              onClick={() => setStageFilter(btn.id)}
+              className={`px-3 py-1.5 rounded-xl border text-[11px] font-black uppercase flex items-center gap-1.5 transition-all cursor-pointer ${
+                stageFilter === btn.id ? btn.active : btn.inactive
+              }`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${btn.dot}`} />
+              <span>{btn.label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* KPIs RÁPIDOS + BUSCADOR (Adaptados a los temas) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t theme-border">
           <div className="theme-bg-main border theme-border rounded-2xl p-3 flex items-center justify-between">
@@ -1358,7 +1929,7 @@ export default function NeutralAreaBacklogView() {
                 Ítems Listados
               </span>
               <span className="text-2xl font-black theme-text-main">
-                {filteredItems.length}
+                {filteredItemsCount}
               </span>
             </div>
             <FileCode2 className="theme-text-primary opacity-80" size={24} />
@@ -1452,6 +2023,22 @@ export default function NeutralAreaBacklogView() {
         <div className={pedidosGridClass}>
           {groupedPedidos.map(renderPedidoCard)}
         </div>
+      )}
+
+      {dashboardPedidoGroup && (
+        <PedidoDashboardModal
+          pedidoGroup={dashboardPedidoGroup}
+          allPlantOrders={orders}
+          onClose={() => setDashboardPedidoGroup(null)}
+          onSelectTraceability={(ctx) => setTraceabilityItem(ctx)}
+        />
+      )}
+
+      {traceabilityItem && (
+        <ProductTraceabilityModal
+          contextData={traceabilityItem}
+          onClose={() => setTraceabilityItem(null)}
+        />
       )}
     </div>
   );
