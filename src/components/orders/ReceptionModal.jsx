@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info, QrCode } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS } from '../../utils/constants';
 
@@ -8,7 +8,8 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
         showReceptionModal, setShowReceptionModal, 
         orders, setOrders, syncOrderToSupabase,
         areaFilter, supervisorProfile,
-        tempPhoto, setTempPhoto
+        tempPhoto, setTempPhoto,
+        scannedQrTarget, setScannedQrTarget
     } = useAppContext();
 
     const [activeTab, setActiveTab] = useState('PENDIENTES'); // PENDIENTES o RECHAZOS
@@ -16,13 +17,70 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
     const [receptionName, setReceptionName] = useState(supervisorProfile?.name || "");
     const [receptionNotes, setReceptionNotes] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
+    const [qrDetectedBanner, setQrDetectedBanner] = useState(null);
+
+    useEffect(() => {
+        if (!showReceptionModal || !scannedQrTarget || scannedQrTarget.type !== 'RECEPCION_QR') {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            const targetId = scannedQrTarget.orderId;
+            const targetPed = String(scannedQrTarget.pedidoNum || '').trim().toUpperCase();
+            const targetCod = String(scannedQrTarget.codArticulo || '').trim().toUpperCase();
+            const userArea = String(supervisorProfile?.area || '').trim();
+
+            const matched =
+                (orders || []).find((o) => o && o.id === targetId && o.transferenciaPendiente) ||
+                (orders || []).find(
+                    (o) =>
+                        o &&
+                        o.transferenciaPendiente &&
+                        String(o.pedidoNum || '').trim().toUpperCase() === targetPed &&
+                        String(o.codArticulo || '').trim().toUpperCase() === targetCod &&
+                        (!userArea ||
+                            userArea === 'Administrador / Todos' ||
+                            o.transferenciaPendiente.haciaArea === userArea)
+                ) ||
+                (orders || []).find(
+                    (o) =>
+                        o &&
+                        o.transferenciaPendiente &&
+                        String(o.pedidoNum || '').trim().toUpperCase() === targetPed &&
+                        String(o.codArticulo || '').trim().toUpperCase() === targetCod
+                );
+
+            if (matched) {
+                setActiveTab('PENDIENTES');
+                setSelectedItems([matched]);
+                setErrorMsg('');
+                setQrDetectedBanner({
+                    orderId: matched.id,
+                    pedidoNum: matched.pedidoNum,
+                    codArticulo: matched.codArticulo,
+                    nombre: matched.nombre,
+                    desdeArea: matched.areaActual,
+                    haciaArea: matched.transferenciaPendiente?.haciaArea
+                });
+                if (!receptionName.trim() && supervisorProfile?.name) {
+                    setReceptionName(supervisorProfile.name);
+                }
+            }
+            setScannedQrTarget(null);
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [showReceptionModal, scannedQrTarget, orders, supervisorProfile, receptionName, setScannedQrTarget]);
 
     if (!showReceptionModal) return null;
 
     // 1. ITEMS PENDIENTES
     const pendingItems = orders.filter(o => 
         o?.transferenciaPendiente && 
-        (areaFilter === 'Todas' || areaFilter === 'Administrador / Todos' || o.transferenciaPendiente.haciaArea === areaFilter)
+        (areaFilter === 'Todas' ||
+         areaFilter === 'Administrador / Todos' ||
+         o.transferenciaPendiente.haciaArea === areaFilter ||
+         (qrDetectedBanner && o.id === qrDetectedBanner.orderId))
     );
 
     const pendingGroups = pendingItems.reduce((acc, item) => {
@@ -48,6 +106,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
         setReceptionNotes("");
         setTempPhoto(null);
         setErrorMsg("");
+        setQrDetectedBanner(null);
     };
 
 
@@ -141,7 +200,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                             <h2 className="text-xl font-black theme-text-main uppercase">Panel de Recepciones</h2>
                             <p className="text-sm md:text-base font-bold theme-text-muted">Verifique entregas o revise devoluciones</p>
                         </div>
-                        <button type="button" onClick={() => setShowReceptionModal(false)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-main shrink-0">✕</button>
+                        <button type="button" onClick={() => { resetState(); setShowReceptionModal(false); }} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-main shrink-0">✕</button>
                     </div>
                     <div className="flex border-t border-[var(--color-border)]">
                         <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
@@ -230,6 +289,22 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                 
                                 {activeTab === 'PENDIENTES' && (
                                     <>
+                                        {qrDetectedBanner && (
+                                            <div className="p-3.5 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/60 text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5 shadow-sm animate-in fade-in">
+                                                <QrCode size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                                                <div className="text-xs leading-snug">
+                                                    <div className="font-black uppercase">
+                                                        📲 Producto detectado automáticamente por escaneo QR
+                                                    </div>
+                                                    <div className="font-bold mt-0.5 uppercase">
+                                                        PED #{qrDetectedBanner.pedidoNum} · CÓD: {qrDetectedBanner.codArticulo}
+                                                    </div>
+                                                    <div className="font-semibold opacity-90 mt-0.5">
+                                                        Transferencia en tránsito: <span className="font-black">{qrDetectedBanner.desdeArea}</span> → <span className="font-black">{qrDetectedBanner.haciaArea}</span>. Presiona <strong>Aceptar</strong> o <strong>Rechazar</strong> abajo.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="theme-bg-card/50 dark:theme-bg-card/5 p-4 rounded-xl border theme-border shadow-sm">
                                             {selectedItems.length > 1 && (
                                             <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 p-3 rounded-xl mb-4">

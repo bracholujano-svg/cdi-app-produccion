@@ -5,6 +5,7 @@ import scanCajetinHandler from './api/scan-cajetin.js'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
+  const buildId = String(Date.now())
   const env = loadEnv(mode, process.cwd(), '')
   if (env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY) {
     process.env.GEMINI_API_KEY = env.GEMINI_API_KEY
@@ -14,8 +15,21 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+  define: {
+    __CDI_BUILD_ID__: JSON.stringify(buildId)
+  },
   plugins: [
     react(),
+    {
+      name: 'cdi-version-manifest',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify({ buildId })
+        })
+      }
+    },
     {
       name: 'local-api-scan-cajetin',
       configureServer(server) {
@@ -42,6 +56,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     VitePWA({
+      selfDestroying: true,
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {

@@ -26,7 +26,7 @@ import ReportConfigModal from './components/modals/ReportConfigModal';
 import PlantPlannerModal from './components/modals/PlantPlannerModal';
 import PackingListsModal from './components/modals/PackingListsModal';
 import QRScannerModal from './components/modals/QRScannerModal';
-import { parseCdiQRCodePayload, buildProductBlueprintQrPayload } from './utils/colorQrHelper';
+import { parseCdiQRCodePayload, buildProductBlueprintQrPayload, findProductByBlueprintQr } from './utils/colorQrHelper';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -134,6 +134,7 @@ const {
     selectedBulkOrders, setSelectedBulkOrders,
     showBulkModal, setShowBulkModal,
     showDossierModal,
+    setShowReceptionModal,
     setScannedQrTarget,
     setShowQRScannerModal,
   } = useAppContext();
@@ -148,10 +149,66 @@ const {
     if (!parsed || parsed.type === 'UNKNOWN') return;
 
     if (parsed.type === 'PLANO_PRODUCTO') {
-      setScannedQrTarget(parsed);
-      setShowQRScannerModal(true);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
+      const matched = findProductByBlueprintQr(parsed, orders, supervisorProfile?.area);
+      if (matched) {
+        const isAdminUser =
+          !supervisorProfile?.area ||
+          supervisorProfile.area === 'Administrador / Todos' ||
+          supervisorProfile.area === 'GENERAL';
+        const towardArea = String(matched.transferenciaPendiente?.haciaArea || '').trim();
+        const userAreaClean = String(supervisorProfile?.area || '').trim();
+        const isRecipientOrAdmin =
+          isAdminUser || !towardArea || userAreaClean === towardArea;
+
+        if (matched.transferenciaPendiente && isRecipientOrAdmin) {
+          if (
+            towardArea &&
+            areaFilter !== 'Todas' &&
+            areaFilter !== 'Administrador / Todos' &&
+            areaFilter !== towardArea
+          ) {
+            setAreaFilter(towardArea);
+          }
+          setScannedQrTarget({
+            type: 'RECEPCION_QR',
+            orderId: matched.id,
+            pedidoNum: matched.pedidoNum,
+            codArticulo: matched.codArticulo
+          });
+          setShowReceptionModal(true);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+
+        const prevArea = String(matched.areaActual || '').trim();
+        const isNeutralArea =
+          !prevArea ||
+          [
+            'Área de Consulta General',
+            'Área Neutra / Backlog',
+            'AREA_NEUTRA',
+            'COMERCIAL / VENTAS',
+            'Comercial / Ventas'
+          ].includes(prevArea);
+
+        if (isNeutralArea) {
+          setScannedQrTarget(parsed);
+          setShowQRScannerModal(true);
+        } else {
+          setSelectedOrder(matched);
+          setOpenSection(null);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
+      // Esperar brevemente por si `orders` aún está descargando desde Supabase antes de activar promoción desde RIBI
+      const fallbackTimer = setTimeout(() => {
+        setScannedQrTarget(parsed);
+        setShowQRScannerModal(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 1500);
+      return () => clearTimeout(fallbackTimer);
     }
 
     if (parsed.type === 'COLOR') {
@@ -189,9 +246,14 @@ const {
   }, [
     supervisorProfile,
     orders,
+    areaFilter,
     setScannedQrTarget,
     setShowRecetarioModal,
     setShowPackingListsModal,
+    setShowReceptionModal,
+    setShowQRScannerModal,
+    setSelectedOrder,
+    setOpenSection,
     setAreaFilter,
     setSelectedGroupPedido
   ]);

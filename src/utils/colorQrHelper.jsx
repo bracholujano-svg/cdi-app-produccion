@@ -316,8 +316,9 @@ export const ColorQRCodeSVG = ({
 };
 
 /**
- * Construye el payload determinístico y único del Código QR de trazabilidad para planos (SolidWorks):
- * Formato exacto: CDI|PED:${numero_pedido}|COD:${codigo_producto}|ID:${item_id}
+ * Construye el payload web directo y determinístico del Código QR de trazabilidad para planos (SolidWorks):
+ * Formato URL pública que abre el Menú Operativo o Recepción de Transferencias automáticamente al escanear:
+ * ${origin}/?qr=PLANO&ped=${numero_pedido}&cod=${codigo_producto}&id=${item_id}
  */
 export const buildProductBlueprintQrPayload = (product = {}) => {
   const numeroPedido = String(product?.pedidoNum || product?.pedido_num || product?.pedido || 'S/N')
@@ -334,7 +335,12 @@ export const buildProductBlueprintQrPayload = (product = {}) => {
     ? (rawId.includes('-') ? rawId.split('-')[0] : rawId.slice(0, 12)).toUpperCase()
     : `${numeroPedido}-${codigoProducto}`;
 
-  return `CDI|PED:${numeroPedido}|COD:${codigoProducto}|ID:${itemId}`;
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://cdi-app-produccion.vercel.app';
+
+  return `${origin}/?qr=PLANO&ped=${encodeURIComponent(numeroPedido)}&cod=${encodeURIComponent(codigoProducto)}&id=${encodeURIComponent(itemId)}`;
 };
 
 /**
@@ -984,7 +990,14 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
   // 1. Verificar si contiene una URL con parámetros ?qr=...
   try {
     const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-    const candidateUrl = urlMatch ? urlMatch[0] : text.startsWith('?qr=') || text.startsWith('?cdi_doc=') ? `https://cdi.local/${text}` : null;
+    const candidateUrl = urlMatch
+      ? urlMatch[0]
+      : text.startsWith('?qr=') ||
+        text.startsWith('?cdi_doc=') ||
+        text.startsWith('/?qr=') ||
+        text.startsWith('/?cdi_doc=')
+      ? `https://cdi.local/${text.replace(/^\/+/, '')}`
+      : null;
     if (candidateUrl) {
       const parsedUrl = new URL(candidateUrl);
 
@@ -1089,6 +1102,30 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
     };
   }
 
+  // 1.6. Soporte tolerante para pistola lectora USB en distribución de teclado español al leer URL de plano (?qr=PLANO)
+  const spanishUrlNormalized = text.replace(/Ñ/gi, ':').replace(/['?_]/g, '?');
+  if (/qr[^a-z0-9]{0,3}plano(?:_producto)?/i.test(spanishUrlNormalized)) {
+    const safeDecode = (val) => {
+      try {
+        return decodeURIComponent(val);
+      } catch (_) {
+        return val;
+      }
+    };
+    const pedSpMatch = spanishUrlNormalized.match(/ped[^a-z0-9]{1,3}#?([A-Za-z0-9._%-]+)/i);
+    const codSpMatch = spanishUrlNormalized.match(/cod[^a-z0-9]{1,3}([A-Za-z0-9._%-]+)/i);
+    const idSpMatch = spanishUrlNormalized.match(/id[^a-z0-9]{1,3}([A-Za-z0-9._%-]+)/i);
+    if (pedSpMatch || codSpMatch || idSpMatch) {
+      return {
+        type: 'PLANO_PRODUCTO',
+        pedidoNum: pedSpMatch ? safeDecode(pedSpMatch[1]).replace(/^#/, '').trim().toUpperCase() : '',
+        codArticulo: codSpMatch ? safeDecode(codSpMatch[1]).trim().toUpperCase() : '',
+        itemId: idSpMatch ? safeDecode(idSpMatch[1]).trim().toUpperCase() : '',
+        raw: text
+      };
+    }
+  }
+
   const upper = text.toUpperCase();
 
   // 2. Reconocer QR de Laboratorio de Color en texto plano
@@ -1191,9 +1228,10 @@ export const parseCdiQRCodePayload = (rawScannedText = '') => {
 };
 
 /**
- * Localiza el producto exacto en la lista de órdenes a partir del QR escaneado de un plano (CDI|PED:...|COD:...|ID:...)
+ * Localiza el producto exacto en la lista de órdenes a partir del QR escaneado de un plano (?qr=PLANO o CDI|PED:...),
+ * priorizando transferencias pendientes dirigidas al área actual del usuario (`preferredArea`) para automatizar su recepción.
  */
-export const findProductByBlueprintQr = (parsed, orders = []) => {
+export const findProductByBlueprintQr = (parsed, orders = [], preferredArea = '') => {
   if (!parsed || !Array.isArray(orders) || orders.length === 0) return null;
 
   const targetPed = String(parsed.pedidoNum || '')
@@ -1202,47 +1240,101 @@ export const findProductByBlueprintQr = (parsed, orders = []) => {
     .toUpperCase();
   const targetCod = String(parsed.codArticulo || '').trim().toUpperCase();
   const targetId = String(parsed.itemId || '').trim().toUpperCase();
+  const prefAreaClean = String(preferredArea || '').trim();
+  const isSpecificPrefArea =
+    Boolean(prefAreaClean) &&
+    prefAreaClean !== 'Administrador / Todos' &&
+    prefAreaClean !== 'Todas' &&
+    prefAreaClean !== 'GENERAL';
 
-  // 1. Coincidencia por ID de ítem (exacto o prefijo de UUID) + Pedido
-  if (targetId) {
-    const byIdAndPed = orders.find((o) => {
-      if (!o) return false;
-      const oPed = String(o.pedidoNum || '').trim().toUpperCase();
+  const candidatesMap = new Map();
+  const addCandidate = (o) => {
+    if (o && o.id && !candidatesMap.has(o.id)) {
+      candidatesMap.set(o.id, o);
+    }
+  };
+
+  orders.forEach((o) => {
+    if (!o) return;
+    const oPed = String(o.pedidoNum || '').replace(/^#/, '').trim().toUpperCase();
+    const oCod = String(o.codArticulo || o.codigo_item || '').trim().toUpperCase();
+    const oId = String(o.id || '').trim().toUpperCase();
+    const oMaster = String(o.master_id || '').trim().toUpperCase();
+
+    const idMatches =
+      Boolean(targetId) &&
+      (oId === targetId ||
+        oId.startsWith(targetId) ||
+        (oMaster && (oMaster === targetId || oMaster.startsWith(targetId))));
+
+    const pedMatches = !targetPed || oPed === targetPed;
+    const pedAndCodMatch =
+      Boolean(targetPed) &&
+      Boolean(targetCod) &&
+      targetCod !== 'S/C' &&
+      oPed === targetPed &&
+      oCod === targetCod;
+
+    if ((idMatches && pedMatches) || pedAndCodMatch) {
+      addCandidate(o);
+    }
+  });
+
+  if (candidatesMap.size === 0 && targetId) {
+    orders.forEach((o) => {
+      if (!o) return;
       const oId = String(o.id || '').trim().toUpperCase();
       const oMaster = String(o.master_id || '').trim().toUpperCase();
-      const idMatches =
+      if (
         oId === targetId ||
         oId.startsWith(targetId) ||
-        (oMaster && (oMaster === targetId || oMaster.startsWith(targetId)));
-      return idMatches && (!targetPed || oPed === targetPed);
+        (oMaster && (oMaster === targetId || oMaster.startsWith(targetId)))
+      ) {
+        addCandidate(o);
+      }
     });
-    if (byIdAndPed) return byIdAndPed;
   }
 
-  // 2. Coincidencia por Pedido + Código de Producto (priorizando el ítem maestro o activo)
-  if (targetPed && targetCod) {
-    const candidates = orders.filter((o) => {
-      if (!o) return false;
-      const oPed = String(o.pedidoNum || '').trim().toUpperCase();
-      const oCod = String(o.codArticulo || o.codigo_item || '').trim().toUpperCase();
-      return oPed === targetPed && oCod === targetCod;
-    });
-    if (candidates.length > 0) {
-      return candidates.find((c) => !c.master_id) || candidates[0];
-    }
+  const candidates = Array.from(candidatesMap.values());
+  if (candidates.length === 0) return null;
+
+  // 1. Transferencia pendiente dirigida al área actual del usuario
+  if (isSpecificPrefArea) {
+    const pendingForMyArea = candidates.find(
+      (c) => String(c.transferenciaPendiente?.haciaArea || '').trim() === prefAreaClean
+    );
+    if (pendingForMyArea) return pendingForMyArea;
   }
 
-  // 3. Coincidencia solo por ID si existe
-  if (targetId) {
-    const byIdOnly = orders.find((o) => {
-      if (!o) return false;
-      const oId = String(o.id || '').trim().toUpperCase();
-      return oId === targetId || oId.startsWith(targetId);
-    });
-    if (byIdOnly) return byIdOnly;
+  // 2. Cualquier registro de este producto que tenga transferenciaPendiente activa
+  const anyPendingTransfer = candidates.find((c) => Boolean(c.transferenciaPendiente));
+  if (anyPendingTransfer) return anyPendingTransfer;
+
+  // 3. Registro operando en el área actual del usuario
+  if (isSpecificPrefArea) {
+    const inMyArea = candidates.find(
+      (c) =>
+        String(c.areaActual || '').trim() === prefAreaClean &&
+        c.estadoInterno !== 'DESPACHADO'
+    );
+    if (inMyArea) return inMyArea;
+
+    // 4. Registro rechazado/devuelto al área actual del usuario
+    const rejectedInMyArea = candidates.find(
+      (c) =>
+        String(c.areaActual || '').trim() === prefAreaClean &&
+        String(c.estadoInterno || '').toUpperCase().startsWith('RECHAZADO POR')
+    );
+    if (rejectedInMyArea) return rejectedInMyArea;
   }
 
-  return null;
+  // 5. Registro activo o maestro
+  const activeCandidate = candidates.find(
+    (c) => c.estadoInterno !== 'DESPACHADO' && !c.isTerminado
+  );
+  if (activeCandidate) return activeCandidate;
+
+  return candidates.find((c) => !c.master_id) || candidates[0];
 };
 
 /**

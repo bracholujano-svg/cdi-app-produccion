@@ -21,7 +21,7 @@ export const parseCommercialDeliveryDate = (rawVal) => {
     const year = Number(ymdMatch[1]);
     const month = Number(ymdMatch[2]);
     const day = Number(ymdMatch[3]);
-    if (year >= 2020 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       return { isoDate, year, month, day };
     }
@@ -38,7 +38,7 @@ export const parseCommercialDeliveryDate = (rawVal) => {
       day = month;
       month = tmp;
     }
-    if (year >= 2020 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       return { isoDate, year, month, day };
     }

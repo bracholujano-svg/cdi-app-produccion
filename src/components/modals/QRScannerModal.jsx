@@ -40,6 +40,7 @@ const QRScannerModal = () => {
     setScannedQrTarget,
     setShowRecetarioModal,
     setShowPackingListsModal,
+    setShowReceptionModal,
     orders,
     setOrders,
     syncOrderToSupabase,
@@ -48,6 +49,7 @@ const QRScannerModal = () => {
     setSelectedGroupPedido,
     setSelectedOrder,
     setOpenSection,
+    areaFilter,
     setAreaFilter
   } = useAppContext();
 
@@ -65,6 +67,8 @@ const QRScannerModal = () => {
   const html5QrCodeRef = useRef(null);
   const fileInputRef = useRef(null);
   const autoCheckedInRef = useRef(null);
+  const lastAutoRoutedKeyRef = useRef(null);
+  const processScannedTextRef = useRef(null);
 
   const stopCameraScanner = async () => {
     if (html5QrCodeRef.current) {
@@ -73,7 +77,9 @@ const QRScannerModal = () => {
           await html5QrCodeRef.current.stop();
         }
         await html5QrCodeRef.current.clear();
-      } catch (_) {}
+      } catch (_) {
+        // Ignorar errores al liberar cámara
+      }
       html5QrCodeRef.current = null;
     }
     setIsCameraActive(false);
@@ -100,7 +106,9 @@ const QRScannerModal = () => {
             aspectRatio: 1.0
           },
           (decodedText) => {
-            handleProcessScannedText(decodedText, true);
+            if (processScannedTextRef.current) {
+              processScannedTextRef.current(decodedText, true);
+            }
           },
           () => {}
         );
@@ -112,7 +120,9 @@ const QRScannerModal = () => {
               { facingMode: 'user' },
               { fps: 12, qrbox: { width: 240, height: 240 } },
               (decodedText) => {
-                handleProcessScannedText(decodedText, true);
+                if (processScannedTextRef.current) {
+                  processScannedTextRef.current(decodedText, true);
+                }
               },
               () => {}
             );
@@ -128,7 +138,16 @@ const QRScannerModal = () => {
   };
 
   useEffect(() => {
-    if (showQRScannerModal) {
+    if (!showQRScannerModal) {
+      lastAutoRoutedKeyRef.current = null;
+      const closeTimer = setTimeout(() => {
+        stopCameraScanner();
+      }, 0);
+      return () => clearTimeout(closeTimer);
+    }
+
+    const initTimer = setTimeout(() => {
+      lastAutoRoutedKeyRef.current = null;
       if (scannedQrTarget && scannedQrTarget.type === 'PLANO_PRODUCTO') {
         setScannedResult(scannedQrTarget);
         setScannedQrTarget(null);
@@ -140,19 +159,18 @@ const QRScannerModal = () => {
       setManualInput('');
       setCheckInNotice('');
       setShowQuickTransferPanel(false);
-    } else {
-      stopCameraScanner();
-    }
+    }, 0);
 
     return () => {
+      clearTimeout(initTimer);
       stopCameraScanner();
     };
   }, [showQRScannerModal]);
 
   const matchedBlueprintOrder = useMemo(() => {
     if (!scannedResult || scannedResult.type !== 'PLANO_PRODUCTO') return null;
-    return findProductByBlueprintQr(scannedResult, orders);
-  }, [scannedResult, orders]);
+    return findProductByBlueprintQr(scannedResult, orders, supervisorProfile?.area);
+  }, [scannedResult, orders, supervisorProfile?.area]);
 
   const isAdminUser =
     !supervisorProfile?.area ||
@@ -273,69 +291,122 @@ const QRScannerModal = () => {
     };
   }, [scannedResult, matchedBlueprintOrder, effectiveCheckInArea]);
 
-  // Asignación automática de área y conciliación de transferencia en tránsito al escanear plano
+  // Enrutamiento inteligente al escanear un QR de producto/plano:
+  // 1) Si tiene transferenciaPendiente hacia el área actual (o es Admin), abre directamente el menú de Aceptación/Rechazo (ReceptionModal).
+  // 2) Si no tiene transferencia entrante, ubica el producto en planta si estaba en consulta general/comercial y abre el Menú Principal del Producto (OrderDetailsModal).
+  const routeScannedProductOrder = async (orderObj, forceOpen = false) => {
+    if (!orderObj) return;
+
+    const hasPendingTransfer = Boolean(orderObj.transferenciaPendiente);
+    const towardArea = String(orderObj.transferenciaPendiente?.haciaArea || '').trim();
+    const userAreaClean = String(supervisorProfile?.area || '').trim();
+    const isRecipientOrAdmin =
+      isAdminUser || !towardArea || userAreaClean === towardArea;
+
+    if (hasPendingTransfer && isRecipientOrAdmin) {
+      if (
+        towardArea &&
+        areaFilter !== 'Todas' &&
+        areaFilter !== 'Administrador / Todos' &&
+        areaFilter !== towardArea
+      ) {
+        setAreaFilter(towardArea);
+      }
+      setScannedQrTarget({
+        type: 'RECEPCION_QR',
+        orderId: orderObj.id,
+        pedidoNum: orderObj.pedidoNum,
+        codArticulo: orderObj.codArticulo
+      });
+      await stopCameraScanner();
+      setShowQRScannerModal(false);
+      setShowReceptionModal(true);
+      showCdiBlueprintToast(
+        `🔄 Transferencia entrante hacia ${towardArea || effectiveCheckInArea}: revisa y acepta o rechaza.`
+      );
+      return;
+    }
+
+    let targetOrder = orderObj;
+    const prevArea = String(orderObj.areaActual || '').trim();
+    const isNeutralSource =
+      !prevArea ||
+      [
+        'Área de Consulta General',
+        'Área Neutra / Backlog',
+        'AREA_NEUTRA',
+        'COMERCIAL / VENTAS',
+        'Comercial / Ventas'
+      ].includes(prevArea);
+
+    if (!hasPendingTransfer && isNeutralSource && effectiveCheckInArea) {
+      const nowIso = new Date().toISOString();
+      targetOrder = {
+        ...orderObj,
+        area: effectiveCheckInArea,
+        areaActual: effectiveCheckInArea,
+        estado: 'EN_ESPERA',
+        estadoInterno: orderObj.estadoInterno === 'EN PROCESO' ? 'EN PROCESO' : 'En Espera',
+        fechaIngresoArea: nowIso,
+        historial: [
+          ...(Array.isArray(orderObj.historial) ? orderObj.historial : []),
+          {
+            fecha: nowIso,
+            accion: `Check-In por Escaneo QR en ${effectiveCheckInArea} (Desde ${prevArea || 'Consulta General'})`,
+            entrega: (prevArea || 'CONSULTA GENERAL').toUpperCase(),
+            recibe: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase()
+          }
+        ]
+      };
+      setOrders((prev) =>
+        (prev || []).map((o) => (o.id === targetOrder.id ? targetOrder : o))
+      );
+      syncOrderToSupabase(targetOrder);
+    }
+
+    if (autoRedirectEnabled || forceOpen) {
+      await stopCameraScanner();
+      setSelectedOrder(targetOrder);
+      setOpenSection(null);
+      setShowQRScannerModal(false);
+    } else {
+      setCheckInNotice(
+        hasPendingTransfer
+          ? `🔄 En tránsito hacia ${towardArea || 'otra sección'}.`
+          : `✅ Producto ubicado en ${targetOrder.areaActual || effectiveCheckInArea}`
+      );
+    }
+  };
+
   useEffect(() => {
     if (
+      !showQRScannerModal ||
       !scannedResult ||
       scannedResult.type !== 'PLANO_PRODUCTO' ||
-      !matchedBlueprintOrder ||
-      !effectiveCheckInArea
+      !matchedBlueprintOrder
     ) {
       return;
     }
 
-    const checkKey = `${matchedBlueprintOrder.id}__${effectiveCheckInArea}`;
-    if (autoCheckedInRef.current === checkKey) return;
+    const routeKey = `${matchedBlueprintOrder.id}__${scannedResult.raw || matchedBlueprintOrder.codArticulo}__${
+      matchedBlueprintOrder.transferenciaPendiente ? matchedBlueprintOrder.transferenciaPendiente.haciaArea || 'TRANS' : 'NORM'
+    }`;
+    if (lastAutoRoutedKeyRef.current === routeKey) return;
+    lastAutoRoutedKeyRef.current = routeKey;
 
-    const hadPendingTransfer = Boolean(matchedBlueprintOrder.transferenciaPendiente);
-    const prevArea = matchedBlueprintOrder.areaActual || 'Área Neutra / Backlog';
-    const needsRelocation = prevArea !== effectiveCheckInArea || hadPendingTransfer;
+    const timer = setTimeout(() => {
+      routeScannedProductOrder(matchedBlueprintOrder, false);
+    }, 0);
 
-    if (!needsRelocation) {
-      autoCheckedInRef.current = checkKey;
-      setCheckInNotice(`✅ Producto ubicado activamente en ${effectiveCheckInArea}`);
-      return;
-    }
-
-    autoCheckedInRef.current = checkKey;
-    const nowIso = new Date().toISOString();
-    const updatedOrder = {
-      ...matchedBlueprintOrder,
-      area: effectiveCheckInArea,
-      areaActual: effectiveCheckInArea,
-      estado: 'EN_ESPERA',
-      estadoInterno:
-        matchedBlueprintOrder.estadoInterno === 'EN PROCESO'
-          ? 'EN PROCESO'
-          : 'En Espera',
-      transferenciaPendiente: null,
-      fechaIngresoArea: nowIso,
-      historial: [
-        ...(Array.isArray(matchedBlueprintOrder.historial)
-          ? matchedBlueprintOrder.historial
-          : []),
-        {
-          fecha: nowIso,
-          accion: hadPendingTransfer
-            ? `Check-In por Escaneo QR en ${effectiveCheckInArea} (Transferencia en tránsito desde ${prevArea} aprobada y conciliada automáticamente)`
-            : `Check-In y Asignación Automática por Escaneo QR en ${effectiveCheckInArea} (Desde ${prevArea})`,
-          entrega: prevArea.toUpperCase(),
-          recibe: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase()
-        }
-      ]
-    };
-
-    setOrders((prev) =>
-      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-    );
-    syncOrderToSupabase(updatedOrder);
-
-    setCheckInNotice(
-      hadPendingTransfer
-        ? `🔄 Transferencia en tránsito desde ${prevArea} aprobada y conciliada automáticamente en ${effectiveCheckInArea}.`
-        : `📍 Check-In automático: Producto reubicado en ${effectiveCheckInArea}.`
-    );
-  }, [scannedResult, matchedBlueprintOrder, effectiveCheckInArea]);
+    return () => clearTimeout(timer);
+  }, [
+    showQRScannerModal,
+    scannedResult,
+    matchedBlueprintOrder,
+    autoRedirectEnabled,
+    effectiveCheckInArea,
+    supervisorProfile?.area
+  ]);
 
   // Acción 1 del Menú Operativo: ▶️ INICIAR TRABAJO (En Proceso)
   const handleStartWorkInProcess = () => {
@@ -511,13 +582,18 @@ const QRScannerModal = () => {
       await stopCameraScanner();
     }
 
+    lastAutoRoutedKeyRef.current = null;
     setScannedResult(parsed);
 
-    // Redirección directa inmediata para Color y Empaque (y para Despacho si el usuario tiene activada la redirección directa)
+    // Redirección directa inmediata para Color y Empaque (PLANO_PRODUCTO se enruta automáticamente en su useEffect según si tiene transferencia pendiente o no)
     if (autoRedirectEnabled && (parsed.type === 'COLOR' || parsed.type === 'EMPAQUE')) {
       executeDirectRedirection(parsed);
     }
   };
+
+  useEffect(() => {
+    processScannedTextRef.current = handleProcessScannedText;
+  });
 
   const handleScanImageFile = async (e) => {
     const file = e.target.files?.[0];
@@ -584,7 +660,7 @@ const QRScannerModal = () => {
           {/* Switch de redirección automática */}
           <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/70 rounded-2xl px-4 py-2.5">
             <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              ⚡ Redirigir automáticamente al escanear un Color, Paquete o Remisión
+              ⚡ Redirigir automáticamente al escanear un Producto, Color, Empaque o Remisión
             </div>
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
@@ -771,6 +847,23 @@ const QRScannerModal = () => {
                           </div>
                         )}
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => routeScannedProductOrder(matchedBlueprintOrder, true)}
+                        className={`w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all ${
+                          matchedBlueprintOrder.transferenciaPendiente
+                            ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                        }`}
+                      >
+                        <ArrowRight size={17} />
+                        <span>
+                          {matchedBlueprintOrder.transferenciaPendiente
+                            ? `Aceptar / Rechazar Transferencia Hacia ${matchedBlueprintOrder.transferenciaPendiente.haciaArea}`
+                            : 'Abrir Menú Principal del Producto (Avance / Transferir / Calidad)'}
+                        </span>
+                      </button>
 
                       {/* MENÚ OPERATIVO RÁPIDO (3 BOTONES TÁCTILES GRANDES) */}
                       <div className="space-y-2">

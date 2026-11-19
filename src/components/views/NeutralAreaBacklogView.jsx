@@ -16,7 +16,8 @@ import {
   Truck,
   PieChart,
   History,
-  Factory
+  Factory,
+  LayoutList
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
@@ -30,8 +31,7 @@ import {
   SolidWorksStampPreview,
   copyBlueprintQrToClipboard,
   downloadBlueprintQrPng,
-  buildProductBlueprintQrPayload,
-  showCdiBlueprintToast
+  buildProductBlueprintQrPayload
 } from '../../utils/colorQrHelper';
 import {
   isTargetBacklogDeliveryDate,
@@ -294,12 +294,12 @@ export default function NeutralAreaBacklogView() {
   // 'GENERACION' -> Fecha de Generación
   // 'DESPACHO' -> Fecha de Despacho
   // 'ALERTAS_COORD' -> Alertas de Coordinación
+  const currentYearStr = String(new Date().getFullYear());
   const [filterMode, setFilterMode] = useState('GENERACION');
   const [stageFilter, setStageFilter] = useState('TODOS'); // 'TODOS' | 'PRODUCCION' | 'DISENO_PROG' | 'COMERCIAL' | 'ALERTA_REZAGO'
   const [selectedMonth, setSelectedMonth] = useState('TODOS'); // 'TODOS' | 'YYYY-MM'
   const [selectedWeek, setSelectedWeek] = useState('TODAS'); // 'TODAS' | '1' | '2' | '3' | '4' | '5'
-  const [selectedYear, setSelectedYear] = useState('TODOS'); // 'TODOS' | '2025' | '2026' | '2027'
-  const [minPedidoNum, setMinPedidoNum] = useState(0); // 0 = Todos los pedidos (para incluir Enero, Febrero, Marzo y Diciembre sin excluir por número)
+  const [selectedYear, setSelectedYear] = useState(currentYearStr); // Por defecto el año actual; permite elegir 'TODOS' o cualquier año histórico
   const [expandedPedidos, setExpandedPedidos] = useState({});
   const [copiedId, setCopiedId] = useState(null);
   const [dashboardPedidoGroup, setDashboardPedidoGroup] = useState(null);
@@ -488,8 +488,6 @@ export default function NeutralAreaBacklogView() {
       }
     });
 
-    const minNumVal = Number(minPedidoNum) || 0;
-
     // 2. Recorrer TODOS los registros de `ribisoft_pedidos` (sin excluir los que ya entraron a planta) y fusionar con `produccion_pedidos`
     (ribisoftRows || []).forEach((r, idx) => {
       if (!r || typeof r !== 'object') return;
@@ -500,10 +498,6 @@ export default function NeutralAreaBacklogView() {
       const numMatch = ped.match(/\d+/);
       const pedNumber = numMatch ? Number(numMatch[0]) : 0;
       const coordAlert = alertsMap.get(ped) || null;
-
-      if (minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal && !coordAlert) {
-        return;
-      }
 
       const desc = String(
         r['Descripción'] ?? r['Descripcion'] ?? r['descripcion'] ?? r['Producto'] ?? r['producto'] ?? ''
@@ -677,7 +671,6 @@ export default function NeutralAreaBacklogView() {
       const numMatch = ped.match(/\d+/);
       const pedNumber = numMatch ? Number(numMatch[0]) : 0;
       const coordAlert = alertsMap.get(ped) || null;
-      if (minNumVal > 0 && pedNumber > 0 && pedNumber < minNumVal && !coordAlert) return;
 
       const plantFamily = buildMergedPlantFamily(groupOrders);
       const primaryOrd = plantFamily.primaryOrder || ord;
@@ -784,7 +777,7 @@ export default function NeutralAreaBacklogView() {
     });
 
     return Array.from(itemsMap.values());
-  }, [orders, ribisoftRows, alertsMap, prodToCodptMap, minPedidoNum, customDeliveryDatesMap]);
+  }, [orders, ribisoftRows, alertsMap, prodToCodptMap, customDeliveryDatesMap]);
 
   /**
    * Extrae la fecha activa del ítem según el `filterMode` seleccionado por el usuario:
@@ -817,15 +810,69 @@ export default function NeutralAreaBacklogView() {
     });
   }, [unifiedConsultaItems, filterMode]);
 
-  // Años disponibles dinámicamente (incluyendo siempre 2026 y 2027 para planeación comercial)
-  const availableYears = useMemo(() => {
-    const yearsSet = new Set([2026, 2027]);
-    modeScopedItems.forEach((item) => {
-      const parsed = getFilterModeDateInfo(item);
-      if (parsed?.year) yearsSet.add(parsed.year);
+  // Cambiar criterio de filtro priorizando el año actual si existen registros en ese año para ese modo
+  const handleSelectFilterMode = (newMode) => {
+    setFilterMode(newMode);
+    setSelectedMonth('TODOS');
+    const hasCurrentYearInMode = unifiedConsultaItems.some((item) => {
+      if (newMode === 'ALERTAS_COORD' && !item.hasCoordAlert) return false;
+      if (newMode === 'DESPACHO' && !item.fechaDespacho) return false;
+      if (newMode === 'GENERACION' && !item.fechaGeneracion && !item.fechaDespacho) return false;
+      const parsed = getFilterModeDateInfo(item, newMode);
+      return parsed && String(parsed.year) === currentYearStr;
     });
-    return Array.from(yearsSet).sort((a, b) => a - b);
-  }, [modeScopedItems, filterMode]);
+    setSelectedYear(hasCurrentYearInMode ? currentYearStr : 'TODOS');
+  };
+
+  // Años disponibles: rango continuo desde el registro histórico más antiguo (al menos 2021) hasta el próximo año
+  const availableYears = useMemo(() => {
+    const currentY = new Date().getFullYear();
+    let minY = Math.min(currentY, 2021);
+    let maxY = currentY + 1;
+
+    const pushDate = (rawVal) => {
+      const parsed = parseCommercialDeliveryDate(rawVal);
+      if (parsed?.year && parsed.year >= 2000 && parsed.year <= 2100) {
+        if (parsed.year < minY) minY = parsed.year;
+        if (parsed.year > maxY) maxY = parsed.year;
+      }
+    };
+
+    unifiedConsultaItems.forEach((item) => {
+      pushDate(item.fechaGeneracion);
+      pushDate(item.fechaDespacho);
+      pushDate(item.coordFechaEntrega);
+      pushDate(item.fechaAsignaRaw);
+      pushDate(item.fechaIngresoArea);
+    });
+
+    (ribisoftRows || []).forEach((r) => {
+      if (!r || typeof r !== 'object') return;
+      pushDate(r['fecha_genera_ped']);
+      pushDate(r['Fecha Genera Ped.']);
+      pushDate(r['Fecha Genera Ped']);
+      pushDate(r['Fecha Genera']);
+      pushDate(r['fecha_asigna']);
+      pushDate(r['Fecha Entrega']);
+      pushDate(r['fecha_entrega']);
+      pushDate(r['fecha_creacion']);
+    });
+
+    (orders || []).forEach((o) => {
+      if (!o) return;
+      pushDate(o.fechaGeneraPed);
+      pushDate(o.fecha_genera_ped);
+      pushDate(o.fechaCreacion);
+      pushDate(o.fechaIngresoArea);
+      pushDate(o.fechaEntregaPrometida);
+    });
+
+    const years = [];
+    for (let y = minY; y <= maxY; y++) {
+      years.push(y);
+    }
+    return years;
+  }, [unifiedConsultaItems, ribisoftRows, orders]);
 
   // Meses disponibles dinámicamente: SOLO son visibles los meses donde realmente existen pedidos en la fecha seleccionada
   const availableMonthsList = useMemo(() => {
@@ -1208,19 +1255,7 @@ export default function NeutralAreaBacklogView() {
     }
   };
 
-  const handleDownloadAllPedidoQrs = (pedidoGroup) => {
-    if (!pedidoGroup || !Array.isArray(pedidoGroup.items)) return;
-    pedidoGroup.items.forEach((item, idx) => {
-      setTimeout(() => {
-        downloadBlueprintQrPng(item);
-      }, idx * 280);
-    });
-    showCdiBlueprintToast(
-      `Descargando ${pedidoGroup.items.length} estampillas PNG para SolidWorks (PED #${pedidoGroup.pedidoNum})`
-    );
-  };
-
-  // Tarjeta compartida por pedido (solo consulta, planificación y descarga/copia de QR SolidWorks; sin envíos a planta)
+  // Tarjeta compartida por pedido (solo consulta, planificación y trazabilidad)
   const renderPedidoCard = (group) => {
     const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
     const dLeftDesp = group.fechaDespacho ? getDaysLeft(group.fechaDespacho) : null;
@@ -1414,10 +1449,10 @@ export default function NeutralAreaBacklogView() {
             </span>
           </div>
 
-          {/* ACCIONES DE CONSULTA: DASHBOARD TORTA + DESCARGA MASIVA DE QRs SOLIDWORKS */}
+          {/* ACCIÓN DE CONSULTA: DASHBOARD TORTA */}
           <div
             className={`flex flex-wrap items-center gap-2 ${
-              isGridCompact ? 'pt-2 border-t theme-border justify-between' : ''
+              isGridCompact ? 'pt-2 border-t theme-border justify-end' : ''
             }`}
           >
             <button
@@ -1431,16 +1466,6 @@ export default function NeutralAreaBacklogView() {
             >
               <PieChart size={14} className="text-emerald-400 dark:text-emerald-200" />
               <span>Dashboard</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDownloadAllPedidoQrs(group)}
-              className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] text-[11px] font-black uppercase flex items-center gap-1.5 shadow cursor-pointer hover:brightness-110"
-              title="Descargar todas las estampillas PNG (440x192px) de este pedido"
-            >
-              <Download size={14} />
-              <span>QRs ({group.items.length})</span>
             </button>
           </div>
         </div>
@@ -1623,39 +1648,81 @@ export default function NeutralAreaBacklogView() {
             </div>
           </div>
 
-          {/* Selector Rápido de Columnas de Cuadrícula y Rango de Pedido */}
+          {/* Selector Rápido de Columnas de Cuadrícula (Símbolos Visuales) */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <div className="flex items-center gap-1 theme-bg-main border theme-border rounded-xl p-1">
               <span className="text-[10px] font-black uppercase theme-text-muted px-2">
-                Cuadrícula:
+                Vista:
               </span>
-              {[1, 2, 3, 4, 5].map((cols) => (
+              {[
+                {
+                  cols: 1,
+                  title: 'Vista Tipo Lista (1 columna)',
+                  icon: <LayoutList size={16} />
+                },
+                {
+                  cols: 2,
+                  title: 'Cuadrícula de 2 Columnas',
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7.5" height="18" rx="1.5" />
+                      <rect x="13.5" y="3" width="7.5" height="18" rx="1.5" />
+                    </svg>
+                  )
+                },
+                {
+                  cols: 3,
+                  title: 'Cuadrícula de 3 Columnas',
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="3" width="5" height="18" rx="1.2" />
+                      <rect x="9.5" y="3" width="5" height="18" rx="1.2" />
+                      <rect x="17" y="3" width="5" height="18" rx="1.2" />
+                    </svg>
+                  )
+                },
+                {
+                  cols: 4,
+                  title: 'Cuadrícula de 4 Columnas',
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="3" width="3.5" height="18" rx="1" />
+                      <rect x="7.5" y="3" width="3.5" height="18" rx="1" />
+                      <rect x="13" y="3" width="3.5" height="18" rx="1" />
+                      <rect x="18.5" y="3" width="3.5" height="18" rx="1" />
+                    </svg>
+                  )
+                },
+                {
+                  cols: 5,
+                  title: 'Cuadrícula de 5 Columnas',
+                  icon: (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="1.5" y="3" width="2.5" height="18" rx="0.8" />
+                      <rect x="6" y="3" width="2.5" height="18" rx="0.8" />
+                      <rect x="10.75" y="3" width="2.5" height="18" rx="0.8" />
+                      <rect x="15.5" y="3" width="2.5" height="18" rx="0.8" />
+                      <rect x="20" y="3" width="2.5" height="18" rx="0.8" />
+                    </svg>
+                  )
+                }
+              ].map(({ cols, title, icon }) => (
                 <button
                   key={cols}
                   type="button"
                   onClick={() => setGridColumns(cols)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
+                  className={`p-2 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                     gridColumns === cols
                       ? 'bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm'
                       : 'theme-text-muted hover:bg-black/10 dark:hover:bg-white/10'
                   }`}
-                  title={cols === 1 ? 'Vista Tipo Lista (1 columna)' : `Cuadrícula de ${cols} Columnas`}
+                  title={title}
+                  aria-label={title}
                 >
-                  {cols === 1 ? 'Lista' : `${cols} Col`}
+                  {icon}
                 </button>
               ))}
             </div>
-
-            <select
-              value={minPedidoNum}
-              onChange={(e) => setMinPedidoNum(Number(e.target.value))}
-              className="px-3 py-2 rounded-xl theme-bg-card theme-text-main border theme-border font-black text-xs uppercase outline-none cursor-pointer"
-            >
-              <option value={0}>Todos los Pedidos RIBI</option>
-              <option value={64000}>Desde Pedido #64000</option>
-              <option value={63500}>Desde Pedido #63500</option>
-              <option value={63000}>Desde Pedido #63000</option>
-            </select>
           </div>
         </div>
 
@@ -1670,11 +1737,7 @@ export default function NeutralAreaBacklogView() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setFilterMode('GENERACION');
-                  setSelectedYear('TODOS');
-                  setSelectedMonth('TODOS');
-                }}
+                onClick={() => handleSelectFilterMode('GENERACION')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
                   filterMode === 'GENERACION'
                     ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border-[var(--color-primary)] shadow-sm'
@@ -1687,11 +1750,7 @@ export default function NeutralAreaBacklogView() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setFilterMode('DESPACHO');
-                  setSelectedYear('TODOS');
-                  setSelectedMonth('TODOS');
-                }}
+                onClick={() => handleSelectFilterMode('DESPACHO')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
                   filterMode === 'DESPACHO'
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
@@ -1704,11 +1763,7 @@ export default function NeutralAreaBacklogView() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setFilterMode('ALERTAS_COORD');
-                  setSelectedYear('TODOS');
-                  setSelectedMonth('TODOS');
-                }}
+                onClick={() => handleSelectFilterMode('ALERTAS_COORD')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 border transition-all cursor-pointer ${
                   filterMode === 'ALERTAS_COORD'
                     ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
@@ -1783,10 +1838,7 @@ export default function NeutralAreaBacklogView() {
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedMonth('TODOS');
-                  setSelectedYear('TODOS');
-                }}
+                onClick={() => setSelectedMonth('TODOS')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-all cursor-pointer ${
                   selectedMonth === 'TODOS' && selectedYear === 'TODOS'
                     ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border-[var(--color-primary)]'

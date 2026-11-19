@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   History, ChevronUp, ChevronDown, Mic, MicOff, Camera, 
-  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers, Truck, CheckCircle2, Copy, Download, QrCode
+  ImageIcon, MessageSquare, UserCheck, ArrowRightLeft, AlertCircle, Package, FileText, Layers, Truck, CheckCircle2, Copy, Download, QrCode, Play, ShieldCheck
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
@@ -38,14 +38,16 @@ const OrderDetailsModal = ({
     tempIsPartial, setTempIsPartial,
     showHistoryEntrega, setShowHistoryEntrega,
     supervisorProfile,
-    areaFilter,
+    areaFilter, setAreaFilter,
     orders,
     setOrders,
     syncOrderToSupabase,
     openDispatchModal,
     inventoryReservations,
     setActiveAlertMaterials,
-    setShowMaterialsAlertModal
+    setShowMaterialsAlertModal,
+    setShowReceptionModal,
+    setScannedQrTarget
   } = useAppContext();
 
   const [isTerminadoLocal, setIsTerminadoLocal] = useState(selectedOrder?.isTerminado || false);
@@ -155,7 +157,98 @@ const OrderDetailsModal = ({
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
-              
+
+              {/* TRANSFERENCIA EN TRÁNSITO DETECTADA */}
+              {selectedOrder.transferenciaPendiente && (
+                <div className="p-3.5 rounded-2xl bg-purple-500/15 border-2 border-purple-500/60 shadow-sm space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-xs font-black uppercase text-purple-800 dark:text-purple-200">
+                      🔄 Transferencia en Tránsito Hacia: {selectedOrder.transferenciaPendiente.haciaArea}
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-purple-600 text-white text-[10px] font-black uppercase shrink-0">
+                      Pendiente
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold theme-text-muted">
+                    Enviado desde {selectedOrder.areaActual} por {selectedOrder.transferenciaPendiente.entregadoPor || 'Planta'}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetArea = selectedOrder.transferenciaPendiente?.haciaArea;
+                      if (
+                        supervisorProfile?.area === 'Administrador / Todos' &&
+                        targetArea &&
+                        areaFilter !== 'Todas' &&
+                        areaFilter !== 'Administrador / Todos' &&
+                        areaFilter !== targetArea
+                      ) {
+                        setAreaFilter(targetArea);
+                      }
+                      setScannedQrTarget({
+                        type: 'RECEPCION_QR',
+                        orderId: selectedOrder.id,
+                        pedidoNum: selectedOrder.pedidoNum,
+                        codArticulo: selectedOrder.codArticulo
+                      });
+                      setSelectedOrder(null);
+                      setShowReceptionModal(true);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase flex items-center justify-center gap-2 shadow cursor-pointer transition-all active:scale-95"
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Aceptar / Rechazar Transferencia en Recepciones</span>
+                  </button>
+                </div>
+              )}
+
+              {/* MENÚ RÁPIDO DE ACCIONES DEL PRODUCTO */}
+              <div className="p-3 rounded-2xl theme-bg-card border theme-border shadow-sm space-y-2">
+                <div className="text-[11px] font-black uppercase tracking-wider theme-text-muted">
+                  ⚡ Menú de Acciones del Producto (Selecciona qué deseas registrar):
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection('planta')}
+                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                      openSection === 'planta'
+                        ? 'bg-amber-500 text-slate-950 border-amber-600 shadow'
+                        : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35 hover:bg-amber-500/25'
+                    }`}
+                  >
+                    <Play size={16} />
+                    <span>Avance Planta</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection('entrega')}
+                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                      openSection === 'entrega'
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow'
+                        : 'bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/35 hover:bg-indigo-500/25'
+                    }`}
+                  >
+                    <ArrowRightLeft size={16} />
+                    <span>Transferir Área</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection('calidad')}
+                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                      openSection === 'calidad'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow'
+                        : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/25'
+                    }`}
+                  >
+                    <ShieldCheck size={16} />
+                    <span>Calidad (QC)</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Botón Ver Planos */}
               <button 
                   type="button" 

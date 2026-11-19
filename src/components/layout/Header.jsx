@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck, FolderKanban } from 'lucide-react';
+import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
 import CDILogo from '../ui/CDILogo';
@@ -13,7 +13,6 @@ const Header = () => {
     viewFilter, setViewFilter,
     coordinationAlerts,
     setShowCoordViewModal,
-    setShowPlantPlannerModal,
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
     areaFilter,
@@ -89,9 +88,6 @@ const Header = () => {
              </button>
              <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 ${viewFilter === 'DESPACHADOS' ? 'bg-emerald-600 text-white border border-emerald-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                <Truck size={"1.1em"} /> Historial de Despachos ({despachadosCount})
-             </button>
-             <button type="button" onClick={() => setShowPlantPlannerModal(true)} className="px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-500 shadow-sm cursor-pointer" title="Abrir Planificador y Área de Consulta General (Disponible para todos los usuarios)">
-               <FolderKanban size={"1.1em"} /> Planificación / Consulta
              </button>
              <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1 ${coordinationAlerts.length > 0 ? 'bg-orange-500 text-white border border-orange-600 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
                <AlertTriangle size={"1.2em"} /> Coord ({coordinationAlerts.length})
