@@ -60,16 +60,39 @@ const PlantPlannerModal = ({
     const [isAdminCardExpanded, setIsAdminCardExpanded] = useState(false);
     const [expandedAdminPedidos, setExpandedAdminPedidos] = useState({});
 
-    // Sincronización en tiempo real y limpieza de caché al abrir el Planificador
+    // Sincronización en tiempo real al abrir el Planificador, recuperar foco o detectar cambios en BD
     useEffect(() => {
         let isMounted = true;
-        const refreshPlannerOrders = async () => {
+        let isRefreshing = false;
+        let debounceTimer = null;
+
+        const refreshPlannerOrders = async (showLoader = false) => {
+            if (isRefreshing || !isMounted) return;
+            isRefreshing = true;
             try {
-                setLoadingErpRows(true);
+                if (showLoader) setLoadingErpRows(true);
                 await supabase.auth.getSession();
-                const { data, error } = await supabase.from('produccion_pedidos').select('data_completa');
-                if (!error && data && isMounted && setOrders) {
-                    const fresh = data
+
+                // Cargar todas las filas de producción (paginado de 1000 en 1000 para no omitir nada)
+                let allProd = [];
+                let pFrom = 0;
+                const pStep = 1000;
+                let pHasMore = true;
+                while (pHasMore && isMounted) {
+                    const { data, error } = await supabase
+                        .from('produccion_pedidos')
+                        .select('data_completa')
+                        .range(pFrom, pFrom + pStep - 1);
+                    if (error || !data || data.length === 0) {
+                        pHasMore = false;
+                    } else {
+                        allProd = allProd.concat(data);
+                        pFrom += pStep;
+                        if (data.length < pStep) pHasMore = false;
+                    }
+                }
+                if (allProd.length > 0 && isMounted && setOrders) {
+                    const fresh = allProd
                         .map(r => r.data_completa)
                         .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum && !isUnassignedErpBulkImport(o));
                     setOrders(fresh);
@@ -99,11 +122,50 @@ const PlantPlannerModal = ({
             } catch (err) {
                 console.error("Error al refrescar órdenes en Planificador:", err);
             } finally {
-                if (isMounted) setLoadingErpRows(false);
+                isRefreshing = false;
+                if (isMounted && showLoader) setLoadingErpRows(false);
             }
         };
-        refreshPlannerOrders();
-        return () => { isMounted = false; };
+
+        const scheduleRefresh = () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                refreshPlannerOrders(false);
+            }, 1200);
+        };
+
+        const handleVisibility = () => {
+            if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+                refreshPlannerOrders(false);
+            }
+        };
+
+        refreshPlannerOrders(true);
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('cdi-erp-synced', scheduleRefresh);
+            window.addEventListener('cdi-force-sync', scheduleRefresh);
+            window.addEventListener('focus', handleVisibility);
+            document.addEventListener('visibilitychange', handleVisibility);
+        }
+
+        const plannerRealtimeChannel = supabase.channel('planner-realtime-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, scheduleRefresh)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, scheduleRefresh)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, scheduleRefresh)
+            .subscribe();
+
+        return () => {
+            isMounted = false;
+            clearTimeout(debounceTimer);
+            supabase.removeChannel(plannerRealtimeChannel);
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('cdi-erp-synced', scheduleRefresh);
+                window.removeEventListener('cdi-force-sync', scheduleRefresh);
+                window.removeEventListener('focus', handleVisibility);
+                document.removeEventListener('visibilitychange', handleVisibility);
+            }
+        };
     }, []);
 
 

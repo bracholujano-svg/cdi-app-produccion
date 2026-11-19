@@ -99,19 +99,27 @@ export const useSupabaseData = () => {
             }
         };
 
-        loadFromCacheAndFetch(false);
+        loadFromCacheAndFetch(true);
         
         const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_IN') {
-                loadFromCacheAndFetch(false);
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                loadFromCacheAndFetch(true);
             }
         });
 
         const handleErpSyncEvent = () => {
             loadFromCacheAndFetch(true);
         };
+        const handleVisibilityOrFocus = () => {
+            if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+                loadFromCacheAndFetch(false);
+            }
+        };
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
+            window.addEventListener('cdi-force-sync', handleErpSyncEvent);
+            window.addEventListener('focus', handleVisibilityOrFocus);
+            document.addEventListener('visibilitychange', handleVisibilityOrFocus);
         }
         
         let workerDebounceTimeout;
@@ -168,26 +176,45 @@ export const useSupabaseData = () => {
             scheduleWorkerReprocess();
         };
 
+        let ribiRealtimeTimeout;
+        const handleRealtimeRibisoft = () => {
+            clearTimeout(ribiRealtimeTimeout);
+            ribiRealtimeTimeout = setTimeout(() => {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+                }
+            }, 1500);
+        };
+
         try {
             const channels = supabase.channel('custom-all-channel')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario' }, handleRealtimeInventario)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos_pedido' }, handleRealtimeRequerimientos)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, handleRealtimeRibisoft)
                 .subscribe();
             
             return () => { 
+                clearTimeout(ribiRealtimeTimeout);
                 supabase.removeChannel(channels); 
                 if (workerRef.current) workerRef.current.terminate();
                 authListener?.subscription?.unsubscribe();
                 if (typeof window !== 'undefined') {
                     window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
+                    window.removeEventListener('cdi-force-sync', handleErpSyncEvent);
+                    window.removeEventListener('focus', handleVisibilityOrFocus);
+                    document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
                 }
             };
         } catch(e) {
             return () => {
+                clearTimeout(ribiRealtimeTimeout);
                 if (workerRef.current) workerRef.current.terminate();
                 authListener?.subscription?.unsubscribe();
                 if (typeof window !== 'undefined') {
                     window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
+                    window.removeEventListener('cdi-force-sync', handleErpSyncEvent);
+                    window.removeEventListener('focus', handleVisibilityOrFocus);
+                    document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
                 }
             };
         }

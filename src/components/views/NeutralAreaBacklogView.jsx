@@ -7,26 +7,19 @@ import {
   Package,
   Copy,
   Download,
-  ArrowRight,
   CheckCircle2,
   Clock,
   FileCode2,
   FolderKanban,
   ArrowUpDown,
   AlertTriangle,
-  Truck,
-  Database
+  Truck
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../supabaseClient';
-import { AREAS_RECEPCION, CONFIG_PROCESOS } from '../../utils/constants';
 import { formatLocalDate, getDaysLeft } from '../../utils/helpers';
-import {
-  cleanErpCode,
-  normalizeProductName,
-  importRibisoftExcelFile
-} from '../../services/ribisoftExcelImporter';
+import { cleanErpCode, normalizeProductName } from '../../services/ribisoftExcelImporter';
 import erpDeliveryDatesMap from '../../utils/erpDeliveryDatesMap.json';
 import CDILogo from '../ui/CDILogo';
 import {
@@ -55,6 +48,32 @@ const MONTH_NAMES = [
   { num: 11, name: 'Noviembre', short: 'Nov' },
   { num: 12, name: 'Diciembre', short: 'Dic' }
 ];
+
+const getMonthWeekInfo = (isoDateStr) => {
+  const parsed = parseCommercialDeliveryDate(isoDateStr);
+  if (!parsed) return null;
+  const weekNum = Math.min(5, Math.ceil(parsed.day / 7));
+  const lastDayOfMonth = new Date(parsed.year, parsed.month, 0).getDate();
+  const ranges = {
+    1: { start: 1, end: 7 },
+    2: { start: 8, end: 14 },
+    3: { start: 15, end: 21 },
+    4: { start: 22, end: 28 },
+    5: { start: 29, end: Math.max(29, lastDayOfMonth) }
+  };
+  const r = ranges[weekNum];
+  const mInfo = MONTH_NAMES.find((m) => m.num === parsed.month);
+  const mName = mInfo ? mInfo.name : String(parsed.month);
+  const mShort = mInfo ? mInfo.short : String(parsed.month);
+  const pad = (n) => String(n).padStart(2, '0');
+  return {
+    weekNum,
+    key: String(weekNum),
+    shortLabel: `Semana ${weekNum} (${pad(r.start)}-${pad(r.end)} ${mShort})`,
+    fullTitle: `Semana ${weekNum} de ${mName} ${parsed.year}`,
+    rangeLabel: `Del ${pad(r.start)} al ${pad(r.end)} de ${mName} ${parsed.year}`
+  };
+};
 
 export const isOrderInNeutralBacklog = (o, alertsMap = null) => {
   if (!o || o.estadoInterno === 'DESPACHADO' || o.isTerminado) return false;
@@ -97,10 +116,7 @@ export const isOrderInNeutralBacklog = (o, alertsMap = null) => {
 export default function NeutralAreaBacklogView() {
   const {
     orders,
-    setOrders,
-    syncOrderToSupabase,
     coordinationAlerts,
-    supervisorProfile,
     setSelectedOrder,
     supabaseData,
     gridColumns,
@@ -117,32 +133,20 @@ export default function NeutralAreaBacklogView() {
   const [ribisoftRows, setRibisoftRows] = useState([]);
   const [loadingRibi, setLoadingRibi] = useState(true);
   const [customDeliveryDatesMap, setCustomDeliveryDatesMap] = useState({});
-  const [syncingExcel, setSyncingExcel] = useState(false);
-  const ribiExcelInputRef = useRef(null);
   const hasSyncedDecMapRef = useRef(false);
   const [backlogSearch, setBacklogSearch] = useState('');
 
   // 3 Modos de filtrado por fecha/origen:
-  // 'GENERACION' -> Fecha de Generación (RIBI)
-  // 'DESPACHO' -> Fecha de Despacho (Comercial)
-  // 'ALERTAS_COORD' -> Alertas de Coordinación de Planta (Coordinador / Jefe de Planta)
+  // 'GENERACION' -> Fecha de Generación
+  // 'DESPACHO' -> Fecha de Despacho
+  // 'ALERTAS_COORD' -> Alertas de Coordinación
   const [filterMode, setFilterMode] = useState('GENERACION');
   const [selectedMonth, setSelectedMonth] = useState('TODOS'); // 'TODOS' | 'YYYY-MM'
+  const [selectedWeek, setSelectedWeek] = useState('TODAS'); // 'TODAS' | '1' | '2' | '3' | '4' | '5'
   const [selectedYear, setSelectedYear] = useState('TODOS'); // 'TODOS' | '2025' | '2026' | '2027'
   const [minPedidoNum, setMinPedidoNum] = useState(0); // 0 = Todos los pedidos (para incluir Enero, Febrero, Marzo y Diciembre sin excluir por número)
   const [expandedPedidos, setExpandedPedidos] = useState({});
-  const [targetAreaByPedido, setTargetAreaByPedido] = useState({});
-  const [targetAreaByItem, setTargetAreaByItem] = useState({});
   const [copiedId, setCopiedId] = useState(null);
-
-  const productionTargetAreas = useMemo(() => {
-    return AREAS_RECEPCION.filter(
-      (a) =>
-        a !== 'Área de Consulta General' &&
-        a !== 'Área Neutra / Backlog' &&
-        a !== 'Comercial / Ventas'
-    );
-  }, []);
 
   const alertsMap = useMemo(() => {
     const map = new Map();
@@ -253,19 +257,44 @@ export default function NeutralAreaBacklogView() {
     loadCustomDeliveryDates();
     loadRibisoftPedidos();
 
+    let realtimeTimer = null;
     const handleErpSynced = () => {
       loadCustomDeliveryDates();
       loadRibisoftPedidos();
     };
+    const handleVisibilityOrFocus = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        handleErpSynced();
+      }
+    };
+    const scheduleRibiReload = () => {
+      clearTimeout(realtimeTimer);
+      realtimeTimer = setTimeout(() => {
+        handleErpSynced();
+      }, 1500);
+    };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('cdi-erp-synced', handleErpSynced);
+      window.addEventListener('cdi-force-sync', handleErpSynced);
+      window.addEventListener('focus', handleVisibilityOrFocus);
+      document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     }
+
+    const ribiChannel = supabase
+      .channel('consulta-general-ribi-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, scheduleRibiReload)
+      .subscribe();
 
     return () => {
       isMounted = false;
+      clearTimeout(realtimeTimer);
+      supabase.removeChannel(ribiChannel);
       if (typeof window !== 'undefined') {
         window.removeEventListener('cdi-erp-synced', handleErpSynced);
+        window.removeEventListener('cdi-force-sync', handleErpSynced);
+        window.removeEventListener('focus', handleVisibilityOrFocus);
+        document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       }
     };
   }, []);
@@ -597,7 +626,44 @@ export default function NeutralAreaBacklogView() {
     }
   }, [availableMonthsList, selectedMonth]);
 
-  // Filtrado completo por buscador, cliente, año, mes y modo
+  // Reiniciar el filtro semanal al cambiar de mes, año o criterio de fecha
+  useEffect(() => {
+    setSelectedWeek('TODAS');
+  }, [filterMode, selectedYear, selectedMonth]);
+
+  // Semanas disponibles dentro del mes seleccionado (Semanas 1..5 con pedidos existentes)
+  const availableWeeksInSelectedMonth = useMemo(() => {
+    if (selectedMonth === 'TODOS') return [];
+    const weekMap = new Map();
+    modeScopedItems.forEach((item) => {
+      const parsed = getFilterModeDateInfo(item);
+      if (!parsed) return;
+      if (selectedYear !== 'TODOS' && String(parsed.year) !== String(selectedYear)) {
+        return;
+      }
+      const ymKey = `${parsed.year}-${String(parsed.month).padStart(2, '0')}`;
+      if (ymKey !== selectedMonth) return;
+
+      const wInfo = getMonthWeekInfo(parsed.isoDate);
+      if (!wInfo) return;
+      if (!weekMap.has(wInfo.key)) {
+        weekMap.set(wInfo.key, {
+          ...wInfo,
+          pedidosSet: new Set(),
+          itemsCount: 0,
+          unitsCount: 0
+        });
+      }
+      const bucket = weekMap.get(wInfo.key);
+      bucket.pedidosSet.add(String(item.pedidoNum || '').trim().toUpperCase());
+      bucket.itemsCount += 1;
+      bucket.unitsCount += Number(item.cantidad) || 1;
+    });
+
+    return Array.from(weekMap.values()).sort((a, b) => a.weekNum - b.weekNum);
+  }, [modeScopedItems, filterMode, selectedYear, selectedMonth]);
+
+  // Filtrado completo por buscador, cliente, año, mes, semana y modo
   const filteredItems = useMemo(() => {
     const qLocal = backlogSearch.trim().toLowerCase();
     const qGlobal = (globalSearchTerm || '').trim().toLowerCase();
@@ -619,6 +685,11 @@ export default function NeutralAreaBacklogView() {
         if (!parsedDate) return false;
         const ymKey = `${parsedDate.year}-${String(parsedDate.month).padStart(2, '0')}`;
         if (ymKey !== selectedMonth) return false;
+
+        if (selectedWeek !== 'TODAS') {
+          const wInfo = getMonthWeekInfo(parsedDate.isoDate);
+          if (!wInfo || wInfo.key !== String(selectedWeek)) return false;
+        }
       }
 
       if (clientUpper) {
@@ -648,6 +719,7 @@ export default function NeutralAreaBacklogView() {
     globalSearchTerm,
     globalClientFilter,
     selectedMonth,
+    selectedWeek,
     selectedYear,
     filterMode
   ]);
@@ -679,8 +751,6 @@ export default function NeutralAreaBacklogView() {
       g.items.push(ord);
     });
 
-    const list = Array.from(map.values());
-
     const getEffectiveIsoDate = (group) => {
       if (filterMode === 'ALERTAS_COORD') {
         return parseCommercialDeliveryDate(group.coordFechaEntrega)?.isoDate || null;
@@ -690,6 +760,14 @@ export default function NeutralAreaBacklogView() {
       }
       return parseCommercialDeliveryDate(group.fechaGeneracion)?.isoDate || null;
     };
+
+    const list = Array.from(map.values()).map((g) => {
+      const firstItemIso = g.items?.[0] ? getFilterModeDateInfo(g.items[0])?.isoDate : null;
+      return {
+        ...g,
+        effectiveIsoDate: firstItemIso || getEffectiveIsoDate(g)
+      };
+    });
 
     if (sortBy === 'pedido_asc') {
       list.sort((a, b) =>
@@ -701,8 +779,8 @@ export default function NeutralAreaBacklogView() {
       );
     } else if (sortBy === 'fecha_asc') {
       list.sort((a, b) => {
-        const dA = getEffectiveIsoDate(a);
-        const dB = getEffectiveIsoDate(b);
+        const dA = a.effectiveIsoDate;
+        const dB = b.effectiveIsoDate;
         if (!dA && !dB) {
           return String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true });
         }
@@ -714,8 +792,8 @@ export default function NeutralAreaBacklogView() {
       });
     } else if (sortBy === 'fecha_desc') {
       list.sort((a, b) => {
-        const dA = getEffectiveIsoDate(a);
-        const dB = getEffectiveIsoDate(b);
+        const dA = a.effectiveIsoDate;
+        const dB = b.effectiveIsoDate;
         if (!dA && !dB) {
           return String(b.pedidoNum).localeCompare(String(a.pedidoNum), undefined, { numeric: true });
         }
@@ -733,6 +811,33 @@ export default function NeutralAreaBacklogView() {
 
     return list;
   }, [filteredItems, alertsMap, sortBy, filterMode]);
+
+  // Agrupación automática por semanas cuando el usuario selecciona un mes puntual
+  const weeklySections = useMemo(() => {
+    if (selectedMonth === 'TODOS') return [];
+    const secMap = new Map();
+    groupedPedidos.forEach((group) => {
+      const wInfo = getMonthWeekInfo(group.effectiveIsoDate);
+      const wKey = wInfo ? wInfo.key : '0';
+      if (!secMap.has(wKey)) {
+        secMap.set(wKey, {
+          key: wKey,
+          weekNum: wInfo ? wInfo.weekNum : 99,
+          shortLabel: wInfo ? wInfo.shortLabel : 'Sin Semana',
+          fullTitle: wInfo ? wInfo.fullTitle : 'Sin Fecha de Semana',
+          rangeLabel: wInfo ? wInfo.rangeLabel : '',
+          pedidos: [],
+          itemsCount: 0,
+          unitsCount: 0
+        });
+      }
+      const sec = secMap.get(wKey);
+      sec.pedidos.push(group);
+      sec.itemsCount += group.items.length;
+      sec.unitsCount += group.items.reduce((acc, it) => acc + (Number(it.cantidad) || 1), 0);
+    });
+    return Array.from(secMap.values()).sort((a, b) => a.weekNum - b.weekNum);
+  }, [groupedPedidos, selectedMonth]);
 
   const totalUnitsCount = useMemo(
     () => filteredItems.reduce((acc, o) => acc + (Number(o.cantidad) || 1), 0),
@@ -771,102 +876,220 @@ export default function NeutralAreaBacklogView() {
     );
   };
 
-  const buildPlantReadyOrder = (item, targetArea, nowIso) => {
-    const nextState = CONFIG_PROCESOS[targetArea]?.[0] || 'En Espera';
-    const generateUUID = () =>
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `ORD_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  // Tarjeta compartida por pedido (solo consulta, planificación y descarga/copia de QR SolidWorks; sin envíos a planta)
+  const renderPedidoCard = (group) => {
+    const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
+    const dLeftDesp = group.fechaDespacho ? getDaysLeft(group.fechaDespacho) : null;
+    const dLeftCoord = group.coordFechaEntrega ? getDaysLeft(group.coordFechaEntrega) : null;
+    const isGridCompact = gridColumns > 1 && !isExpanded;
 
-    const finalId = item.isFromPlantTable ? item.id : generateUUID();
+    return (
+      <div
+        key={group.pedidoNum}
+        className={`theme-bg-card border-2 ${
+          group.hasCoordAlert ? 'border-orange-500/70' : 'theme-border'
+        } rounded-3xl shadow-lg overflow-hidden flex flex-col justify-between transition-all hover:border-[var(--color-primary)] ${
+          isExpanded ? 'col-span-full' : ''
+        }`}
+      >
+        {/* CABECERA DEL PEDIDO */}
+        <div
+          className={`p-4 sm:p-5 theme-bg-header ${
+            isExpanded ? 'border-b theme-border' : ''
+          } flex flex-col ${
+            isGridCompact ? 'gap-3 h-full justify-between' : 'xl:flex-row xl:items-center justify-between gap-4'
+          }`}
+        >
+          <div
+            className="flex flex-col gap-2 cursor-pointer flex-1"
+            onClick={() =>
+              setExpandedPedidos((prev) => ({
+                ...prev,
+                [group.pedidoNum]: !isExpanded
+              }))
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="px-3.5 py-1 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] font-black text-sm sm:text-base tracking-wide shadow">
+                PED #{group.pedidoNum}
+              </span>
 
-    return {
-      ...item,
-      id: finalId,
-      isFromPlantTable: true,
-      area: targetArea,
-      areaActual: targetArea,
-      estado: 'EN_ESPERA',
-      estadoInterno: nextState,
-      qr_plano_payload: buildProductBlueprintQrPayload({
-        id: finalId,
-        pedidoNum: item.pedidoNum,
-        codArticulo: item.codArticulo
-      }),
-      fechaIngresoArea: nowIso,
-      bitacoraTurnos: Array.isArray(item.bitacoraTurnos) ? item.bitacoraTurnos : [],
-      bitacoraCalidad: Array.isArray(item.bitacoraCalidad) ? item.bitacoraCalidad : [],
-      historial: [
-        ...(Array.isArray(item.historial) ? item.historial : []),
-        {
-          fecha: nowIso,
-          accion: `Enviado desde Área de Consulta General hacia ${targetArea}`,
-          entrega: (supervisorProfile?.name || 'CONSULTA GENERAL').toUpperCase(),
-          recibe: targetArea.toUpperCase()
-        }
-      ]
-    };
-  };
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {group.hasCoordAlert && (
+                  <span className="px-2 py-0.5 rounded-lg bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/40 font-black text-[10px] uppercase flex items-center gap-1">
+                    <AlertTriangle size={11} /> Coord.
+                  </span>
+                )}
+                <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black text-xs">
+                  {group.items.length} ÍTEM(S)
+                </span>
+              </div>
+            </div>
 
-  const handleMoveItemToProduction = (product, destinationArea) => {
-    const targetArea = destinationArea || targetAreaByItem[product.id] || 'Diseño';
-    const nowIso = new Date().toISOString();
-    const readyOrder = buildPlantReadyOrder(product, targetArea, nowIso);
+            <h3 className="text-sm sm:text-base font-black uppercase theme-text-main leading-snug line-clamp-2">
+              {group.cliente}
+              {group.proyecto && group.proyecto !== group.cliente
+                ? ` — ${group.proyecto}`
+                : ''}
+            </h3>
 
-    setOrders((prev) => {
-      const exists = (prev || []).some((o) => o.id === readyOrder.id);
-      if (exists) {
-        return prev.map((o) => (o.id === readyOrder.id ? readyOrder : o));
-      }
-      return [...(prev || []), readyOrder];
-    });
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold theme-text-muted">
+              {group.fechaGeneracion && (
+                <span className="px-2 py-0.5 rounded theme-bg-main border theme-border flex items-center gap-1 font-bold">
+                  <Clock size={12} /> Gen: {formatLocalDate(group.fechaGeneracion)}
+                </span>
+              )}
 
-    syncOrderToSupabase(readyOrder);
-    showCdiBlueprintToast(`Ítem ${product.codArticulo} enviado a ${targetArea}`);
-  };
+              {group.fechaDespacho && (
+                <span
+                  className={`px-2 py-0.5 rounded flex items-center gap-1 font-black ${
+                    dLeftDesp !== null && dLeftDesp < 0
+                      ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  <Calendar size={12} />
+                  Desp: {formatLocalDate(group.fechaDespacho)}
+                  {dLeftDesp !== null && ` (${dLeftDesp}d)`}
+                </span>
+              )}
 
-  const handleMoveEntirePedidoToProduction = (pedidoGroup) => {
-    if (!pedidoGroup || !Array.isArray(pedidoGroup.items)) return;
-    const targetArea = targetAreaByPedido[pedidoGroup.pedidoNum] || 'Diseño';
-    const nowIso = new Date().toISOString();
+              {group.coordFechaEntrega && (filterMode === 'ALERTAS_COORD' || !group.fechaDespacho) && (
+                <span className="px-2 py-0.5 rounded bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 flex items-center gap-1 font-black">
+                  <AlertTriangle size={12} />
+                  Coord: {formatLocalDate(group.coordFechaEntrega)}
+                  {dLeftCoord !== null && ` (${dLeftCoord}d)`}
+                </span>
+              )}
 
-    const preparedOrders = pedidoGroup.items.map((item) =>
-      buildPlantReadyOrder(item, targetArea, nowIso)
+              {group.areaActual && (
+                <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black text-[11px] uppercase">
+                  En: {group.areaActual}
+                </span>
+              )}
+            </div>
+
+            {group.coordAlertNota && (
+              <div className="text-[11px] font-bold text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg px-2 py-1 line-clamp-2">
+                Nota Coord.: {group.coordAlertNota}
+              </div>
+            )}
+
+            <span className="text-[11px] underline theme-text-primary font-black">
+              {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs SolidWorks'}
+            </span>
+          </div>
+
+          {/* ACCIÓN SOLO DE CONSULTA: DESCARGA MASIVA DE QRs SOLIDWORKS */}
+          <div
+            className={`flex flex-wrap items-center gap-2 ${
+              isGridCompact ? 'pt-2 border-t theme-border justify-between' : ''
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => handleDownloadAllPedidoQrs(group)}
+              className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] text-[11px] font-black uppercase flex items-center gap-1.5 shadow cursor-pointer hover:brightness-110"
+              title="Descargar todas las estampillas PNG (440x192px) de este pedido"
+            >
+              <Download size={14} />
+              <span>QRs ({group.items.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* CUADRÍCULA DE ÍTEMS Y ESTAMPILLAS QR PARA SOLIDWORKS */}
+        {isExpanded && (
+          <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 bg-black/5 dark:bg-black/20">
+            {group.items.map((item) => {
+              const isCopied = copiedId === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (item.isFromPlantTable) {
+                      setSelectedOrder(item);
+                    }
+                  }}
+                  className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-sm"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono font-black text-xs">
+                        CÓD: {item.codArticulo || 'S/C'}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black text-xs">
+                        CANT: {item.cantidad || 1}
+                      </span>
+                    </div>
+
+                    <h4 className="font-black text-sm sm:text-base uppercase theme-text-main leading-snug">
+                      {item.nombre}
+                    </h4>
+
+                    {item.programador && (
+                      <div className="text-[11px] font-bold theme-text-muted uppercase">
+                        Programador: {item.programador}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* VISTA PREVIA FIEL 1:1 (220x96px) DE LA ESTAMPILLA DE SOLIDWORKS */}
+                  <div
+                    className="theme-bg-card p-2.5 rounded-xl border theme-border flex flex-col items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="text-[10px] font-black uppercase tracking-wider theme-text-muted">
+                      Estampilla SolidWorks (220×96 px • Nivel H)
+                    </div>
+                    <SolidWorksStampPreview product={item} />
+
+                    <div className="grid grid-cols-2 gap-1.5 w-full pt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyStamp(e, item)}
+                        className={`py-2 px-2.5 rounded-xl font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer ${
+                          isCopied
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-[var(--color-primary)] text-[var(--color-surface)] hover:brightness-110 active:scale-95'
+                        }`}
+                        title="Copiar imagen PNG al portapapeles para pegar con Ctrl+V en SolidWorks (.SLDDRW)"
+                      >
+                        {isCopied ? (
+                          <>
+                            <CheckCircle2 size={14} />
+                            <span>¡Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            <span>Copiar QR Plano</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadBlueprintQrPng(item);
+                        }}
+                        className="py-2 px-2.5 rounded-xl theme-bg-main border theme-border theme-text-main hover:brightness-95 font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                        title="Descargar PNG en alta resolución (440x192 px)"
+                      >
+                        <Download size={14} />
+                        <span>Descargar PNG</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
-
-    setOrders((prev) => {
-      const byId = new Map((prev || []).map((o) => [o.id, o]));
-      preparedOrders.forEach((po) => {
-        byId.set(po.id, po);
-      });
-      return Array.from(byId.values());
-    });
-
-    preparedOrders.forEach((po) => syncOrderToSupabase(po));
-    showCdiBlueprintToast(
-      `Pedido #${pedidoGroup.pedidoNum} (${preparedOrders.length} ítems) enviado a ${targetArea}`
-    );
-  };
-
-  const handleDirectExcelSync = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSyncingExcel(true);
-    try {
-      const res = await importRibisoftExcelFile(file);
-      if (res.type === 'produccion_pedidos') {
-        showCdiBlueprintToast(
-          `Excel RIBI sincronizado: ${res.ribisoftInserted || 0} nuevos y fechas de despacho actualizadas`
-        );
-      } else {
-        showCdiBlueprintToast('Archivo ERP sincronizado correctamente en Consulta General');
-      }
-    } catch (err) {
-      alert('Error sincronizando Excel RIBI: ' + (err?.message || err));
-    } finally {
-      setSyncingExcel(false);
-      if (ribiExcelInputRef.current) ribiExcelInputRef.current.value = '';
-    }
   };
 
   return (
@@ -888,26 +1111,8 @@ export default function NeutralAreaBacklogView() {
             </div>
           </div>
 
-          {/* Selector Rápido de Columnas de Cuadrícula, Rango de Pedido y Sincronización Excel RIBI */}
+          {/* Selector Rápido de Columnas de Cuadrícula y Rango de Pedido */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <input
-              ref={ribiExcelInputRef}
-              type="file"
-              accept=".xls,.xlsx"
-              className="hidden"
-              onChange={handleDirectExcelSync}
-            />
-            <button
-              type="button"
-              disabled={syncingExcel}
-              onClick={() => ribiExcelInputRef.current?.click()}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase flex items-center gap-1.5 shadow cursor-pointer transition-colors disabled:opacity-50"
-              title="Subir archivo Excel actualizado del RIBI (lista de pedidos de produccion.xls) con las fechas de despacho de Diciembre 2026 y 2027"
-            >
-              <Database size={14} />
-              <span>{syncingExcel ? 'Sincronizando...' : '📥 Sincronizar Excel RIBI'}</span>
-            </button>
-
             <div className="flex items-center gap-1 theme-bg-main border theme-border rounded-xl p-1">
               <span className="text-[10px] font-black uppercase theme-text-muted px-2">
                 Cuadrícula:
@@ -1094,6 +1299,43 @@ export default function NeutralAreaBacklogView() {
               ))}
             </div>
           </div>
+
+          {/* Filtro por Semanas dentro del Mes seleccionado */}
+          {selectedMonth !== 'TODOS' && availableWeeksInSelectedMonth.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-dashed theme-border">
+              <span className="text-[11px] font-black uppercase tracking-wider theme-text-main flex items-center gap-1 mr-1">
+                <Calendar size={14} />
+                Semanas del Mes:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setSelectedWeek('TODAS')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-all cursor-pointer ${
+                  selectedWeek === 'TODAS'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                    : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
+                }`}
+              >
+                Todas las Semanas (Separadas)
+              </button>
+
+              {availableWeeksInSelectedMonth.map((wk) => (
+                <button
+                  key={wk.key}
+                  type="button"
+                  onClick={() => setSelectedWeek(wk.key)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-black uppercase border transition-all cursor-pointer ${
+                    selectedWeek === wk.key
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'theme-bg-main theme-text-main theme-border hover:brightness-95'
+                  }`}
+                >
+                  {wk.shortLabel} ({wk.pedidosSet.size})
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* KPIs RÁPIDOS + BUSCADOR (Adaptados a los temas) */}
@@ -1147,7 +1389,7 @@ export default function NeutralAreaBacklogView() {
         </div>
       </div>
 
-      {/* LISTADO / CUADRÍCULA DE PEDIDOS */}
+      {/* LISTADO / CUADRÍCULA DE PEDIDOS (SEPARADO AUTOMÁTICAMENTE POR SEMANAS AL ELEGIR UN MES) */}
       {loadingRibi && groupedPedidos.length === 0 ? (
         <div className="theme-bg-card border-2 theme-border rounded-3xl p-12 text-center space-y-3">
           <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -1165,288 +1407,50 @@ export default function NeutralAreaBacklogView() {
             Prueba seleccionar <strong>"Todos los Meses"</strong> o cambiar el criterio entre Fecha de Generación, Fecha de Despacho o Alertas de Coordinación.
           </p>
         </div>
-      ) : (
-        <div className={pedidosGridClass}>
-          {groupedPedidos.map((group) => {
-            const isExpanded = Boolean(expandedPedidos[group.pedidoNum]);
-            const dLeftDesp = group.fechaDespacho ? getDaysLeft(group.fechaDespacho) : null;
-            const dLeftCoord = group.coordFechaEntrega ? getDaysLeft(group.coordFechaEntrega) : null;
-            const selectedDestArea = targetAreaByPedido[group.pedidoNum] || 'Diseño';
-            const isGridCompact = gridColumns > 1 && !isExpanded;
-
-            return (
-              <div
-                key={group.pedidoNum}
-                className={`theme-bg-card border-2 ${
-                  group.hasCoordAlert ? 'border-orange-500/70' : 'theme-border'
-                } rounded-3xl shadow-lg overflow-hidden flex flex-col justify-between transition-all hover:border-[var(--color-primary)] ${
-                  isExpanded ? 'col-span-full' : ''
-                }`}
-              >
-                {/* CABECERA DEL PEDIDO */}
-                <div
-                  className={`p-4 sm:p-5 theme-bg-header ${
-                    isExpanded ? 'border-b theme-border' : ''
-                  } flex flex-col ${
-                    isGridCompact ? 'gap-3 h-full justify-between' : 'xl:flex-row xl:items-center justify-between gap-4'
-                  }`}
-                >
-                  <div
-                    className="flex flex-col gap-2 cursor-pointer flex-1"
-                    onClick={() =>
-                      setExpandedPedidos((prev) => ({
-                        ...prev,
-                        [group.pedidoNum]: !isExpanded
-                      }))
-                    }
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="px-3.5 py-1 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] font-black text-sm sm:text-base tracking-wide shadow">
-                        PED #{group.pedidoNum}
-                      </span>
-
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {group.hasCoordAlert && (
-                          <span className="px-2 py-0.5 rounded-lg bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/40 font-black text-[10px] uppercase flex items-center gap-1">
-                            <AlertTriangle size={11} /> Coord.
-                          </span>
-                        )}
-                        <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black text-xs">
-                          {group.items.length} ÍTEM(S)
-                        </span>
-                      </div>
-                    </div>
-
-                    <h3 className="text-sm sm:text-base font-black uppercase theme-text-main leading-snug line-clamp-2">
-                      {group.cliente}
-                      {group.proyecto && group.proyecto !== group.cliente
-                        ? ` — ${group.proyecto}`
-                        : ''}
-                    </h3>
-
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold theme-text-muted">
-                      {group.fechaGeneracion && (
-                        <span className="px-2 py-0.5 rounded theme-bg-main border theme-border flex items-center gap-1 font-bold">
-                          <Clock size={12} /> Gen: {formatLocalDate(group.fechaGeneracion)}
-                        </span>
-                      )}
-
-                      {group.fechaDespacho && (
-                        <span
-                          className={`px-2 py-0.5 rounded flex items-center gap-1 font-black ${
-                            dLeftDesp !== null && dLeftDesp < 0
-                              ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                          }`}
-                        >
-                          <Calendar size={12} />
-                          Desp: {formatLocalDate(group.fechaDespacho)}
-                          {dLeftDesp !== null && ` (${dLeftDesp}d)`}
-                        </span>
-                      )}
-
-                      {group.coordFechaEntrega && (filterMode === 'ALERTAS_COORD' || !group.fechaDespacho) && (
-                        <span className="px-2 py-0.5 rounded bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 flex items-center gap-1 font-black">
-                          <AlertTriangle size={12} />
-                          Coord: {formatLocalDate(group.coordFechaEntrega)}
-                          {dLeftCoord !== null && ` (${dLeftCoord}d)`}
-                        </span>
-                      )}
-
-                      {group.areaActual && (
-                        <span className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-black text-[11px] uppercase">
-                          En: {group.areaActual}
-                        </span>
-                      )}
-                    </div>
-
-                    {group.coordAlertNota && (
-                      <div className="text-[11px] font-bold text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg px-2 py-1 line-clamp-2">
-                        Nota Coord.: {group.coordAlertNota}
-                      </div>
-                    )}
-
-                    <span className="text-[11px] underline theme-text-primary font-black">
-                      {isExpanded ? '▲ Ocultar ítems y QRs' : '▼ Ver ítems y QRs SolidWorks'}
-                    </span>
+      ) : selectedMonth !== 'TODOS' ? (
+        <div className="space-y-6">
+          {weeklySections.map((sec) => (
+            <div key={`week_sec_${sec.key}`} className="space-y-3">
+              {/* CABECERA AUTOMÁTICA DE LA SEMANA */}
+              <div className="theme-bg-card border-2 border-[var(--color-primary)]/40 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] shadow-sm shrink-0">
+                    <Calendar size={18} />
                   </div>
-
-                  {/* ACCIONES MASIVAS DEL PEDIDO */}
-                  <div
-                    className={`flex flex-wrap items-center gap-2 ${
-                      isGridCompact ? 'pt-2 border-t theme-border justify-between' : ''
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadAllPedidoQrs(group)}
-                      className="px-3 py-2 rounded-xl bg-[var(--color-primary)] text-[var(--color-surface)] text-[11px] font-black uppercase flex items-center gap-1.5 shadow cursor-pointer hover:brightness-110"
-                      title="Descargar todas las estampillas PNG (440x192px) de este pedido"
-                    >
-                      <Download size={14} />
-                      <span>QRs ({group.items.length})</span>
-                    </button>
-
-                    {!group.areaActual && (
-                      <div className="flex items-center gap-1 theme-bg-main p-1 rounded-xl border theme-border flex-1 sm:flex-initial justify-end">
-                        <select
-                          value={selectedDestArea}
-                          onChange={(e) =>
-                            setTargetAreaByPedido((prev) => ({
-                              ...prev,
-                              [group.pedidoNum]: e.target.value
-                            }))
-                          }
-                          className="px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-black text-[11px] uppercase border theme-border outline-none cursor-pointer max-w-[150px] truncate"
-                        >
-                          {productionTargetAreas.map((area) => (
-                            <option key={area} value={area}>
-                              Hacia: {area}
-                            </option>
-                          ))}
-                        </select>
-
-                        <button
-                          type="button"
-                          onClick={() => handleMoveEntirePedidoToProduction(group)}
-                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase flex items-center gap-1 shadow cursor-pointer shrink-0"
-                        >
-                          <span>Enviar</span>
-                          <ArrowRight size={13} />
-                        </button>
-                      </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wide theme-text-main">
+                      {sec.fullTitle}
+                    </h3>
+                    {sec.rangeLabel && (
+                      <p className="text-xs font-bold theme-text-muted">
+                        {sec.rangeLabel}
+                      </p>
                     )}
                   </div>
                 </div>
 
-                {/* CUADRÍCULA DE ÍTEMS Y ESTAMPILLAS QR PARA SOLIDWORKS */}
-                {isExpanded && (
-                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 bg-black/5 dark:bg-black/20">
-                    {group.items.map((item) => {
-                      const itemDestArea = targetAreaByItem[item.id] || 'Diseño';
-                      const isCopied = copiedId === item.id;
-
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => {
-                            if (item.isFromPlantTable) {
-                              setSelectedOrder(item);
-                            }
-                          }}
-                          className="p-4 rounded-2xl theme-bg-main border-2 theme-border hover:border-[var(--color-primary)] transition-all flex flex-col justify-between gap-3 shadow-sm"
-                        >
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono font-black text-xs">
-                                CÓD: {item.codArticulo || 'S/C'}
-                              </span>
-                              <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black text-xs">
-                                CANT: {item.cantidad || 1}
-                              </span>
-                            </div>
-
-                            <h4 className="font-black text-sm sm:text-base uppercase theme-text-main leading-snug">
-                              {item.nombre}
-                            </h4>
-
-                            {item.programador && (
-                              <div className="text-[11px] font-bold theme-text-muted uppercase">
-                                Programador: {item.programador}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* VISTA PREVIA FIEL 1:1 (220x96px) DE LA ESTAMPILLA DE SOLIDWORKS */}
-                          <div
-                            className="theme-bg-card p-2.5 rounded-xl border theme-border flex flex-col items-center gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="text-[10px] font-black uppercase tracking-wider theme-text-muted">
-                              Estampilla SolidWorks (220×96 px • Nivel H)
-                            </div>
-                            <SolidWorksStampPreview product={item} />
-
-                            <div className="grid grid-cols-2 gap-1.5 w-full pt-1">
-                              <button
-                                type="button"
-                                onClick={(e) => handleCopyStamp(e, item)}
-                                className={`py-2 px-2.5 rounded-xl font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer ${
-                                  isCopied
-                                    ? 'bg-emerald-600 text-white'
-                                    : 'bg-[var(--color-primary)] text-[var(--color-surface)] hover:brightness-110 active:scale-95'
-                                }`}
-                                title="Copiar imagen PNG al portapapeles para pegar con Ctrl+V en SolidWorks (.SLDDRW)"
-                              >
-                                {isCopied ? (
-                                  <>
-                                    <CheckCircle2 size={14} />
-                                    <span>¡Copiado!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy size={14} />
-                                    <span>Copiar QR Plano</span>
-                                  </>
-                                )}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadBlueprintQrPng(item);
-                                }}
-                                className="py-2 px-2.5 rounded-xl theme-bg-main border theme-border theme-text-main hover:brightness-95 font-black text-[11px] uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
-                                title="Descargar PNG en alta resolución (440x192 px)"
-                              >
-                                <Download size={14} />
-                                <span>Descargar PNG</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* ENVIAR ÍTEM INDIVIDUAL A PRODUCCIÓN */}
-                          {!item.isInActivePlantArea && (
-                            <div
-                              className="pt-2 border-t theme-border flex items-center gap-1.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <select
-                                value={itemDestArea}
-                                onChange={(e) =>
-                                  setTargetAreaByItem((prev) => ({
-                                    ...prev,
-                                    [item.id]: e.target.value
-                                  }))
-                                }
-                                className="flex-1 px-2 py-1.5 rounded-lg theme-bg-card theme-text-main font-bold text-[11px] uppercase border theme-border outline-none"
-                              >
-                                {productionTargetAreas.map((a) => (
-                                  <option key={a} value={a}>
-                                    {a}
-                                  </option>
-                                ))}
-                              </select>
-
-                              <button
-                                type="button"
-                                onClick={() => handleMoveItemToProduction(item, itemDestArea)}
-                                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase flex items-center gap-1 shrink-0 cursor-pointer"
-                              >
-                                <span>Enviar</span>
-                                <ArrowRight size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase">
+                  <span className="px-3 py-1 rounded-xl bg-[var(--color-primary)]/15 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
+                    {sec.pedidos.length} Pedido(s)
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    {sec.itemsCount} Ítem(s)
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    {sec.unitsCount} Unidades
+                  </span>
+                </div>
               </div>
-            );
-          })}
+
+              <div className={pedidosGridClass}>
+                {sec.pedidos.map(renderPedidoCard)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={pedidosGridClass}>
+          {groupedPedidos.map(renderPedidoCard)}
         </div>
       )}
     </div>
