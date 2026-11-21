@@ -121,56 +121,73 @@ const OrderDetailsModal = ({
 
   return (
       
-        <div className="fixed inset-0 bg-black/80  z-[100] flex items-center justify-end p-0 sm:p-2">
-          <div className="theme-bg-card w-full h-full sm:h-[95vh] w-full max-w-[600px] w-full max-w-[800px] sm:w-[600px] md:w-[700px] md:w-[600px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
-            <div className="p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0">
-              <div className="flex flex-col truncate pr-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-black uppercase truncate theme-text-main">PED: {selectedOrder.pedidoNum}</h2>
-                  {selectedOrder.codArticulo && (
-                    <span className="text-sm bg-blue-500/15 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/30 font-mono font-black truncate">
-                      CÓD: {selectedOrder.codArticulo}
-                    </span>
-                  )}
-                  {selectedOrder.cantidad && (
-                    <span className="text-sm bg-orange-500/20 text-orange-800 dark:text-orange-500 px-2 py-0.5 rounded border border-orange-500/30 font-black truncate flex items-center gap-1">
-                      <Package size={"1.1em"} /> CANT: {selectedOrder.cantidad}
-                    </span>
-                  )}
-                  {selectedOrder.estadoInterno === 'DESPACHADO' ? (
-                    <span className="text-sm bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-500/30 font-black truncate flex items-center gap-1 shadow-sm">
-                      <CheckCircle2 size={"1.1em"} /> DESPACHADO
-                    </span>
-                  ) : selectedOrder.areaActual === 'Despachos' && (
-                    <span className="text-sm bg-purple-500/20 text-purple-800 dark:text-purple-300 px-2.5 py-0.5 rounded border border-purple-500/30 font-black truncate flex items-center gap-1 shadow-sm">
-                      <Truck size={"1.1em"} /> EN ESPERA EN DESPACHOS
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[100] flex items-center justify-end p-0 sm:p-2">
+          <div className="bg-white dark:bg-[#111827] w-full h-full sm:h-[95vh] max-w-[680px] sm:w-[600px] md:w-[660px] sm:rounded-2xl overflow-hidden flex flex-col shadow-xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300">
+            <div className="px-5 py-4 bg-[#1E293B] text-white border-b border-[#D4AF37]/30 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3.5 min-w-0 pr-4">
+                <img
+                  src="/cdi-logo.png"
+                  alt="CDI Exhibiciones"
+                  className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+                />
+                <div className="flex flex-col truncate">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm sm:text-base font-bold uppercase tabular-nums truncate text-white">
+                      PED: {selectedOrder.pedidoNum}
+                    </h2>
+                    {selectedOrder.codArticulo && (
+                      <span className="text-xs bg-slate-800 text-[#D4AF37] px-2 py-0.5 rounded-md border border-[#D4AF37]/30 font-mono tabular-nums font-bold truncate">
+                        CÓD: {selectedOrder.codArticulo}
+                      </span>
+                    )}
+                    {selectedOrder.cantidad && (
+                      <span className="text-xs bg-[#FFFBEB] text-[#92400E] px-2 py-0.5 rounded-full border border-[#FDE68A] font-bold tabular-nums truncate flex items-center gap-1">
+                        <Package size={13} /> CANT: {selectedOrder.cantidad}
+                      </span>
+                    )}
+                    {selectedOrder.estadoInterno === 'DESPACHADO' ? (
+                      <span className="text-xs bg-[#ECFDF5] text-[#065F46] px-2.5 py-0.5 rounded-full border border-[#A7F3D0] font-bold truncate flex items-center gap-1">
+                        <CheckCircle2 size={13} /> DESPACHADO
+                      </span>
+                    ) : selectedOrder.areaActual === 'Despachos' && (
+                      <span className="text-xs bg-slate-800 text-slate-200 px-2.5 py-0.5 rounded-full border border-slate-700 font-bold truncate flex items-center gap-1">
+                        <Truck size={13} /> EN ESPERA EN DESPACHOS
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold uppercase truncate text-slate-200 mt-0.5">
+                    {selectedOrder.nombre}
+                  </p>
+                  {selectedOrder.asignado_a && selectedOrder.asignado_a.length > 0 && (
+                    <span className="text-xs bg-[#2E435B] text-slate-100 px-2.5 py-0.5 rounded-md border border-slate-600 font-semibold truncate flex items-center gap-1 mt-1.5 w-fit">
+                      <UserCheck size={13} /> ASIGNADO A: {Array.isArray(selectedOrder.asignado_a) ? selectedOrder.asignado_a.join(', ') : selectedOrder.asignado_a}
                     </span>
                   )}
                 </div>
-                <p className="text-base lg:text-lg font-bold uppercase truncate theme-text-muted mt-0.5">{selectedOrder.nombre}</p>
-                {selectedOrder.asignado_a && selectedOrder.asignado_a.length > 0 && (
-                  <span className="text-sm md:text-base bg-indigo-500/20 text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-md border border-indigo-500/30 font-black truncate flex items-center gap-1 mt-2 w-fit">
-                    <UserCheck size={"1.2em"} /> ASIGNADO A: {Array.isArray(selectedOrder.asignado_a) ? selectedOrder.asignado_a.join(', ') : selectedOrder.asignado_a}
-                  </span>
-                )}
               </div>
-              <button type="button" onClick={() => setSelectedOrder(null)} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-main shrink-0">✕</button>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors shrink-0"
+              >
+                ✕
+              </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar theme-bg-main">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-[#F4F5F7] dark:bg-[#0B1120]">
 
               {/* TRANSFERENCIA EN TRÁNSITO DETECTADA */}
               {selectedOrder.transferenciaPendiente && (
-                <div className="p-3.5 rounded-2xl bg-purple-500/15 border-2 border-purple-500/60 shadow-sm space-y-2">
+                <div className="p-3.5 rounded-xl bg-[#FFFBEB] dark:bg-amber-950/30 border border-[#FDE68A] dark:border-amber-800/70 shadow-xs space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-xs font-black uppercase text-purple-800 dark:text-purple-200">
+                    <div className="text-xs font-bold uppercase text-[#92400E] dark:text-amber-200">
                       🔄 Transferencia en Tránsito Hacia: {selectedOrder.transferenciaPendiente.haciaArea}
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-purple-600 text-white text-[10px] font-black uppercase shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-[#92400E] border border-[#FDE68A] text-[10px] font-bold uppercase shrink-0">
                       Pendiente
                     </span>
                   </div>
-                  <p className="text-xs font-bold theme-text-muted">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Enviado desde {selectedOrder.areaActual} por {selectedOrder.transferenciaPendiente.entregadoPor || 'Planta'}.
                   </p>
                   <button
@@ -195,7 +212,7 @@ const OrderDetailsModal = ({
                       setSelectedOrder(null);
                       setShowReceptionModal(true);
                     }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase flex items-center justify-center gap-2 shadow cursor-pointer transition-all active:scale-95"
+                    className="w-full py-2.5 px-3 rounded-lg bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-xs uppercase flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
                   >
                     <CheckCircle2 size={16} />
                     <span>Aceptar / Rechazar Transferencia en Recepciones</span>
@@ -204,47 +221,47 @@ const OrderDetailsModal = ({
               )}
 
               {/* MENÚ RÁPIDO DE ACCIONES DEL PRODUCTO */}
-              <div className="p-3 rounded-2xl theme-bg-card border theme-border shadow-sm space-y-2">
-                <div className="text-[11px] font-black uppercase tracking-wider theme-text-muted">
-                  ⚡ Menú de Acciones del Producto (Selecciona qué deseas registrar):
+              <div className="p-3.5 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-xs space-y-2.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Menú de Acciones del Producto:
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setOpenSection('planta')}
-                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                    className={`p-2.5 rounded-lg font-semibold text-xs uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
                       openSection === 'planta'
-                        ? 'bg-amber-500 text-slate-950 border-amber-600 shadow'
-                        : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35 hover:bg-amber-500/25'
+                        ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <Play size={16} />
+                    <Play size={15} />
                     <span>Avance Planta</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setOpenSection('entrega')}
-                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                    className={`p-2.5 rounded-lg font-semibold text-xs uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
                       openSection === 'entrega'
-                        ? 'bg-indigo-600 text-white border-indigo-700 shadow'
-                        : 'bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/35 hover:bg-indigo-500/25'
+                        ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <ArrowRightLeft size={16} />
+                    <ArrowRightLeft size={15} />
                     <span>Transferir Área</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setOpenSection('calidad')}
-                    className={`p-2.5 rounded-xl font-black text-[11px] uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
+                    className={`p-2.5 rounded-lg font-semibold text-xs uppercase flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer text-center ${
                       openSection === 'calidad'
-                        ? 'bg-emerald-600 text-white border-emerald-700 shadow'
-                        : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/25'
+                        ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <ShieldCheck size={16} />
+                    <ShieldCheck size={15} />
                     <span>Calidad (QC)</span>
                   </button>
                 </div>
@@ -254,24 +271,24 @@ const OrderDetailsModal = ({
               <button 
                   type="button" 
                   onClick={() => alert(`Próximamente: Se abrirán los planos (PDF) para el producto ${selectedOrder.codArticulo} vinculados a ReviSoft.`)} 
-                  className="w-full bg-[var(--color-primary)]/10 theme-text-main hover:bg-[var(--color-primary)]/20 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-sm md:text-base uppercase transition-colors shadow-sm border border-[var(--color-primary)]/20"
+                  className="w-full bg-white dark:bg-[#111827] text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 py-2.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-xs sm:text-sm uppercase transition-colors shadow-2xs border border-slate-300 dark:border-slate-700"
               >
-                  <FileText size={"1.3em"} /> Ver Planos del Producto
+                  <FileText size={16} /> Ver Planos del Producto
               </button>
 
               {/* TARJETA DE ESTAMPILLA QR CALIBRADA PARA SOLIDWORKS (.SLDDRW) */}
-              <div className="p-3.5 rounded-2xl theme-bg-card border-2 border-indigo-500/40 shadow-sm space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
-                    <QrCode size={16} />
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-[#1E293B] dark:text-slate-200">
+                    <QrCode size={15} className="text-[#2E435B] dark:text-[#D4AF37]" />
                     <span>Estampilla QR Oficial para SolidWorks (.SLDDRW)</span>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-emerald-400 font-mono">
+                  <span className="text-[10px] font-bold tabular-nums px-2 py-0.5 rounded bg-[#1E293B] text-[#D4AF37] font-mono">
                     220×96 px • Nivel H
                   </span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-200/60 dark:bg-slate-950/70 p-2.5 rounded-xl border theme-border">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                   <SolidWorksStampPreview product={selectedOrder} />
 
                   <div className="flex flex-col gap-2 w-full sm:flex-1">
@@ -284,18 +301,18 @@ const OrderDetailsModal = ({
                           alert(err.message || 'No se pudo copiar la estampilla QR.');
                         }
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-lg bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold text-xs uppercase flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                     >
-                      <Copy size={15} />
+                      <Copy size={14} />
                       <span>Copiar QR para Plano (SolidWorks)</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => downloadBlueprintQrPng(selectedOrder)}
-                      className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow active:scale-95 transition-all cursor-pointer"
+                      className="w-full py-2 px-3 rounded-lg bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold text-xs uppercase flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
                     >
-                      <Download size={15} />
+                      <Download size={14} />
                       <span>Descargar PNG (440×192 px)</span>
                     </button>
                   </div>

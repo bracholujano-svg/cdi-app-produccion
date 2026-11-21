@@ -123,26 +123,35 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] flex items-center justify-center z-50 p-2 md:p-4">
+      <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Cabecera */}
-        <header className="bg-slate-900 text-white p-4 md:p-5 flex justify-between items-center shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Paso 2 de 2</span>
+        <header className="bg-[#1E293B] text-white px-5 py-4 flex justify-between items-center shrink-0 border-b border-[#D4AF37]/30">
+          <div className="flex items-center gap-3.5">
+            <img
+              src="/cdi-logo.png"
+              alt="CDI Exhibiciones"
+              className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+            />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="bg-[#2E435B] text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Paso 2 de 2
+                </span>
+              </div>
+              <h2 className="text-base md:text-lg font-bold mt-0.5">Declaración de Muestra Física</h2>
+              <p className="text-xs text-slate-300">Parámetros reales de aplicación del fondo, color y medición.</p>
             </div>
-            <h2 className="text-lg font-bold mt-1">Declaración de Muestra Física</h2>
-            <p className="text-xs text-slate-400">Parámetros reales de aplicación del fondo, color y medición.</p>
           </div>
         </header>
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-4 md:p-6 overflow-y-auto custom-scroll flex-grow">
           
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3 mb-6">
-            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-            <p className="text-xs text-blue-800 leading-relaxed">
+          <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex gap-3 mb-6">
+            <AlertCircle className="text-[#2E435B] dark:text-[#D4AF37] flex-shrink-0 mt-0.5" size={20} />
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
               La fórmula fue guardada exitosamente. Para solicitar la aprobación de esta muestra, declare los detalles del <strong>fondo aplicado</strong>, la mezcla del <strong>color</strong>, y adjunte la evidencia colorimétrica.
             </p>
           </div>
@@ -151,19 +160,19 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
             
             {/* COLUMNA IZQUIERDA: Sustrato y Base */}
             <div className="space-y-5">
-              <h3 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 border-b pb-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                 <Layers size={16} className="text-slate-500"/> 1. Preparación de Base / Fondo
               </h3>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Material de la Muestra</label>
-                  <input type="text" name="sustrato_muestra" value={formData.sustrato_muestra} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" placeholder="Ej: MDF, Metal, Madera..." />
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Material de la Muestra</label>
+                  <input type="text" name="sustrato_muestra" value={formData.sustrato_muestra} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" placeholder="Ej: MDF, Metal, Madera..." />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tipo de Base</label>
-                  <select name="base_tipo" value={formData.base_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tipo de Base</label>
+                  <select name="base_tipo" value={formData.base_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none">
                     <option value="Poliuretano Blanco">Poliuretano Blanco</option>
                     <option value="Base Catalizada">Base Catalizada</option>
                     <option value="Primer Automotriz">Primer Automotriz</option>
@@ -172,32 +181,32 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Color de Base</label>
-                  <input type="text" name="base_color" value={formData.base_color} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" placeholder="Ej: Blanco, Gris Oscuro..." />
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Color de Base</label>
+                  <input type="text" name="base_color" value={formData.base_color} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" placeholder="Ej: Blanco, Gris Oscuro..." />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Acabado de Base</label>
-                  <select name="base_manos" value={formData.base_manos} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Acabado de Base</label>
+                  <select name="base_manos" value={formData.base_manos} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none">
                     <option value="1 Mano">1 Mano</option>
                     <option value="2 Manos">2 Manos</option>
                     <option value="3 Manos">3 Manos</option>
                   </select>
                 </div>
 
-                <div className="col-span-2 grid grid-cols-3 gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200">
+                <div className="col-span-2 grid grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
                     <div className="col-span-3"><span className="text-[10px] font-bold text-slate-500 uppercase">Mezcla de la Base</span></div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-500 mb-1">Catalizador</label>
-                      <input type="text" name="base_catalizador_tipo" value={formData.base_catalizador_tipo} onChange={handleChange} className="w-full px-2 py-1.5 rounded border border-slate-300 text-xs focus:border-blue-500 outline-none" placeholder="Ref/Marca" />
+                      <input type="text" name="base_catalizador_tipo" value={formData.base_catalizador_tipo} onChange={handleChange} className="w-full px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs focus:border-[#2E435B] outline-none" placeholder="Ref/Marca" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-500 mb-1">% Cat.</label>
-                      <input type="number" name="base_catalizador_pct" value={formData.base_catalizador_pct} onChange={handleChange} className="w-full px-2 py-1.5 rounded border border-slate-300 text-xs focus:border-blue-500 outline-none" />
+                      <input type="number" name="base_catalizador_pct" value={formData.base_catalizador_pct} onChange={handleChange} className="w-full px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs tabular-nums focus:border-[#2E435B] outline-none" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-500 mb-1">% Disolv.</label>
-                      <input type="number" name="base_disolvente_pct" value={formData.base_disolvente_pct} onChange={handleChange} className="w-full px-2 py-1.5 rounded border border-slate-300 text-xs focus:border-blue-500 outline-none" />
+                      <input type="number" name="base_disolvente_pct" value={formData.base_disolvente_pct} onChange={handleChange} className="w-full px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs tabular-nums focus:border-[#2E435B] outline-none" />
                     </div>
                 </div>
               </div>
@@ -205,52 +214,52 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
 
             {/* COLUMNA DERECHA: Mezcla de Color y Resultado */}
             <div className="space-y-5">
-              <h3 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 border-b pb-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                 <Droplet size={16} className="text-slate-500"/> 2. Mezcla de Color (Pintura Final)
               </h3>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">% Pasta Mateante (Si aplica)</label>
-                   <input type="number" name="porcentaje_pasta_mateante" value={formData.porcentaje_pasta_mateante} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                   <input type="number" name="porcentaje_pasta_mateante" value={formData.porcentaje_pasta_mateante} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm tabular-nums focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Catalizador Color</label>
-                  <input type="text" name="catalizador_tipo" value={formData.catalizador_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" placeholder="Ref" />
+                  <input type="text" name="catalizador_tipo" value={formData.catalizador_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" placeholder="Ref" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">% Cat. Color</label>
-                  <input type="number" name="catalizador_pct" value={formData.catalizador_pct} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                  <input type="number" name="catalizador_pct" value={formData.catalizador_pct} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm tabular-nums focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Disolvente Color</label>
-                  <input type="text" name="disolvente_tipo" value={formData.disolvente_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" placeholder="Ref" />
+                  <input type="text" name="disolvente_tipo" value={formData.disolvente_tipo} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" placeholder="Ref" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">% Disolv. Color</label>
-                  <input type="number" name="disolvente_pct" value={formData.disolvente_pct} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                  <input type="number" name="disolvente_pct" value={formData.disolvente_pct} onChange={handleChange} className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm tabular-nums focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none" />
                 </div>
               </div>
 
-              <h3 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 border-b pb-2 pt-4">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 pt-4">
                 <Camera size={16} className="text-slate-500"/> 3. Evidencia Colorimétrica
               </h3>
 
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Resultado (ΔE Real)</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Resultado (ΔE Real)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs font-bold text-emerald-600">ΔE =</span>
-                    <input type="text" name="tolerancia_delta_e" value={formData.tolerancia_delta_e} onChange={handleChange} className="w-full pl-10 pr-3 py-2 rounded-lg bg-emerald-50 border border-emerald-300 text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none" placeholder="0.8" required />
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">ΔE =</span>
+                    <input type="text" name="tolerancia_delta_e" value={formData.tolerancia_delta_e} onChange={handleChange} className="w-full pl-11 pr-3 py-2 rounded-lg bg-[#ECFDF5] dark:bg-emerald-950/40 border border-[#A7F3D0] dark:border-emerald-800 text-sm font-bold tabular-nums text-[#065F46] dark:text-emerald-300 focus:border-emerald-600 outline-none" placeholder="0.8" required />
                   </div>
                 </div>
                 
                 <div className="flex-1">
-                  <label className="cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-blue-400 rounded-lg h-[68px] hover:bg-blue-50 transition-colors bg-white overflow-hidden relative">
+                  <label className="cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg h-[68px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors bg-white dark:bg-slate-900 overflow-hidden relative">
                     {imagenMuestra ? (
                       <img src={imagenMuestra} alt="Muestra" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-[10px] font-bold text-blue-600 text-center px-2">Cargar Foto de la Lectura</span>
+                      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 text-center px-2">Cargar Foto de la Lectura</span>
                     )}
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
@@ -261,16 +270,16 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
           </div>
           
           <div className="mt-6">
-             <label className="block text-xs font-semibold text-slate-600 mb-1">Observaciones / Procedimiento Adicional</label>
-             <textarea name="procedimiento_preparacion" value={formData.procedimiento_preparacion} onChange={handleChange} rows="2" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-300 text-sm focus:border-blue-500 outline-none resize-none" placeholder="Describa brevemente detalles adicionales..."></textarea>
+             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Observaciones / Procedimiento Adicional</label>
+             <textarea name="procedimiento_preparacion" value={formData.procedimiento_preparacion} onChange={handleChange} rows="2" className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none resize-none" placeholder="Describa brevemente detalles adicionales..."></textarea>
           </div>
 
           {/* Botones de acción */}
-          <div className="pt-6 mt-4 border-t border-slate-200 flex flex-col md:flex-row justify-end gap-3 sticky bottom-0 bg-white shadow-[0_-20px_20px_-10px_rgba(255,255,255,0.9)]">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+          <div className="pt-5 mt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-end gap-3 sticky bottom-0 bg-white dark:bg-[#111827]">
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 transition-colors">
               Cerrar (Quedará en Borrador)
             </button>
-            <button type="submit" disabled={isSubmitting} className="w-full md:w-auto px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
+            <button type="submit" disabled={isSubmitting} className="w-full md:w-auto px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-[#1E293B] hover:bg-[#0F172A] shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
               {isSubmitting ? <span className="animate-pulse">Enviando...</span> : <><CheckCircle size={16} /> Enviar a Revisión de Supervisor</>}
             </button>
           </div>

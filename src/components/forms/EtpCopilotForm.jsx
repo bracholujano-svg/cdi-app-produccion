@@ -917,7 +917,9 @@ export default function EtpCopilotForm({
                 src={getCdiLogoSrc()}
                 crossOrigin="anonymous"
                 alt="CDI Exhibiciones"
-                style={{ height: '54px', width: 'auto', objectFit: 'contain' }}
+                width={65}
+                height={54}
+                style={{ height: '54px', width: '65px', objectFit: 'contain' }}
               />
               <div>
                 <h1
@@ -1003,21 +1005,21 @@ export default function EtpCopilotForm({
 
             <div className="flex-grow">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="bg-amber-50 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-amber-200 uppercase tracking-wider">
+                <span className="bg-slate-100 text-[#2E435B] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">
                   Laboratorio de Colorimetría • SC Color
                 </span>
 
                 {/* Indicador de Estado de Ficha */}
                 {estadoAprobacion === 'aprobado_produccion' ? (
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-emerald-300 flex items-center gap-1 uppercase shadow-sm">
+                  <span className="bg-[#ECFDF5] text-[#065F46] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#A7F3D0] flex items-center gap-1 uppercase">
                     <CheckCircle2 size={12} /> Aprobado Oficial (Planta)
                   </span>
                 ) : estadoAprobacion === 'pendiente_revision' ? (
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1 uppercase">
+                  <span className="bg-[#FFFBEB] text-[#92400E] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#FDE68A] flex items-center gap-1 uppercase">
                     <Clock size={12} /> En Ajuste / Pendiente Revisión
                   </span>
                 ) : (
-                  <span className="bg-stone-200 text-stone-700 text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase">
+                  <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-slate-300 uppercase">
                     Borrador
                   </span>
                 )}
@@ -1032,7 +1034,7 @@ export default function EtpCopilotForm({
                       printColorSampleBackLabel(consolidatedColorData);
                     }
                   }}
-                  className={`bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
+                  className={`bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
                     isGeneratingPDF ? 'hidden' : 'print:hidden'
                   }`}
                   title="Configurar tamaño de etiqueta (100x80mm, térmica, etc.) e imprimir etiqueta con Código QR"
@@ -1049,7 +1051,7 @@ export default function EtpCopilotForm({
                       printFullTechnicalSheetA4(consolidatedColorData);
                     }
                   }}
-                  className={`bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
+                  className={`bg-[#1E293B] hover:bg-[#0F172A] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors uppercase cursor-pointer ${
                     isGeneratingPDF ? 'hidden' : 'print:hidden'
                   }`}
                   title="Configurar tamaño de hoja, escala y ajuste e imprimir Ficha Técnica Completa"
@@ -1061,7 +1063,7 @@ export default function EtpCopilotForm({
                   <button
                     type="button"
                     onClick={() => setIsPinModalOpen(true)}
-                    className={`bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-black px-3 py-1.5 rounded-lg border border-amber-300 flex items-center gap-1.5 transition-colors shadow-sm uppercase ${
+                    className={`bg-[#FFFBEB] text-[#92400E] hover:bg-amber-100/80 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#FDE68A] flex items-center gap-1.5 transition-colors uppercase ${
                       isGeneratingPDF ? 'hidden' : 'print:hidden'
                     }`}
                   >
@@ -1072,7 +1074,7 @@ export default function EtpCopilotForm({
                     <button
                       type="button"
                       onClick={() => setIsLocked(true)}
-                      className={`bg-stone-100 text-slate-700 hover:bg-stone-200 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-stone-300 flex items-center gap-1.5 transition-colors uppercase ${
+                      className={`bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors uppercase ${
                         isGeneratingPDF ? 'hidden' : 'print:hidden'
                       }`}
                     >
@@ -2006,7 +2008,7 @@ export default function EtpCopilotForm({
                     type="button"
                     onClick={handleRechazar}
                     disabled={isSubmitting}
-                    className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-md flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#FEF2F2] hover:bg-red-600 text-[#991B1B] hover:text-white border border-[#FECACA] flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                   >
                     <XCircle size={15} /> Devolver para Ajuste
                   </button>
@@ -2015,10 +2017,10 @@ export default function EtpCopilotForm({
                     type="button"
                     onClick={handleAprobar}
                     disabled={isSubmitting || !isConfirmed}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                    className={`px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-xs flex items-center justify-center gap-1.5 transition-all ${
                       isConfirmed
-                        ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
-                        : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                        ? 'bg-[#1E293B] hover:bg-[#0F172A] cursor-pointer'
+                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     }`}
                   >
                     <ShieldCheck size={16} /> Aprobar Ficha Oficial y Generar QR
@@ -2031,7 +2033,7 @@ export default function EtpCopilotForm({
                       type="button"
                       onClick={handleGuardarModificaciones}
                       disabled={isSubmitting}
-                      className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#1E293B] hover:bg-[#0F172A] text-white shadow-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                     >
                       <Save size={15} /> Guardar Modificaciones
                     </button>
@@ -2042,10 +2044,10 @@ export default function EtpCopilotForm({
                   type="button"
                   onClick={handleAprobar}
                   disabled={!isConfirmed || isSubmitting}
-                  className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-md flex items-center justify-center gap-2 transition-all ${
+                  className={`px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-xs flex items-center justify-center gap-2 transition-all ${
                     isConfirmed
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                      ? 'bg-[#1E293B] hover:bg-[#0F172A]'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   }`}
                 >
                   <ShieldCheck size={16} /> Validar y Aprobar Ficha Oficial con QR

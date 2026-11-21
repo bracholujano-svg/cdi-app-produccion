@@ -1936,35 +1936,39 @@ export default function SCEntonacion({
         {renderSecurityModal()}
         {renderPrintConfigModal()}
 
-        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#111827] p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowFormulacion(false)}
-              className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 p-3 rounded-xl transition-colors shadow-sm cursor-pointer"
+              className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 p-2.5 rounded-xl transition-colors shadow-2xs cursor-pointer"
               title="Volver"
             >
-              <ArrowLeft size={22} strokeWidth={2.5} />
+              <ArrowLeft size={20} strokeWidth={2.2} />
             </button>
+            <img
+              src="/cdi-logo.png"
+              alt="CDI Exhibiciones"
+              className="h-11 w-auto object-contain drop-shadow-sm shrink-0 hidden sm:block"
+            />
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase flex items-center gap-2.5">
-                  <FlaskConical className="text-indigo-600" size={26} />
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                   Formulación Colorimétrica
                 </h2>
                 {isEnsayoMode && (
-                  <span className="px-3 py-0.5 rounded-full text-xs font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
-                    🧪 Modo Ensayo / Prueba
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase bg-slate-100 dark:bg-slate-800 text-[#1E293B] dark:text-[#D4AF37] border border-[#D4AF37]/40">
+                    Modo Ensayo / Prueba
                   </span>
                 )}
               </div>
-              <p className="text-sm font-bold mt-1 flex items-center gap-2">
-                <span className="text-slate-400 uppercase tracking-widest text-xs">
+              <p className="text-xs font-semibold mt-1 flex items-center gap-2">
+                <span className="text-slate-500 uppercase tracking-wider">
                   COLOR OBJETIVO:
                 </span>
-                <span className="bg-slate-800 text-white px-2.5 py-0.5 rounded-md text-xs font-black">
+                <span className="bg-[#1E293B] text-white px-2 py-0.5 rounded text-[11px] font-semibold">
                   {sistemaColor}
                 </span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-black text-base">
+                <span className="text-[#2E435B] dark:text-[#D4AF37] font-bold text-sm tabular-nums">
                   {codigoObjetivo || (isEnsayoMode ? 'ENSAYO DE PRUEBA' : 'SIN CÓDIGO')}
                 </span>
               </p>
@@ -1977,41 +1981,41 @@ export default function SCEntonacion({
               <button
                 type="button"
                 onClick={() => setIsEnsayoMode(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   !isEnsayoMode
-                    ? 'bg-indigo-600 text-white shadow'
+                    ? 'bg-[#1E293B] text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
-                📋 Fórmula Oficial
+                Fórmula Oficial
               </button>
               <button
                 type="button"
                 onClick={() => setIsEnsayoMode(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   isEnsayoMode
-                    ? 'bg-purple-600 text-white shadow'
+                    ? 'bg-[#2E435B] text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
-                🧪 Ensayo / Prueba
+                Modo Ensayo
               </button>
             </div>
 
             <button
               onClick={() => setShowFormulacion(false)}
-              className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-black uppercase tracking-wider rounded-xl text-xs transition-colors border border-red-200 cursor-pointer"
+              className="px-3.5 py-2 bg-[#FEF2F2] hover:bg-red-100 text-[#991B1B] font-semibold rounded-xl text-xs transition-colors border border-[#FECACA] cursor-pointer"
             >
-              CANCELAR
+              Cancelar
             </button>
           </div>
         </div>
 
         {/* Si está en Modo Ensayo, permitir editar código/nombre de ensayo y notas rápidas */}
         {isEnsayoMode && (
-          <div className="bg-purple-50/80 dark:bg-purple-950/30 border-2 border-purple-300 dark:border-purple-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+          <div className="bg-slate-50 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             <div className="md:col-span-5">
-              <label className="block text-[11px] font-black uppercase text-purple-900 dark:text-purple-300 mb-1">
+              <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
                 Identificador del Ensayo / Muestra de Prueba
               </label>
               <input
@@ -2019,11 +2023,11 @@ export default function SCEntonacion({
                 value={codigoObjetivo}
                 onChange={(e) => setCodigoObjetivo(e.target.value.toUpperCase())}
                 placeholder="Ej. ENSAYO-ROJO-01, PRUEBA-CLIENTE..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-slate-900 dark:text-white font-black text-sm uppercase"
+                className="w-full px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-bold tabular-nums text-sm uppercase focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none"
               />
             </div>
             <div className="md:col-span-7">
-              <label className="block text-[11px] font-black uppercase text-purple-900 dark:text-purple-300 mb-1">
+              <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
                 Notas u Observaciones del Ensayo (Opcional)
               </label>
               <input
@@ -2031,7 +2035,7 @@ export default function SCEntonacion({
                 value={notasEnsayo}
                 onChange={(e) => setNotasEnsayo(e.target.value)}
                 placeholder="Ej. Prueba variando 5% de tinte amarillo sobre MDF..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-slate-900 dark:text-white font-bold text-sm"
+                className="w-full px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-medium text-sm focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 outline-none"
               />
             </div>
           </div>
@@ -2134,7 +2138,7 @@ export default function SCEntonacion({
                 </div>
                 <button
                   onClick={() => setIsScannerOpen(true)}
-                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 p-4 rounded-xl transition-colors flex items-center justify-center shrink-0 shadow-sm cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 p-3.5 rounded-xl transition-colors flex items-center justify-center shrink-0 shadow-2xs cursor-pointer"
                   title="Escanear Código de Lata"
                 >
                   <Camera size={22} />
@@ -2142,7 +2146,7 @@ export default function SCEntonacion({
               </div>
             </div>
             <div className="col-span-8 md:col-span-3">
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Paso 2: Gramos pesados (g)
               </label>
               <input
@@ -2150,7 +2154,7 @@ export default function SCEntonacion({
                 value={gramosInput}
                 onChange={(e) => setGramosInput(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-lg font-black px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors shadow-sm"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-lg font-bold tabular-nums px-4 py-3 rounded-xl focus:outline-none focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 transition-colors shadow-2xs"
                 onKeyDown={(e) => e.key === 'Enter' && agregarGramos()}
               />
             </div>
@@ -2158,15 +2162,15 @@ export default function SCEntonacion({
               <button
                 onClick={agregarGramos}
                 disabled={!selectedPPG || !gramosInput}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black py-3.5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 h-[50px] cursor-pointer"
+                className="w-full bg-[#1E293B] hover:bg-[#0F172A] disabled:bg-slate-300 text-white font-bold py-3.5 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 h-[50px] text-xs uppercase tracking-wider cursor-pointer"
               >
-                <Plus size={18} strokeWidth={3} /> AÑADIR
+                <Plus size={18} strokeWidth={2.5} /> Añadir
               </button>
             </div>
           </div>
 
           {isScannerOpen && (
-            <div className="mt-6 p-6 border-2 border-dashed border-indigo-300 rounded-2xl bg-indigo-50/50 relative">
+            <div className="mt-6 p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/50 relative">
               <button
                 onClick={() => setIsScannerOpen(false)}
                 className="absolute top-4 right-4 text-slate-500 hover:text-red-500 z-10 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm"
@@ -2175,9 +2179,9 @@ export default function SCEntonacion({
               </button>
               <div
                 id="reader"
-                className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-indigo-200 bg-black"
+                className="w-full max-w-md mx-auto overflow-hidden rounded-2xl shadow-inner border border-slate-200 bg-black"
               ></div>
-              <p className="text-center text-xs font-black text-indigo-800 uppercase tracking-widest mt-4 flex items-center justify-center gap-2">
+              <p className="text-center text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mt-4 flex items-center justify-center gap-2">
                 <Camera size={16} /> Apunta al código de barras de la lata o pasta
               </p>
             </div>
@@ -2185,26 +2189,26 @@ export default function SCEntonacion({
         </div>
 
         {/* Tabla Acumulativa */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="p-5 bg-slate-900 flex flex-wrap justify-between items-center gap-4 text-white">
-            <h3 className="font-black text-base flex items-center gap-2 tracking-wider uppercase">
-              <CheckCircle2 className="text-emerald-400" size={20} />
+        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+          <div className="px-5 py-4 bg-[#1E293B] flex flex-wrap justify-between items-center gap-4 text-white border-b border-[#D4AF37]/30">
+            <h3 className="font-bold text-sm sm:text-base flex items-center gap-2 tracking-wider uppercase">
+              <CheckCircle2 className="text-[#D4AF37]" size={20} />
               {isEnsayoMode ? 'ENSAYO EN BALANZA (PRUEBA)' : 'RECETA EN CURSO'}
             </h3>
             <div className="flex gap-3">
-              <div className="bg-slate-800 px-4 py-1.5 rounded-xl flex flex-col items-end border border-slate-700">
-                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">
+              <div className="bg-slate-800/90 px-3.5 py-1.5 rounded-xl flex flex-col items-end border border-slate-700">
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
                   Galones (Aprox)
                 </span>
-                <span className="font-black text-indigo-400 text-base">
+                <span className="font-bold text-slate-200 text-sm sm:text-base tabular-nums">
                   {(totalGramosActual / 3800).toFixed(2)} gal
                 </span>
               </div>
-              <div className="bg-slate-800 px-4 py-1.5 rounded-xl flex flex-col items-end border border-slate-700">
-                <span className="text-[10px] text-slate-400 font-black tracking-widest uppercase">
+              <div className="bg-slate-800/90 px-3.5 py-1.5 rounded-xl flex flex-col items-end border border-[#D4AF37]/30">
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
                   Peso Total
                 </span>
-                <span className="font-black text-emerald-400 text-base">
+                <span className="font-bold text-[#D4AF37] text-sm sm:text-base tabular-nums">
                   {totalGramosActual.toFixed(1)} g
                 </span>
               </div>
@@ -2214,20 +2218,20 @@ export default function SCEntonacion({
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <th className="p-4 pl-6 text-xs font-black text-slate-500 uppercase tracking-wider">
+                <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                  <th className="p-4 pl-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Código / Pasta o Base PPG
                   </th>
-                  <th className="p-4 text-xs font-black text-slate-500 uppercase tracking-wider w-48">
+                  <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-48">
                     Proporción
                   </th>
-                  <th className="p-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right w-28">
+                  <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-28">
                     Gramos
                   </th>
-                  <th className="p-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right w-28">
+                  <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-28">
                     % Fórmula
                   </th>
-                  <th className="p-4 w-44 text-right pr-6">Ajuste</th>
+                  <th className="p-4 w-44 text-right pr-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Ajuste</th>
                 </tr>
               </thead>
               <tbody>
@@ -2238,8 +2242,8 @@ export default function SCEntonacion({
                       className="p-12 text-center bg-slate-50/50 dark:bg-slate-800/40"
                     >
                       <div className="inline-flex flex-col items-center justify-center opacity-50">
-                        <FlaskConical size={40} className="mb-2 text-slate-400" />
-                        <span className="text-sm font-black uppercase tracking-widest text-slate-500">
+                        <FlaskConical size={36} className="mb-2 text-slate-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                           Fórmula vacía
                         </span>
                       </div>
@@ -2251,28 +2255,28 @@ export default function SCEntonacion({
                     return (
                       <tr
                         key={f.id_referencia}
-                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-indigo-50/30 transition-colors"
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                       >
                         <td className="p-4 pl-6">
-                          <span className="inline-block text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider mb-0.5">
+                          <span className="inline-block text-[10px] font-bold tabular-nums text-[#2E435B] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded uppercase tracking-wider mb-0.5">
                             {f.id_referencia !== f.descripcion ? f.id_referencia : 'MANUAL'}
                           </span>
-                          <span className="block text-sm font-black text-slate-800 dark:text-white">
+                          <span className="block text-sm font-bold text-slate-800 dark:text-white">
                             {f.descripcion}
                           </span>
                         </td>
                         <td className="p-4">
                           <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                             <div
-                              className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                              className="bg-[#2E435B] h-full rounded-full transition-all duration-300"
                               style={{ width: `${Math.min(100, Math.max(3, pct))}%` }}
                             />
                           </div>
                         </td>
-                        <td className="p-4 text-base font-black text-indigo-700 dark:text-indigo-400 text-right">
+                        <td className="p-4 text-base font-bold tabular-nums text-[#1E293B] dark:text-slate-100 text-right">
                           {f.gramos} g
                         </td>
-                        <td className="p-4 text-base font-black text-slate-800 dark:text-white text-right">
+                        <td className="p-4 text-base font-bold tabular-nums text-slate-700 dark:text-slate-200 text-right">
                           {pct.toFixed(2)}%
                         </td>
                         <td className="p-4 text-right pr-6">
@@ -2290,7 +2294,7 @@ export default function SCEntonacion({
                               onKeyDown={(e) =>
                                 e.key === 'Enter' && sumarGramosFila(f.id_referencia)
                               }
-                              className="w-16 px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              className="w-16 px-2 py-1.5 text-xs font-bold tabular-nums text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-[#2E435B]"
                             />
                             <button
                               onClick={() => sumarGramosFila(f.id_referencia)}
@@ -2298,17 +2302,17 @@ export default function SCEntonacion({
                                 !gramosExtra[f.id_referencia] ||
                                 Number(gramosExtra[f.id_referencia]) <= 0
                               }
-                              className="p-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-lg transition-colors disabled:opacity-40"
+                              className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[#1E293B] hover:text-white rounded-lg transition-colors disabled:opacity-40"
                               title="Sumar gramos a esta base"
                             >
-                              <Plus size={15} strokeWidth={3} />
+                              <Plus size={15} strokeWidth={2.5} />
                             </button>
                             <button
                               onClick={() => eliminarFila(f.id_referencia)}
-                              className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg transition-colors"
                               title="Eliminar fila"
                             >
-                              <X size={15} strokeWidth={3} />
+                              <X size={15} strokeWidth={2.5} />
                             </button>
                           </div>
                         </td>
@@ -2325,9 +2329,9 @@ export default function SCEntonacion({
               type="button"
               onClick={() => guardarReceta(true)}
               disabled={isSearching || filasReceta.length === 0}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white font-black py-4 px-5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2.5 text-sm uppercase tracking-wider cursor-pointer"
+              className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-[#1E293B] dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-bold py-3.5 px-5 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider cursor-pointer"
             >
-              <Beaker size={20} />
+              <Beaker size={18} />
               {isSearching
                 ? 'GUARDANDO...'
                 : 'GUARDAR COMO ENSAYO / PRUEBA RÁPIDA'}
@@ -2337,9 +2341,9 @@ export default function SCEntonacion({
               type="button"
               onClick={() => guardarReceta(false)}
               disabled={isSearching || filasReceta.length === 0}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-black py-4 px-5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2.5 text-sm uppercase tracking-wider cursor-pointer"
+              className="flex-1 bg-[#1E293B] hover:bg-[#0F172A] disabled:bg-slate-300 text-white font-bold py-3.5 px-5 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider cursor-pointer"
             >
-              <Save size={20} />
+              <Save size={18} />
               {isSearching
                 ? 'GUARDANDO FÓRMULA...'
                 : 'GUARDAR Y DECLARAR MUESTRA FÍSICA (ETP)'}
@@ -2778,7 +2782,7 @@ export default function SCEntonacion({
         {renderSpectroLightbox()}
 
         {/* BARRA SUPERIOR DE NAVEGACIÓN + BOTONERA DE ACCIONES */}
-        <div className="bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#111827] px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           {/* Izquierda: Botón de Regreso a Búsqueda/Catálogo + Título del Color */}
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -2793,7 +2797,7 @@ export default function SCEntonacion({
                   setCurrentView('inicio');
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer shadow-2xs"
             >
               <ArrowLeft size={16} />
               <span>{cameFromCatalog ? 'Volver al Catálogo' : 'Volver al Buscador'}</span>
@@ -2801,37 +2805,43 @@ export default function SCEntonacion({
 
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
 
+            <img
+              src="/cdi-logo.png"
+              alt="CDI Exhibiciones"
+              className="h-10 w-auto object-contain drop-shadow-sm shrink-0 hidden sm:block"
+            />
+
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#2E435B] dark:text-slate-300">
                   {fichaConsolidada.sistema_color}
                 </span>
                 <span
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-black uppercase bg-slate-900 text-amber-300 border border-slate-700"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums font-bold uppercase bg-[#1E293B] text-[#D4AF37] border border-[#D4AF37]/30"
                   title="Identificador único de la Ficha Técnica de Color"
                 >
                   ID FICHA: {fichaConsolidada.id_ficha_tecnica}
                 </span>
                 {fichaConsolidada.es_ensayo && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-300">
-                    🧪 Ensayo / Prueba
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                    Ensayo / Prueba
                   </span>
                 )}
                 {colorEncontrado.estado_aprobacion === 'aprobado_produccion' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]">
                     <ShieldCheck size={12} /> Ficha Oficial Aprobada
                   </span>
                 ) : colorEncontrado.estado_aprobacion === 'pendiente_revision' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]">
                     Pendiente Revisión
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-700 border border-slate-300">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-slate-100 text-slate-700 border border-slate-300">
                     Borrador
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-bold tabular-nums text-slate-900 dark:text-white uppercase tracking-tight">
                 {fichaConsolidada.codigo_color}
                 {fichaConsolidada.nombre_color &&
                 fichaConsolidada.nombre_color !== fichaConsolidada.codigo_color
@@ -2843,46 +2853,46 @@ export default function SCEntonacion({
 
           {/* Derecha: BOTONERA CON IMPRESIÓN CONFIGURABLE + VER FICHA TÉCNICA + MODIFICACIÓN Y BORRADO CON CLAVE */}
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-            {/* 1. IMPRIMIR ETIQUETA DE MUESTRA (Con selector 100x80mm / Térmica / Escala) */}
+            {/* 1. IMPRIMIR ETIQUETA DE MUESTRA */}
             <button
               onClick={() => openPrintConfigurator('label', fichaConsolidada)}
-              className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               title="Seleccionar tamaño de etiqueta (100x80mm, térmica, etc.), ajustar escala e imprimir etiqueta de muestra"
             >
-              <Printer size={15} /> Imprimir Etiqueta de Muestra
+              <Printer size={15} /> Imprimir Etiqueta
             </button>
 
-            {/* 2. VER FICHA TÉCNICA COMPLETA (Con ID de Ficha Técnica y Foto del Ensayo de Espectrofotometría) */}
+            {/* 2. VER FICHA TÉCNICA COMPLETA */}
             <button
               onClick={() => setShowViewSheetModal(true)}
-              className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-[#2E435B] hover:bg-[#1E293B] text-white rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               title="Ver Ficha Técnica completa con su ID y la foto del resultado del ensayo de espectrofotometría"
             >
               <Eye size={15} /> Ver Ficha Técnica
             </button>
 
-            {/* 3. IMPRIMIR FICHA TÉCNICA (Con selector de hoja Carta/A4/Oficio y Escala) */}
+            {/* 3. IMPRIMIR FICHA TÉCNICA */}
             <button
               onClick={() => openPrintConfigurator('sheet', fichaConsolidada)}
-              className="px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-[#1E293B] hover:bg-[#0F172A] text-white rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               title="Seleccionar tipo de hoja, formato y escala para imprimir la Ficha Técnica Completa"
             >
-              <Printer size={15} /> Imprimir Ficha Técnica
+              <Printer size={15} /> Imprimir Ficha
             </button>
 
-            {/* 4. MODIFICAR FÓRMULA (Protegido con Clave real de Supervisor Pintura Líquida o Admin) */}
+            {/* 4. MODIFICAR FÓRMULA */}
             <button
               onClick={() => requestProtectedAction('EDIT_ETP', colorEncontrado)}
-              className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-[#FFFBEB] hover:bg-amber-100/80 text-[#92400E] border border-[#FDE68A] rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Modificar especificaciones o fórmula (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
             >
               <Edit3 size={15} /> Modificar Fórmula
             </button>
 
-            {/* 5. ELIMINAR COLOR / LIMPIAR PRUEBA (Protegido con Clave de Supervisor Pintura Líquida o Admin) */}
+            {/* 5. ELIMINAR COLOR / LIMPIAR PRUEBA */}
             <button
               onClick={() => requestProtectedAction('DELETE_COLOR', colorEncontrado)}
-              className="px-3 py-2.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-300 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-2 bg-[#FEF2F2] hover:bg-red-600 text-[#991B1B] hover:text-white border border-[#FECACA] rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Eliminar este color o ensayo de prueba (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
             >
               <Trash2 size={15} /> Eliminar
@@ -3076,28 +3086,28 @@ export default function SCEntonacion({
 
           {/* Columna Derecha: Tabla de Fórmula (Pastas/Bases) y Calculadora de Lote */}
           <div className="lg:col-span-9">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full flex flex-col">
+            <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden h-full flex flex-col">
               {/* Cabecera unificada de la tabla con la calculadora de lote */}
-              <div className="px-6 py-4 bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+              <div className="px-6 py-4 bg-[#1E293B] border-b border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
                 <div className="flex items-center gap-2.5">
-                  <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
+                  <CheckCircle2 size={20} className="text-[#D4AF37] shrink-0" />
                   <div>
-                    <h3 className="font-black text-sm sm:text-base uppercase tracking-wider">
+                    <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider">
                       FÓRMULA DE ENTONACIÓN (PASTAS / BASES)
                     </h3>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
-                  <span className="text-xs font-bold text-slate-300">⚖️ Preparar Lote:</span>
+                  <span className="text-xs font-semibold text-slate-300">⚖️ Preparar Lote:</span>
                   <input
                     type="number"
                     value={targetGramos}
                     onChange={(e) => setTargetGramos(e.target.value)}
                     placeholder="Ej. 1000"
-                    className="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-right font-black text-emerald-400 text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-right font-bold tabular-nums text-[#D4AF37] text-xs focus:ring-2 focus:ring-[#D4AF37]/40 outline-none"
                   />
-                  <span className="text-xs font-black text-slate-400">g</span>
+                  <span className="text-xs font-bold text-slate-400">g</span>
                 </div>
               </div>
 
@@ -3105,16 +3115,16 @@ export default function SCEntonacion({
                 <table className="w-full text-left border-collapse min-w-[480px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-4 pl-6 text-xs font-black text-slate-400 uppercase tracking-wider">
+                      <th className="p-4 pl-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
                         Código / Pasta o Base PPG
                       </th>
-                      <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-wider w-44">
+                      <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-44">
                         Proporción
                       </th>
-                      <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center">
+                      <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center tabular-nums">
                         {targetGramos > 0 ? `Gramos Lote (${targetGramos}g)` : 'Gramos Muestra'}
                       </th>
-                      <th className="p-4 pr-6 text-xs font-black text-slate-400 uppercase tracking-wider text-right">
+                      <th className="p-4 pr-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">
                         % Fórmula
                       </th>
                     </tr>
@@ -3123,20 +3133,20 @@ export default function SCEntonacion({
                     {fichaConsolidada.formulacion_pastas.map((item, idx) => (
                       <tr
                         key={idx}
-                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-emerald-50/20 transition-colors"
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                       >
                         <td className="p-4 pl-6">
-                          <span className="inline-block text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider mb-0.5">
+                          <span className="inline-block text-[10px] font-bold tabular-nums text-[#2E435B] dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded uppercase tracking-wider mb-0.5">
                             {item.codigo !== item.nombre ? item.codigo : 'BASE / TINTA'}
                           </span>
-                          <span className="block text-sm font-black text-slate-800 dark:text-white">
+                          <span className="block text-sm font-bold text-slate-800 dark:text-white">
                             {item.nombre}
                           </span>
                         </td>
                         <td className="p-4">
                           <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                             <div
-                              className="bg-gradient-to-r from-indigo-600 to-emerald-500 h-full rounded-full"
+                              className="bg-[#2E435B] h-full rounded-full"
                               style={{
                                 width: `${Math.min(
                                   100,
@@ -3147,12 +3157,12 @@ export default function SCEntonacion({
                           </div>
                         </td>
                         <td className="p-4 text-center">
-                          <span className="text-sm font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-lg inline-block">
+                          <span className="text-sm font-bold tabular-nums text-[#1E293B] dark:text-slate-100 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-lg inline-block">
                             {item.gramos} g
                           </span>
                         </td>
-                        <td className="p-4 pr-6 text-right">
-                          <span className="text-lg font-black text-slate-800 dark:text-white">
+                        <td className="p-4 pr-6 text-right tabular-nums">
+                          <span className="text-base font-bold text-slate-800 dark:text-white">
                             {item.porcentaje}
                           </span>
                           <span className="text-xs font-bold text-slate-400 ml-0.5">%</span>
@@ -3175,7 +3185,7 @@ export default function SCEntonacion({
 
               {/* Pie sutil con opción de modificar pesaje en balanza (Protegido con Clave) */}
               <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                <span>
+                <span className="tabular-nums">
                   Total componentes:{' '}
                   <strong className="text-slate-700 dark:text-slate-200">
                     {fichaConsolidada.formulacion_pastas.length} pastas/bases
@@ -3183,7 +3193,7 @@ export default function SCEntonacion({
                 </span>
                 <button
                   onClick={() => requestProtectedAction('EDIT_BALANZA', colorEncontrado)}
-                  className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-black uppercase tracking-wider text-[11px] cursor-pointer"
+                  className="text-[#2E435B] hover:text-[#1E293B] dark:text-[#D4AF37] font-bold uppercase tracking-wider text-[11px] cursor-pointer"
                 >
                   ⚖️ Ajustar Pesaje en Balanza (Clave Supervisor)
                 </button>
@@ -3194,24 +3204,31 @@ export default function SCEntonacion({
 
         {/* Modal de Edición de Ficha Técnica Completa (EtpCopilotForm) */}
         {showEtpModal && (
-          <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-2 md:p-4">
-            <div className="w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col bg-slate-50 dark:bg-[#0f172a] rounded-3xl relative shadow-2xl border border-slate-700">
-              <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
-                <button
-                  onClick={() => {
-                    setShowEtpModal(false);
-                    setEtpPreAuthorized(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
-                >
-                  <ArrowLeft size={16} />
-                  <span>Volver a la Ficha</span>
-                </button>
+          <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[150] flex items-center justify-center p-2 md:p-4">
+            <div className="w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col bg-white dark:bg-[#111827] rounded-2xl relative shadow-xl border border-slate-200 dark:border-slate-800">
+              <div className="px-5 py-3.5 bg-[#1E293B] border-b border-[#D4AF37]/30 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setShowEtpModal(false);
+                      setEtpPreAuthorized(false);
+                    }}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Volver a la Ficha</span>
+                  </button>
+                  <img
+                    src="/cdi-logo.png"
+                    alt="CDI Exhibiciones"
+                    className="h-9 w-auto object-contain drop-shadow-sm hidden sm:block"
+                  />
+                </div>
 
-                <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-400">
+                <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-300 tabular-nums">
                   <span>{savedColorData?.sistema_color || sistemaColor}</span>
                   <ChevronRight size={14} />
-                  <span className="text-blue-400 font-black">
+                  <span className="text-[#D4AF37] font-bold">
                     {savedColorData?.codigo_objetivo || codigoObjetivo}
                   </span>
                 </div>
@@ -3221,10 +3238,10 @@ export default function SCEntonacion({
                     setShowEtpModal(false);
                     setEtpPreAuthorized(false);
                   }}
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-colors cursor-pointer"
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
                   title="Cerrar Editor"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
@@ -3298,26 +3315,28 @@ export default function SCEntonacion({
       {renderPrintConfigModal()}
 
       {/* Cabecera Principal con Botón Restaurado "VOLVER A INICIO" */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white dark:bg-[#111827] p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           {onClose && (
             <button
               onClick={onClose}
-              className="flex items-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-black text-xs uppercase tracking-wider transition-colors shadow-2xs cursor-pointer shrink-0"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg font-semibold text-xs uppercase tracking-wider transition-colors shadow-2xs cursor-pointer shrink-0"
               title="Salir al menú principal de la aplicación"
             >
-              <ArrowLeft size={18} strokeWidth={2.5} />
+              <ArrowLeft size={16} strokeWidth={2.2} />
               <span>Volver a Inicio</span>
             </button>
           )}
-          <div className="p-3 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-2xl text-white shadow-md shadow-indigo-500/20 hidden sm:flex">
-            <FlaskConical size={28} />
-          </div>
+          <img
+            src="/cdi-logo.png"
+            alt="CDI Exhibiciones"
+            className="h-11 w-auto object-contain drop-shadow-sm shrink-0 hidden sm:block"
+          />
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="text-[10px] font-semibold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[#2E435B] dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               Laboratorio de Colorimetría Industrial
             </span>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight mt-1">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-1">
               SC COLOR • Entonación y Fichas Técnicas
             </h1>
           </div>
@@ -3337,33 +3356,33 @@ export default function SCEntonacion({
               setColorEncontrado(null);
               setShowFormulacion(true);
             }}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 justify-center transition-colors cursor-pointer"
+            className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#1E293B] dark:text-slate-100 border border-slate-300 dark:border-slate-700 px-4 py-2.5 rounded-lg font-semibold text-xs uppercase tracking-wider shadow-2xs flex items-center gap-2 justify-center transition-colors cursor-pointer"
             title="Iniciar un ensayo o prueba de colorimetría en laboratorio"
           >
-            <Beaker size={18} /> Modo Ensayo
+            <Beaker size={16} className="text-[#2E435B] dark:text-[#D4AF37]" /> Modo Ensayo
           </button>
 
           <button
             onClick={openCatalog}
-            className="bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-5 py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 justify-center transition-colors cursor-pointer"
+            className="bg-[#1E293B] hover:bg-[#0F172A] text-white px-4 py-2.5 rounded-lg font-semibold text-xs uppercase tracking-wider shadow-xs flex items-center gap-2 justify-center transition-colors cursor-pointer"
           >
-            <Palette size={18} /> Catálogo de Colores
+            <Palette size={16} /> Catálogo de Colores
           </button>
         </div>
       </div>
 
       {/* Buscador Limpio de Fórmulas */}
-      <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="bg-white dark:bg-[#111827] p-6 md:p-7 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           <div className="col-span-12 md:col-span-4">
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
               Sistema / Carta de Color
             </label>
             <div className="relative">
               <select
                 value={sistemaColor}
                 onChange={(e) => setSistemaColor(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-base font-black px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none transition-colors cursor-pointer"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-bold px-4 py-3 rounded-lg focus:outline-none focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 appearance-none transition-colors cursor-pointer"
               >
                 <option value="PANTONE">PANTONE</option>
                 <option value="RAL">RAL</option>
@@ -3379,7 +3398,7 @@ export default function SCEntonacion({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="3"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
@@ -3389,7 +3408,7 @@ export default function SCEntonacion({
             </div>
           </div>
           <div className="col-span-12 md:col-span-5 relative" ref={searchDropdownRef}>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
               Código de Fórmula o Nombre del Color
             </label>
             <input
@@ -3401,7 +3420,7 @@ export default function SCEntonacion({
               }}
               onFocus={() => setShowSearchDropdown(true)}
               placeholder="Ej. 840, ECO-840, 7005 C, BLANCO NIEVE..."
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-base font-black px-4 py-3.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors uppercase placeholder:font-normal placeholder:text-slate-400"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-bold tabular-nums px-4 py-3 rounded-lg focus:outline-none focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30 transition-colors uppercase placeholder:font-normal placeholder:text-slate-400"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   setShowSearchDropdown(false);
@@ -3411,8 +3430,8 @@ export default function SCEntonacion({
             />
 
             {showSearchDropdown && sugerenciasBusqueda.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
                   Coincidencias en Inventario de Almacén ({sugerenciasBusqueda.length})
                 </div>
                 {sugerenciasBusqueda.map((sug, idx) => (
@@ -3425,17 +3444,17 @@ export default function SCEntonacion({
                       setShowSearchDropdown(false);
                       handleBuscar(selCode);
                     }}
-                    className="w-full px-4 py-2.5 text-left hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                    className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-between gap-2 cursor-pointer"
                   >
                     <div className="truncate">
-                      <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 text-xs sm:text-sm mr-2">
+                      <span className="font-mono tabular-nums font-bold text-[#2E435B] dark:text-[#D4AF37] text-xs sm:text-sm mr-2">
                         {sug.codigo || 'S/C'}
                       </span>
-                      <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
                         {sug.descripcion}
                       </span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0">
                       Almacén
                     </span>
                   </button>
@@ -3448,14 +3467,14 @@ export default function SCEntonacion({
               id="btn-buscar-receta"
               onClick={handleBuscar}
               disabled={isSearching || !codigoObjetivo}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black py-3.5 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 h-[52px] text-xs uppercase tracking-wider cursor-pointer"
+              className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold py-3 px-4 rounded-lg shadow-2xs transition-colors flex items-center justify-center gap-2 h-[46px] text-xs uppercase tracking-wider cursor-pointer"
               title="Buscar Receta"
             >
               {isSearching ? (
-                <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-800 rounded-full animate-spin" />
               ) : (
                 <>
-                  <Search size={18} strokeWidth={2.5} /> Buscar
+                  <Search size={16} strokeWidth={2.2} /> Buscar
                 </>
               )}
             </button>
@@ -3467,10 +3486,10 @@ export default function SCEntonacion({
                 setShowFormulacion(true);
                 setColorEncontrado(null);
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5 h-[52px] text-xs uppercase tracking-wider cursor-pointer"
+              className="bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold py-3 px-4 rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 h-[46px] text-xs uppercase tracking-wider cursor-pointer"
               title="Nueva Formulación"
             >
-              <Plus size={18} strokeWidth={3} /> Nuevo
+              <Plus size={16} strokeWidth={2.5} /> Nuevo
             </button>
           </div>
         </div>
@@ -3478,7 +3497,7 @@ export default function SCEntonacion({
 
       {searchFeedback && (
         <div className="animate-fade-in text-center">
-          <span className="inline-block px-5 py-2 bg-indigo-50 text-indigo-800 border border-indigo-200 font-black text-xs rounded-full tracking-widest">
+          <span className="inline-block px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold text-xs rounded-full tracking-wider">
             {searchFeedback}
           </span>
         </div>
@@ -3487,17 +3506,17 @@ export default function SCEntonacion({
       {/* Resultado cuando un código buscado NO existe */}
       {colorEncontrado === false && (
         <div className="animate-slide-up">
-          <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-8 md:p-10 text-center flex flex-col items-center justify-center space-y-4 shadow-sm">
-            <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-200">
-              <AlertTriangle size={30} strokeWidth={2.5} />
+          <div className="bg-[#FFFBEB] dark:bg-amber-950/20 border border-[#FDE68A] dark:border-amber-800/60 rounded-2xl p-8 md:p-10 text-center flex flex-col items-center justify-center space-y-4 shadow-xs">
+            <div className="w-12 h-12 bg-amber-100/80 dark:bg-amber-900/40 text-[#92400E] dark:text-amber-300 rounded-xl flex items-center justify-center border border-[#FDE68A]">
+              <AlertTriangle size={26} strokeWidth={2.2} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-amber-900 uppercase tracking-tight">
+              <h3 className="text-lg font-bold text-[#92400E] dark:text-amber-200 uppercase tracking-tight">
                 Fórmula no registrada en el laboratorio
               </h3>
-              <p className="text-sm font-medium text-amber-800/80 max-w-lg mx-auto mt-1">
+              <p className="text-sm font-medium text-amber-800/90 dark:text-amber-300/80 max-w-lg mx-auto mt-1">
                 No existe ficha técnica previa para{' '}
-                <strong>
+                <strong className="tabular-nums">
                   {sistemaColor} {codigoObjetivo}
                 </strong>
                 . Inicia una nueva formulación o un ensayo en balanza para registrar la receta.
@@ -3510,9 +3529,9 @@ export default function SCEntonacion({
                   setShowFormulacion(true);
                   setColorEncontrado(null);
                 }}
-                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-[#1E293B] hover:bg-[#0F172A] text-white font-semibold uppercase tracking-wider text-xs rounded-lg shadow-xs transition-colors cursor-pointer"
               >
-                + INICIAR FORMULACIÓN OFICIAL
+                + Iniciar Formulación Oficial
               </button>
               <button
                 onClick={() => {
@@ -3520,9 +3539,9 @@ export default function SCEntonacion({
                   setShowFormulacion(true);
                   setColorEncontrado(null);
                 }}
-                className="px-6 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-white hover:bg-slate-50 text-[#1E293B] border border-slate-300 font-semibold uppercase tracking-wider text-xs rounded-lg shadow-2xs transition-colors cursor-pointer"
               >
-                🧪 INICIAR COMO ENSAYO / PRUEBA
+                Iniciar como Ensayo / Prueba
               </button>
             </div>
           </div>
@@ -3531,21 +3550,28 @@ export default function SCEntonacion({
 
       {/* MODAL CATÁLOGO CON FILTROS DE LIMPIEZA Y BOTÓN DE BORRADO PROTEGIDO */}
       {showCatalogModal && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-end p-0 sm:p-2">
-          <div className="theme-bg-card w-full h-full sm:h-[95vh] sm:w-[580px] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border animate-in slide-in-from-right duration-300">
-            <div className="p-5 theme-bg-header border-b theme-border space-y-3 shrink-0">
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[100] flex items-center justify-end p-0 sm:p-2">
+          <div className="bg-white dark:bg-[#111827] w-full h-full sm:h-[95vh] sm:w-[580px] sm:rounded-2xl overflow-hidden flex flex-col shadow-xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300">
+            <div className="p-5 bg-[#1E293B] text-white border-b border-[#D4AF37]/30 space-y-3 shrink-0">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-black theme-text-main uppercase flex items-center gap-2">
-                  <Palette size={'1.2em'} /> Catálogo de Colores ({filteredCatalogColors.length})
-                </h2>
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/cdi-logo.png"
+                    alt="CDI Exhibiciones"
+                    className="h-9 w-auto object-contain drop-shadow-sm shrink-0"
+                  />
+                  <h2 className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center gap-2 tabular-nums">
+                    Catálogo de Colores ({filteredCatalogColors.length})
+                  </h2>
+                </div>
                 <button
                   onClick={() => {
                     setShowCatalogModal(false);
                     setCurrentView('inicio');
                   }}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2 cursor-pointer shadow-sm text-xs uppercase"
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-slate-100 font-semibold flex items-center gap-1.5 cursor-pointer text-xs uppercase"
                 >
-                  <ArrowLeft size={16} /> Cerrar
+                  <ArrowLeft size={15} /> Cerrar
                 </button>
               </div>
 
@@ -3556,23 +3582,23 @@ export default function SCEntonacion({
                   value={catalogSearch}
                   onChange={(e) => setCatalogSearch(e.target.value)}
                   placeholder="Filtrar por código, cliente o sistema..."
-                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--color-base)] border theme-border text-xs font-bold theme-text-main outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-xs font-medium text-white placeholder:text-slate-400 outline-none focus:border-[#D4AF37]"
                 />
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { id: 'TODOS', label: 'Todos' },
                     { id: 'APROBADOS', label: '✓ Oficiales' },
-                    { id: 'ENSAYOS', label: '🧪 Borradores / Pruebas' },
+                    { id: 'ENSAYOS', label: 'Borradores / Pruebas' },
                     { id: 'SOLO_ENSAYOS', label: 'Solo Ensayos' }
                   ].map((f) => (
                     <button
                       key={f.id}
                       type="button"
                       onClick={() => setCatalogFilter(f.id)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase transition-colors cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold uppercase transition-colors cursor-pointer ${
                         catalogFilter === f.id
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-[var(--color-base)] theme-text-muted border theme-border hover:theme-text-main'
+                          ? 'bg-[#D4AF37] text-slate-950 font-bold'
+                          : 'bg-slate-800/80 text-slate-300 border border-slate-700 hover:text-white'
                       }`}
                     >
                       {f.label}
@@ -3582,13 +3608,13 @@ export default function SCEntonacion({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-base)] custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 bg-[#F4F5F7] dark:bg-[#0B1120] custom-scrollbar">
               {isLoadingCatalog ? (
                 <div className="flex justify-center items-center h-40">
-                  <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-3 border-slate-300 border-t-[#1E293B] rounded-full animate-spin"></div>
                 </div>
               ) : filteredCatalogColors.length === 0 ? (
-                <p className="text-center theme-text-muted font-bold p-8">
+                <p className="text-center text-slate-500 font-medium p-8 text-sm">
                   No hay colores que coincidan con este filtro.
                 </p>
               ) : (
@@ -3601,7 +3627,7 @@ export default function SCEntonacion({
                     }, {})
                   ).map(([sistema, colores]) => (
                     <div key={sistema}>
-                      <h3 className="text-sm font-black theme-text-muted uppercase tracking-widest mb-3 border-b border-[var(--color-primary)]/10 pb-2">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-200 dark:border-slate-800 pb-2 tabular-nums">
                         {sistema} ({colores.length})
                       </h3>
                       <div className="grid grid-cols-2 gap-3">
@@ -3612,25 +3638,25 @@ export default function SCEntonacion({
                             <div
                               key={c.id}
                               onClick={() => handleSelectFromCatalog(c)}
-                              className="flex flex-col items-start bg-[var(--color-surface)] border theme-border p-3 rounded-2xl hover:border-indigo-500 transition-colors text-left group hover:-translate-y-0.5 shadow-sm relative overflow-hidden cursor-pointer"
+                              className="flex flex-col items-start bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 p-3 rounded-xl hover:border-[#2E435B] transition-all text-left group shadow-xs hover:shadow-md relative overflow-hidden cursor-pointer"
                             >
                               <div
-                                className="w-full h-16 rounded-xl mb-2 shadow-inner border border-black/5 relative"
+                                className="w-full h-16 rounded-lg mb-2 shadow-inner border border-black/10 relative"
                                 style={{ backgroundColor: c.color_hexadecimal || '#ccc' }}
                               >
                                 <span
-                                  className={`absolute top-1.5 left-1.5 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                  className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase shadow-2xs ${
                                     isEnsayo
-                                      ? 'bg-purple-600 text-white'
+                                      ? 'bg-slate-100 text-slate-800 border border-slate-300'
                                       : c.estado_aprobacion === 'aprobado_produccion'
-                                      ? 'bg-emerald-600 text-white'
+                                      ? 'bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]'
                                       : c.estado_aprobacion === 'pendiente_revision'
-                                      ? 'bg-amber-500 text-white'
-                                      : 'bg-slate-700 text-white'
+                                      ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]'
+                                      : 'bg-slate-100 text-slate-700 border border-slate-300'
                                   }`}
                                 >
                                   {isEnsayo
-                                    ? '🧪 Ensayo'
+                                    ? 'Ensayo'
                                     : c.estado_aprobacion === 'aprobado_produccion'
                                     ? 'Aprobado'
                                     : c.estado_aprobacion === 'pendiente_revision'
@@ -3645,22 +3671,22 @@ export default function SCEntonacion({
                                     e.stopPropagation();
                                     requestProtectedAction('DELETE_COLOR', c);
                                   }}
-                                  className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white shadow transition-transform hover:scale-105 cursor-pointer"
+                                  className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-white/90 hover:bg-red-600 text-red-700 hover:text-white border border-red-200 shadow-2xs transition-colors cursor-pointer"
                                   title="Eliminar este color (Requiere clave de Supervisor de Pintura Líquida o Administrador)"
                                 >
                                   <Trash2 size={13} />
                                 </button>
                               </div>
-                              <span className="font-black theme-text-main text-sm w-full truncate">
+                              <span className="font-bold tabular-nums text-slate-900 dark:text-slate-100 text-sm w-full truncate">
                                 {c.codigo_objetivo}
                               </span>
                               {proc.cliente && (
-                                <span className="text-[10px] font-bold theme-text-muted w-full truncate">
+                                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 w-full truncate">
                                   Cliente: {proc.cliente}
                                 </span>
                               )}
                               {proc.acabado_produccion && (
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 w-full truncate">
+                                <span className="text-[11px] font-semibold text-[#2E435B] dark:text-slate-300 w-full truncate">
                                   Acabado: {proc.acabado_produccion}
                                 </span>
                               )}

@@ -248,7 +248,7 @@ export default function PublicPdfViewer() {
       <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800 text-white px-4 py-3 shadow-2xl print:hidden">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center p-1 shrink-0">
+            <div className="px-2 py-1 bg-white rounded-xl flex items-center justify-center shrink-0">
               <span dangerouslySetInnerHTML={{ __html: buildCdiLogoHtml(26) }} />
             </div>
             <div>
@@ -313,7 +313,7 @@ export default function PublicPdfViewer() {
           {/* ENCABEZADO CORPORATIVO OFICIAL CDI */}
           <div className="border-b-2 border-slate-900 pb-5 mb-5 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center p-2.5 shrink-0 shadow-md">
+              <div className="px-3 py-2 bg-slate-950 rounded-2xl flex items-center justify-center shrink-0 shadow-md">
                 <span dangerouslySetInnerHTML={{ __html: buildCdiLogoHtml(52) }} />
               </div>
               <div>

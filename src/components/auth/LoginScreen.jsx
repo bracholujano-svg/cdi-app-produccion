@@ -226,13 +226,13 @@ const LoginScreen = () => {
         </button>
 
         <div className="w-full max-w-md bg-white dark:bg-[#111827] lg:bg-transparent lg:dark:bg-transparent rounded-2xl lg:rounded-none border border-[#E2E8F0] dark:border-[#1E293B] lg:border-0 shadow-lg lg:shadow-none p-6 sm:p-8 lg:p-2">
-          {/* Cabecera con el Nuevo Escudo Dorado 3D protagonista */}
+          {/* Cabecera con el Nuevo Escudo Dorado 3D protagonista (h-28 sm:h-32) */}
           <div className="text-center mb-7">
             <div className="flex justify-center mb-4 select-none">
               <img
                 src="/cdi-logo.png"
                 alt="CDI Exhibiciones"
-                className="h-24 w-auto object-contain drop-shadow-md mx-auto"
+                className="h-28 sm:h-32 w-auto object-contain drop-shadow-lg mx-auto"
               />
             </div>
             <h2 className="text-xl font-bold tracking-tight text-[#0F172A] dark:text-white">

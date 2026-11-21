@@ -637,29 +637,26 @@ const QRScannerModal = () => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[160] flex items-center justify-center p-3 sm:p-5 animate-fade-in"
+      className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[160] flex items-center justify-center p-3 sm:p-5 animate-fade-in"
       onClick={() => {
         stopCameraScanner();
         setShowQRScannerModal(false);
       }}
     >
       <div
-        className="bg-white dark:bg-slate-900 border-2 border-indigo-500 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[94vh]"
+        className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full shadow-xl overflow-hidden flex flex-col max-h-[94vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera */}
-        <div className="p-4 sm:p-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <CDILogo heightClass="h-7 sm:h-9" />
-            <div className="p-2 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 shrink-0">
-              <QrCode size={22} />
-            </div>
+        <div className="px-5 py-4 bg-[#1E293B] text-white flex items-center justify-between border-b border-[#D4AF37]/30">
+          <div className="flex items-center gap-3.5">
+            <CDILogo heightClass="h-10 sm:h-11 w-auto" />
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className="text-[10px] font-semibold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#2E435B] text-[#D4AF37] border border-[#D4AF37]/30">
                 Escáner Inteligente de Planta CDI
               </span>
-              <h3 className="text-base sm:text-lg font-black uppercase tracking-tight mt-0.5">
-                Lector de Códigos QR (Remisiones • Empaque • SC Color)
+              <h3 className="text-sm sm:text-base font-bold uppercase tracking-tight mt-1">
+                Lector de Códigos QR (Planos • Remisiones • Empaque • SC Color)
               </h3>
             </div>
           </div>
@@ -669,39 +666,39 @@ const QRScannerModal = () => {
               stopCameraScanner();
               setShowQRScannerModal(false);
             }}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar">
           {/* Switch de redirección automática */}
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/70 rounded-2xl px-4 py-2.5">
-            <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              ⚡ Redirigir automáticamente al escanear un Producto, Color, Empaque o Remisión
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5">
+            <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Redirigir automáticamente al escanear un Producto, Color, Empaque o Remisión
             </div>
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoRedirectEnabled}
                 onChange={(e) => setAutoRedirectEnabled(e.target.checked)}
-                className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+                className="w-4 h-4 accent-[#1E293B] rounded cursor-pointer"
               />
-              <span className="text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+              <span className="text-xs font-bold uppercase text-[#1E293B] dark:text-[#D4AF37]">
                 {autoRedirectEnabled ? 'Activado' : 'Ver resumen antes'}
               </span>
             </label>
           </div>
 
           {/* Visor de Cámara en Vivo */}
-          <div className="relative rounded-2xl overflow-hidden bg-slate-950 border-2 border-slate-800 min-h-[250px] flex flex-col items-center justify-center">
+          <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 min-h-[250px] flex flex-col items-center justify-center">
             <div id="cdi-qr-reader-viewport" className="w-full max-w-[380px] mx-auto" />
 
             {!isCameraActive && !scannedResult && (
               <div className="p-6 text-center space-y-3">
-                <Camera size={40} className="mx-auto text-indigo-400 opacity-80" />
-                <p className="text-xs sm:text-sm font-bold text-slate-300 max-w-md mx-auto">
+                <Camera size={36} className="mx-auto text-[#D4AF37] opacity-85" />
+                <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-md mx-auto">
                   {cameraError ||
                     'Presiona "Activar Cámara" para escanear un código QR en vivo o toma una foto de la etiqueta.'}
                 </p>
@@ -709,14 +706,14 @@ const QRScannerModal = () => {
                   <button
                     type="button"
                     onClick={startCameraScanner}
-                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase flex items-center gap-2 cursor-pointer"
+                    className="px-4 py-2.5 rounded-lg bg-[#1E293B] hover:bg-[#0F172A] border border-slate-700 text-white text-xs font-semibold uppercase flex items-center gap-2 cursor-pointer"
                   >
                     <Camera size={16} /> Activar Cámara en Vivo
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase flex items-center gap-2 cursor-pointer"
+                    className="px-4 py-2.5 rounded-lg bg-[#2E435B] hover:bg-[#1E293B] text-white text-xs font-semibold uppercase flex items-center gap-2 cursor-pointer"
                   >
                     <Upload size={16} /> Tomar Foto / Subir Imagen QR
                   </button>
@@ -731,14 +728,14 @@ const QRScannerModal = () => {
               <button
                 type="button"
                 onClick={startCameraScanner}
-                className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-indigo-600 text-white text-xs font-black uppercase flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 rounded-lg bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold uppercase flex items-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw size={14} /> Reiniciar Cámara
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold uppercase flex items-center gap-1.5 cursor-pointer"
               >
                 <Upload size={14} /> Escanear desde Foto
               </button>
@@ -752,7 +749,7 @@ const QRScannerModal = () => {
               />
             </div>
 
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Compatible con QR de Muestra de Color, Bulto de Empaque y Remisión de Despacho
             </span>
           </div>
@@ -765,18 +762,18 @@ const QRScannerModal = () => {
                 handleProcessScannedText(manualInput.trim(), false);
               }
             }}
-            className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 flex flex-col sm:flex-row gap-2"
+            className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row gap-2"
           >
             <input
               type="text"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
               placeholder="Pistola Lectora QR o escribe Ej: 64077, 64077-B01, ETP-8925, REM-64077..."
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+              className="flex-1 px-3.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-semibold tabular-nums text-slate-900 dark:text-white outline-none focus:border-[#2E435B] focus:ring-2 focus:ring-[#D4AF37]/30"
             />
             <button
               type="submit"
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              className="px-4 py-2 rounded-lg bg-[#1E293B] hover:bg-[#0F172A] text-white text-xs font-semibold uppercase flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
             >
               <Search size={15} /> Ir al Destino QR
             </button>

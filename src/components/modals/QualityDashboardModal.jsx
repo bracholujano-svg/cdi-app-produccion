@@ -207,30 +207,28 @@ const QualityDashboardModal = ({ orders: rawOrders = [], coordinationAlerts = []
             title="Calidad & ISO 9001"
             subtitle="Auditoría y Trazabilidad en segundo plano"
             icon={ShieldCheck}
-            accentClass="bg-emerald-600 text-white"
+            accentClass="bg-[#1E293B] text-[#D4AF37]"
             onRestore={() => setIsMinimized(false)}
             onClose={onClose}
         />
-        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 bg-black/70 backdrop-blur-md z-[110] flex items-center justify-center animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
-            <div className={`theme-bg-card overflow-hidden border theme-border flex flex-col transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
+        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[110] flex items-center justify-center animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
+            <div className={`bg-[#F4F5F7] dark:bg-[#0B1120] overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-xl'}`}>
                 
                 {/* Cabecera Principal */}
-                <div className="p-4 md:p-5 theme-bg-header border-b theme-border flex flex-wrap items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <CDILogo heightClass="h-8 md:h-10" />
-                        <div className="p-2.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/30">
-                            <ShieldCheck size={24} />
-                        </div>
+                <div className="px-4 md:px-6 py-3.5 bg-white dark:bg-[#111827] border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                    <div className="flex items-center gap-3.5">
+                        <CDILogo heightClass="h-11 w-auto" />
+                        <div className="h-7 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0" />
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight theme-text-main">
+                                <h2 className="text-lg md:text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100">
                                     Módulo de Calidad & ISO 9001
                                 </h2>
-                                <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                <span className="bg-[#ECFDF5] text-[#065F46] text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                                     Auditoría Activa
                                 </span>
                             </div>
-                            <p className="text-xs font-bold theme-text-muted uppercase">
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                                 Monitoreo de Conformidad, Mermas, Inspección y Trazabilidad
                             </p>
                         </div>

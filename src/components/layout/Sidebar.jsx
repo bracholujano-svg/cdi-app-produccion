@@ -75,91 +75,326 @@ const Sidebar = () => {
     setAreaFilter('Todas'); 
   };
 
+  const isSupervisorOrAdmin =
+    supervisorProfile?.area?.toUpperCase().includes('ADMIN') ||
+    supervisorProfile?.area?.toUpperCase().includes('SUPERVISOR');
+
+  const navItemClass =
+    'w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-[#1E293B] dark:hover:text-white transition-colors group cursor-pointer';
+  const iconBoxClass =
+    'w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:bg-[#1E293B] group-hover:text-white group-hover:border-[#1E293B] transition-colors shrink-0';
+
   return (
     <>
-      {/* ZONA INVISIBLE DE HOVER EN TODO EL BORDE IZQUIERDO */}
-      <div 
+      {/* ZONA INVISIBLE DE HOVER EN EL BORDE IZQUIERDO */}
+      <div
         onMouseEnter={() => setIsSidebarOpen(true)}
-        className="fixed left-0 top-0 w-6 h-full z-[55] bg-transparent hidden md:block"
+        className="fixed left-0 top-0 w-4 h-full z-[55] bg-transparent hidden md:block"
       />
 
-      {/* BACKDROP DEL SIDEBAR */}
+      {/* BACKDROP UNIFORME DEL SIDEBAR */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/60  z-[70]" onClick={() => setIsSidebarOpen(false)}></div>
+        <div
+          className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[70] transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
-      {/* CAJÓN OCULTO (SIDEBAR) */}
-      <div onMouseLeave={() => setIsSidebarOpen(false)}
-      className={`fixed top-0 left-0 h-full w-[110px] md:w-[130px] bg-[var(--color-base)] z-[80] border-r border-[var(--color-border)] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col items-center py-6 gap-6 overflow-y-auto custom-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <button onClick={() => setIsSidebarOpen(false)} className="absolute top-4 right-4 theme-text-muted hover:text-white transition-colors">
-          <X size={"1.5em"} />
-        </button>
-        <div className="mt-10 flex flex-col gap-4 w-full px-2 mb-10 items-center">
-            <CDILogo heightClass="h-6" className="mb-1" />
+      {/* DRAWER LATERAL CORPORATIVO (w-64 / 256px) */}
+      <aside
+        onMouseLeave={() => setIsSidebarOpen(false)}
+        className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-[#111827] z-[80] border-r border-[#E2E8F0] dark:border-[#1E293B] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col overflow-hidden ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* CABECERA CORPORATIVA OSCURA CON ESCUDO DORADO PROTAGONISTA */}
+        <div className="bg-[#1E293B] px-4 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/cdi-logo.png"
+              alt="CDI Exhibiciones"
+              className="h-14 w-auto object-contain drop-shadow-md shrink-0"
+            />
+            <div className="min-w-0">
+              <div className="text-sm font-bold tracking-tight text-white leading-tight truncate">
+                CDI EXHIBICIONES
+              </div>
+              <div className="text-xs font-medium text-slate-300 mt-0.5 truncate">
+                Control de Planta
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            title="Cerrar menú"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-            <button title="Lector de Códigos QR (Ir a Remisión, Empaque, Color o Plano)" type="button" onClick={() => { setIsSidebarOpen(false); setShowQRScannerModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-sky-500 border-2 border-sky-500/50 transition-colors duration-200 hover:text-white hover:bg-sky-600 hover:border-sky-600 hover:-translate-y-1">
-              <QrCode size={"1.8em"} strokeWidth={2.2} /><span className="text-[11px] md:text-xs font-black uppercase tracking-wider text-center leading-tight truncate w-full px-1">Lector QR</span>
+        {/* LISTA DE NAVEGACIÓN VERTICAL LIMPIA */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-4">
+          {/* SECCIÓN 1: OPERACIÓN Y PLANTA */}
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Operación de Planta
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowAddModal(true);
+                setSearchResults([]);
+                setShowSearchSelector(false);
+                setDuplicateError('');
+              }}
+              className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg text-sm font-semibold bg-[#1E293B] hover:bg-[#0F172A] text-white shadow-xs border-l-[3px] border-[#D4AF37] transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#D4AF37] shrink-0">
+                  <Plus size={18} strokeWidth={2.4} />
+                </span>
+                <span className="truncate">Nuevo Pedido</span>
+              </span>
             </button>
 
-            <button title="Planificador y Área de Consulta General" type="button" onClick={() => { setIsSidebarOpen(false); setShowPlantPlannerModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-indigo-500 border border-indigo-500/30 transition-colors duration-200 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 hover:-translate-y-1">
-              <Map size={"1.8em"} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Planificador</span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowQRScannerModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <QrCode size={17} />
+                </span>
+                <span className="truncate">Lector QR</span>
+              </span>
             </button>
-            <button title="Listas de Empaque y QR" type="button" onClick={() => { setIsSidebarOpen(false); setShowPackingListsModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-amber-500 border border-amber-500/30 transition-colors duration-200 hover:text-white hover:bg-amber-600 hover:border-amber-600 hover:-translate-y-1">
-              <Package size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Empaque</span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowPlantPlannerModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <Map size={17} />
+                </span>
+                <span className="truncate">Planificador</span>
+              </span>
             </button>
-            <button title="Calidad" type="button" onClick={() => { setIsSidebarOpen(false); setShowQualityModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-colors duration-200 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 hover:-translate-y-1">
-              <ShieldCheck size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Calidad</span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowPackingListsModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <Package size={17} />
+                </span>
+                <span className="truncate">Listas de Empaque</span>
+              </span>
             </button>
-            <button title="Monitor TV" type="button" onClick={() => { setIsSidebarOpen(false); setShowTVMonitor(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 hover:-translate-y-1">
-              <Monitor size={"1.8em"} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Monitor TV</span>
+          </div>
+
+          {/* SECCIÓN 2: CALIDAD Y COLORIMETRÍA */}
+          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Calidad y Laboratorio
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowQualityModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <ShieldCheck size={17} />
+                </span>
+                <span className="truncate">Calidad (QC)</span>
+              </span>
             </button>
-            <button title="Dossier" type="button" onClick={() => { setIsSidebarOpen(false); setShowDossierModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-purple-600 dark:text-purple-400 border border-purple-500/30 transition-colors duration-200 hover:text-white hover:bg-purple-600 hover:border-purple-600 hover:-translate-y-1">
-              <Activity size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Dossier</span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowRecetarioModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <FlaskConical size={17} />
+                </span>
+                <span className="truncate">SC Color</span>
+              </span>
+              {pendingEtpCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60 shrink-0">
+                  {pendingEtpCount}
+                </span>
+              )}
             </button>
-            
-            <div className="w-full flex flex-col gap-2 relative group" ref={themeDropdownRef}>
-              <button title="Temas" type="button" onClick={() => setIsThemeOpen(!isThemeOpen)} className={`bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-pink-600 dark:text-pink-400 border transition-colors duration-200 hover:text-white hover:bg-pink-600 hover:border-pink-600 hover:-translate-y-1 ${isThemeOpen ? 'bg-pink-600/20 border-pink-500' : 'border-pink-500/30'}`}>
-                <Palette size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Temas</span>
+
+            {isSupervisorOrAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  setShowEtpSupervisorModal(true);
+                }}
+                className={navItemClass}
+              >
+                <span className="flex items-center gap-3 min-w-0">
+                  <span className={iconBoxClass}>
+                    <AlertCircle size={17} />
+                  </span>
+                  <span className="truncate">Auditoría ETP</span>
+                </span>
+                {pendingEtpCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/60 shrink-0">
+                    {pendingEtpCount}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* SECCIÓN 3: MONITOREO Y REPORTES */}
+          <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Monitoreo y Reportes
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowTVMonitor(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <Monitor size={17} />
+                </span>
+                <span className="truncate">Monitor TV</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowDossierModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <Activity size={17} />
+                </span>
+                <span className="truncate">Dossier</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setShowReportConfigModal(true);
+              }}
+              className={navItemClass}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className={iconBoxClass}>
+                  <FileText size={17} />
+                </span>
+                <span className="truncate">Reportes de Turno</span>
+              </span>
+            </button>
+
+            {/* SELECTOR DE TEMA DISCRETO */}
+            <div className="relative" ref={themeDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsThemeOpen(!isThemeOpen)}
+                className={navItemClass}
+              >
+                <span className="flex items-center gap-3 min-w-0">
+                  <span className={iconBoxClass}>
+                    <Palette size={17} />
+                  </span>
+                  <span className="truncate">Apariencia / Tema</span>
+                </span>
               </button>
               {isThemeOpen && (
-                <div className="w-full flex flex-col gap-2 mt-1 animate-in slide-in-from-top-2 duration-300">
-                  <button title="Tema Santuario" onClick={() => changeTheme('santuario')} className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] w-full">
-                    <span className="w-5 h-5 rounded-full mb-1 shadow-sm" style={{ backgroundColor: '#f8faf3', border: '1px solid #c5c8be' }}></span> <span className="truncate text-center w-full">Santuario</span>
-                  </button>
-                  <button title="Tema Autoridad" onClick={() => changeTheme('autoridad')} className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] w-full">
-                    <span className="w-5 h-5 rounded-full mb-1 shadow-sm" style={{ backgroundColor: '#000000', border: '1px solid #c4c7c7' }}></span> <span className="truncate text-center w-full">Autoridad</span>
-                  </button>
-                  <button title="Tema Cine" onClick={() => changeTheme('cine')} className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] w-full">
-                    <span className="w-5 h-5 rounded-full mb-1 shadow-sm" style={{ backgroundColor: '#ffb1c3', border: '1px solid #5c3f45' }}></span> <span className="truncate text-center w-full">Cine</span>
-                  </button>
-                  <button title="Tema Fluidez" onClick={() => changeTheme('fluidez')} className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold uppercase theme-text-main transition-colors bg-[var(--color-surface)] border border-[var(--color-border)] w-full">
-                    <span className="w-5 h-5 rounded-full mb-1 shadow-sm" style={{ backgroundColor: '#006d32', border: '1px solid #bbcbb9' }}></span> <span className="truncate text-center w-full">Fluidez</span>
-                  </button>
+                <div className="mt-1 ml-11 mr-1 p-1.5 rounded-lg bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-1">
+                  {[
+                    { id: 'zafiro', label: 'Corporativo CDI', swatch: '#1E293B' },
+                    { id: 'santuario', label: 'Santuario', swatch: '#55624d' },
+                    { id: 'autoridad', label: 'Autoridad', swatch: '#0f172a' },
+                    { id: 'fluidez', label: 'Fluidez', swatch: '#006d32' },
+                    { id: 'cine', label: 'Cine', swatch: '#c41a45' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => changeTheme(t.id)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full border border-black/15 shrink-0"
+                        style={{ backgroundColor: t.swatch }}
+                      />
+                      <span className="truncate">{t.label}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-            <button title="Nuevo Pedido" type="button" onClick={() => { setIsSidebarOpen(false); setShowAddModal(true); setSearchResults([]); setShowSearchSelector(false); setDuplicateError(""); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
-              <Plus size={"1.8em"} strokeWidth={3} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Nuevo</span>
-            </button>
-            <button title="SC Color (Entonación)" type="button" onClick={() => { setIsSidebarOpen(false); setShowRecetarioModal(true); }} className="relative bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
-              <FlaskConical size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">SC Color</span>
-              {pendingEtpCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">{pendingEtpCount}</span>}
-            </button>
-            {(supervisorProfile?.area?.toUpperCase().includes('ADMIN') || supervisorProfile?.area?.toUpperCase().includes('SUPERVISOR')) && (
-            <button title="Auditar Fórmulas ETP" type="button" onClick={() => { setIsSidebarOpen(false); setShowEtpSupervisorModal(true); }} className="relative bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
-              <AlertCircle size={"1.8em"} strokeWidth={2} />
-              <span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">ETP</span>
-              {pendingEtpCount > 0 && <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">{pendingEtpCount}</span>}
-            </button>
-            )}
-            <button title="Reportes de Planta" type="button" onClick={() => { setIsSidebarOpen(false); setShowReportConfigModal(true); }} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg theme-text-muted border border-[var(--color-border)] transition-colors duration-200 hover:text-white hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:-translate-y-1">
-              <FileText size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Reportes</span>
-            </button>
-            <button title="Cerrar Sesión" type="button" onClick={handleLogout} className="bg-[var(--color-surface)] aspect-square w-full rounded-2xl flex flex-col items-center justify-center gap-1.5 p-1.5 shadow-lg text-red-500/70 border border-red-500/30 transition-colors duration-200 hover:text-white hover:bg-red-500 hover:border-red-500 hover:-translate-y-1 mt-4">
-              <LogOut size={"1.8em"} strokeWidth={2} /><span className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-center leading-tight truncate w-full px-1">Salir</span>
-            </button>
+          </div>
+        </nav>
+
+        {/* PIE DEL DRAWER: PERFIL + CERRAR SESIÓN */}
+        <div className="p-3 border-t border-[#E2E8F0] dark:border-[#1E293B] bg-[#F4F5F7]/70 dark:bg-[#0B1120]/70 shrink-0 space-y-2">
+          {supervisorProfile?.name && (
+            <div className="px-2 py-1">
+              <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
+                {supervisorProfile.name}
+              </div>
+              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                {supervisorProfile.area}
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-semibold text-[#991B1B] dark:text-red-400 hover:bg-[#FEF2F2] dark:hover:bg-red-950/40 border border-transparent hover:border-[#FECACA] dark:hover:border-red-800/50 transition-colors cursor-pointer"
+          >
+            <LogOut size={17} className="shrink-0" />
+            <span>Cerrar Sesión</span>
+          </button>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

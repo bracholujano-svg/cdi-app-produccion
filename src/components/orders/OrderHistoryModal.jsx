@@ -186,47 +186,54 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
     });
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4 animate-in fade-in duration-200">
-            <div className="bg-[var(--color-base)] w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-[var(--color-border)] overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] flex items-center justify-center z-[150] p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#111827] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-xl flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
                 {/* Cabecera */}
-                <div className="p-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex justify-between items-start relative shrink-0">
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-black theme-text-main uppercase tracking-tight flex items-center gap-2">
-                            <History size="1em" /> Trazabilidad por Secciones
-                        </h2>
-                        <p className="text-sm font-bold theme-text-muted mt-1 flex items-center gap-2">
-                            PEDIDO #{order.pedidoNum} | ART: {order.codArticulo}
-                        </p>
+                <div className="px-6 py-4 border-b border-[#D4AF37]/30 bg-[#1E293B] text-white flex justify-between items-center relative shrink-0">
+                    <div className="flex items-center gap-3.5">
+                        <img
+                            src="/cdi-logo.png"
+                            alt="CDI Exhibiciones"
+                            className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+                        />
+                        <div>
+                            <h2 className="text-lg md:text-xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                                Trazabilidad por Secciones
+                            </h2>
+                            <p className="text-xs font-semibold tabular-nums text-[#D4AF37] mt-0.5 flex items-center gap-2">
+                                PEDIDO #{order.pedidoNum} | ART: {order.codArticulo}
+                            </p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-black/10 rounded-xl hover:bg-black/20 transition-colors theme-text-main shrink-0">
-                        <X size={"1.5em"} />
+                    <button onClick={onClose} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors text-slate-200 hover:text-white shrink-0">
+                        <X size={20} />
                     </button>
                 </div>
 
                 {/* Resumen Superior */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-black/5 border-b border-[var(--color-border)] shrink-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 shrink-0">
                     <div className="flex flex-col">
-                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Cliente</span>
-                        <span className="text-sm md:text-base font-black theme-text-main truncate">{order.cliente || 'S/N'}</span>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cliente</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{order.cliente || 'S/N'}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Área Actual</span>
-                        <span className="text-sm md:text-base font-black theme-text-main flex items-center gap-1"><MapPin size="1em"/> {order.areaActual}</span>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Área Actual</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1"><MapPin size={14} className="text-[#2E435B] dark:text-[#D4AF37]"/> {order.areaActual}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Estado Interno</span>
-                        <span className="text-sm md:text-base font-black theme-text-main flex items-center gap-1"><Activity size="1em"/> {order.estadoInterno}</span>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Estado Interno</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1"><Activity size={14} className="text-[#2E435B] dark:text-[#D4AF37]"/> {order.estadoInterno}</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm md:text-base font-bold theme-text-muted uppercase">Tiempo Restante</span>
-                        <span className={`text-sm md:text-base font-black flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-emerald-500'}`}>
-                            <Calendar size="1em"/> {daysLeft !== null ? (isOverdue ? `ATRASADO ${Math.abs(daysLeft)} DÍAS` : `${daysLeft} DÍAS`) : 'S/F'}
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tiempo Restante</span>
+                        <span className={`text-sm font-bold tabular-nums flex items-center gap-1 ${isOverdue ? 'text-[#991B1B] dark:text-red-400' : 'text-[#065F46] dark:text-emerald-400'}`}>
+                            <Calendar size={14}/> {daysLeft !== null ? (isOverdue ? `ATRASADO ${Math.abs(daysLeft)} DÍAS` : `${daysLeft} DÍAS`) : 'S/F'}
                         </span>
                     </div>
                 </div>
 
                 {/* Línea de Tiempo por Fases (Áreas) */}
-                <div className="p-6 overflow-y-auto flex-1 bg-[var(--color-base)]">
+                <div className="p-6 overflow-y-auto flex-1 bg-[#F4F5F7] dark:bg-[#0B1120]">
                     {phases.length === 0 ? (
                         <div className="text-center p-10 font-bold theme-text-muted uppercase">
                             No hay registros en el historial para este pedido.

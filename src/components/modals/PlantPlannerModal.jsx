@@ -298,36 +298,34 @@ const PlantPlannerModal = ({
             onRestore={() => setIsMinimized(false)}
             onClose={() => setShowPlantPlannerModal(false)}
         />
-        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
-            <div className={`theme-bg-primary flex flex-col overflow-hidden border theme-border relative transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'}`}>
+        <div className={`${isMinimized ? 'hidden' : 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 backdrop-blur-[2px] animate-in fade-in duration-200'} ${isMaximized ? 'p-0' : 'p-2 md:p-4'}`}>
+            <div className={`bg-[#F4F5F7] dark:bg-[#0B1120] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 relative transition-all duration-200 ${isMaximized ? 'w-screen h-screen rounded-none' : 'w-[90vw] h-[85vh] rounded-2xl shadow-xl'}`}>
                 
                 {/* BOTÓN FLOTANTE LATERAL IZQUIERDO: VER INDICADORES (DIRECTIVA 2) */}
                 <button 
                     type="button" 
                     onClick={() => setShowIndicadores(true)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 px-2 rounded-r-2xl shadow-2xl flex flex-col items-center gap-2 transition-all hover:pl-3 group border-y border-r border-indigo-400/40 select-none cursor-pointer"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-[#1E293B] hover:bg-[#0F172A] text-white py-3.5 px-2 rounded-r-2xl shadow-xl flex flex-col items-center gap-2 transition-all hover:pl-3 group border-y border-r border-[#D4AF37]/40 select-none cursor-pointer"
                     title="Ver Indicadores (Panel Lateral)"
                 >
-                    <BarChart2 className="w-5 h-5 text-white animate-pulse group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest [writing-mode:vertical-lr] rotate-180">
+                    <BarChart2 className="w-5 h-5 text-[#D4AF37] group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-lr] rotate-180">
                         Indicadores
                     </span>
                 </button>
 
                 {/* Header Principal */}
-                <div className="p-3 md:p-4 border-b theme-border flex flex-wrap items-center justify-between gap-3 theme-bg-secondary sticky top-0 z-20">
-                    <div className="flex items-center gap-3">
-                        <CDILogo heightClass="h-8 md:h-10" />
-                        <div className="p-2.5 bg-indigo-500/20 rounded-xl shadow-inner border border-indigo-500/30">
-                            <LayoutGrid className="w-6 h-6 text-indigo-500" />
-                        </div>
+                <div className="px-4 md:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#111827] sticky top-0 z-20">
+                    <div className="flex items-center gap-3.5">
+                        <CDILogo heightClass="h-11 w-auto" />
+                        <div className="h-7 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0" />
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-xl md:text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight drop-shadow-sm">
-                                    Planificador
+                                <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight uppercase">
+                                    Planificador de Planta
                                 </h2>
                             </div>
-                            <p className="text-xs md:text-sm font-bold theme-text-primary mt-0.5">Control Estratégico y Mapa de Áreas</p>
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Control Estratégico y Mapa de Áreas</p>
                         </div>
                     </div>
 

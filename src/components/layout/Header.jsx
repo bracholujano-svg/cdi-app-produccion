@@ -100,21 +100,21 @@ const Header = () => {
               <Menu size={20} />
             </button>
 
-            {/* LOGO NÍTIDO + TIPOGRAFÍA LIMPIA */}
+            {/* LOGO NÍTIDO PROTAGONISTA (48px) + TIPOGRAFÍA LIMPIA */}
             <div
-              className="flex items-center gap-2.5 select-none cursor-pointer py-0.5"
+              className="flex items-center gap-3 select-none cursor-pointer py-0.5 shrink-0"
               onClick={() => window.scrollTo(0, 0)}
             >
               <img
                 src="/cdi-logo.png"
                 alt="CDI Exhibiciones"
-                className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+                className="h-12 w-auto object-contain drop-shadow-[0_2px_6px_rgba(15,23,42,0.22)] shrink-0"
               />
               <div className="flex flex-col">
                 <span className="text-sm md:text-base font-bold tracking-tight text-[#1E293B] dark:text-slate-100 leading-none">
                   CDI EXHIBICIONES
                 </span>
-                <span className="text-[10px] font-medium tracking-wider uppercase text-slate-400 dark:text-slate-500 mt-0.5 hidden sm:inline">
+                <span className="text-[10px] font-medium tracking-wider uppercase text-slate-500 dark:text-slate-400 mt-1 hidden sm:inline">
                   Control Industrial
                 </span>
               </div>

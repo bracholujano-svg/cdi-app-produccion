@@ -2,19 +2,19 @@ import React from 'react';
 
 const CDILogo = ({
   className = '',
-  heightClass = 'h-10 md:h-11',
+  heightClass = 'h-11 md:h-12',
   showWordmark = false,
   wordmarkClassName = ''
 }) => {
   return (
     <div
-      className={`inline-flex items-center gap-2.5 select-none bg-transparent shrink-0 ${className}`}
+      className={`inline-flex items-center gap-3 select-none bg-transparent shrink-0 ${className}`}
       aria-label="CDI Exhibiciones"
     >
       <img
         src="/cdi-logo.png"
         alt="CDI Exhibiciones"
-        className={`${heightClass} w-auto object-contain drop-shadow-sm block shrink-0`}
+        className={`${heightClass} w-auto object-contain drop-shadow-[0_2px_6px_rgba(15,23,42,0.22)] block shrink-0`}
       />
       {showWordmark && (
         <span

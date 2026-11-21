@@ -32,16 +32,15 @@ export default function CoordViewModal({ deleteAlert }) {
     });
 
     return (
-        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-0 md:p-4">
-            <div className="theme-bg-card w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
-                <div className="p-5 bg-[var(--color-primary)] text-[var(--color-surface)] flex justify-between items-center shrink-0 shadow-sm z-10">
-                    <div className="flex items-center gap-3">
-                        <CDILogo heightClass="h-7 sm:h-8" className="shrink-0" />
-                        <span className="h-5 w-px bg-current opacity-20 hidden sm:block"></span>
-                        <LayoutList size={20}/>
-                        <h2 className="text-lg font-black uppercase">Plan Maestro de Despacho</h2>
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[110] flex items-center justify-center p-0 md:p-4">
+            <div className="bg-white dark:bg-[#111827] w-full h-full md:max-w-5xl md:h-auto md:max-h-[85vh] md:rounded-2xl overflow-hidden flex flex-col shadow-xl border border-slate-200 dark:border-slate-800">
+                <div className="px-5 py-4 bg-[#1E293B] text-white border-b border-[#D4AF37]/30 flex justify-between items-center shrink-0 z-10">
+                    <div className="flex items-center gap-3.5">
+                        <CDILogo heightClass="h-10 w-auto" className="shrink-0" />
+                        <span className="h-6 w-px bg-slate-700 hidden sm:block"></span>
+                        <h2 className="text-base sm:text-lg font-bold uppercase tracking-tight">Plan Maestro de Despacho</h2>
                     </div>
-                    <button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">✕</button>
+                    <button type="button" onClick={() => setShowCoordViewModal(false)} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-slate-200 hover:text-white transition-colors">✕</button>
                 </div>
               
                 <div className="p-4 bg-[var(--color-surface)] border-b theme-border flex flex-col md:flex-row gap-4 shrink-0">

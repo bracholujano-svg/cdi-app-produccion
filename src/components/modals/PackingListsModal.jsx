@@ -2213,7 +2213,7 @@ const PackingListsModal = () => {
             : 'Bultos y QR en segundo plano'
         }
         icon={Package}
-        accentClass="bg-amber-500 text-slate-950"
+        accentClass="bg-[#1E293B] text-[#D4AF37]"
         onRestore={() => setIsMinimized(false)}
         onClose={() => setShowPackingListsModal(false)}
       />
@@ -2222,35 +2222,33 @@ const PackingListsModal = () => {
         className={`${
           isMinimized
             ? 'hidden'
-            : 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center overflow-hidden'
+            : 'fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[100] flex items-center justify-center overflow-hidden'
         } ${isMaximized ? 'p-0' : 'p-2 md:p-5'}`}
       >
         <div
-          className={`bg-[var(--color-base)] border-2 border-[var(--color-border)] flex flex-col overflow-hidden transition-all duration-200 ${
+          className={`bg-[#F4F5F7] dark:bg-[#0B1120] border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden transition-all duration-200 ${
             isMaximized
               ? 'w-screen h-screen rounded-none'
-              : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'
+              : 'w-[90vw] h-[85vh] rounded-2xl shadow-xl'
           }`}
         >
           {/* CABECERA PRINCIPAL: CONTROLES DE VENTANA FIJOS EN LA ESQUINA SUPERIOR DERECHA DE LA VENTANA */}
-          <div className="bg-[var(--color-surface)] border-b-2 border-[var(--color-border)] px-4 md:px-6 py-3.5 flex flex-col gap-3 shrink-0">
+          <div className="bg-white dark:bg-[#111827] border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3.5 flex flex-col gap-3 shrink-0">
             {/* FILA SUPERIOR: TÍTULO A LA IZQUIERDA + PESTAÑAS Y CONTROLES DE VENTANA EN ESQUINA SUPERIOR DERECHA */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
-                <CDILogo heightClass="h-8 md:h-10" />
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex items-center justify-center text-amber-500 shadow-inner shrink-0">
-                  <Package size={22} strokeWidth={2.4} />
-                </div>
+                <CDILogo heightClass="h-11 w-auto" />
+                <div className="h-7 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0" />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight theme-text-main">
-                      Módulo de Lista de Empaque y Fraccionamiento de Bultos / QR
+                    <h2 className="text-lg md:text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100">
+                      Lista de Empaque y Fraccionamiento de Bultos / QR
                     </h2>
-                    <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-600 text-white border border-emerald-400 shadow-sm">
-                      Trazabilidad de Pedido Completo + QR
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]">
+                      Trazabilidad + QR
                     </span>
                   </div>
-                  <p className="text-xs md:text-sm theme-text-muted font-bold mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     Organiza bultos en EMPAQUE, divide productos grandes en subpaquetes o cantidades en lotes y consulta el historial.
                   </p>
                 </div>
@@ -2258,20 +2256,20 @@ const PackingListsModal = () => {
 
               {/* ESQUINA SUPERIOR DERECHA DE LA VENTANA: SELECTOR DE VISTA + BARRA DE MINIMIZAR / AMPLIAR / CERRAR */}
               <div className="flex items-center gap-3 shrink-0">
-                <div className="flex items-center gap-2 bg-[var(--color-base)] p-1.5 rounded-2xl border-2 border-[var(--color-border)]">
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => {
                       setConsultingClosedListId(null);
                       setMainViewTab('ACTIVAS');
                     }}
-                    className={`px-4 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer border-2 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tabular-nums flex items-center gap-1.5 transition-all cursor-pointer ${
                       mainViewTab === 'ACTIVAS'
-                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                        : 'bg-[var(--color-surface)] theme-text-main border-[var(--color-border)] hover:border-amber-500 hover:bg-amber-500/15'
+                        ? 'bg-[#1E293B] text-white shadow-2xs'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700'
                     }`}
                   >
-                    <Package size={17} />
+                    <Package size={15} />
                     <span>Mesa de Empaque ({activeWorkingLists.length})</span>
                   </button>
 
@@ -2281,14 +2279,14 @@ const PackingListsModal = () => {
                       setConsultingClosedListId(null);
                       setMainViewTab('HISTORIAL');
                     }}
-                    className={`px-4 py-2 rounded-xl text-xs md:text-sm font-black uppercase flex items-center gap-2 transition-all cursor-pointer border-2 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tabular-nums flex items-center gap-1.5 transition-all cursor-pointer ${
                       mainViewTab === 'HISTORIAL'
-                        ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
-                        : 'bg-[var(--color-surface)] theme-text-main border-[var(--color-border)] hover:border-indigo-500 hover:bg-indigo-500/15'
+                        ? 'bg-[#1E293B] text-white shadow-2xs'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700'
                     }`}
                   >
-                    <History size={17} />
-                    <span>Historial de Listas ({(packingLists || []).length})</span>
+                    <History size={15} />
+                    <span>Historial ({(packingLists || []).length})</span>
                   </button>
 
                   <button
@@ -2299,10 +2297,10 @@ const PackingListsModal = () => {
                       }
                     }}
                     title="Sincronizar ahora mismo con todos los equipos de la planta"
-                    className="px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-semibold uppercase flex items-center gap-1.5 bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] hover:bg-emerald-100 transition-all cursor-pointer"
                   >
-                    <RotateCcw size={15} />
-                    <span className="hidden lg:inline">Sincronizado en Vivo</span>
+                    <RotateCcw size={14} />
+                    <span className="hidden lg:inline">En Vivo</span>
                   </button>
                 </div>
 

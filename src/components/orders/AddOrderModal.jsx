@@ -163,21 +163,18 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-0 md:p-4 animate-in fade-in duration-200">
-      <div className="theme-bg-card w-full h-full md:max-w-5xl md:max-h-[92vh] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl border theme-border">
+    <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[110] flex items-center justify-center p-0 md:p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#111827] w-full h-full md:max-w-5xl md:max-h-[92vh] md:rounded-2xl overflow-hidden flex flex-col shadow-xl border border-slate-200 dark:border-slate-800">
         
         {/* Cabecera del Modal */}
-        <div className="p-4 md:p-5 theme-bg-header border-b theme-border flex justify-between items-center shrink-0 shadow-sm z-10">
-          <div className="flex items-center gap-3">
-            <CDILogo heightClass="h-8 md:h-9" />
-            <div className="p-2 bg-[var(--color-primary)]/20 rounded-xl text-[var(--color-primary)]">
-              <Plus size={20} />
-            </div>
+        <div className="px-5 py-4 bg-[#1E293B] text-white border-b border-[#D4AF37]/30 flex justify-between items-center shrink-0 z-10">
+          <div className="flex items-center gap-3.5">
+            <CDILogo heightClass="h-10 md:h-11 w-auto" />
             <div>
-              <h2 className="text-base md:text-lg font-black uppercase flex items-center gap-2 theme-text-main">
+              <h2 className="text-base md:text-lg font-bold uppercase flex items-center gap-2 text-white">
                 Nuevo Registro / Ingreso a Planta
               </h2>
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Sistema de Ingreso Dual</span>
+              <span className="text-[11px] font-medium text-slate-300 uppercase">Sistema de Ingreso Dual • CDI Exhibiciones</span>
             </div>
           </div>
           <button 
@@ -192,7 +189,7 @@ const AddOrderModal = ({ createOrder, createBulkOrders, doExcelSearch }) => {
               if (setShowSearchSelector) setShowSearchSelector(false);
               if (setDuplicateError) setDuplicateError('');
             }} 
-            className="p-2.5 bg-black/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-xl transition-colors theme-text-main cursor-pointer"
+            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg transition-colors cursor-pointer"
           >
             ✕
           </button>

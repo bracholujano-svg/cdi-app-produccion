@@ -37,7 +37,7 @@ const RecetarioModal = () => {
         title="SC COLOR • Entonación"
         subtitle="Laboratorio y Fichas Técnicas en segundo plano"
         icon={FlaskConical}
-        accentClass="bg-indigo-600 text-white"
+        accentClass="bg-[#1E293B] text-[#D4AF37]"
         onRestore={() => setIsMinimized(false)}
         onClose={() => setShowRecetarioModal(false)}
       />
@@ -46,26 +46,29 @@ const RecetarioModal = () => {
         className={`${
           isMinimized
             ? 'hidden'
-            : 'fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center animate-fade-in'
+            : 'fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[110] flex items-center justify-center animate-fade-in'
         } ${recetarioMaximized ? 'p-0' : 'p-2 md:p-4'}`}
       >
         <div
-          className={`theme-bg-card overflow-hidden flex flex-col border theme-border relative transition-all duration-200 ${
+          className={`bg-[#F4F5F7] dark:bg-[#0B1120] overflow-hidden flex flex-col border border-[#E2E8F0] dark:border-[#1E293B] relative transition-all duration-200 ${
             recetarioMaximized
               ? 'w-screen h-screen rounded-none'
-              : 'w-[90vw] h-[85vh] rounded-2xl shadow-2xl'
+              : 'w-[90vw] h-[85vh] rounded-2xl shadow-xl'
           }`}
         >
           {/* Barra Superior Unificada de Ventana (Sin botones inferiores flotantes) */}
-          <div className="px-4 md:px-6 py-2.5 bg-slate-100/90 dark:bg-slate-900/95 border-b theme-border flex items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <CDILogo heightClass="h-7 md:h-9" />
-              <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-sm shrink-0">
-                <FlaskConical size={16} />
+          <div className="px-4 md:px-6 py-2.5 bg-white dark:bg-[#111827] border-b border-[#E2E8F0] dark:border-[#1E293B] flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <CDILogo heightClass="h-11 w-auto" />
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0" />
+              <div className="min-w-0">
+                <span className="block text-xs md:text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+                  SC COLOR • Laboratorio de Entonación y Fichas Técnicas
+                </span>
+                <span className="hidden sm:block text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                  CDI Exhibiciones — Control Colorimétrico y Formulación PPG
+                </span>
               </div>
-              <span className="text-xs md:text-sm font-black uppercase tracking-wider theme-text-main truncate">
-                SC COLOR • Laboratorio de Entonación y Fichas Técnicas
-              </span>
             </div>
 
             <WindowControls

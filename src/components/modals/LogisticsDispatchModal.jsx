@@ -144,28 +144,25 @@ export default function LogisticsDispatchModal({
   const totalUnidades = orders.reduce((sum, o) => sum + (parseInt(o.cantidad) || 1), 0);
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="theme-bg-card w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl border theme-border flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[150] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#111827] w-full max-w-2xl max-h-[92vh] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Cabecera del Modal */}
-        <div className="p-4 sm:p-5 border-b theme-border flex items-center justify-between bg-gradient-to-r from-purple-900/40 to-slate-900/60">
-          <div className="flex items-center gap-3">
-            <CDILogo heightClass="h-8 sm:h-9" className="shrink-0 hidden sm:block" />
-            <div className="p-3 bg-purple-600 text-white rounded-2xl shadow-lg shadow-purple-600/30">
-              <Truck size={26} />
-            </div>
+        <div className="px-5 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between bg-[#1E293B] text-white">
+          <div className="flex items-center gap-3.5">
+            <CDILogo heightClass="h-10 sm:h-11 w-auto" className="shrink-0" />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg sm:text-xl font-black uppercase text-white tracking-tight">
+                <h3 className="text-base sm:text-lg font-bold uppercase text-white tracking-tight">
                   Registrar Despacho Logístico
                 </h3>
-                <span className="px-2 py-0.5 rounded-md bg-sky-500/30 border border-sky-400/50 text-sky-200 text-xs font-black uppercase">
+                <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold tabular-nums uppercase">
                   {guiaRemesa || 'REM-0001'}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/30 border border-amber-400/50 text-amber-200 text-xs font-black uppercase">
+                <span className="px-2 py-0.5 rounded-md bg-[#2E435B] border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold tabular-nums uppercase">
                   {numeroEmpaque || 'EMP-0001'}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium mt-0.5">
+              <p className="text-xs text-slate-300 font-medium mt-0.5 tabular-nums">
                 {orders.length === 1
                   ? `Pedido #${orders[0]?.pedidoNum} — ${orders[0]?.nombre || ''} (${orders[0]?.cantidad || 1} und)`
                   : `${orders.length} productos seleccionados (${totalUnidades} unidades en total)`}
@@ -175,10 +172,10 @@ export default function LogisticsDispatchModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors"
             title="Cancelar"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 

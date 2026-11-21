@@ -201,24 +201,31 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80  z-[110] flex items-center justify-center p-2 md:p-4">
-            <div className="w-full max-w-4xl bg-[var(--color-base)] h-[90vh] md:h-[85vh] rounded-[2rem] flex flex-col border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] z-[110] flex items-center justify-center p-2 md:p-4">
+            <div className="w-full max-w-4xl bg-white dark:bg-[#111827] h-[90vh] md:h-[85vh] rounded-2xl flex flex-col border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden animate-in zoom-in duration-300">
                 
                 {/* HEADER CON PESTAÑAS */}
-                <div className="bg-[var(--bg-header)] border-b border-[var(--color-border)] shrink-0 flex flex-col">
-                    <div className="p-5 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-xl font-black theme-text-main uppercase">Panel de Recepciones</h2>
-                            <p className="text-sm md:text-base font-bold theme-text-muted">Verifique entregas o revise devoluciones</p>
+                <div className="bg-[#1E293B] text-white border-b border-[#D4AF37]/30 shrink-0 flex flex-col">
+                    <div className="px-5 py-4 flex justify-between items-center">
+                        <div className="flex items-center gap-3.5">
+                            <img
+                                src="/cdi-logo.png"
+                                alt="CDI Exhibiciones"
+                                className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+                            />
+                            <div>
+                                <h2 className="text-lg md:text-xl font-bold text-white uppercase tracking-tight">Panel de Recepciones</h2>
+                                <p className="text-xs md:text-sm font-medium text-slate-300">Verifique entregas en tránsito o revise devoluciones</p>
+                            </div>
                         </div>
-                        <button type="button" onClick={() => { resetState(); setShowReceptionModal(false); }} className="p-2.5 bg-black/10 rounded-xl hover:bg-black/20 theme-text-main shrink-0">✕</button>
+                        <button type="button" onClick={() => { resetState(); setShowReceptionModal(false); }} className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-slate-200 hover:text-white shrink-0">✕</button>
                     </div>
-                    <div className="flex border-t border-[var(--color-border)]">
-                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-[var(--color-primary)] text-[var(--color-base)] border-b-4 border-black/20' : 'theme-text-muted hover:bg-black/5'}`}>
+                    <div className="flex border-t border-slate-700/80 bg-slate-900/50">
+                        <button onClick={() => { setActiveTab('PENDIENTES'); resetState(); }} className={`flex-1 py-2.5 text-xs md:text-sm font-bold uppercase tabular-nums transition-colors flex justify-center items-center gap-2 ${activeTab === 'PENDIENTES' ? 'bg-white dark:bg-[#111827] text-[#1E293B] dark:text-white border-t-2 border-[#D4AF37]' : 'text-slate-300 hover:bg-slate-800/60'}`}>
                             Pendientes de Ingreso ({pendingItems.length})
                         </button>
-                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-3 text-sm md:text-base font-black uppercase transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-red-500 text-white border-b-4 border-red-700' : 'theme-text-muted hover:bg-red-500/10 hover:text-red-500'}`}>
-                            <AlertTriangle size={16} /> Mis Devoluciones ({rejectedItems.length})
+                        <button onClick={() => { setActiveTab('RECHAZOS'); resetState(); }} className={`flex-1 py-2.5 text-xs md:text-sm font-bold uppercase tabular-nums transition-colors flex justify-center items-center gap-2 ${activeTab === 'RECHAZOS' ? 'bg-[#FEF2F2] dark:bg-red-950/60 text-[#991B1B] dark:text-red-300 border-t-2 border-red-600' : 'text-slate-300 hover:bg-red-500/10 hover:text-red-300'}`}>
+                            <AlertTriangle size={15} /> Mis Devoluciones ({rejectedItems.length})
                         </button>
                     </div>
                 </div>
