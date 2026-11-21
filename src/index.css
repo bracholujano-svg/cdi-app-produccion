@@ -3,24 +3,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* New Dynamic Theming Engine (CSS Variables) - WCAG High Contrast Defaults */
+/* Sistema de Diseño Corporativo CDI Exhibiciones (SaaS Industrial Moderno) */
 :root {
-    --color-base: #f8fafc;
-    --color-surface: #ffffff;
-    --color-primary: #0f172a;
-    --color-primary-glow: rgba(15, 23, 42, 0.2);
-    --color-text-main: #0f172a;
-    --color-text-muted: #334155;
-    --color-border: #cbd5e1;
+    --color-base: #F4F5F7;
+    --color-surface: #FFFFFF;
+    --color-primary: #1E293B;
+    --color-primary-hover: #0F172A;
+    --color-brand-slate: #2E435B;
+    --color-accent-gold: #D4AF37;
+    --color-primary-glow: rgba(212, 175, 55, 0.22);
+    --color-text-main: #0F172A;
+    --color-text-muted: #475569;
+    --color-border: #E2E8F0;
 }
 :root.dark {
-    --color-base: #0b1118;
-    --color-surface: #131c26;
-    --color-primary: #38bdf8;
-    --color-primary-glow: rgba(56, 189, 248, 0.25);
-    --color-text-main: #f8fafc;
-    --color-text-muted: #cbd5e1;
-    --color-border: #334155;
+    --color-base: #0B1120;
+    --color-surface: #111827;
+    --color-primary: #38BDF8;
+    --color-primary-hover: #0284C7;
+    --color-brand-slate: #2E435B;
+    --color-accent-gold: #D4AF37;
+    --color-primary-glow: rgba(212, 175, 55, 0.25);
+    --color-text-main: #F8FAFC;
+    --color-text-muted: #94A3B8;
+    --color-border: #1E293B;
 }
 
 /* Tema 1: Santuario (Digital Sanctuary) */
@@ -108,8 +114,8 @@
     background-color: var(--color-surface); 
     color: var(--color-text-main);
     border: 1px solid var(--color-border);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    border-radius: 16px; /* rounded-2xl */
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    border-radius: 12px; /* rounded-xl */
 }
 .theme-bg-header { 
     background-color: var(--color-surface); 
@@ -117,14 +123,14 @@
     border-bottom: 1px solid var(--color-border);
 }
 .theme-bg-input { 
-    background-color: rgba(0,0,0,0.2); 
+    background-color: var(--color-surface); 
     color: var(--color-text-main); 
     border: 1px solid var(--color-border);
     transition: all 0.2s ease;
 }
 .theme-bg-input:focus-within {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px var(--color-primary), 0 0 15px var(--color-primary-glow);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
 }
 .theme-border { border-color: var(--color-border); }
 .theme-text-muted { color: var(--color-text-muted, var(--text-muted, #334155)); }

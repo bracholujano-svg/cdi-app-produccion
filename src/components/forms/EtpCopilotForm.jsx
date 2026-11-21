@@ -49,6 +49,7 @@ import {
   compressSpectroImage,
   buildTechnicalSheetId
 } from '../../utils/colorQrHelper';
+import { preloadCdiLogoBase64, getCdiLogoSrc } from '../../utils/cdiLogo';
 
 export default function EtpCopilotForm({
   colorId,
@@ -491,6 +492,7 @@ export default function EtpCopilotForm({
     setIsSubmitting(true);
     setIsGeneratingPDF(true);
 
+    await preloadCdiLogoBase64();
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const elemento = componentRef.current;
@@ -909,20 +911,28 @@ export default function EtpCopilotForm({
             isGeneratingPDF ? 'block' : 'hidden print:block'
           } mb-4 border-b-2 border-slate-900 pb-3`}
         >
-          <div className="flex justify-between items-center">
-            <div>
-              <h1
-                className="text-2xl font-black text-slate-900 tracking-tight"
-                style={{ fontFamily: "'Arial Black', Arial, sans-serif" }}
-              >
-                CDI EXHIBICIONES S.A.S. — LABORATORIO DE COLORIMETRÍA
-              </h1>
-              <h2
-                className="text-sm font-bold text-slate-600 uppercase tracking-wider"
-                style={{ fontFamily: 'Arial, sans-serif' }}
-              >
-                FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y VALIDACIÓN DE COLOR (SC COLOR)
-              </h2>
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex items-center gap-3.5">
+              <img
+                src={getCdiLogoSrc()}
+                crossOrigin="anonymous"
+                alt="CDI Exhibiciones"
+                style={{ height: '54px', width: 'auto', objectFit: 'contain' }}
+              />
+              <div>
+                <h1
+                  className="text-2xl font-black text-slate-900 tracking-tight"
+                  style={{ fontFamily: "'Arial Black', Arial, sans-serif" }}
+                >
+                  CDI EXHIBICIONES S.A.S. — LABORATORIO DE COLORIMETRÍA
+                </h1>
+                <h2
+                  className="text-sm font-bold text-slate-600 uppercase tracking-wider"
+                  style={{ fontFamily: 'Arial, sans-serif' }}
+                >
+                  FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y VALIDACIÓN DE COLOR (SC COLOR)
+                </h2>
+              </div>
             </div>
             <div className="text-right">
               <span className="text-xs font-mono block text-slate-500">

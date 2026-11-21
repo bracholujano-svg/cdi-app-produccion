@@ -102,51 +102,158 @@ const OrderCard = ({ group }) => {
       } catch { return ''; }
   }, [group?.fechaEntregaPrometida]);
 
+  const cleanMaterialLabel = (label = '') =>
+    String(label || '')
+      .replace(/^[⚠️✅⏳❌]+\s*/u, '')
+      .trim();
+
   return (
-    <div key={group.pedidoNum} onClick={() => { setSelectedGroupPedido(group.pedidoNum); setItemSearchTerm(''); }} className={`rounded-[1.5rem] p-4 cursor-pointer transition-colors hover:-translate-y-1 shadow-sm hover:shadow-md theme-bg-card relative group border ${isNoMaterials ? 'border-yellow-500/80' : isSinStock ? 'border-red-500/90' : isPendienteEntrega ? 'border-amber-500/80' : (isSufficient ? 'border-[var(--color-primary)]/50' : isAtrasado ? 'border-red-500/50' : isUrgent ? 'border-red-400/50' : 'theme-border')} flex flex-col min-w-0`}>
-      
-      <div className="flex justify-between items-start mb-2 gap-2">
-        <div className="flex flex-col gap-1 w-full">
-          <div className={`rounded-md font-black uppercase shadow-sm whitespace-nowrap overflow-hidden text-ellipsis text-base lg:text-lg px-1.5 py-1 ${isGroupDispatched ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 border border-emerald-500/30' : isAtrasado ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isUrgent ? 'animate-bg-pulse-red text-red-800 dark:text-red-500 border border-red-500/20' : isCumplido ? 'bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/20' : 'bg-[var(--color-primary)]/10 theme-text-primary border border-[var(--color-primary)]/20'}`}>
-            {isGroupDispatched ? `✅ DESPACHADO${formattedDate}` : (isAtrasado ? `⚠️ ATRASO ${Math.abs(daysLeft)}D${formattedDate}` : (daysLeft !== null ? `⏳ ${daysLeft}D RESTANTES${formattedDate}` : 'S/F'))}
+    <div
+      key={group.pedidoNum}
+      onClick={() => {
+        setSelectedGroupPedido(group.pedidoNum);
+        setItemSearchTerm('');
+      }}
+      className="rounded-xl p-4 cursor-pointer bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all relative group flex flex-col min-w-0"
+    >
+      {/* CABECERA: ESTADO DE ENTREGA + SOFT PILL DE INSUMOS */}
+      <div className="flex justify-between items-start mb-3 gap-2">
+        <div className="flex flex-col gap-1.5 w-full min-w-0">
+          {/* Píldora de estado temporal / despacho */}
+          <div
+            className={`inline-flex items-center gap-2 rounded-lg font-semibold text-xs sm:text-sm px-2.5 py-1 border tabular-nums whitespace-nowrap overflow-hidden text-ellipsis ${
+              isGroupDispatched
+                ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0] dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-800/60'
+                : isAtrasado || isUrgent
+                ? 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA] dark:bg-red-950/45 dark:text-red-300 dark:border-red-800/60'
+                : isCumplido
+                ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0] dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-800/60'
+                : 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                isGroupDispatched || isCumplido
+                  ? 'bg-[#10B981]'
+                  : isAtrasado || isUrgent
+                  ? 'bg-[#EF4444]'
+                  : 'bg-slate-400'
+              }`}
+            />
+            <span className="truncate tabular-nums">
+              {isGroupDispatched
+                ? `Despachado${formattedDate}`
+                : isAtrasado
+                ? `Atraso ${Math.abs(daysLeft)}d${formattedDate}`
+                : daysLeft !== null
+                ? `${daysLeft}d restantes${formattedDate}`
+                : 'Sin fecha asignada'}
+            </span>
           </div>
+
+          {/* Soft Pills de estado de insumos MRP */}
           {isNoMaterials && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">{orderSummary.label}</span>
-              <FolderOpen size={"1.1em"} className="shrink-0" />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveAlertMaterials(todosRequerimientos);
+                setShowMaterialsAlertModal(true);
+              }}
+              className="w-full text-left rounded-lg font-medium text-xs sm:text-sm px-2.5 py-1 bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-800/60 hover:brightness-95 transition-all flex items-center justify-between gap-1.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                <span className="truncate">{cleanMaterialLabel(orderSummary.label)}</span>
+              </span>
+              <FolderOpen size={13} className="shrink-0 opacity-75" />
             </button>
           )}
           {isSinStock && (
-            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 animate-bg-pulse-red bg-red-500/15 text-red-800 dark:text-red-400 border border-red-500/40 hover:bg-red-500/25 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">{orderSummary.label}</span>
-              <ChevronDown size={"1.1em"} className="shrink-0" />
+            <button
+              type="button"
+              title={orderSummary.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveAlertMaterials(todosRequerimientos);
+                setShowMaterialsAlertModal(true);
+              }}
+              className="w-full text-left rounded-lg font-semibold text-xs sm:text-sm px-2.5 py-1 bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] dark:bg-red-950/45 dark:text-red-300 dark:border-red-800/60 hover:brightness-95 transition-all flex items-center justify-between gap-1.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] shrink-0" />
+                <span className="truncate">{cleanMaterialLabel(orderSummary.label)}</span>
+              </span>
+              <ChevronDown size={14} className="shrink-0 opacity-80" />
             </button>
           )}
           {isPendienteEntrega && (
-            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 animate-bg-pulse-orange bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/40 hover:bg-amber-500/25 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">{orderSummary.label}</span>
-              <ChevronDown size={"1.1em"} className="shrink-0" />
+            <button
+              type="button"
+              title={orderSummary.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveAlertMaterials(todosRequerimientos);
+                setShowMaterialsAlertModal(true);
+              }}
+              className="w-full text-left rounded-lg font-medium text-xs sm:text-sm px-2.5 py-1 bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-800/60 hover:brightness-95 transition-all flex items-center justify-between gap-1.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                <span className="truncate">{cleanMaterialLabel(orderSummary.label)}</span>
+              </span>
+              <ChevronDown size={14} className="shrink-0 opacity-80" />
             </button>
           )}
           {isSufficient && (
-            <button type="button" title={orderSummary.label} onClick={(e) => { e.stopPropagation(); setActiveAlertMaterials(todosRequerimientos); setShowMaterialsAlertModal(true); }} className="w-full text-left rounded-md font-black uppercase shadow-sm overflow-hidden text-xs sm:text-sm lg:text-base px-2 py-1 bg-green-500/10 text-green-800 dark:text-green-500 border border-green-500/30 hover:bg-green-500/20 transition-colors flex items-center justify-between gap-1">
-              <span className="truncate">{orderSummary.label}</span>
-              <FolderOpen size={"1.1em"} className="shrink-0" />
+            <button
+              type="button"
+              title={orderSummary.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveAlertMaterials(todosRequerimientos);
+                setShowMaterialsAlertModal(true);
+              }}
+              className="w-full text-left rounded-lg font-medium text-xs sm:text-sm px-2.5 py-1 bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-800/60 hover:brightness-95 transition-all flex items-center justify-between gap-1.5 cursor-pointer"
+            >
+              <span className="flex items-center gap-2 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shrink-0" />
+                <span className="truncate">{cleanMaterialLabel(orderSummary.label)}</span>
+              </span>
+              <FolderOpen size={13} className="shrink-0 opacity-75" />
             </button>
           )}
         </div>
-        <FolderOpen size={"1.2em"} className={`${isAtrasado || isUrgent || hasAlert ? 'text-red-600 dark:text-red-400' : 'theme-text-muted'} opacity-40 shrink-0 group-hover:scale-110 transition-transform`} />
+        <FolderOpen
+          size={16}
+          className="text-slate-400 dark:text-slate-500 shrink-0 group-hover:text-[#1E293B] dark:group-hover:text-slate-200 transition-colors mt-1"
+        />
       </div>
       
-      <h3 title={group.pedidoNum} className="text-sm md:text-base font-mono font-bold uppercase leading-tight truncate theme-text-primary">
-        PED: {group.pedidoNum}
+      {/* NÚMERO DE PEDIDO Y CLIENTE */}
+      <h3
+        title={group.pedidoNum}
+        className="text-sm md:text-base font-mono tabular-nums font-bold tracking-tight leading-snug truncate text-[#0F172A] dark:text-slate-100"
+      >
+        PED #{group.pedidoNum}
       </h3>
-      <p title={group.cliente?.trim() || 'CLIENTE NO REGISTRADO'} className={`font-black uppercase mt-0.5 truncate text-base lg:text-lg ${!group.cliente?.trim() ? 'text-orange-800 dark:text-orange-500' : 'theme-text-muted'}`}>{group.cliente?.trim() || 'CLIENTE NO REGISTRADO'}</p>
+      <p
+        title={group.cliente?.trim() || 'Cliente no registrado'}
+        className={`font-semibold mt-0.5 truncate text-sm md:text-base ${
+          !group.cliente?.trim()
+            ? 'text-[#92400E] dark:text-amber-400'
+            : 'text-slate-600 dark:text-slate-300'
+        }`}
+      >
+        {group.cliente?.trim() || 'Cliente no registrado'}
+      </p>
       
-      <div className="mt-3 pt-3 border-t border-[#0f172a]/10 dark:border-white/5 flex gap-1.5 flex-wrap items-center">
+      {/* BADGES UNIFORMES DE ÁREAS Y ESTADO */}
+      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex gap-1.5 flex-wrap items-center">
         {isGroupDispatched ? (
-          <span className="px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-xs md:text-sm whitespace-nowrap truncate">
-            {group.products?.length || 0} DESPACHADOS
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-semibold text-xs tabular-nums bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0] dark:bg-emerald-950/45 dark:text-emerald-300 dark:border-emerald-800/60 whitespace-nowrap truncate">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            {group.products?.length || 0} Despachados
           </span>
         ) : (
           (() => {
@@ -165,8 +272,8 @@ const OrderCard = ({ group }) => {
             const entries = Object.entries(areaCounts);
             if (entries.length === 0) {
               return (
-                <span className="px-2 py-1 theme-bg-input rounded-md font-black theme-text-primary text-xs md:text-sm whitespace-nowrap truncate">
-                  {group.products?.length || 0} DESPACHOS
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md font-semibold text-xs tabular-nums bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 whitespace-nowrap truncate">
+                  {group.products?.length || 0} Despachos
                 </span>
               );
             }
@@ -186,39 +293,40 @@ const OrderCard = ({ group }) => {
                 <span
                   key={areaName}
                   title={`${count} producto(s) ubicado(s) en ${areaName}`}
-                  className={`px-2 py-1 rounded-md font-black text-xs md:text-sm whitespace-nowrap truncate border ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-semibold text-xs tabular-nums whitespace-nowrap truncate border ${
                     isSelectedArea
-                      ? 'bg-[var(--color-primary)]/20 theme-text-primary border-[var(--color-primary)]/50 shadow-sm'
-                      : 'theme-bg-input theme-text-primary border-slate-300/60 dark:border-slate-700'
+                      ? 'bg-[#1E293B] text-white border-[#1E293B]'
+                      : 'bg-slate-100 text-slate-700 border-slate-200/90 dark:bg-slate-800/80 dark:text-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {count} {areaName.toUpperCase()}
+                  <span className="font-bold">{count}</span>
+                  <span>{areaName.toUpperCase()}</span>
                 </span>
               );
             });
           })()
         )}
         {partialProductsCount > 0 && (
-            <span 
-                style={{ color: '#7c2d12', backgroundColor: '#ffedd5', borderColor: '#c2410c' }}
-                className="px-2.5 py-1 rounded-md border-2 font-black text-xs md:text-sm whitespace-nowrap truncate flex items-center gap-1.5 shadow-sm"
-            >
-                <Package size="1.2em" style={{ color: '#c2410c' }} /> {partialProductsCount} ENTREGA PARCIAL
-            </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border font-semibold text-xs tabular-nums whitespace-nowrap truncate bg-[#FFFBEB] text-[#92400E] border-[#FDE68A] dark:bg-amber-950/45 dark:text-amber-300 dark:border-amber-800/60">
+            <Package size={12} className="shrink-0" />
+            <span>{partialProductsCount} Entrega parcial</span>
+          </span>
         )}
         {(() => {
           const globalOrderProducts = orders.filter(o => o && o.pedidoNum === group.pedidoNum);
           const hasActiveBifurcation = globalOrderProducts.some(p => p && p.master_id);
           if (hasActiveBifurcation) {
             return (
-              <span className="px-2 py-1 bg-blue-500/10 rounded-md font-black text-blue-600 border border-blue-500/30 text-xs md:text-sm whitespace-nowrap truncate">MÚLTIPLES SECCIONES</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md font-semibold text-xs bg-slate-100 text-[#2E435B] border border-slate-200 dark:bg-slate-800 dark:text-sky-300 dark:border-slate-700 whitespace-nowrap truncate">
+                Múltiples secciones
+              </span>
             );
           }
           return null;
         })()}
       </div>
 
-      {/* PROGRESS INDICATOR */}
+      {/* INDICADOR DE AVANCE POR ÁREA */}
       {areaFilter !== 'Todas' && areaFilter !== 'Administrador / Todos' && (
         (() => {
           const globalOrderProducts = orders.filter(o => o && o.pedidoNum === group.pedidoNum);
@@ -230,10 +338,8 @@ const OrderCard = ({ group }) => {
           
           const processedUnits = globalOrderProducts.filter(p => {
             const pAreaIndex = AREAS.indexOf(p.areaActual);
-            // Si está físicamente en mi área o más adelante
             if (pAreaIndex >= myAreaIndex) return true;
             
-            // Si no está, pero estuvo en mi área en el pasado (trazabilidad)
             const wasInMyArea = (p.historial || []).some(h => 
               (h.accion && h.accion.toUpperCase().includes(areaFilter.toUpperCase())) ||
               (h.entrega && h.entrega.toUpperCase() === areaFilter.toUpperCase())
@@ -244,16 +350,22 @@ const OrderCard = ({ group }) => {
           const progressPercent = Math.round((processedUnits / totalUnits) * 100);
 
           return (
-            <div className="mt-2 flex flex-col gap-1 w-full overflow-hidden">
-              <div className="flex justify-between items-center text-sm md:text-base font-black uppercase theme-text-main opacity-70 gap-1 w-full">
-                <span className="flex items-center gap-1 truncate"><Activity size={10} className="shrink-0" /> Avance</span>
-                <span className="shrink-0 whitespace-nowrap">{processedUnits} / {totalUnits} ({progressPercent}%)</span>
+            <div className="mt-2.5 flex flex-col gap-1 w-full overflow-hidden">
+              <div className="flex justify-between items-center text-xs font-medium text-slate-500 dark:text-slate-400 gap-1 w-full tabular-nums">
+                <span className="flex items-center gap-1 truncate">
+                  <Activity size={11} className="shrink-0" /> Avance de sección
+                </span>
+                <span className="shrink-0 whitespace-nowrap font-semibold text-slate-700 dark:text-slate-200">
+                  {processedUnits} / {totalUnits} ({progressPercent}%)
+                </span>
               </div>
-              <div className="w-full h-1.5 bg-black/10 dark:theme-bg-card/10 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-colors duration-1000 ${progressPercent === 100 ? 'bg-green-500' : 'bg-[var(--color-primary)]'}`} 
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    progressPercent === 100 ? 'bg-[#10B981]' : 'bg-[#1E293B] dark:bg-sky-500'
+                  }`} 
                   style={{ width: `${progressPercent}%` }}
-                ></div>
+                />
               </div>
             </div>
           );

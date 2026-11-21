@@ -81,19 +81,19 @@ export default defineConfig(({ mode }) => {
         name: 'CDI EXHIBICIONES',
         short_name: 'CDI EXHIBICIONES',
         description: 'Aplicación de Control de Inventario y MRP',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#1E293B',
+        background_color: '#0B1120',
         display: 'standalone',
         start_url: '/',
         icons: [
           {
-            src: '/logo.png',
+            src: '/cdi-logo.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/logo.png',
+            src: '/cdi-logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

@@ -2107,16 +2107,21 @@ export const printFullTechnicalSheetA4 = (rawData, customOptions = {}) => {
         <div class="preview-stage">
           <div class="sheet-container">
             <div class="header-sheet section-block">
-              <div>
-                <div class="title-black">CDI EXHIBICIONES S.A.S. ${
-                  esEnsayo ? '— [DOCUMENTO DE ENSAYO / PRUEBA]' : ''
-                }</div>
-                <div>FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y COLORIMETRÍA (SC COLOR / ETP)</div>
-                <div><strong>ID FICHA TÉCNICA:</strong> <span style="background:#0f172a;color:#fff;padding:1px 6px;border-radius:4px;font-family:monospace;">${idFichaTecnica}</span></div>
-                <div><strong>COLOR:</strong> ${sistemaCatalogo} — ${codigoColor || 'S/C'} ${
-    nombreColor && nombreColor !== codigoColor ? `(${nombreColor})` : ''
-  }</div>
-                <div><strong>CLIENTE / PROYECTO:</strong> ${cliente || 'USO GENERAL PLANTA'}</div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="flex-shrink:0;">
+                  ${buildCdiLogoHtml(58)}
+                </div>
+                <div>
+                  <div class="title-black">CDI EXHIBICIONES S.A.S. ${
+                    esEnsayo ? '— [DOCUMENTO DE ENSAYO / PRUEBA]' : ''
+                  }</div>
+                  <div>FICHA TÉCNICA OFICIAL DE PRODUCCIÓN Y COLORIMETRÍA (SC COLOR / ETP)</div>
+                  <div><strong>ID FICHA TÉCNICA:</strong> <span style="background:#0f172a;color:#fff;padding:1px 6px;border-radius:4px;font-family:monospace;">${idFichaTecnica}</span></div>
+                  <div><strong>COLOR:</strong> ${sistemaCatalogo} — ${codigoColor || 'S/C'} ${
+      nombreColor && nombreColor !== codigoColor ? `(${nombreColor})` : ''
+    }</div>
+                  <div><strong>CLIENTE / PROYECTO:</strong> ${cliente || 'USO GENERAL PLANTA'}</div>
+                </div>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
                 ${

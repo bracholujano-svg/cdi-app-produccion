@@ -35,7 +35,7 @@ const Header = () => {
 
   const handleManualSync = async () => {
     if (syncCooldown > 0 || isSyncingOrders) return;
-    setSyncCooldown(10);
+    setSyncCooldown(30);
     try {
       if (typeof triggerManualDeltaSync === 'function') {
         await triggerManualDeltaSync();
@@ -74,123 +74,228 @@ const Header = () => {
   const totalNotifications = pendingReceptions + rejectedReceptions;
 
   return (
-    <div className="sticky top-0 z-[50] w-full shadow-md theme-bg-main border-b theme-border">
+    <div className="sticky top-0 z-[50] w-full bg-white dark:bg-[#111827] border-b border-[#E2E8F0] dark:border-[#1E293B]">
       {mostUrgentOrder && (
-        <div className="bg-red-600 text-white py-2 border-b border-red-800 whitespace-nowrap overflow-hidden">
-          <div className="flex animate-marquee items-center text-base lg:text-lg font-black uppercase tracking-widest w-max pr-[100vw]">
-            <span className="flex items-center gap-2"><AlertTriangle size={"1.2em"} /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido: {mostUrgentOrder.pedidoNum}) - FALTAN {getDaysLeft(getEffectiveDate(mostUrgentOrder))} DÍAS</span>
+        <div className="bg-[#991B1B] text-white py-1.5 border-b border-red-900/60 whitespace-nowrap overflow-hidden">
+          <div className="flex animate-marquee items-center text-xs md:text-sm font-semibold tracking-wider w-max pr-[100vw] tabular-nums">
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={15} className="text-[#FDE68A]" /> PEDIDO PRÓXIMO: {mostUrgentOrder.cliente} (Pedido #{mostUrgentOrder.pedidoNum}) — FALTAN {getDaysLeft(getEffectiveDate(mostUrgentOrder))} DÍAS
+            </span>
           </div>
         </div>
       )}
 
-      {/* HEADER UNIFICADO (ÚNICA BARRA FIJA SUPERIOR) */}
-      <header className={`theme-bg-header p-2 md:p-3 border-b theme-border transition-colors`}>
-        <div className="w-full px-2 md:px-4 flex flex-wrap items-center justify-between gap-3">
+      {/* HEADER UNIFICADO — ESTILO SAAS INDUSTRIAL */}
+      <header className="bg-white dark:bg-[#111827] px-2 py-2 md:px-4 md:py-2.5 transition-colors">
+        <div className="w-full flex flex-wrap items-center justify-between gap-3">
           
-          {/* LADO IZQUIERDO: LOGO Y PERFIL */}
-          <div className="flex items-center gap-2 md:gap-4">
-             {/* HAMBURGER MENU PARA ABRIR SIDEBAR */}
-             <button onClick={() => setIsSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 theme-text-main transition-colors">
-               <Menu size={"1.5em"} />
-             </button>
-             {/* LOGO */}
-             <div className="flex items-center select-none cursor-pointer py-1" onClick={() => window.scrollTo(0,0)}>
-                 <CDILogo heightClass="h-9 md:h-11" />
-             </div>
+          {/* LADO IZQUIERDO: MENÚ, ESCUDO DORADO /cdi-logo.png + MARCA Y PERFIL */}
+          <div className="flex items-center gap-2.5 md:gap-3.5">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#1E293B] dark:hover:text-white transition-colors cursor-pointer"
+              title="Abrir menú principal"
+            >
+              <Menu size={20} />
+            </button>
 
-            {/* PERFIL */}
-            <div className="hidden md:flex flex-col text-left pl-4 ml-2 border-l-2 theme-border shrink-0">
-              <span className="text-sm font-black theme-text-main uppercase leading-none">{supervisorProfile?.name}</span>
-              <span className="text-sm font-bold theme-text-muted uppercase mt-1">{supervisorProfile?.area}</span>
+            {/* LOGO NÍTIDO + TIPOGRAFÍA LIMPIA */}
+            <div
+              className="flex items-center gap-2.5 select-none cursor-pointer py-0.5"
+              onClick={() => window.scrollTo(0, 0)}
+            >
+              <img
+                src="/cdi-logo.png"
+                alt="CDI Exhibiciones"
+                className="h-10 w-auto object-contain drop-shadow-sm shrink-0"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm md:text-base font-bold tracking-tight text-[#1E293B] dark:text-slate-100 leading-none">
+                  CDI EXHIBICIONES
+                </span>
+                <span className="text-[10px] font-medium tracking-wider uppercase text-slate-400 dark:text-slate-500 mt-0.5 hidden sm:inline">
+                  Control Industrial
+                </span>
+              </div>
+            </div>
+
+            {/* PERFIL DE USUARIO */}
+            <div className="hidden md:flex flex-col text-left pl-3.5 ml-1 border-l border-[#E2E8F0] dark:border-[#1E293B] shrink-0">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-tight truncate max-w-[180px]">
+                {supervisorProfile?.name}
+              </span>
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                {supervisorProfile?.area}
+              </span>
             </div>
           </div>
           
-          {/* CENTRO: BOTONES DE FILTRO */}
-          <div className="flex bg-black/5 dark:theme-bg-card/5 rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar w-full md:w-auto md:max-w-[54vw] order-last md:order-none mt-2 md:mt-0 gap-1">
-             <button type="button" onClick={() => setViewFilter('TODOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors shrink-0 ${viewFilter === 'TODOS' ? 'bg-[var(--color-primary)] text-[var(--color-surface)] border border-[var(--color-primary)] shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               Producción ({totalOrders - despachadosCount})
-             </button>
-             <button type="button" onClick={() => setViewFilter('ATRASADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors shrink-0 ${viewFilter === 'ATRASADOS' ? 'bg-red-600 text-white border border-red-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               Atrasos ({atrasadosCount})
-             </button>
-             <button type="button" onClick={() => setViewFilter('DESPACHADOS')} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1.5 shrink-0 ${viewFilter === 'DESPACHADOS' ? 'bg-emerald-600 text-white border border-emerald-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               <Truck size={"1.1em"} /> Historial de Despachos ({despachadosCount})
-             </button>
-             <button type="button" onClick={() => setShowCoordViewModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1 ${coordinationAlerts.length > 0 ? 'bg-orange-500 text-white border border-orange-600 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               <AlertTriangle size={"1.2em"} /> Coord ({coordinationAlerts.length})
-             </button>
-             <button type="button" onClick={() => setShowReceptionModal(true)} className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-sm md:text-base font-black uppercase transition-colors flex items-center gap-1 relative ${totalNotifications > 0 ? 'bg-purple-600 text-white border border-purple-700 shadow-md' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-black/20 dark:border-white/20 hover:bg-black/20 dark:hover:bg-white/20 shadow-sm'}`}>
-               <Bell size={"1.2em"} className={totalNotifications > 0 ? 'animate-pulse' : ''} /> Recepciones
-               {totalNotifications > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-sm font-black w-4 h-4 rounded-full flex items-center justify-center animate-bounce">{totalNotifications}</span>}
-             </button>
+          {/* CENTRO: PESTAÑAS SEGMENTED CONTROL SOBRIAS */}
+          <div className="flex items-center bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] rounded-xl p-1 shrink-0 overflow-x-auto custom-scrollbar w-full md:w-auto md:max-w-[56vw] order-last md:order-none mt-1.5 md:mt-0 gap-1">
+            <button
+              type="button"
+              onClick={() => setViewFilter('TODOS')}
+              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer tabular-nums ${
+                viewFilter === 'TODOS'
+                  ? 'bg-[#1E293B] text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70'
+              }`}
+            >
+              <span>Producción</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums ${
+                  viewFilter === 'TODOS'
+                    ? 'bg-white/15 text-white'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {totalOrders - despachadosCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewFilter('ATRASADOS')}
+              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer tabular-nums ${
+                viewFilter === 'ATRASADOS'
+                  ? 'bg-[#1E293B] text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70'
+              }`}
+            >
+              {atrasadosCount > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] shrink-0" />
+              )}
+              <span>Atrasos</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums ${
+                  viewFilter === 'ATRASADOS'
+                    ? 'bg-white/15 text-white'
+                    : atrasadosCount > 0
+                    ? 'bg-[#FEF2F2] text-[#991B1B] dark:bg-red-950/60 dark:text-red-300'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {atrasadosCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewFilter('DESPACHADOS')}
+              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer tabular-nums ${
+                viewFilter === 'DESPACHADOS'
+                  ? 'bg-[#1E293B] text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70'
+              }`}
+            >
+              <Truck size={14} className="shrink-0" />
+              <span>Historial de Despachos</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums ${
+                  viewFilter === 'DESPACHADOS'
+                    ? 'bg-white/15 text-white'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {despachadosCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowCoordViewModal(true)}
+              className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer tabular-nums"
+            >
+              {coordinationAlerts.length > 0 ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+              ) : (
+                <AlertTriangle size={14} className="shrink-0 opacity-70" />
+              )}
+              <span>Coord</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums ${
+                  coordinationAlerts.length > 0
+                    ? 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60'
+                    : 'bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {coordinationAlerts.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowReceptionModal(true)}
+              className="px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/70 transition-all shrink-0 flex items-center gap-1.5 relative cursor-pointer tabular-nums"
+            >
+              <Bell size={14} className={totalNotifications > 0 ? 'text-[#991B1B] dark:text-red-400' : 'opacity-70'} />
+              <span>Recepciones</span>
+              {totalNotifications > 0 && (
+                <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/60">
+                  {totalNotifications}
+                </span>
+              )}
+            </button>
           </div>
 
-          {/* LADO DERECHO: ESTADO DE CONEXIÓN, BOTÓN SINCRONIZAR AHORA Y TOGGLE THEME */}
+          {/* LADO DERECHO: PASTILLA EN LÍNEA, ÍCONO DISCRETO DE SINCRONIZACIÓN (30s) Y TEMA */}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
-             <div
-               className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 border theme-border"
-               title={
-                 realtimeStatus === 'CONNECTED'
-                   ? 'Conectado en tiempo real a Supabase'
-                   : realtimeStatus === 'OFFLINE'
-                   ? 'Sin conexión a internet (trabajando con caché local)'
-                   : 'Conectando en tiempo real...'
-               }
-             >
-               <span
-                 className={`w-2 h-2 rounded-full shrink-0 ${
-                   realtimeStatus === 'CONNECTED'
-                     ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]'
-                     : realtimeStatus === 'OFFLINE'
-                     ? 'bg-rose-500'
-                     : 'bg-amber-400 animate-pulse'
-                 }`}
-               />
-               <span className="text-[10px] font-black uppercase tracking-wide theme-text-muted">
-                 {realtimeStatus === 'CONNECTED'
-                   ? 'En línea'
-                   : realtimeStatus === 'OFFLINE'
-                   ? 'Sin red'
-                   : 'Sincronizando'}
-               </span>
-             </div>
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              title={
+                realtimeStatus === 'CONNECTED'
+                  ? 'Conectado en tiempo real a Supabase'
+                  : realtimeStatus === 'OFFLINE'
+                  ? 'Sin conexión a internet (trabajando con caché local)'
+                  : 'Conectando en tiempo real...'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  realtimeStatus === 'CONNECTED'
+                    ? 'bg-[#10B981]'
+                    : realtimeStatus === 'OFFLINE'
+                    ? 'bg-[#EF4444]'
+                    : 'bg-[#F59E0B] animate-pulse'
+                }`}
+              />
+              <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                {realtimeStatus === 'CONNECTED'
+                  ? 'En línea'
+                  : realtimeStatus === 'OFFLINE'
+                  ? 'Sin red'
+                  : 'Conectando'}
+              </span>
+            </div>
 
-             <button
-               type="button"
-               onClick={handleManualSync}
-               disabled={syncCooldown > 0 || isSyncingOrders}
-               title={
-                 syncCooldown > 0
-                   ? `Sincronizar ahora (disponible en ${syncCooldown}s)`
-                   : 'Sincronizar ahora (traer cambios recientes)'
-               }
-               className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-black uppercase flex items-center gap-1.5 transition-all shrink-0 ${
-                 syncCooldown > 0 || isSyncingOrders
-                   ? 'bg-black/5 dark:bg-white/5 theme-border theme-text-muted opacity-65 cursor-not-allowed'
-                   : 'bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 theme-text-main hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] hover:border-[var(--color-primary)] cursor-pointer shadow-sm'
-               }`}
-             >
-               <RefreshCw size={13} className={isSyncingOrders ? 'animate-spin' : ''} />
-               <span className="hidden lg:inline">
-                 {isSyncingOrders
-                   ? 'Actualizando...'
-                   : syncCooldown > 0
-                   ? `Al día (${syncCooldown}s)`
-                   : 'Sincronizar ahora'}
-               </span>
-             </button>
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={syncCooldown > 0 || isSyncingOrders}
+              title={
+                syncCooldown > 0
+                  ? `Sincronizar cambios (disponible en ${syncCooldown}s)`
+                  : 'Sincronizar cambios'
+              }
+              aria-label="Sincronizar cambios"
+              className={`p-2 rounded-lg border transition-all shrink-0 flex items-center justify-center ${
+                syncCooldown > 0 || isSyncingOrders
+                  ? 'bg-slate-100 dark:bg-slate-800/50 border-[#E2E8F0] dark:border-[#1E293B] text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                  : 'bg-white dark:bg-[#0B1120] border-[#E2E8F0] dark:border-[#1E293B] text-slate-600 dark:text-slate-300 hover:bg-[#1E293B] hover:text-white hover:border-[#1E293B] cursor-pointer shadow-2xs'
+              }`}
+            >
+              <RefreshCw size={15} className={isSyncingOrders ? 'animate-spin' : ''} />
+            </button>
 
-             <div 
-                onClick={() => setIsDarkMode(!isDarkMode)} 
-                className={`relative w-14 h-7 flex items-center bg-black/10 dark:bg-black/30 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner ${isDarkMode ? 'border border-blue-500/30' : 'border border-black/10'}`}
-             >
-                {/* Bola Deslizable */}
-                <div 
-                  className={`absolute w-5 h-5 theme-bg-card rounded-full shadow-md flex items-center justify-center transition-transform duration-300 ease-in-out ${isDarkMode ? 'translate-x-7 bg-blue-500 shadow-[0_0_10px_#3b82f6,0_0_20px_#3b82f6]' : 'translate-x-0'}`}
-                >
-                  {isDarkMode ? <Moon size={12} color="white" /> : <Sun size={12} color="#f59e0b" />}
-                </div>
-             </div>
+            <button
+              type="button"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              title={isDarkMode ? 'Modo claro' : 'Modo oscuro'}
+              className="p-2 rounded-lg border border-[#E2E8F0] dark:border-[#1E293B] bg-white dark:bg-[#0B1120] text-slate-600 dark:text-slate-300 hover:text-[#1E293B] dark:hover:text-white hover:border-slate-300 transition-colors cursor-pointer"
+            >
+              {isDarkMode ? <Moon size={15} className="text-sky-400" /> : <Sun size={15} className="text-amber-500" />}
+            </button>
           </div>
 
         </div>

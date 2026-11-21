@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { supabase } from '../../supabaseClient';
-import { buildCdiLogoHtml } from '../../utils/cdiLogo';
+import { buildCdiLogoHtml, preloadCdiLogoBase64 } from '../../utils/cdiLogo';
 import { decodeCompactDocData, buildQRSvgMarkup } from '../../utils/colorQrHelper';
 
 /**
@@ -140,6 +140,7 @@ export default function PublicPdfViewer() {
     if (!printableAreaRef.current || !docData) return;
     setIsGeneratingPdf(true);
     try {
+      await preloadCdiLogoBase64();
       const element = printableAreaRef.current;
       const canvas = await html2canvas(element, {
         scale: 2,
