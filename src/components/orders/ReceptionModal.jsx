@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info, QrCode } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS } from '../../utils/constants';
+import { compressImageForUpload } from '../../utils/imageCompression';
 
 const ReceptionModal = ({ processReception, processBulkReception }) => {
     const { 
@@ -138,12 +139,21 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
         input.type = 'file';
         input.accept = 'image/*';
         input.capture = 'environment';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
+        input.onchange = async (e) => {
+            const file = e.target.files?.[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => setTempPhoto(reader.result);
-                reader.readAsDataURL(file);
+                try {
+                    const compressed = await compressImageForUpload(file, {
+                        maxDimension: 800,
+                        quality: 0.72,
+                        maxTargetKB: 120,
+                        preferWebp: true
+                    });
+                    if (compressed) setTempPhoto(compressed);
+                } catch (err) {
+                    console.error('Error comprimiendo foto de recepción:', err);
+                    setErrorMsg('No se pudo comprimir la fotografía. Intente nuevamente.');
+                }
             }
         };
         input.click();

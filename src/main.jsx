@@ -31,10 +31,14 @@ if (typeof window !== 'undefined') {
     window.location.reload();
   };
 
-  const verifyLatestBuildAndSync = async () => {
-    if ('caches' in window) {
-      caches.delete('supabase-api-cache').catch(() => {});
+  let lastVersionCheckAt = 0;
+
+  const verifyLatestBuild = async (force = false) => {
+    const now = Date.now();
+    if (!force && lastVersionCheckAt > 0 && now - lastVersionCheckAt < 120000) {
+      return;
     }
+    lastVersionCheckAt = now;
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
@@ -48,8 +52,6 @@ if (typeof window !== 'undefined') {
         })
         .catch(() => {});
     }
-
-    window.dispatchEvent(new CustomEvent('cdi-force-sync'));
 
     if (!localBuildId || isCheckingUpdate || isReloading) return;
     isCheckingUpdate = true;
@@ -84,14 +86,15 @@ if (typeof window !== 'undefined') {
     });
   }
 
-  window.addEventListener('load', verifyLatestBuildAndSync);
-  window.addEventListener('focus', verifyLatestBuildAndSync);
+  // Verificar nueva versión desplegada únicamente al cargar, al volver tras >= 2 min, o cada 10 minutos.
+  // NUNCA disparar `cdi-force-sync` ni purgar cachés de datos periódicamente (evita fuga masiva de Egress en Supabase).
+  window.addEventListener('load', () => verifyLatestBuild(true));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      verifyLatestBuildAndSync();
+      verifyLatestBuild(false);
     }
   });
-  window.setInterval(verifyLatestBuildAndSync, 60000);
+  window.setInterval(() => verifyLatestBuild(false), 600000);
 }
 
 createRoot(document.getElementById('root')).render(

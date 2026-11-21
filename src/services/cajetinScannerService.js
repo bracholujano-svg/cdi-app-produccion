@@ -12,7 +12,7 @@ export const GEMINI_MODELS_FALLBACK = ['gemini-3.8-flash', 'gemini-3.5-flash', '
 export const comprimirImagenCajetin = (imageSource) => {
   return new Promise((resolve, reject) => {
     const processImageObj = (img) => {
-      const maxDim = 1280;
+      const maxDim = 1024;
       let width = img.width;
       let height = img.height;
 
@@ -32,7 +32,7 @@ export const comprimirImagenCajetin = (imageSource) => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
       const base64Raw = compressedDataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
 
       resolve({

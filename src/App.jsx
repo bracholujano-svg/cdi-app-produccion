@@ -737,12 +737,24 @@ const {
     }, 400);
   };
 
-  // Sincronización automática inicial de todos los pedidos con fecha de entrega comercial de Noviembre 2026 en adelante y 2027 hacia el Área Neutra
+  // Sincronización automática inicial de pedidos Nov 2026 / 2027 hacia Área Neutra
+  // Limitada a máximo 1 ejecución cada 30 minutos por sesión (evita 4 full-table scans en cada F5)
   const initialBacklogSyncDoneRef = useRef(false);
   useEffect(() => {
     if (!supervisorProfile || initialBacklogSyncDoneRef.current) return;
+    try {
+      const lastSyncTs = Number(safeSessionStorage.get('cdi_backlog_autosync_ts') || 0);
+      if (lastSyncTs && Date.now() - lastSyncTs < 30 * 60 * 1000) {
+        initialBacklogSyncDoneRef.current = true;
+        return;
+      }
+    } catch (_) {}
+
     const timer = setTimeout(() => {
       initialBacklogSyncDoneRef.current = true;
+      try {
+        safeSessionStorage.set('cdi_backlog_autosync_ts', String(Date.now()));
+      } catch (_) {}
       syncNov2026And2027OrdersToNeutralArea({
         currentOrders: orders,
         currentAlerts: coordinationAlerts,
@@ -757,9 +769,9 @@ const {
           });
         }
       });
-    }, 1200);
+    }, 2500);
     return () => clearTimeout(timer);
-  }, [supervisorProfile, coordinationAlerts.length]);
+  }, [supervisorProfile]);
 
   const shareToWhatsApp = (type, savedLog = null) => {
     if (!selectedOrder) return;

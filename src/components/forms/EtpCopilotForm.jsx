@@ -160,7 +160,7 @@ export default function EtpCopilotForm({
       } else if (colorId) {
         const { data, error } = await supabase
           .from('recetas_detalle')
-          .select('*')
+          .select('id, id_color, id_referencia_ppg, nombre_base, porcentaje_final')
           .eq('id_color', colorId);
         if (!error && data && !unmounted) {
           setIngredientes(data);

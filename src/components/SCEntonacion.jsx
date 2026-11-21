@@ -42,6 +42,39 @@ import {
 
 const PRINT_PREFS_STORAGE_KEY = 'cdi_sc_color_print_prefs_v3';
 
+// Proyección ligera para listados/catálogo de SC Color (PROHIBIDO traer imagen_muestra Base64 en listas)
+const COLOR_CATALOG_LIGHT_COLS =
+  'id, sistema_color, codigo_objetivo, color_hexadecimal, estado_aprobacion, created_at, ' +
+  'proc_cliente:procedimiento_preparacion->>cliente, ' +
+  'proc_acabado:procedimiento_preparacion->>acabado_produccion, ' +
+  'proc_es_ensayo:procedimiento_preparacion->>es_ensayo, ' +
+  'proc_id_ficha:procedimiento_preparacion->>id_ficha_tecnica';
+const COLOR_CATALOG_FALLBACK_COLS =
+  'id, sistema_color, codigo_objetivo, color_hexadecimal, estado_aprobacion, created_at';
+const RECETA_DETALLE_COLS = 'id, id_color, id_referencia_ppg, nombre_base, porcentaje_final';
+
+const normalizeLightCatalogRow = (row) => {
+  if (!row) return row;
+  const existingProc =
+    row.procedimiento_preparacion && typeof row.procedimiento_preparacion === 'object'
+      ? row.procedimiento_preparacion
+      : {};
+  return {
+    ...row,
+    _isLightCatalogRow: true,
+    procedimiento_preparacion: {
+      ...existingProc,
+      cliente: row.proc_cliente ?? existingProc.cliente ?? '',
+      acabado_produccion: row.proc_acabado ?? existingProc.acabado_produccion ?? '',
+      es_ensayo:
+        row.proc_es_ensayo === true ||
+        row.proc_es_ensayo === 'true' ||
+        Boolean(existingProc.es_ensayo),
+      id_ficha_tecnica: row.proc_id_ficha ?? existingProc.id_ficha_tecnica ?? ''
+    }
+  };
+};
+
 /**
  * Valida de forma estricta si un ítem del inventario pertenece a la línea de
  * pinturas, pastas, tintas, bases o recubrimientos, excluyendo carpintería, maderas o ferretería general.
@@ -159,6 +192,10 @@ export default function SCEntonacion({
   const [showViewSheetModal, setShowViewSheetModal] = useState(false);
   const [showSpectroLightbox, setShowSpectroLightbox] = useState(false);
   const [isUploadingSpectroPhoto, setIsUploadingSpectroPhoto] = useState(false);
+
+  // Caché en memoria de fichas individuales ya descargadas (evita re-descargar Base64 repetidas veces)
+  const colorDetailCacheRef = useRef(new Map());
+  const catalogLastFetchRef = useRef(0);
 
   // ============================================================================
   // ESTADO UNIFICADO DE AUTORIZACIÓN CON CLAVE (MODIFICAR / ELIMINAR COLOR)
@@ -280,18 +317,40 @@ export default function SCEntonacion({
     setPrintConfigModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const openCatalog = async () => {
+  const openCatalog = async (forceRefresh = false) => {
     setCurrentView('catalogo');
     setShowCatalogModal(true);
+
+    // Reutilizar catálogo en memoria si se consultó hace menos de 5 minutos (0 KB de Egress)
+    const now = Date.now();
+    if (!forceRefresh && catalogColors.length > 0 && now - catalogLastFetchRef.current < 300000) {
+      return;
+    }
+
     setIsLoadingCatalog(true);
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('colores_aprobados')
-        .select('*')
+        .select(COLOR_CATALOG_LIGHT_COLS)
         .order('sistema_color', { ascending: true })
-        .order('codigo_objetivo', { ascending: true });
+        .order('codigo_objetivo', { ascending: true })
+        .limit(250);
+
+      if (error) {
+        // Fallback seguro sin JSONB ni Base64
+        const fallback = await supabase
+          .from('colores_aprobados')
+          .select(COLOR_CATALOG_FALLBACK_COLS)
+          .order('sistema_color', { ascending: true })
+          .order('codigo_objetivo', { ascending: true })
+          .limit(250);
+        data = fallback.data;
+        error = fallback.error;
+      }
+
       if (!error && data) {
-        setCatalogColors(data);
+        setCatalogColors(data.map(normalizeLightCatalogRow));
+        catalogLastFetchRef.current = Date.now();
       }
     } catch (e) {
       console.error(e);
@@ -310,14 +369,38 @@ export default function SCEntonacion({
     setShowCatalogModal(false);
     setCurrentView('detalle');
 
+    // Si ya tenemos el detalle completo + receta cacheados en memoria, evitar re-descarga
+    const cachedEntry = colorDetailCacheRef.current.get(color.id);
+    if (cachedEntry && !color._forceReload) {
+      setColorEncontrado(cachedEntry.color);
+      setSelectedColor(cachedEntry.color);
+      setSavedColorData(cachedEntry.color);
+      setRecetaExistente(cachedEntry.receta);
+      return;
+    }
+
     setIsSearching(true);
     try {
-      const { data: recetaData } = await supabase
-        .from('recetas_detalle')
-        .select('*')
-        .eq('id_color', color.id);
-      setColorEncontrado(color);
-      setRecetaExistente(recetaData || []);
+      // Carga bajo demanda ÚNICAMENTE del registro individual seleccionado (con su foto/ETP) + su receta
+      const needFullColorFetch = Boolean(color._isLightCatalogRow || !color.procedimiento_preparacion?.formulacion_pastas);
+      const [colorRes, recetaRes] = await Promise.all([
+        needFullColorFetch
+          ? supabase.from('colores_aprobados').select('*').eq('id', color.id).single()
+          : Promise.resolve({ data: color, error: null }),
+        supabase
+          .from('recetas_detalle')
+          .select(RECETA_DETALLE_COLS)
+          .eq('id_color', color.id)
+      ]);
+
+      const fullColor = colorRes?.data || color;
+      const recetaList = recetaRes?.data || [];
+
+      colorDetailCacheRef.current.set(color.id, { color: fullColor, receta: recetaList });
+      setColorEncontrado(fullColor);
+      setSelectedColor(fullColor);
+      setSavedColorData(fullColor);
+      setRecetaExistente(recetaList);
     } catch (e) {
       console.error(e);
       setColorEncontrado(color);
@@ -326,7 +409,7 @@ export default function SCEntonacion({
     }
   };
 
-  // Si se abre SCEntonacion desde el Lector QR (o enlace directo ?qr=COLOR), buscar y abrir ese color y su Ficha Técnica
+  // Si se abre SCEntonacion desde el Lector QR (o enlace directo ?qr=COLOR), buscar puntual y abrir ese color (sin descargar toda la tabla)
   useEffect(() => {
     if (!scannedQrTarget || scannedQrTarget.type !== 'COLOR') return;
     let isMounted = true;
@@ -334,35 +417,60 @@ export default function SCEntonacion({
     const loadScannedColor = async () => {
       try {
         setIsSearching(true);
-        const { data: allColors } = await supabase
-          .from('colores_aprobados')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!isMounted || !Array.isArray(allColors)) return;
-
         const targetId = String(scannedQrTarget.id || '').trim();
         const targetFicha = String(scannedQrTarget.idFicha || '').trim().toUpperCase();
         const targetCode = String(scannedQrTarget.codigo || '').trim().toUpperCase();
         const targetSys = String(scannedQrTarget.sistema || '').trim().toUpperCase();
 
-        const matched =
-          allColors.find((c) => targetId && String(c.id) === targetId) ||
-          allColors.find((c) => targetFicha && buildTechnicalSheetId(c) === targetFicha) ||
-          allColors.find(
-            (c) =>
-              targetCode &&
-              String(c.codigo_objetivo || '').trim().toUpperCase() === targetCode &&
-              (!targetSys || String(c.sistema_color || '').trim().toUpperCase() === targetSys)
-          ) ||
-          allColors.find(
-            (c) =>
-              targetCode &&
-              String(c.codigo_objetivo || '')
-                .trim()
-                .toUpperCase()
-                .includes(targetCode)
-          );
+        let matched = null;
+
+        // 1. Búsqueda directa por ID (1 sola fila)
+        if (targetId) {
+          const { data } = await supabase
+            .from('colores_aprobados')
+            .select('*')
+            .eq('id', targetId)
+            .maybeSingle();
+          if (data) matched = data;
+        }
+
+        // 2. Búsqueda directa por código (+ sistema opcional) (máx 1 fila)
+        if (!matched && targetCode) {
+          let q = supabase.from('colores_aprobados').select('*').eq('codigo_objetivo', targetCode);
+          if (targetSys) q = q.eq('sistema_color', targetSys);
+          const { data: exactRows } = await q.limit(1);
+          if (Array.isArray(exactRows) && exactRows.length > 0) {
+            matched = exactRows[0];
+          } else {
+            const { data: partialRows } = await supabase
+              .from('colores_aprobados')
+              .select('*')
+              .ilike('codigo_objetivo', `%${targetCode}%`)
+              .limit(1);
+            if (Array.isArray(partialRows) && partialRows.length > 0) {
+              matched = partialRows[0];
+            }
+          }
+        }
+
+        // 3. Fallback solo si viene ID de ficha sin ID ni código: consultar proyección ligera sin imágenes
+        if (!matched && targetFicha) {
+          const { data: lightColors } = await supabase
+            .from('colores_aprobados')
+            .select(COLOR_CATALOG_LIGHT_COLS)
+            .order('created_at', { ascending: false })
+            .limit(250);
+          if (Array.isArray(lightColors)) {
+            const lightMatched = lightColors
+              .map(normalizeLightCatalogRow)
+              .find((c) => buildTechnicalSheetId(c) === targetFicha);
+            if (lightMatched) {
+              matched = lightMatched;
+            }
+          }
+        }
+
+        if (!isMounted) return;
 
         if (matched) {
           await handleSelectFromCatalog(matched);
@@ -632,9 +740,13 @@ export default function SCEntonacion({
       } else {
         const { data: recetaData } = await supabase
           .from('recetas_detalle')
-          .select('*')
+          .select(RECETA_DETALLE_COLS)
           .eq('id_color', colorData.id);
 
+        colorDetailCacheRef.current.set(colorData.id, {
+          color: colorData,
+          receta: recetaData || []
+        });
         setColorEncontrado(colorData);
         setSelectedColor(colorData);
         setSavedColorId(colorData.id);
@@ -903,7 +1015,8 @@ export default function SCEntonacion({
 
           if (errColor) throw errColor;
 
-          // 3. Actualizar estado local y catálogo
+          // 3. Actualizar estado local y catálogo de forma optimista (sin re-descargar la tabla)
+          colorDetailCacheRef.current.delete(targetColor.id);
           setCatalogColors((prev) => prev.filter((c) => c.id !== targetColor.id));
 
           if (colorEncontrado && colorEncontrado.id === targetColor.id) {
@@ -912,7 +1025,8 @@ export default function SCEntonacion({
             setRecetaExistente([]);
             setShowEtpModal(false);
             if (cameFromCatalog) {
-              openCatalog();
+              setCurrentView('catalogo');
+              setShowCatalogModal(true);
             } else {
               setCurrentView('inicio');
             }
@@ -1075,6 +1189,10 @@ export default function SCEntonacion({
         ...colorEncontrado,
         procedimiento_preparacion: nextProc
       };
+      colorDetailCacheRef.current.set(updatedColor.id, {
+        color: updatedColor,
+        receta: recetaExistente || []
+      });
       setColorEncontrado(updatedColor);
       setSelectedColor(updatedColor);
       setSavedColorData(updatedColor);
@@ -3091,10 +3209,43 @@ export default function SCEntonacion({
                     setShowEtpModal(false);
                     setEtpPreAuthorized(false);
                   }}
-                  onSave={() => {
+                  onSave={(savedPayload) => {
                     setShowEtpModal(false);
                     setEtpPreAuthorized(false);
-                    handleBuscar();
+                    if (savedPayload && savedColorId) {
+                      const merged = {
+                        ...(colorEncontrado || savedColorData || {}),
+                        ...savedPayload,
+                        id: savedColorId
+                      };
+                      colorDetailCacheRef.current.set(savedColorId, {
+                        color: merged,
+                        receta: recetaExistente || []
+                      });
+                      setColorEncontrado(merged);
+                      setSelectedColor(merged);
+                      setSavedColorData(merged);
+                      setCatalogColors((prev) =>
+                        prev.map((c) =>
+                          c.id === savedColorId
+                            ? normalizeLightCatalogRow({
+                                ...c,
+                                sistema_color: merged.sistema_color || c.sistema_color,
+                                codigo_objetivo: merged.codigo_objetivo || c.codigo_objetivo,
+                                estado_aprobacion: merged.estado_aprobacion || c.estado_aprobacion,
+                                proc_cliente: merged.procedimiento_preparacion?.cliente,
+                                proc_acabado: merged.procedimiento_preparacion?.acabado_produccion,
+                                proc_es_ensayo: merged.procedimiento_preparacion?.es_ensayo,
+                                proc_id_ficha: merged.procedimiento_preparacion?.id_ficha_tecnica
+                              })
+                            : c
+                        )
+                      );
+                    } else {
+                      colorDetailCacheRef.current.delete(savedColorId);
+                      catalogLastFetchRef.current = 0;
+                      handleBuscar();
+                    }
                   }}
                 />
               </div>

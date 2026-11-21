@@ -305,12 +305,7 @@ const PackingListsModal = () => {
   }, [scannedQrTarget, packingLists, setScannedQrTarget]);
 
   // Cargar líneas de `ribisoft_pedidos` del pedido activo para detectar también ítems que aún estén en Administración/ERP
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cdi-force-sync'));
-    }
-  }, [mainViewTab]);
-
+  // (Se eliminó el disparo de `cdi-force-sync` al cambiar `mainViewTab` para evitar descargas masivas innecesarias de Egress)
   useEffect(() => {
     let isMounted = true;
     const targetPed = String(activePackingList?.pedidoNum || '').trim();
@@ -324,7 +319,8 @@ const PackingListsModal = () => {
         const { data, error } = await supabase
           .from('ribisoft_pedidos')
           .select('*')
-          .eq('pedido_sin', targetPed);
+          .eq('pedido_sin', targetPed)
+          .limit(200);
         if (!error && Array.isArray(data) && isMounted) {
           setErpOrderRows(data);
         }

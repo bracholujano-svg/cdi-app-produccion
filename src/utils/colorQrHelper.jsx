@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { generateQRMatrix } from './qrGenerator';
 import { buildCdiLogoHtml } from './cdiLogo';
+import { compressImageForUpload } from './imageCompression';
 
 /**
  * Calcula o recupera de forma determinística el Consecutivo de Número de Empaque (EMP-0001)
@@ -616,40 +617,14 @@ export const isProductInProcessState = (p) => {
 /**
  * Comprime una imagen (ej. lectura de espectrofotómetro) en el navegador para evitar
  * guardar megabytes en Base64 dentro de Supabase y mantener la app ultrarrápida.
+ * Delegado al motor centralizado `compressImageForUpload` (máx 800px, WebP/JPEG 0.72, <= 120 KB).
  */
-export const compressSpectroImage = (file, maxWidth = 960, quality = 0.75) => {
-  return new Promise((resolve, reject) => {
-    if (!file) return resolve(null);
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('No se pudo leer el archivo de imagen'));
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onerror = () => resolve(event.target.result);
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-          if (height > maxWidth) {
-            width = Math.round((width * maxWidth) / height);
-            height = maxWidth;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        } catch (_) {
-          resolve(event.target.result);
-        }
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+export const compressSpectroImage = (file, maxWidth = 800, quality = 0.72) => {
+  return compressImageForUpload(file, {
+    maxDimension: maxWidth,
+    quality,
+    maxTargetKB: 120,
+    preferWebp: true
   });
 };
 

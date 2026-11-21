@@ -60,50 +60,30 @@ const PlantPlannerModal = ({
     const [isAdminCardExpanded, setIsAdminCardExpanded] = useState(false);
     const [expandedAdminPedidos, setExpandedAdminPedidos] = useState({});
 
-    // Sincronización en tiempo real al abrir el Planificador, recuperar foco o detectar cambios en BD
+    // Sincronización optimizada del Planificador:
+    // `orders` ya viene sincronizado en tiempo real desde `useOrders` (AppContext); aquí solo cargamos `ribisoft_pedidos`
+    // bajo demanda al abrir el modal con cooldown de 3 minutos y tope seguro, sin re-descargar `produccion_pedidos` en bucle.
     useEffect(() => {
         let isMounted = true;
         let isRefreshing = false;
-        let debounceTimer = null;
+        let lastRibisoftFetchAt = 0;
 
-        const refreshPlannerOrders = async (showLoader = false) => {
+        const refreshPlannerRibisoft = async (showLoader = false, force = false) => {
+            const now = Date.now();
             if (isRefreshing || !isMounted) return;
+            if (!force && lastRibisoftFetchAt > 0 && now - lastRibisoftFetchAt < 180000) return;
             isRefreshing = true;
             try {
                 if (showLoader) setLoadingErpRows(true);
                 await supabase.auth.getSession();
 
-                // Cargar todas las filas de producción (paginado de 1000 en 1000 para no omitir nada)
-                let allProd = [];
-                let pFrom = 0;
-                const pStep = 1000;
-                let pHasMore = true;
-                while (pHasMore && isMounted) {
-                    const { data, error } = await supabase
-                        .from('produccion_pedidos')
-                        .select('data_completa')
-                        .range(pFrom, pFrom + pStep - 1);
-                    if (error || !data || data.length === 0) {
-                        pHasMore = false;
-                    } else {
-                        allProd = allProd.concat(data);
-                        pFrom += pStep;
-                        if (data.length < pStep) pHasMore = false;
-                    }
-                }
-                if (allProd.length > 0 && isMounted && setOrders) {
-                    const fresh = allProd
-                        .map(r => r.data_completa)
-                        .filter(o => o && typeof o === 'object' && o.id && o.pedidoNum && !isUnassignedErpBulkImport(o));
-                    setOrders(fresh);
-                }
-
-                // Cargar pedidos de la carpeta Ribisoft (`ribisoft_pedidos`) en lotes para evaluar los >= 64000 sin movimiento
+                // Cargar pedidos de la carpeta Ribisoft (`ribisoft_pedidos`) en lotes con tope seguro
                 let allRibisoft = [];
                 let from = 0;
                 const step = 1000;
+                const MAX_RIBI_ROWS = 4000;
                 let hasMore = true;
-                while (hasMore && isMounted) {
+                while (hasMore && isMounted && allRibisoft.length < MAX_RIBI_ROWS) {
                     const { data: rBatch, error: rErr } = await supabase
                         .from('ribisoft_pedidos')
                         .select('*')
@@ -118,52 +98,32 @@ const PlantPlannerModal = ({
                 }
                 if (isMounted) {
                     setErpRibisoftRows(allRibisoft);
+                    lastRibisoftFetchAt = Date.now();
                 }
             } catch (err) {
-                console.error("Error al refrescar órdenes en Planificador:", err);
+                console.error("Error al refrescar pedidos ERP en Planificador:", err);
             } finally {
                 isRefreshing = false;
                 if (isMounted && showLoader) setLoadingErpRows(false);
             }
         };
 
-        const scheduleRefresh = () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                refreshPlannerOrders(false);
-            }, 1200);
+        const handleErpUpdated = () => {
+            refreshPlannerRibisoft(false, true);
         };
 
-        const handleVisibility = () => {
-            if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-                refreshPlannerOrders(false);
-            }
-        };
-
-        refreshPlannerOrders(true);
+        refreshPlannerRibisoft(true, true);
 
         if (typeof window !== 'undefined') {
-            window.addEventListener('cdi-erp-synced', scheduleRefresh);
-            window.addEventListener('cdi-force-sync', scheduleRefresh);
-            window.addEventListener('focus', handleVisibility);
-            document.addEventListener('visibilitychange', handleVisibility);
+            window.addEventListener('cdi-erp-synced', handleErpUpdated);
+            window.addEventListener('cdi-ribisoft-updated', handleErpUpdated);
         }
-
-        const plannerRealtimeChannel = supabase.channel('planner-realtime-sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, scheduleRefresh)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, scheduleRefresh)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, scheduleRefresh)
-            .subscribe();
 
         return () => {
             isMounted = false;
-            clearTimeout(debounceTimer);
-            supabase.removeChannel(plannerRealtimeChannel);
             if (typeof window !== 'undefined') {
-                window.removeEventListener('cdi-erp-synced', scheduleRefresh);
-                window.removeEventListener('cdi-force-sync', scheduleRefresh);
-                window.removeEventListener('focus', handleVisibility);
-                document.removeEventListener('visibilitychange', handleVisibility);
+                window.removeEventListener('cdi-erp-synced', handleErpUpdated);
+                window.removeEventListener('cdi-ribisoft-updated', handleErpUpdated);
             }
         };
     }, []);

@@ -552,7 +552,8 @@ export const useOrders = () => {
         const fetchProduccion = async (force = false) => {
             const now = Date.now();
             if (isFetchingProduccion) return;
-            if (!force && lastFetchProduccionAt > 0 && now - lastFetchProduccionAt < 2500) {
+            // Cooldown mínimo de 2 minutos para recargas no forzadas (evita tormentas de Egress en cambios de pestaña)
+            if (!force && lastFetchProduccionAt > 0 && now - lastFetchProduccionAt < 120000) {
                 return;
             }
             isFetchingProduccion = true;
@@ -562,9 +563,10 @@ export const useOrders = () => {
                 let allPedidosRows = [];
                 let from = 0;
                 const step = 1000;
+                const MAX_ROWS_GUARD = 4000;
                 let hasMore = true;
 
-                while (hasMore) {
+                while (hasMore && allPedidosRows.length < MAX_ROWS_GUARD) {
                     const { data: batchData, error: e1 } = await supabase
                         .from('produccion_pedidos')
                         .select('id, codigo_item, data_completa')
@@ -634,7 +636,10 @@ export const useOrders = () => {
                 
                 let remotePackingListsFromAlertas = [];
                 try {
-                    const { data: alertasData } = await supabase.from('coordinacion_alertas').select('data_completa');
+                    const { data: alertasData } = await supabase
+                        .from('coordinacion_alertas')
+                        .select('data_completa')
+                        .limit(500);
                     if (alertasData) {
                         const allRows = alertasData
                             .map(row => row.data_completa)
@@ -707,23 +712,24 @@ export const useOrders = () => {
 
         const handleVisibilityOrFocus = () => {
             if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-                fetchProduccion(true);
+                // Respeta cooldown de 2 minutos (NO fuerza descarga completa en cada Alt+Tab)
+                fetchProduccion(false);
             }
         };
 
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleForceSyncEvent);
             window.addEventListener('cdi-force-sync', handleForceSyncEvent);
-            window.addEventListener('focus', handleVisibilityOrFocus);
             document.addEventListener('visibilitychange', handleVisibilityOrFocus);
         }
 
-        // Polling silencioso cada 8 segundos cuando la ventana está visible para garantizar sincronización continua en toda la planta
+        // Respaldo conservador cada 5 minutos (antes era cada 8s = 450 full-scans/hora).
+        // La sincronización inmediata la manejan los 3 canales Realtime/Broadcast incrementales.
         const pollInterval = setInterval(() => {
             if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-                fetchProduccion(true);
+                fetchProduccion(false);
             }
-        }, 8000);
+        }, 300000);
 
         const applyIncomingOrder = (newData) => {
             if (!newData || !newData.id) return;
@@ -766,8 +772,6 @@ export const useOrders = () => {
 
                 if (newData) {
                     applyIncomingOrder(newData);
-                } else {
-                    fetchProduccion(true);
                 }
             } else if (payload.eventType === 'DELETE') {
                 const oldId = payload.old?.id;
@@ -781,11 +785,23 @@ export const useOrders = () => {
             }
         };
 
-        const handleAlertasPayload = (payload) => {
+        const handleAlertasPayload = async (payload) => {
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                const newData = payload.new?.data_completa;
+                let newData = payload.new?.data_completa;
+                const rowId = payload.new?.id;
+                if ((!newData || !newData.id) && rowId) {
+                    try {
+                        const { data: singleAlert } = await supabase
+                            .from('coordinacion_alertas')
+                            .select('id, data_completa')
+                            .eq('id', rowId)
+                            .single();
+                        if (singleAlert?.data_completa) {
+                            newData = singleAlert.data_completa;
+                        }
+                    } catch (_) {}
+                }
                 if (!newData || !newData.id) {
-                    fetchProduccion(true);
                     return;
                 }
 
@@ -832,6 +848,17 @@ export const useOrders = () => {
                     } else if (payload.data) {
                         applyIncomingOrder(payload.data);
                     }
+                } else if (payload.kind === 'ALERT') {
+                    if (payload.action === 'DELETE' && payload.data?.id) {
+                        setCoordinationAlerts(prev => prev.filter(a => a.id !== payload.data.id));
+                    } else if (payload.data?.id) {
+                        setCoordinationAlerts(prev => {
+                            const exists = prev.some(a => a.id === payload.data.id);
+                            return exists
+                                ? prev.map(a => (a.id === payload.data.id ? payload.data : a))
+                                : [...prev, payload.data];
+                        });
+                    }
                 } else if (payload.kind === 'PACKING_LIST') {
                     if (payload.action === 'DELETE') {
                         setPackingLists(prev => prev.filter(
@@ -841,8 +868,7 @@ export const useOrders = () => {
                         setPackingLists(prev => mergeAndDeduplicatePackingLists(prev, [payload.data], []));
                     }
                 }
-                // Respaldo de consistencia tras recibir notificación broadcast
-                fetchProduccion(true);
+                // Actualización 100% incremental en memoria (sin re-descargar la tabla completa)
             })
             .subscribe();
 
@@ -858,7 +884,6 @@ export const useOrders = () => {
             if (typeof window !== 'undefined') {
                 window.removeEventListener('cdi-erp-synced', handleForceSyncEvent);
                 window.removeEventListener('cdi-force-sync', handleForceSyncEvent);
-                window.removeEventListener('focus', handleVisibilityOrFocus);
                 document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
             }
         };

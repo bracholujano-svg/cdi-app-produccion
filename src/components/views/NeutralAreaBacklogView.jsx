@@ -343,16 +343,24 @@ export default function NeutralAreaBacklogView() {
       }
     };
 
-    const loadRibisoftPedidos = async () => {
+    let isFetchingRibi = false;
+    let lastRibiFetchAt = 0;
+
+    const loadRibisoftPedidos = async (force = false) => {
+      const now = Date.now();
+      if (isFetchingRibi) return;
+      if (!force && lastRibiFetchAt > 0 && now - lastRibiFetchAt < 180000) return;
+      isFetchingRibi = true;
       setLoadingRibi(true);
       try {
         await supabase.auth.getSession();
         let allRows = [];
         let from = 0;
         const step = 1000;
+        const MAX_RIBI_ROWS = 4000;
         let hasMore = true;
 
-        while (hasMore && isMounted) {
+        while (hasMore && isMounted && allRows.length < MAX_RIBI_ROWS) {
           const { data, error } = await supabase
             .from('ribisoft_pedidos')
             .select('*')
@@ -369,6 +377,7 @@ export default function NeutralAreaBacklogView() {
 
         if (isMounted) {
           setRibisoftRows(allRows);
+          lastRibiFetchAt = Date.now();
 
           // Sincronizar silenciosamente en Supabase una sola vez los pedidos de Diciembre 2026 / 2027
           // presentes en `erpDeliveryDatesMap` cuya `fecha_asigna` aún no refleje esa fecha de entrega comercial
@@ -407,51 +416,53 @@ export default function NeutralAreaBacklogView() {
       } catch (err) {
         console.error('Error cargando pedidos desde ribisoft_pedidos:', err);
       } finally {
+        isFetchingRibi = false;
         if (isMounted) setLoadingRibi(false);
       }
     };
 
     loadCustomDeliveryDates();
-    loadRibisoftPedidos();
+    loadRibisoftPedidos(true);
 
-    let realtimeTimer = null;
     const handleErpSynced = () => {
       loadCustomDeliveryDates();
-      loadRibisoftPedidos();
+      loadRibisoftPedidos(true);
     };
-    const handleVisibilityOrFocus = () => {
-      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-        handleErpSynced();
+
+    // Actualización incremental en memoria desde Realtime (0 re-descargas masivas de la tabla)
+    const handleRibiRealtimePayload = (payload) => {
+      if (!payload) return;
+      if (payload.eventType === 'INSERT' && payload.new) {
+        setRibisoftRows((prev) => [...prev, payload.new]);
+      } else if (payload.eventType === 'UPDATE' && payload.new) {
+        const targetId = payload.new.id;
+        if (targetId !== undefined && targetId !== null) {
+          setRibisoftRows((prev) =>
+            prev.map((row) => (row.id === targetId ? { ...row, ...payload.new } : row))
+          );
+        }
+      } else if (payload.eventType === 'DELETE' && payload.old) {
+        const targetId = payload.old.id;
+        if (targetId !== undefined && targetId !== null) {
+          setRibisoftRows((prev) => prev.filter((row) => row.id !== targetId));
+        }
       }
-    };
-    const scheduleRibiReload = () => {
-      clearTimeout(realtimeTimer);
-      realtimeTimer = setTimeout(() => {
-        handleErpSynced();
-      }, 1500);
     };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('cdi-erp-synced', handleErpSynced);
-      window.addEventListener('cdi-force-sync', handleErpSynced);
-      window.addEventListener('focus', handleVisibilityOrFocus);
-      document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     }
 
     const ribiChannel = supabase
       .channel('consulta-general-ribi-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, scheduleRibiReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ribisoft_pedidos' }, handleRibiRealtimePayload)
       .subscribe();
 
     return () => {
       isMounted = false;
-      clearTimeout(realtimeTimer);
       supabase.removeChannel(ribiChannel);
       if (typeof window !== 'undefined') {
         window.removeEventListener('cdi-erp-synced', handleErpSynced);
-        window.removeEventListener('cdi-force-sync', handleErpSynced);
-        window.removeEventListener('focus', handleVisibilityOrFocus);
-        document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
       }
     };
   }, []);

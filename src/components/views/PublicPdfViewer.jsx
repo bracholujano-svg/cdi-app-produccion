@@ -62,15 +62,18 @@ export default function PublicPdfViewer() {
           try {
             const { data: dbOrders } = await supabase
               .from('produccion_pedidos')
-              .select('*')
-              .or(`pedidoNum.eq.${pedidoNum},orden.eq.${pedidoNum}`);
+              .select('id, pedido_num, codigo_item, cliente, data_completa')
+              .eq('pedido_num', pedidoNum)
+              .limit(200);
 
             if (Array.isArray(dbOrders) && dbOrders.length > 0) {
-              const plantRows = dbOrders.filter((r) => {
-                const idStr = String(r.id || '').toUpperCase();
-                const codeStr = String(r.codigo_item || r.codArticulo || '').toUpperCase();
-                return codeStr !== 'PACKING_LIST_MASTER' && !idStr.startsWith('PACKLIST_');
-              });
+              const plantRows = dbOrders
+                .map((r) => ({ ...(r.data_completa || {}), ...r }))
+                .filter((r) => {
+                  const idStr = String(r.id || '').toUpperCase();
+                  const codeStr = String(r.codigo_item || r.codArticulo || '').toUpperCase();
+                  return codeStr !== 'PACKING_LIST_MASTER' && !idStr.startsWith('PACKLIST_');
+                });
 
               if (plantRows.length > 0) {
                 const firstRow = plantRows[0];

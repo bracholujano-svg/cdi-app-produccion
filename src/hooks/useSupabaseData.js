@@ -33,10 +33,12 @@ export const useSupabaseData = () => {
             }
         };
 
+        const MRP_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de vigencia para caché local MRP
+
         const loadFromCacheAndFetch = async (force = false) => {
             const now = Date.now();
             if (isFetchingRef.current) return;
-            if (!force && lastFullFetchAtRef.current > 0 && now - lastFullFetchAtRef.current < 4000) {
+            if (!force && lastFullFetchAtRef.current > 0 && now - lastFullFetchAtRef.current < MRP_CACHE_TTL_MS) {
                 return;
             }
             isFetchingRef.current = true;
@@ -45,21 +47,28 @@ export const useSupabaseData = () => {
                 // Ensure the user session is loaded to pass RLS
                 await supabase.auth.getSession();
                 
-                // 1. Mostrar caché primero para que la interfaz cargue rápido
+                // 1. Mostrar caché primero para carga instantánea y evitar re-descargas en F5 repetidos
                 if (!rawInvRef.current) {
-                    const cachedData = await localforage.getItem('cdi_mrp_processed_cache_v3');
+                    const [cachedData, cachedTs] = await Promise.all([
+                        localforage.getItem('cdi_mrp_processed_cache_v3'),
+                        localforage.getItem('cdi_mrp_processed_cache_ts_v3')
+                    ]);
                     if (cachedData) {
                         setSupabaseData(cachedData);
+                        if (!force && cachedTs && now - Number(cachedTs) < MRP_CACHE_TTL_MS) {
+                            lastFullFetchAtRef.current = Number(cachedTs);
+                            return;
+                        }
                     }
                 }
 
-                // 2. Fetch de BD en segundo plano en paralelo
-                const fetchAll = async (table) => {
+                // 2. Fetch de BD en segundo plano en paralelo (con tope de seguridad)
+                const fetchAll = async (table, maxRows = 10000) => {
                     let allData = [];
                     let from = 0;
                     const step = 1000;
                     let hasMore = true;
-                    while (hasMore) {
+                    while (hasMore && allData.length < maxRows) {
                         let query = supabase
                             .from(table)
                             .select('*');
@@ -82,14 +91,16 @@ export const useSupabaseData = () => {
                 };
 
                 const [inv, req] = await Promise.all([
-                    fetchAll('inventario'),
-                    fetchAll('requerimientos_pedido')
+                    fetchAll('inventario', 6000),
+                    fetchAll('requerimientos_pedido', 10000)
                 ]);
 
                 if (inv && req) {
                     rawInvRef.current = inv;
                     rawReqRef.current = req;
-                    lastFullFetchAtRef.current = Date.now();
+                    const ts = Date.now();
+                    lastFullFetchAtRef.current = ts;
+                    localforage.setItem('cdi_mrp_processed_cache_ts_v3', ts).catch(() => {});
                     dispatchToWorker(inv, req);
                 }
             } catch(e) {
@@ -99,11 +110,12 @@ export const useSupabaseData = () => {
             }
         };
 
-        loadFromCacheAndFetch(true);
+        // Al montar: respeta caché fresca (< 5 min) para no re-descargar miles de filas en cada F5
+        loadFromCacheAndFetch(false);
         
         const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                loadFromCacheAndFetch(true);
+            if (event === 'SIGNED_IN') {
+                loadFromCacheAndFetch(false);
             }
         });
 
@@ -118,7 +130,6 @@ export const useSupabaseData = () => {
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleErpSyncEvent);
             window.addEventListener('cdi-force-sync', handleErpSyncEvent);
-            window.addEventListener('focus', handleVisibilityOrFocus);
             document.addEventListener('visibilitychange', handleVisibilityOrFocus);
         }
         
@@ -181,9 +192,10 @@ export const useSupabaseData = () => {
             clearTimeout(ribiRealtimeTimeout);
             ribiRealtimeTimeout = setTimeout(() => {
                 if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('cdi-erp-synced'));
+                    // Emitir evento específico para vistas de Ribisoft sin forzar re-descarga de inventario/producción
+                    window.dispatchEvent(new CustomEvent('cdi-ribisoft-updated'));
                 }
-            }, 1500);
+            }, 4000);
         };
 
         try {
@@ -201,7 +213,6 @@ export const useSupabaseData = () => {
                 if (typeof window !== 'undefined') {
                     window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
                     window.removeEventListener('cdi-force-sync', handleErpSyncEvent);
-                    window.removeEventListener('focus', handleVisibilityOrFocus);
                     document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
                 }
             };
@@ -213,7 +224,6 @@ export const useSupabaseData = () => {
                 if (typeof window !== 'undefined') {
                     window.removeEventListener('cdi-erp-synced', handleErpSyncEvent);
                     window.removeEventListener('cdi-force-sync', handleErpSyncEvent);
-                    window.removeEventListener('focus', handleVisibilityOrFocus);
                     document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
                 }
             };
