@@ -7,13 +7,15 @@ export const SESSION_SECRET =
 export const sanitizeInput = (text) =>
   DOMPurify.sanitize(String(text ?? ''), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
 
+const FORBIDDEN_OBJ_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export const deepSanitize = (obj) => {
   if (typeof obj === 'string') return sanitizeInput(obj);
   if (Array.isArray(obj)) return obj.map(deepSanitize);
   if (obj !== null && typeof obj === 'object') {
     const newObj = {};
     for (let key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key) && !FORBIDDEN_OBJ_KEYS.has(key)) {
         newObj[key] = deepSanitize(obj[key]);
       }
     }
@@ -70,13 +72,19 @@ export const validateCorporateEmail = (rawInput = '') => {
     return { valid: false, email: '', error: 'Ingresa tu usuario corporativo.' };
   }
   const emailFull = clean.includes('@') ? clean : `${clean}@cdiexhibiciones.co`;
-  // Lista blanca estricta: solo letras, números, punto, guion y guion bajo (bloquea ', ", ;, =, paréntesis, etc.)
-  const strictEmailAllowlist = /^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-  if (!strictEmailAllowlist.test(emailFull)) {
+  // Lista blanca estricta: usuario corporativo válido y dominio corporativo @cdiexhibiciones.co
+  const [localPart, domainPart, ...extraAt] = emailFull.split('@');
+  const strictLocalAllowlist = /^[a-z0-9._+-]{2,64}$/;
+  if (
+    extraAt.length > 0 ||
+    !localPart ||
+    !strictLocalAllowlist.test(localPart) ||
+    domainPart !== 'cdiexhibiciones.co'
+  ) {
     return {
       valid: false,
       email: emailFull,
-      error: 'Formato de usuario o correo inválido (solo letras, números, puntos y guiones).'
+      error: 'Solo se permiten correos corporativos válidos (@cdiexhibiciones.co).'
     };
   }
   return { valid: true, email: emailFull, error: null };
@@ -258,8 +266,85 @@ export const isPaintSupervisorOrAdminRole = (rawRole = '') => {
     norm.includes('ADMINISTRADOR') ||
     norm === 'ADMIN' ||
     norm.includes('TODOS') ||
-    norm.includes('PINTURA LIQUIDA')
+    norm.includes('PINTURA LIQUIDA') ||
+    norm === 'SUPERVISOR_PINTURA_LIQUIDA'
   );
+};
+
+/**
+ * Resuelve la autoridad de rol/área de un usuario de Supabase priorizando SIEMPRE
+ * `app_metadata` (inmutable desde el cliente / solo editable por servidor/SQL).
+ * `user_metadata` se usa únicamente como respaldo de visualización o área operativa NO privilegiada;
+ * jamás puede otorgar privilegios de Administrador ni Supervisor por auto-edición.
+ */
+export const resolveTrustedUserRole = (user) => {
+  const appMeta = (user && typeof user.app_metadata === 'object' && user.app_metadata) || {};
+  const userMeta = (user && typeof user.user_metadata === 'object' && user.user_metadata) || {};
+
+  const rawRoles = [];
+  if (Array.isArray(appMeta.roles)) rawRoles.push(...appMeta.roles);
+  if (typeof appMeta.role === 'string' && appMeta.role) rawRoles.push(appMeta.role);
+  if (typeof appMeta.rol === 'string' && appMeta.rol) rawRoles.push(appMeta.rol);
+
+  const normalizedAppRoles = Array.from(
+    new Set(
+      rawRoles
+        .map((r) => String(r || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
+  const isAdmin =
+    appMeta.is_admin === true ||
+    normalizedAppRoles.includes('admin') ||
+    normalizedAppRoles.includes('administrador');
+
+  const isPaintSupervisor =
+    isAdmin ||
+    normalizedAppRoles.includes('supervisor_pintura_liquida');
+
+  // Área operativa autorizada: primero app_metadata (inmutable), luego user_metadata SOLO si no intenta escalar privilegios
+  const appArea =
+    typeof appMeta.area_autorizada === 'string' && appMeta.area_autorizada.trim()
+      ? appMeta.area_autorizada.trim()
+      : '';
+
+  let resolvedArea = 'GENERAL';
+  if (isAdmin) {
+    resolvedArea = appArea || 'Administrador / Todos';
+  } else if (appArea) {
+    resolvedArea = appArea;
+  } else if (isPaintSupervisor) {
+    resolvedArea = 'Pintura Líquida';
+  } else {
+    const candidateArea = String(userMeta.rol || userMeta.area || '').trim();
+    const normCandidate = candidateArea
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    // Bloquear cualquier intento de auto-asignarse rol de admin/supervisor vía user_metadata
+    const attemptsPrivilegeEscalation =
+      normCandidate.includes('ADMIN') ||
+      normCandidate.includes('TODOS') ||
+      normCandidate.includes('SUPERVISOR') ||
+      normCandidate.includes('GERENTE');
+
+    resolvedArea = candidateArea && !attemptsPrivilegeEscalation ? candidateArea : 'GENERAL';
+  }
+
+  const displayName = validateSafeText(
+    userMeta.nombre || userMeta.name || user?.email || 'Usuario',
+    80
+  );
+
+  return {
+    name: displayName || 'Usuario',
+    area: validateSafeText(resolvedArea, 60) || 'GENERAL',
+    appRoles: normalizedAppRoles,
+    isAdmin,
+    isPaintSupervisor
+  };
 };
 
 /**
@@ -341,25 +426,18 @@ export const verifySupervisorCredentials = async ({
     // Credenciales válidas: limpiar contador de intentos fallidos
     resetRateLimit('supervisor_pin', emailFull);
 
-    const userMeta = data.user.user_metadata || {};
-    const resolvedRole =
-      userMeta.rol ||
-      userMeta.area ||
-      (emailFull === String(fallbackProfile?.email || '').toLowerCase()
-        ? fallbackProfile?.area || fallbackProfile?.rol
-        : '') ||
-      'GENERAL';
+    // Resolver privilegios EXCLUSIVAMENTE desde app_metadata inmutable del servidor
+    const trusted = resolveTrustedUserRole(data.user);
     const resolvedName =
-      userMeta.nombre ||
-      userMeta.name ||
+      trusted.name ||
       fallbackProfile?.name ||
       fallbackProfile?.nombre ||
       emailFull;
 
-    if (requirePaintOrAdmin && !isPaintSupervisorOrAdminRole(resolvedRole)) {
+    if (requirePaintOrAdmin && !(trusted.isAdmin || trusted.isPaintSupervisor)) {
       return {
         ok: false,
-        error: `⛔ Acceso restringido: El usuario "${resolvedName}" pertenece al área "${resolvedRole}". Esta acción requiere clave de Supervisor de Pintura Líquida o Administrador.`
+        error: `⛔ Acceso restringido: El usuario "${resolvedName}" no cuenta con rol autorizado (admin o supervisor_pintura_liquida) en app_metadata del servidor.`
       };
     }
 
@@ -369,7 +447,10 @@ export const verifySupervisorCredentials = async ({
         id: data.user.id,
         email: emailFull,
         nombre: resolvedName,
-        rol: resolvedRole
+        rol: trusted.area,
+        appRoles: trusted.appRoles,
+        isAdmin: trusted.isAdmin,
+        isPaintSupervisor: trusted.isPaintSupervisor
       }
     };
   } catch (err) {

@@ -31,6 +31,11 @@ import {
   showCdiBlueprintToast
 } from '../../utils/colorQrHelper';
 import { AREAS_RECEPCION } from '../../utils/constants';
+import {
+  sanitizePostgrestSearchTerm,
+  validatePlantSubmissionText,
+  sanitizePlantText
+} from '../../utils/inputSecurity';
 
 const QRScannerModal = () => {
   const {
@@ -209,11 +214,13 @@ const QRScannerModal = () => {
     const autoPromoteFromRibisoft = async () => {
       try {
         const ped = String(scannedResult.pedidoNum).trim();
+        const safePed = sanitizePostgrestSearchTerm(ped, { maxLength: 60 });
+        if (!safePed) return;
         const cod = String(scannedResult.codArticulo || '').trim().toUpperCase();
         const { data: ribiMatches } = await supabase
           .from('ribisoft_pedidos')
           .select('*')
-          .ilike('PedidoSIN', `%${ped}%`)
+          .ilike('PedidoSIN', `%${safePed}%`)
           .limit(60);
 
         if (isCancelled || !Array.isArray(ribiMatches) || ribiMatches.length === 0) return;
@@ -479,18 +486,30 @@ const QRScannerModal = () => {
   // Acción 3 del Menú Operativo: 📦 ENTREGA ENTRE SECCIONES
   const handleConfirmQuickTransfer = () => {
     if (!matchedBlueprintOrder || !quickTransferTargetArea) return;
+    const noteCheck = validatePlantSubmissionText(quickTransferNote, {
+      fieldLabel: 'observación de entrega QR',
+      maxLength: 600,
+      allowNewlines: true
+    });
+    if (!noteCheck.valid) {
+      alert(noteCheck.error);
+      return;
+    }
+
+    const safeTargetArea = sanitizePlantText(quickTransferTargetArea, { maxLength: 80, allowNewlines: false });
+    const safeSupName = sanitizePlantText(supervisorProfile?.name || effectiveCheckInArea, { maxLength: 80, allowNewlines: false });
     const nowIso = new Date().toISOString();
     const updatedOrder = {
       ...matchedBlueprintOrder,
       area: effectiveCheckInArea,
       areaActual: effectiveCheckInArea,
-      estadoInterno: `EN TRÁNSITO HACIA ${quickTransferTargetArea.toUpperCase()}`,
+      estadoInterno: `EN TRÁNSITO HACIA ${safeTargetArea.toUpperCase()}`,
       transferenciaPendiente: {
         desdeArea: effectiveCheckInArea,
-        haciaArea: quickTransferTargetArea,
-        entregadoPor: supervisorProfile?.name || effectiveCheckInArea,
+        haciaArea: safeTargetArea,
+        entregadoPor: safeSupName,
         fecha: nowIso,
-        nota: quickTransferNote || 'Transferencia iniciada desde Check-In QR'
+        nota: noteCheck.value || 'Transferencia iniciada desde Check-In QR'
       },
       historial: [
         ...(Array.isArray(matchedBlueprintOrder.historial)
@@ -498,10 +517,10 @@ const QRScannerModal = () => {
           : []),
         {
           fecha: nowIso,
-          accion: `Entrega a ${quickTransferTargetArea} (En tránsito desde Check-In QR)`,
-          entrega: (supervisorProfile?.name || effectiveCheckInArea).toUpperCase(),
-          recibe: quickTransferTargetArea.toUpperCase(),
-          nota: quickTransferNote || 'Sin observaciones'
+          accion: `Entrega a ${safeTargetArea} (En tránsito desde Check-In QR)`,
+          entrega: safeSupName.toUpperCase(),
+          recibe: safeTargetArea.toUpperCase(),
+          nota: noteCheck.value || 'Sin observaciones'
         }
       ]
     };

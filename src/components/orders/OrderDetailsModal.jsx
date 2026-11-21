@@ -6,6 +6,7 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS, AREAS_ADMIN, AREAS_PRIMARIAS, AREAS_SECUNDARIAS, AREAS_FINALES, ROUTING_MAP, PERSONAL_DISENO, PERSONAL_CNC, AREAS_PLANTA, AREAS } from '../../utils/constants';
 import { SolidWorksStampPreview, copyBlueprintQrToClipboard, downloadBlueprintQrPng } from '../../utils/colorQrHelper';
+import { safeOpenEvidenceUrl } from '../../utils/inputSecurity';
 
 const OrderDetailsModal = ({
   handleImageUpload,
@@ -424,7 +425,7 @@ const OrderDetailsModal = ({
                                     <button type="button" onClick={() => shareToWhatsApp('tech', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className="text-base lg:text-lg font-black theme-text-main uppercase">{n.actividad}</span><span className="text-base text-sm font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-base lg:text-lg italic theme-text-muted my-1">"{n.nota}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    {n.foto && <button type="button" onClick={()=>safeOpenEvidenceUrl(n.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
                                     <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-main">OP: {n.operario}</span><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
@@ -487,7 +488,7 @@ const OrderDetailsModal = ({
                                     <button type="button" onClick={() => shareToWhatsApp('calidad', n)} className="absolute top-3 right-3 text-[#25D366] hover:scale-110 transition-transform"><MessageSquare size={"1.2em"} /></button>
                                     <div className="flex justify-between items-center mb-1 pr-8"><span className={`text-base lg:text-lg font-black uppercase ${n.estado==='APROBADO' ? 'text-green-800 dark:text-green-500' : n.estado==='RETRABAJO' ? 'text-yellow-800 dark:text-yellow-500' : 'text-red-800 dark:text-red-500'}`}>{n.estado}</span><span className="text-base text-sm font-bold theme-text-muted">{new Date(n.fecha).toLocaleString()}</span></div>
                                     <p className="text-base lg:text-lg italic theme-text-muted my-1">"{n.observacion}"</p>
-                                    {n.foto && <button type="button" onClick={()=>window.open(n.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
+                                    {n.foto && <button type="button" onClick={()=>safeOpenEvidenceUrl(n.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Evidencia</button>}
                                     <div className="flex justify-between items-end mt-2"><span className="text-base font-black uppercase theme-text-main">INSP: {n.inspector}</span><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {n.supervisor}</span></div>
                                 </div>
                             ))}
@@ -867,7 +868,7 @@ const OrderDetailsModal = ({
 >{h.accion}</span><span className="text-base text-sm font-bold theme-text-muted">{new Date(h.fecha).toLocaleString()}</span></div>
                                     <div className="grid grid-cols-2 gap-2 text-base font-black uppercase bg-black/10 p-2 rounded-lg"><div><span className="text-base md:text-sm lg:text-sm md:text-base lg:text-lg lg:text-sm theme-text-main block uppercase">ENTREGA</span>{h.entrega}</div><div><span className="text-base md:text-sm lg:text-sm md:text-base lg:text-lg lg:text-sm theme-text-main block uppercase">RECIBE</span>{h.recibe}</div></div>
                                     {h.nota && <p className="text-base italic theme-text-muted mt-2">Obs: "{h.nota}"</p>}
-                                    {h.foto && <button type="button" onClick={()=>window.open(h.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
+                                    {h.foto && <button type="button" onClick={()=>safeOpenEvidenceUrl(h.foto)} className="text-base font-black theme-text-main flex items-center gap-1 mt-1"><ImageIcon size={"1.2em"}/> Ver Acta Firmada</button>}
                                     <div className="flex justify-end items-end mt-2"><span className="text-base text-sm font-bold theme-text-muted uppercase">SUP: {h.supervisor || 'S/N'}</span></div>
                                 </div>
                             ))}
@@ -976,7 +977,7 @@ const OrderDetailsModal = ({
                                                                     </div>
                                                                     <p className="italic theme-text-muted text-sm my-1">"{n.nota}"</p>
                                                                     {n.foto && (
-                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-sm font-black theme-text-main flex items-center gap-1 mt-1">
+                                                                        <button type="button" onClick={() => safeOpenEvidenceUrl(n.foto)} className="text-sm font-black theme-text-main flex items-center gap-1 mt-1">
                                                                             <ImageIcon size={12}/> Ver Evidencia
                                                                         </button>
                                                                     )}
@@ -1011,7 +1012,7 @@ const OrderDetailsModal = ({
                                                                     </div>
                                                                     <p className="italic theme-text-muted text-sm my-1">"{n.observacion}"</p>
                                                                     {n.foto && (
-                                                                        <button type="button" onClick={() => window.open(n.foto)} className="text-sm font-black theme-text-main flex items-center gap-1 mt-1">
+                                                                        <button type="button" onClick={() => safeOpenEvidenceUrl(n.foto)} className="text-sm font-black theme-text-main flex items-center gap-1 mt-1">
                                                                             <ImageIcon size={12}/> Ver Evidencia
                                                                         </button>
                                                                     )}

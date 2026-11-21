@@ -1,4 +1,10 @@
 import { CONFIG_PROCESOS } from '../utils/constants';
+import {
+    validatePlantSubmissionText,
+    sanitizePlantText,
+    sanitizeImageDataUrl,
+    sanitizeLogisticaData
+} from '../utils/inputSecurity';
 
 /**
  * Checks if all products associated with a target order are fully dispatched,
@@ -43,6 +49,34 @@ export const executeTransfer = (ids, {
         return { updatedOrders: orders, updatedAlerts: null, ordersToSync: [], alertsToSync: [] };
     }
 
+    const notaCheck = validatePlantSubmissionText(transferNota, {
+        fieldLabel: 'Observaciones de Transferencia',
+        maxLength: 600,
+        allowNewlines: true
+    });
+    if (!notaCheck.valid) throw new Error(notaCheck.error);
+
+    const entregaCheck = validatePlantSubmissionText(entrega || supervisorName || 'S/N', {
+        fieldLabel: 'Persona que Entrega',
+        maxLength: 80,
+        allowNewlines: false,
+        fallback: 'S/N'
+    });
+    if (!entregaCheck.valid) throw new Error(entregaCheck.error);
+
+    const recibeCheck = validatePlantSubmissionText(recibe || '', {
+        fieldLabel: 'Persona que Recibe',
+        maxLength: 80,
+        allowNewlines: false
+    });
+    if (!recibeCheck.valid) throw new Error(recibeCheck.error);
+
+    const safeTransferNota = notaCheck.value;
+    const safeEntrega = entregaCheck.value;
+    const safeRecibe = recibeCheck.value;
+    const safeSupervisor = sanitizePlantText(supervisorName || 'S/N', { maxLength: 80, allowNewlines: false, fallback: 'S/N' });
+    const safeTransferPhoto = sanitizeImageDataUrl(transferPhoto);
+
     let newOrdersList = [...orders];
     const ordersToSync = [];
     let currentAlerts = [...coordinationAlerts];
@@ -70,12 +104,12 @@ export const executeTransfer = (ids, {
             const areasSummaryText = areas.join(', ');
             const originalHistoryEntry = {
                 fecha: new Date().toISOString(),
-                supervisor: supervisorName || "S/N",
+                supervisor: safeSupervisor,
                 accion: `Entrega Parcial a ${areasSummaryText}${qtyText}`,
-                entrega: entrega,
-                recibe: recibe,
-                nota: transferNota,
-                foto: transferPhoto
+                entrega: safeEntrega,
+                recibe: safeRecibe,
+                nota: safeTransferNota,
+                foto: safeTransferPhoto
             };
 
             // Update original (stays in current area)
@@ -96,12 +130,12 @@ export const executeTransfer = (ids, {
 
                 const newHistoryEntry = { 
                     fecha: new Date().toISOString(), 
-                    supervisor: supervisorName || "S/N", 
+                    supervisor: safeSupervisor, 
                     accion: `Entrega Parcial a ${area}${asignadoText}${qtyText}`, 
-                    entrega: entrega, 
-                    recibe: recibe, 
-                    nota: transferNota, 
-                    foto: transferPhoto 
+                    entrega: safeEntrega, 
+                    recibe: safeRecibe, 
+                    nota: safeTransferNota, 
+                    foto: safeTransferPhoto 
                 };
 
                 let targetOrder = isDespacho 
@@ -130,9 +164,9 @@ export const executeTransfer = (ids, {
                         asignado_a: personalAsignado,
                         transferenciaPendiente: {
                             haciaArea: area,
-                            entregadoPor: entrega || supervisorName || "S/N",
-                            nota: transferNota,
-                            fotoEntrega: transferPhoto,
+                            entregadoPor: safeEntrega,
+                            nota: safeTransferNota,
+                            fotoEntrega: safeTransferPhoto,
                             fechaEnvio: new Date().toISOString(),
                             isPartial: true
                         },
@@ -162,12 +196,12 @@ export const executeTransfer = (ids, {
             
             const newHistoryEntry = { 
                 fecha: new Date().toISOString(), 
-                supervisor: supervisorName || "S/N", 
+                supervisor: safeSupervisor, 
                 accion: isPartial ? `Entrega Parcial a ${area}${asignadoText}` : `Entrega a ${area}${asignadoText}`, 
-                entrega: entrega, 
-                recibe: recibe, 
-                nota: transferNota, 
-                foto: transferPhoto 
+                entrega: safeEntrega, 
+                recibe: safeRecibe, 
+                nota: safeTransferNota, 
+                foto: safeTransferPhoto 
             };
             
             let targetOrder;
@@ -193,9 +227,9 @@ export const executeTransfer = (ids, {
                         asignado_a: personalAsignado,
                         transferenciaPendiente: {
                             haciaArea: area,
-                            entregadoPor: entrega || supervisorName || "S/N",
-                            nota: transferNota,
-                            fotoEntrega: transferPhoto,
+                            entregadoPor: safeEntrega,
+                            nota: safeTransferNota,
+                            fotoEntrega: safeTransferPhoto,
                             fechaEnvio: new Date().toISOString(),
                             isPartial: isPartial
                         },
@@ -234,9 +268,9 @@ export const executeTransfer = (ids, {
                         asignado_a: personalAsignado,
                         transferenciaPendiente: {
                             haciaArea: area,
-                            entregadoPor: entrega || supervisorName || "S/N",
-                            nota: transferNota,
-                            fotoEntrega: transferPhoto,
+                            entregadoPor: safeEntrega,
+                            nota: safeTransferNota,
+                            fotoEntrega: safeTransferPhoto,
                             fechaEnvio: new Date().toISOString(),
                             isPartial: false
                         },
@@ -280,6 +314,26 @@ export const executeReception = (ids, {
         return { updatedOrders: orders, updatedAlerts: null, ordersToSync: [], alertsToSync: [] };
     }
 
+    const recNameCheck = validatePlantSubmissionText(receptionName || supervisorName || 'S/N', {
+        fieldLabel: 'Recibido por',
+        maxLength: 80,
+        allowNewlines: false,
+        fallback: 'S/N'
+    });
+    if (!recNameCheck.valid) throw new Error(recNameCheck.error);
+
+    const recNotesCheck = validatePlantSubmissionText(notes || '', {
+        fieldLabel: 'Observaciones de Recepción',
+        maxLength: 600,
+        allowNewlines: true
+    });
+    if (!recNotesCheck.valid) throw new Error(recNotesCheck.error);
+
+    const safeSupervisor = sanitizePlantText(supervisorName || 'S/N', { maxLength: 80, allowNewlines: false, fallback: 'S/N' });
+    const safeReceptionName = recNameCheck.value;
+    const safeNotes = recNotesCheck.value;
+    const safePhoto = sanitizeImageDataUrl(photo);
+
     let newOrdersList = [...orders];
     const ordersToSync = [];
     let currentAlerts = [...coordinationAlerts];
@@ -299,12 +353,12 @@ export const executeReception = (ids, {
         
         const newHistoryEntry = {
             fecha: new Date().toISOString(),
-            supervisor: supervisorName || "S/N",
+            supervisor: safeSupervisor,
             accion: isReject ? `Rechazo de ${targetArea}` : `Recepción en ${targetArea}`,
             entrega: order.transferenciaPendiente.entregadoPor,
-            recibe: receptionName,
-            nota: notes,
-            foto: photo
+            recibe: safeReceptionName,
+            nota: safeNotes,
+            foto: safePhoto
         };
         
         const updatedOrder = isReject
@@ -364,6 +418,35 @@ export const executeDispatch = (ids, {
         return { updatedOrders: orders, updatedAlerts: null, ordersToSync: [], alertsToSync: [] };
     }
 
+    const notaCheck = validatePlantSubmissionText(nota, {
+        fieldLabel: 'observación de despacho',
+        maxLength: 600,
+        allowNewlines: true
+    });
+    if (!notaCheck.valid) {
+        throw new Error(notaCheck.error);
+    }
+
+    if (logisticaData && typeof logisticaData === 'object') {
+        for (const [k, v] of Object.entries(logisticaData)) {
+            if (typeof v === 'string' && v.trim()) {
+                const logCheck = validatePlantSubmissionText(v, {
+                    fieldLabel: `dato logístico (${k})`,
+                    maxLength: k === 'observaciones' ? 500 : 120,
+                    allowNewlines: k === 'observaciones'
+                });
+                if (!logCheck.valid) {
+                    throw new Error(logCheck.error);
+                }
+            }
+        }
+    }
+
+    const safeSupervisor = sanitizePlantText(supervisorName, { maxLength: 80, allowNewlines: false, fallback: 'S/N' });
+    const safeLogistica = sanitizeLogisticaData(logisticaData);
+    const safeNota = notaCheck.value;
+    const safeFoto = sanitizeImageDataUrl(foto);
+
     let newOrdersList = [...orders];
     const ordersToSync = [];
     let currentAlerts = [...coordinationAlerts];
@@ -378,13 +461,13 @@ export const executeDispatch = (ids, {
 
         const historyEntry = {
             fecha: new Date().toISOString(),
-            supervisor: supervisorName || "S/N",
+            supervisor: safeSupervisor,
             accion: "Despacho Final de Planta (Salida)",
-            entrega: supervisorName || "S/N",
-            recibe: logisticaData?.nombreChofer || "Transporte",
-            nota: nota || "",
-            foto: foto || null,
-            logistica: logisticaData || null
+            entrega: safeSupervisor,
+            recibe: safeLogistica?.nombreChofer || "Transporte",
+            nota: safeNota,
+            foto: safeFoto,
+            logistica: safeLogistica
         };
 
         const dispatchedOrder = {
@@ -393,12 +476,12 @@ export const executeDispatch = (ids, {
             estadoInterno: 'DESPACHADO',
             isTerminado: true,
             fechaDespacho: date || new Date().toISOString(),
-            datos_logistica: logisticaData || null,
+            datos_logistica: safeLogistica,
             resumenEmpaque: order.resumenEmpaque
                 ? {
                     ...order.resumenEmpaque,
-                    numeroEmpaque: logisticaData?.numeroEmpaque || order.resumenEmpaque.numeroEmpaque,
-                    codigoRemision: logisticaData?.guiaRemesa || order.resumenEmpaque.codigoRemision
+                    numeroEmpaque: safeLogistica?.numeroEmpaque || order.resumenEmpaque.numeroEmpaque,
+                    codigoRemision: safeLogistica?.guiaRemesa || order.resumenEmpaque.codigoRemision
                 }
                 : order.resumenEmpaque,
             transferenciaPendiente: null,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import localforage from 'localforage';
 import { supabase } from '../supabaseClient';
 import { deepSanitize, formatSafeErrorMessage } from '../utils/security';
+import { sanitizeOrderPayload, sanitizeAlertPayload } from '../utils/inputSecurity';
 
 const ORDERS_CACHE_KEY = 'cdi_orders_cache_v2';
 const ALERTS_CACHE_KEY = 'cdi_alerts_cache_v2';
@@ -463,7 +464,7 @@ export const useOrders = () => {
                     const { error } = await supabase.from('produccion_pedidos').delete().eq('id', orderObject.id);
                     dbError = error;
                 } else {
-                    const sanitizedOrder = deepSanitize({
+                    const sanitizedOrder = sanitizeOrderPayload({
                         ...orderObject,
                         ultimaActualizacionPlanta: new Date().toISOString()
                     });
@@ -533,7 +534,7 @@ export const useOrders = () => {
                     emitLiveBroadcast('ALERT', 'DELETE', { id: alertObject.id });
                 }
             } else {
-                const sanitizedAlert = deepSanitize(alertObject);
+                const sanitizedAlert = sanitizeAlertPayload(alertObject);
                 const { error } = await supabase.from('coordinacion_alertas').upsert({
                     id: sanitizedAlert.id,
                     data_completa: sanitizedAlert

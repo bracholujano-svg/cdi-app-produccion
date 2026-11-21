@@ -17,6 +17,10 @@ dist-ssr
 .env.local
 .env.*
 
+# Scripts locales de auditoría y remediación de seguridad (solo respaldo local)
+supabase_auditoria_seguridad_readonly.sql
+supabase_remediacion_seguridad_f1_f2.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

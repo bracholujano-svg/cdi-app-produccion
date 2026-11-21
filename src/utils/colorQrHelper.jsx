@@ -378,7 +378,18 @@ export const showCdiBlueprintToast = (
       'pointer-events:none'
     ].join(';')
   );
-  toast.innerHTML = `<span style="display:inline-flex;width:22px;height:22px;border-radius:999px;background:#10b981;color:#052e16;align-items:center;justify-content:center;font-weight:900;">✓</span><span>${message}</span>`;
+  const badge = document.createElement('span');
+  badge.setAttribute(
+    'style',
+    'display:inline-flex;width:22px;height:22px;border-radius:999px;background:#10b981;color:#052e16;align-items:center;justify-content:center;font-weight:900;'
+  );
+  badge.textContent = '✓';
+
+  const textSpan = document.createElement('span');
+  textSpan.textContent = String(message ?? '');
+
+  toast.appendChild(badge);
+  toast.appendChild(textSpan);
   document.body.appendChild(toast);
 
   setTimeout(() => {

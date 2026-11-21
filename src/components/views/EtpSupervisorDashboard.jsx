@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient';
 import { Beaker, AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
 import EtpCopilotForm from '../forms/EtpCopilotForm';
 import CDILogo from '../ui/CDILogo';
+import { validatePlantSubmissionText, sanitizeColorEtpPayload } from '../../utils/inputSecurity';
 
 const ETP_PENDING_LIGHT_COLS = 'id, sistema_color, codigo_objetivo, color_hexadecimal, estado_aprobacion, created_at';
 
@@ -87,30 +88,46 @@ export default function EtpSupervisorDashboard({ supervisorProfile }) {
 
     const handleAprobar = async (etpData) => {
         try {
+            const checks = [
+                validatePlantSubmissionText(etpData?.cliente, { fieldLabel: 'cliente', maxLength: 140, allowNewlines: false }),
+                validatePlantSubmissionText(etpData?.textoPreparacion, { fieldLabel: 'texto de preparación', maxLength: 1000, allowNewlines: true }),
+                validatePlantSubmissionText(etpData?.textoFondo, { fieldLabel: 'texto de fondo', maxLength: 1000, allowNewlines: true }),
+                validatePlantSubmissionText(etpData?.textoColor, { fieldLabel: 'texto de color', maxLength: 1000, allowNewlines: true }),
+                validatePlantSubmissionText(etpData?.textoAcabado, { fieldLabel: 'texto de acabado', maxLength: 1000, allowNewlines: true }),
+                validatePlantSubmissionText(etpData?.catalizador, { fieldLabel: 'catalizador', maxLength: 150, allowNewlines: false }),
+                validatePlantSubmissionText(etpData?.disolvente, { fieldLabel: 'disolvente', maxLength: 150, allowNewlines: false })
+            ];
+            const failed = checks.find((c) => !c.valid);
+            if (failed) {
+                alert(failed.error);
+                return;
+            }
+
+            const safeUpdatePayload = sanitizeColorEtpPayload({
+                sustrato_muestra: checks[1].value,
+                tolerancia_delta_e: etpData.deltaE,
+                catalizador_tipo: checks[5].value,
+                disolvente_tipo: checks[6].value,
+                procedimiento_preparacion: {
+                    cliente: checks[0].value,
+                    preparacion: checks[1].value,
+                    fondo: checks[2].value,
+                    color: checks[3].value,
+                    acabado: checks[4].value,
+                    viscosidad: etpData.viscosidad,
+                    presion: etpData.presion,
+                    boquilla: etpData.boquilla,
+                    manos: etpData.manos,
+                    brillo: etpData.glossLevel,
+                    fondoObligatorio: etpData.fondoRequired
+                },
+                sistema_color: etpData.colorSystem,
+                aprobado_por_id: supervisorProfile?.id || null,
+                estado_aprobacion: 'aprobado_produccion'
+            });
+
             const { error } = await supabase.from('colores_aprobados')
-                .update({
-                    sustrato_muestra: etpData.textoPreparacion,
-                    tolerancia_delta_e: etpData.deltaE,
-                    catalizador_tipo: etpData.catalizador,
-                    disolvente_tipo: etpData.disolvente,
-                    procedimiento_preparacion: {
-                        cliente: etpData.cliente,
-                        preparacion: etpData.textoPreparacion,
-                        fondo: etpData.textoFondo,
-                        color: etpData.textoColor,
-                        acabado: etpData.textoAcabado,
-                        viscosidad: etpData.viscosidad,
-                        presion: etpData.presion,
-                        boquilla: etpData.boquilla,
-                        manos: etpData.manos,
-                        brillo: etpData.glossLevel,
-                        fondoObligatorio: etpData.fondoRequired
-                    },
-                    
-                    sistema_color: etpData.colorSystem,
-                    aprobado_por_id: supervisorProfile?.id || null,
-                    estado_aprobacion: 'aprobado_produccion'
-                })
+                .update(safeUpdatePayload)
                 .eq('id', selectedColor.id);
             
             if (error) throw error;

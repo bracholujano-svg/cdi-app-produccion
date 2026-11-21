@@ -2,6 +2,12 @@ import EtpSupervisorDashboard from './components/views/EtpSupervisorDashboard';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { deepSanitize } from './utils/security';
+import {
+  validatePlantSubmissionText,
+  sanitizePlantText,
+  sanitizeShiftNoteEntry,
+  sanitizeQualityNoteEntry
+} from './utils/inputSecurity';
 import { SUPERVISORES, CONFIG_PROCESOS, AREAS_RECEPCION, AREAS } from './utils/constants';
 import { safeStorage, safeSessionStorage, getLocalYYYYMMDD, formatLocalDate, getDaysLeft } from './utils/helpers';
 import { useSupabaseData } from './hooks/useSupabaseData';
@@ -362,8 +368,24 @@ const {
   const createOrder = (e) => {
     e.preventDefault();
     const form = e.target;
-    const pedNum = (form.pedidoNum.value || "").trim().toUpperCase();
-    const codArt = (form.codArticulo.value || "").trim().toUpperCase();
+    const pedCheck = validatePlantSubmissionText(form.pedidoNum.value || "", { fieldLabel: 'Número de Pedido', maxLength: 40, allowNewlines: false, uppercase: true, required: true });
+    const codCheck = validatePlantSubmissionText(form.codArticulo.value || "", { fieldLabel: 'Código Artículo', maxLength: 50, allowNewlines: false, uppercase: true });
+    const nomCheck = validatePlantSubmissionText(form.nombre.value || "", { fieldLabel: 'Descripción', maxLength: 250, allowNewlines: false, uppercase: true, required: true });
+    const cliCheck = validatePlantSubmissionText(form.cliente.value || "", { fieldLabel: 'Cliente', maxLength: 150, allowNewlines: false, uppercase: true, required: true });
+    const reqCheck = validatePlantSubmissionText(form.requisicion?.value || "", { fieldLabel: 'Requisición', maxLength: 80, allowNewlines: false, uppercase: true });
+    const acabCheck = validatePlantSubmissionText(form.acabado?.value || "", { fieldLabel: 'Acabado', maxLength: 150, allowNewlines: false, uppercase: true });
+    const opCheck = validatePlantSubmissionText(form.ordenProduccion?.value || "", { fieldLabel: 'Orden Producción', maxLength: 80, allowNewlines: false, uppercase: true });
+    const entCheck = validatePlantSubmissionText(form.entregaPersona?.value || "S/N", { fieldLabel: 'Entrega', maxLength: 80, allowNewlines: false, uppercase: true, fallback: 'S/N' });
+    const recCheck = validatePlantSubmissionText(form.recibePersona?.value || "S/N", { fieldLabel: 'Recibe', maxLength: 80, allowNewlines: false, uppercase: true, fallback: 'S/N' });
+
+    const firstInvalid = [pedCheck, codCheck, nomCheck, cliCheck, reqCheck, acabCheck, opCheck, entCheck, recCheck].find(c => !c.valid);
+    if (firstInvalid) {
+      setDuplicateError(firstInvalid.error);
+      return;
+    }
+
+    const pedNum = pedCheck.value;
+    const codArt = codCheck.value;
     const areaIni = form.areaRecibe.value;
     
     setDuplicateError("");
@@ -389,9 +411,9 @@ const {
         pedidoNum: pedNum,
         codArticulo: codArt
       }),
-      nombre: (form.nombre.value || "").trim().toUpperCase(),
+      nombre: nomCheck.value,
       cantidad: Number(form.cantidad.value) || 1,
-      cliente: (form.cliente.value || "").trim().toUpperCase(),
+      cliente: cliCheck.value,
       area: isNeutralArea ? 'AREA_NEUTRA' : targetAreaIni,
       areaActual: targetAreaIni,
       estado: isNeutralArea ? 'PENDIENTE_INGENIERIA' : (CONFIG_PROCESOS[targetAreaIni]?.[0] || "En Espera"),
@@ -399,16 +421,16 @@ const {
       prioridad: existingAlert ? 'ALTA' : 'NORMAL',
       fechaIngresoArea: new Date().toISOString(), 
       fechaEntregaPrometida: existingAlert ? existingAlert.fechaEntrega : (form.fechaEntrega?.value || null),
-      requisicion: (form.requisicion?.value || "").trim().toUpperCase(),
-      acabado: (form.acabado?.value || "").trim().toUpperCase(),
-      ordenProduccion: (form.ordenProduccion?.value || "").trim().toUpperCase(),
+      requisicion: reqCheck.value,
+      acabado: acabCheck.value,
+      ordenProduccion: opCheck.value,
       bitacoraTurnos: [],
       bitacoraCalidad: [],
       historial: [{
           fecha: new Date().toISOString(),
           accion: `Ingreso Inicial en ${targetAreaIni}`,
-          entrega: (form.entregaPersona.value || "S/N").toUpperCase(),
-          recibe: (form.recibePersona.value || "S/N").toUpperCase()
+          entrega: entCheck.value,
+          recibe: recCheck.value
       }]
     };
     
@@ -511,13 +533,32 @@ const {
 
   const addShiftNote = (isTerminadoFlag = null) => {
     if (!selectedOrder) return;
-    const newNote = { 
-      id: Date.now(), 
+    const opCheck = validatePlantSubmissionText(tempOperario, {
+      fieldLabel: 'nombre del operario',
+      maxLength: 80,
+      allowNewlines: false
+    });
+    if (!opCheck.valid) { alert(opCheck.error); return; }
+
+    const noteCheck = validatePlantSubmissionText(shiftNoteText, {
+      fieldLabel: 'nota de avance de planta',
+      maxLength: 600,
+      allowNewlines: true
+    });
+    if (!noteCheck.valid) { alert(noteCheck.error); return; }
+
+    const safeActivity = sanitizePlantText(tempShiftActivity, { maxLength: 100, allowNewlines: false });
+    const newNote = sanitizeShiftNoteEntry({
+      id: Date.now(),
       area: selectedOrder.areaActual,
-      supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
-      actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
-    };
-    const updatedOrder = { ...selectedOrder, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
+      supervisor: supervisorProfile?.name || "S/N",
+      operario: opCheck.value || "S/N",
+      actividad: safeActivity,
+      nota: noteCheck.value || "Sin novedades",
+      foto: tempPhoto,
+      fecha: new Date().toISOString()
+    });
+    const updatedOrder = { ...selectedOrder, estadoInterno: safeActivity, bitacoraTurnos: [...(selectedOrder.bitacoraTurnos || []), newNote] };
     if (typeof isTerminadoFlag === 'boolean') {
       updatedOrder.isTerminado = isTerminadoFlag;
     }
@@ -528,12 +569,30 @@ const {
 
   const addQualityNote = () => {
     if (!selectedOrder) return;
-    const newNote = {
-      id: Date.now(), 
+    const inspCheck = validatePlantSubmissionText(calidadInspector, {
+      fieldLabel: 'nombre del inspector',
+      maxLength: 80,
+      allowNewlines: false
+    });
+    if (!inspCheck.valid) { alert(inspCheck.error); return; }
+
+    const obsCheck = validatePlantSubmissionText(calidadNota, {
+      fieldLabel: 'observación de calidad',
+      maxLength: 600,
+      allowNewlines: true
+    });
+    if (!obsCheck.valid) { alert(obsCheck.error); return; }
+
+    const newNote = sanitizeQualityNoteEntry({
+      id: Date.now(),
       area: selectedOrder.areaActual,
-      supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
-      estado: calidadState, observacion: calidadNota || "Sin observaciones", foto: calidadPhoto, fecha: new Date().toISOString()
-    };
+      supervisor: supervisorProfile?.name || "S/N",
+      inspector: inspCheck.value || "S/N",
+      estado: calidadState,
+      observacion: obsCheck.value || "Sin observaciones",
+      foto: calidadPhoto,
+      fecha: new Date().toISOString()
+    });
     const updatedOrder = { ...selectedOrder, bitacoraCalidad: [...(selectedOrder.bitacoraCalidad || []), newNote] };
     const newOrdersList = orders.map(o => o?.id === selectedOrder.id ? updatedOrder : o);
     setOrders(newOrdersList); setSelectedOrder(updatedOrder); syncOrderToSupabase(updatedOrder);
@@ -543,17 +602,36 @@ const {
   
   const handleBulkShiftNote = (ids, isTerminadoFlag = null) => {
       if (!ids || ids.length === 0) return;
+      const opCheck = validatePlantSubmissionText(tempOperario, {
+        fieldLabel: 'nombre del operario',
+        maxLength: 80,
+        allowNewlines: false
+      });
+      if (!opCheck.valid) { alert(opCheck.error); return; }
+
+      const noteCheck = validatePlantSubmissionText(shiftNoteText, {
+        fieldLabel: 'nota de avance masivo',
+        maxLength: 600,
+        allowNewlines: true
+      });
+      if (!noteCheck.valid) { alert(noteCheck.error); return; }
+
+      const safeActivity = sanitizePlantText(tempShiftActivity, { maxLength: 100, allowNewlines: false });
       let newOrdersList = [...orders];
-      const newNoteBase = { 
-        supervisor: supervisorProfile?.name || "S/N", operario: tempOperario || "S/N", 
-        actividad: tempShiftActivity, nota: shiftNoteText || "Sin novedades", foto: tempPhoto, fecha: new Date().toISOString() 
+      const newNoteBase = {
+        supervisor: supervisorProfile?.name || "S/N",
+        operario: opCheck.value || "S/N",
+        actividad: safeActivity,
+        nota: noteCheck.value || "Sin novedades",
+        foto: tempPhoto,
+        fecha: new Date().toISOString()
       };
 
       ids.forEach((id, index) => {
           const order = newOrdersList.find(o => o?.id === id);
           if(order) {
-            const newNote = { ...newNoteBase, area: order.areaActual, id: Date.now() + index };
-            const updatedOrder = { ...order, estadoInterno: tempShiftActivity, bitacoraTurnos: [...(order.bitacoraTurnos || []), newNote] };
+            const newNote = sanitizeShiftNoteEntry({ ...newNoteBase, area: order.areaActual, id: Date.now() + index });
+            const updatedOrder = { ...order, estadoInterno: safeActivity, bitacoraTurnos: [...(order.bitacoraTurnos || []), newNote] };
             if (typeof isTerminadoFlag === 'boolean') {
               updatedOrder.isTerminado = isTerminadoFlag;
             }
@@ -569,16 +647,34 @@ const {
 
   const handleBulkQualityNote = (ids) => {
       if (!ids || ids.length === 0) return;
+      const inspCheck = validatePlantSubmissionText(calidadInspector, {
+        fieldLabel: 'nombre del inspector',
+        maxLength: 80,
+        allowNewlines: false
+      });
+      if (!inspCheck.valid) { alert(inspCheck.error); return; }
+
+      const obsCheck = validatePlantSubmissionText(calidadNota, {
+        fieldLabel: 'observación de calidad',
+        maxLength: 600,
+        allowNewlines: true
+      });
+      if (!obsCheck.valid) { alert(obsCheck.error); return; }
+
       let newOrdersList = [...orders];
       const newNoteBase = {
-        supervisor: supervisorProfile?.name || "S/N", inspector: calidadInspector || "S/N",
-        estado: calidadState, observacion: calidadNota || "Sin observaciones", foto: calidadPhoto, fecha: new Date().toISOString()
+        supervisor: supervisorProfile?.name || "S/N",
+        inspector: inspCheck.value || "S/N",
+        estado: calidadState,
+        observacion: obsCheck.value || "Sin observaciones",
+        foto: calidadPhoto,
+        fecha: new Date().toISOString()
       };
 
       ids.forEach((id, index) => {
           const order = newOrdersList.find(o => o?.id === id);
           if(order) {
-            const newNote = { ...newNoteBase, id: Date.now() + index };
+            const newNote = sanitizeQualityNoteEntry({ ...newNoteBase, area: order.areaActual, id: Date.now() + index });
             const updatedOrder = { ...order, bitacoraCalidad: [...(order.bitacoraCalidad || []), newNote] };
             newOrdersList = newOrdersList.map(o => o?.id === id ? updatedOrder : o);
             syncOrderToSupabase(updatedOrder);
@@ -700,8 +796,38 @@ const {
 
   const addItemToCoordList = () => {
     if (!inputManualPedido || !inputManualFecha || !inputManualCliente) return;
+    const pedCheck = validatePlantSubmissionText(inputManualPedido, {
+      fieldLabel: 'número de pedido',
+      maxLength: 60,
+      allowNewlines: false,
+      required: true
+    });
+    if (!pedCheck.valid) { alert(pedCheck.error); return; }
+
+    const cliCheck = validatePlantSubmissionText(inputManualCliente, {
+      fieldLabel: 'nombre del cliente',
+      maxLength: 140,
+      allowNewlines: false,
+      required: true
+    });
+    if (!cliCheck.valid) { alert(cliCheck.error); return; }
+
+    const detCheck = validatePlantSubmissionText(inputManualDetalle, {
+      fieldLabel: 'detalle de coordinación',
+      maxLength: 600,
+      allowNewlines: true
+    });
+    if (!detCheck.valid) { alert(detCheck.error); return; }
+
     const generateUUID = () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-    const newItem = { id: generateUUID(), pedidoNum: inputManualPedido.trim().toUpperCase(), cliente: inputManualCliente.trim().toUpperCase(), fechaEntrega: inputManualFecha, detalle: inputManualDetalle ? inputManualDetalle.trim() : '', creadoEn: new Date().toISOString() };
+    const newItem = {
+      id: generateUUID(),
+      pedidoNum: pedCheck.value.toUpperCase(),
+      cliente: cliCheck.value.toUpperCase(),
+      fechaEntrega: sanitizePlantText(inputManualFecha, { maxLength: 40, allowNewlines: false }),
+      detalle: detCheck.value,
+      creadoEn: new Date().toISOString()
+    };
     setCoordList([...coordList, newItem]);
     setInputManualPedido(""); setInputManualCliente(""); setInputManualDetalle("");
   };

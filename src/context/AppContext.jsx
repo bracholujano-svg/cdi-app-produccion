@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { safeStorage, safeSessionStorage } from '../utils/helpers';
-import { SESSION_SECRET } from '../utils/security';
+import { SESSION_SECRET, resolveTrustedUserRole } from '../utils/security';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useOrders } from '../hooks/useOrders';
 import { useInventoryMRP } from '../hooks/useInventoryMRP';
@@ -59,11 +59,15 @@ export const AppContextProvider = ({ children }) => {
           return;
         }
 
+        const trusted = resolveTrustedUserRole(session.user);
         const verifiedProfile = {
           id: session.user.id,
-          name: session.user.user_metadata?.nombre || session.user.user_metadata?.name || 'Usuario',
+          name: trusted.name,
           email: session.user.email,
-          area: session.user.user_metadata?.rol || session.user.user_metadata?.area || 'GENERAL'
+          area: trusted.area,
+          appRoles: trusted.appRoles,
+          isAdmin: trusted.isAdmin,
+          isPaintSupervisor: trusted.isPaintSupervisor
         };
         const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
         setSupervisorProfile(verifiedProfile);
@@ -78,11 +82,15 @@ export const AppContextProvider = ({ children }) => {
         setSupervisorProfile(null);
         safeSessionStorage.remove('cdi_supervisor_session');
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        const trusted = resolveTrustedUserRole(session.user);
         const verifiedProfile = {
           id: session.user.id,
-          name: session.user.user_metadata?.nombre || session.user.user_metadata?.name || 'Usuario',
+          name: trusted.name,
           email: session.user.email,
-          area: session.user.user_metadata?.rol || session.user.user_metadata?.area || 'GENERAL'
+          area: trusted.area,
+          appRoles: trusted.appRoles,
+          isAdmin: trusted.isAdmin,
+          isPaintSupervisor: trusted.isPaintSupervisor
         };
         const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
         setSupervisorProfile(verifiedProfile);

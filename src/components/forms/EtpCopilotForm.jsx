@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { verifySupervisorCredentials } from '../../utils/security';
+import { validatePlantSubmissionText, sanitizeColorEtpPayload } from '../../utils/inputSecurity';
 import {
   ColorQRCodeSVG,
   buildColorQRPayload,
@@ -581,10 +582,28 @@ export default function EtpCopilotForm({
     }
   };
 
+  // Validación anti-inyección de campos de texto libre antes de guardar ETP en Supabase
+  const validateEtpTextFields = () => {
+    const checks = [
+      validatePlantSubmissionText(cliente, { fieldLabel: 'cliente', maxLength: 140, allowNewlines: false }),
+      validatePlantSubmissionText(colorRef, { fieldLabel: 'código del color', maxLength: 80, allowNewlines: false }),
+      validatePlantSubmissionText(formData.nombreComercial, { fieldLabel: 'nombre comercial', maxLength: 120, allowNewlines: false }),
+      validatePlantSubmissionText(sustratoBase, { fieldLabel: 'sustrato base', maxLength: 200, allowNewlines: false }),
+      validatePlantSubmissionText(aprobadoPor, { fieldLabel: 'nombre del supervisor', maxLength: 100, allowNewlines: false }),
+      validatePlantSubmissionText(formData.textoPreparacion, { fieldLabel: 'procedimiento de preparación', maxLength: 1200, allowNewlines: true }),
+      validatePlantSubmissionText(formData.textoFondo, { fieldLabel: 'procedimiento de fondo', maxLength: 1200, allowNewlines: true }),
+      validatePlantSubmissionText(formData.textoColor, { fieldLabel: 'procedimiento de color', maxLength: 1200, allowNewlines: true }),
+      validatePlantSubmissionText(formData.textoAcabado, { fieldLabel: 'procedimiento de acabado', maxLength: 1200, allowNewlines: true }),
+      validatePlantSubmissionText(formData.catalizador, { fieldLabel: 'catalizador', maxLength: 150, allowNewlines: false }),
+      validatePlantSubmissionText(formData.disolvente, { fieldLabel: 'disolvente', maxLength: 150, allowNewlines: false })
+    ];
+    return checks.find((c) => !c.valid) || { valid: true };
+  };
+
   // Construir el payload de base de datos con todos los nuevos campos consolidados y el QR
   const buildDatabasePayload = (targetStatus = 'aprobado_produccion') => {
     const finalQrString = buildColorQRPayload(consolidatedColorData);
-    return {
+    return sanitizeColorEtpPayload({
       sustrato_muestra: sustratoBase || formData.fondoRequired || formData.textoPreparacion,
       tolerancia_delta_e: formData.deltaE,
       catalizador_tipo: formData.catalizador,
@@ -629,7 +648,7 @@ export default function EtpCopilotForm({
       codigo_objetivo: (colorRef || formData.nombreComercial || '').trim().toUpperCase(),
       aprobado_por_id: supervisorProfile?.id || null,
       estado_aprobacion: targetStatus
-    };
+    });
   };
 
   // Aprobación Oficial de ETP por Supervisor y Generación Automática de QR
@@ -648,6 +667,11 @@ export default function EtpCopilotForm({
     }
     if (!aprobadoPor.trim()) {
       alert('⚠️ Campo obligatorio: Indica el Nombre del Supervisor que valida y aprueba la ficha.');
+      return;
+    }
+    const textCheck = validateEtpTextFields();
+    if (!textCheck.valid) {
+      alert(textCheck.error);
       return;
     }
 
@@ -686,14 +710,24 @@ export default function EtpCopilotForm({
       alert('Debe ingresar un motivo de rechazo para devolver la muestra.');
       return;
     }
+    const motivoCheck = validatePlantSubmissionText(motivo, {
+      fieldLabel: 'motivo de rechazo',
+      maxLength: 600,
+      allowNewlines: true,
+      required: true
+    });
+    if (!motivoCheck.valid) {
+      alert(motivoCheck.error);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload = sanitizeColorEtpPayload({
         estado_aprobacion: 'rechazado',
         procedimiento_preparacion: {
           ...procInit,
-          motivo_rechazo: motivo.trim(),
+          motivo_rechazo: motivoCheck.value,
           fecha_rechazo: new Date().toISOString(),
           rechazado_por:
             aprobadoPor ||
@@ -701,7 +735,7 @@ export default function EtpCopilotForm({
             supervisorProfile?.name ||
             'Supervisor'
         }
-      };
+      });
 
       if (colorId) {
         const { error } = await supabase
@@ -725,6 +759,11 @@ export default function EtpCopilotForm({
 
   // Guardar modificaciones cuando la ficha aprobada fue desbloqueada
   const handleGuardarModificaciones = async () => {
+    const textCheck = validateEtpTextFields();
+    if (!textCheck.valid) {
+      alert(textCheck.error);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const payload = buildDatabasePayload(estadoAprobacion || 'aprobado_produccion');

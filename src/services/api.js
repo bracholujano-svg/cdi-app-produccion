@@ -1,21 +1,25 @@
 import { supabase } from '../supabaseClient';
 import { isUnassignedErpBulkImport } from '../hooks/useOrders';
 import {
-    escapePostgrestFilter,
-    validateCorporateEmail,
     validateSafeText,
     checkRateLimit,
     recordRateLimitAttempt,
     resetRateLimit,
-    formatSafeErrorMessage
+    formatSafeErrorMessage,
+    resolveTrustedUserRole
 } from '../utils/security';
+import {
+    sanitizePostgrestSearchTerm,
+    validateLoginCredentials,
+    validateRegisterInput
+} from '../utils/inputSecurity';
 
 export { isUnassignedErpBulkImport };
 
 export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
     return new Promise(async (resolve, reject) => {
-        const pTerm = escapePostgrestFilter(pedidoBusqueda || "", 40);
-        const aTerm = escapePostgrestFilter(articuloBusqueda || "", 40);
+        const pTerm = sanitizePostgrestSearchTerm(pedidoBusqueda || "", 40);
+        const aTerm = sanitizePostgrestSearchTerm(articuloBusqueda || "", 40);
         if (!pTerm && !aTerm) return reject("INGRESAR PEDIDO O ÚLTIMOS DÍGITOS DEL ARTÍCULO.");
         if (aTerm && aTerm.length < 3) return reject("INGRESA AL MENOS 3 DÍGITOS DEL ARTÍCULO.");
 
@@ -91,15 +95,12 @@ export const searchInRibisoft = async (pedidoBusqueda, articuloBusqueda) => {
 };
 
 export const loginEnGoogle = async (usuario, clave) => {
-    const emailValidation = validateCorporateEmail(usuario);
-    if (!emailValidation.valid) {
-        return { success: false, error: `⚠️ ${emailValidation.error.toUpperCase()}` };
+    const credValidation = validateLoginCredentials({ username: usuario, password: clave });
+    if (!credValidation.valid) {
+        return { success: false, error: credValidation.error.toUpperCase() };
     }
-    const cleanEmail = emailValidation.email;
-    const cleanPass = String(clave || '').trim();
-    if (!cleanPass || cleanPass.length < 6) {
-        return { success: false, error: "⚠️ CREDENCIALES INCORRECTAS O USUARIO NO ENCONTRADO." };
-    }
+    const cleanEmail = credValidation.email;
+    const cleanPass = credValidation.password;
 
     const rl = checkRateLimit('auth_login', cleanEmail, {
         maxAttempts: 5,
@@ -126,12 +127,16 @@ export const loginEnGoogle = async (usuario, clave) => {
 
         resetRateLimit('auth_login', cleanEmail);
         
-        // El perfil del usuario viaja firmado en data.user.user_metadata
+        // Autoridad de roles priorizada desde app_metadata inmutable (sin escalación vía user_metadata)
+        const trusted = resolveTrustedUserRole(data.user);
         const profile = {
             id: data.user.id,
             email: data.user.email || cleanEmail,
-            nombre: validateSafeText(data.user.user_metadata?.nombre || 'Usuario', 80),
-            rol: validateSafeText(data.user.user_metadata?.rol || 'GENERAL', 60),
+            nombre: trusted.name,
+            rol: trusted.area,
+            appRoles: trusted.appRoles,
+            isAdmin: trusted.isAdmin,
+            isPaintSupervisor: trusted.isPaintSupervisor,
             estado: 'Activo'
         };
 
@@ -142,21 +147,19 @@ export const loginEnGoogle = async (usuario, clave) => {
 };
 
 export const registrarEnGoogle = async (usuario, clave, nombre, area) => {
-    const emailValidation = validateCorporateEmail(usuario);
-    if (!emailValidation.valid) {
-        return { success: false, error: "❌ SÓLO SE PERMITEN CORREOS CORPORATIVOS VÁLIDOS (@cdiexhibiciones.co)" };
+    const regValidation = validateRegisterInput({
+        name: nombre,
+        username: usuario,
+        password: clave,
+        area
+    });
+    if (!regValidation.valid) {
+        return { success: false, error: regValidation.error.toUpperCase() };
     }
-    const cleanEmail = emailValidation.email;
-    const cleanPass = String(clave || '').trim();
-    const cleanNombre = validateSafeText(nombre, 80).toUpperCase();
-    const cleanArea = validateSafeText(area, 60);
-
-    if (!cleanNombre || cleanNombre.length < 3) {
-        return { success: false, error: "❌ INGRESA UN NOMBRE COMPLETO VÁLIDO." };
-    }
-    if (cleanPass.length < 6) {
-        return { success: false, error: "❌ LA CLAVE DEBE TENER AL MENOS 6 CARACTERES." };
-    }
+    const cleanEmail = regValidation.email;
+    const cleanPass = regValidation.password;
+    const cleanNombre = regValidation.name;
+    const cleanArea = regValidation.area;
 
     const rl = checkRateLimit('auth_register', cleanEmail, {
         maxAttempts: 3,

@@ -3,6 +3,7 @@ import { Camera, CheckCircle, AlertTriangle, MessageSquare, ImageIcon, Info, QrC
 import { useAppContext } from '../../context/AppContext';
 import { CONFIG_PROCESOS } from '../../utils/constants';
 import { compressImageForUpload } from '../../utils/imageCompression';
+import { safeOpenEvidenceUrl } from '../../utils/inputSecurity';
 
 const ReceptionModal = ({ processReception, processBulkReception }) => {
     const { 
@@ -332,7 +333,7 @@ const ReceptionModal = ({ processReception, processBulkReception }) => {
                                                 </div>
                                             )}
                                             {selectedItems.length === 1 && selectedItems[0].transferenciaPendiente?.fotoEntrega && (
-                                                <button onClick={() => window.open(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-main text-sm font-bold flex items-center gap-1 hover:underline">
+                                                <button onClick={() => safeOpenEvidenceUrl(selectedItems[0].transferenciaPendiente?.fotoEntrega)} className="mt-3 theme-text-main text-sm font-bold flex items-center gap-1 hover:underline">
                                                     <ImageIcon size={14} /> Ver Foto de Evidencia de Envío
                                                 </button>
                                             )}

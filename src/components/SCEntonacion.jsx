@@ -30,6 +30,11 @@ import EtpCopilotForm from './forms/EtpCopilotForm';
 import OperarioPasoDos from './forms/OperarioPasoDos';
 import { verifySupervisorCredentials, formatSafeErrorMessage, validateSafeText } from '../utils/security';
 import {
+  sanitizePostgrestSearchTerm,
+  validatePlantSubmissionText,
+  sanitizeColorEtpPayload
+} from '../utils/inputSecurity';
+import {
   ColorQRCodeSVG,
   LABEL_PAGE_PRESETS,
   buildColorQRPayload,
@@ -442,13 +447,16 @@ export default function SCEntonacion({
           if (Array.isArray(exactRows) && exactRows.length > 0) {
             matched = exactRows[0];
           } else {
-            const { data: partialRows } = await supabase
-              .from('colores_aprobados')
-              .select('*')
-              .ilike('codigo_objetivo', `%${targetCode}%`)
-              .limit(1);
-            if (Array.isArray(partialRows) && partialRows.length > 0) {
-              matched = partialRows[0];
+            const safeTargetCode = sanitizePostgrestSearchTerm(targetCode, { maxLength: 80 });
+            if (safeTargetCode) {
+              const { data: partialRows } = await supabase
+                .from('colores_aprobados')
+                .select('*')
+                .ilike('codigo_objetivo', `%${safeTargetCode}%`)
+                .limit(1);
+              if (Array.isArray(partialRows) && partialRows.length > 0) {
+                matched = partialRows[0];
+              }
             }
           }
         }
@@ -724,14 +732,17 @@ export default function SCEntonacion({
 
       // 2. Si no hay coincidencia exacta con el sistema actual, buscar por coincidencia parcial en codigo_objetivo
       if (!colorData) {
-        const { data: partialData } = await supabase
-          .from('colores_aprobados')
-          .select('*')
-          .ilike('codigo_objetivo', `%${codeToSearch}%`)
-          .limit(1);
-        if (partialData && partialData.length > 0) {
-          colorData = partialData[0];
-          colorError = null;
+        const safeCodeToSearch = sanitizePostgrestSearchTerm(codeToSearch, { maxLength: 80 });
+        if (safeCodeToSearch) {
+          const { data: partialData } = await supabase
+            .from('colores_aprobados')
+            .select('*')
+            .ilike('codigo_objetivo', `%${safeCodeToSearch}%`)
+            .limit(1);
+          if (partialData && partialData.length > 0) {
+            colorData = partialData[0];
+            colorError = null;
+          }
         }
       }
 
@@ -802,7 +813,27 @@ export default function SCEntonacion({
   const guardarReceta = async (guardarSoloComoEnsayo = false) => {
     if (filasReceta.length === 0) return;
 
-    const rawCode = codigoObjetivo.trim().toUpperCase();
+    const codeCheck = validatePlantSubmissionText(codigoObjetivo, {
+      fieldLabel: 'código objetivo',
+      maxLength: 80,
+      allowNewlines: false
+    });
+    if (!codeCheck.valid) {
+      alert(codeCheck.error);
+      return;
+    }
+
+    const notasCheck = validatePlantSubmissionText(notasEnsayo, {
+      fieldLabel: 'notas del ensayo',
+      maxLength: 1000,
+      allowNewlines: true
+    });
+    if (!notasCheck.valid) {
+      alert(notasCheck.error);
+      return;
+    }
+
+    const rawCode = codeCheck.value.toUpperCase();
     const codObj =
       rawCode ||
       `ENSAYO-${new Date().toISOString().slice(5, 10).replace('-', '')}-${Math.floor(
@@ -837,36 +868,38 @@ export default function SCEntonacion({
         if (delErr) throw delErr;
 
         const prevProc = colorEncontrado.procedimiento_preparacion || {};
+        const safeUpdate = sanitizeColorEtpPayload({
+          procedimiento_preparacion: {
+            ...prevProc,
+            es_ensayo: esEnsayoFlag,
+            notas_ensayo: notasCheck.value || prevProc.notas_ensayo || '',
+            formulacion_pastas: formulacionPastas,
+            total_gramos_muestra: totalGramos
+          }
+        });
         await supabase
           .from('colores_aprobados')
-          .update({
-            procedimiento_preparacion: {
-              ...prevProc,
-              es_ensayo: esEnsayoFlag,
-              notas_ensayo: notasEnsayo.trim() || prevProc.notas_ensayo || '',
-              formulacion_pastas: formulacionPastas,
-              total_gramos_muestra: totalGramos
-            }
-          })
+          .update(safeUpdate)
           .eq('id', colorId);
       } else {
+        const safeInsert = sanitizeColorEtpPayload({
+          sistema_color: sistemaColor,
+          codigo_objetivo: codObj,
+          color_hexadecimal: '#cccccc',
+          estado_aprobacion: 'borrador',
+          procedimiento_preparacion: {
+            es_ensayo: esEnsayoFlag,
+            notas_ensayo: notasCheck.value || '',
+            cliente: esEnsayoFlag ? 'ENSAYO DE LABORATORIO (PRUEBA)' : 'USO GENERAL PLANTA',
+            formulacion_pastas: formulacionPastas,
+            total_gramos_muestra: totalGramos,
+            acabado_muestra_fisica:
+              'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)'
+          }
+        });
         const { data: nuevoColor, error: colorError } = await supabase
           .from('colores_aprobados')
-          .insert({
-            sistema_color: sistemaColor,
-            codigo_objetivo: codObj,
-            color_hexadecimal: '#cccccc',
-            estado_aprobacion: 'borrador',
-            procedimiento_preparacion: {
-              es_ensayo: esEnsayoFlag,
-              notas_ensayo: notasEnsayo.trim() || '',
-              cliente: esEnsayoFlag ? 'ENSAYO DE LABORATORIO (PRUEBA)' : 'USO GENERAL PLANTA',
-              formulacion_pastas: formulacionPastas,
-              total_gramos_muestra: totalGramos,
-              acabado_muestra_fisica:
-                'BRILLANTE (Estándar Sellado Anti-Contaminación para Espectrofotómetro)'
-            }
-          })
+          .insert(safeInsert)
           .select()
           .single();
 

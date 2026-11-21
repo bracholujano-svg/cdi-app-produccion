@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, Droplet, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { compressSpectroImage, buildTechnicalSheetId } from '../../utils/colorQrHelper';
+import { validatePlantSubmissionText, sanitizeColorEtpPayload, sanitizeImageDataUrl } from '../../utils/inputSecurity';
 
 const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,23 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const textValidations = [
+      validatePlantSubmissionText(formData.sustrato_muestra, { fieldLabel: 'sustrato de muestra', maxLength: 200, allowNewlines: false, required: true }),
+      validatePlantSubmissionText(formData.base_tipo, { fieldLabel: 'tipo de base', maxLength: 150, allowNewlines: false }),
+      validatePlantSubmissionText(formData.base_color, { fieldLabel: 'color de base', maxLength: 100, allowNewlines: false }),
+      validatePlantSubmissionText(formData.base_manos, { fieldLabel: 'manos de base', maxLength: 80, allowNewlines: false }),
+      validatePlantSubmissionText(formData.base_catalizador_tipo, { fieldLabel: 'catalizador de base', maxLength: 120, allowNewlines: false }),
+      validatePlantSubmissionText(formData.catalizador_tipo, { fieldLabel: 'tipo de catalizador', maxLength: 120, allowNewlines: false }),
+      validatePlantSubmissionText(formData.disolvente_tipo, { fieldLabel: 'tipo de disolvente', maxLength: 120, allowNewlines: false }),
+      validatePlantSubmissionText(formData.procedimiento_preparacion, { fieldLabel: 'procedimiento de preparación', maxLength: 1000, allowNewlines: true })
+    ];
+    const failed = textValidations.find((r) => !r.valid);
+    if (failed) {
+      alert(failed.error);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -58,37 +76,39 @@ const OperarioPasoDos = ({ colorBorradorId, onClose, onGuardarExitoso }) => {
       const prevProc = currentRow?.procedimiento_preparacion || {};
       const idFichaTecnica = buildTechnicalSheetId(currentRow || { id: colorBorradorId });
 
-      const { error } = await supabase.from('colores_aprobados')
-        .update({ 
-           sustrato_muestra: formData.sustrato_muestra,
-           tolerancia_delta_e: formData.tolerancia_delta_e,
-           porcentaje_pasta_mateante: Number(formData.porcentaje_pasta_mateante) || 0,
-           catalizador_tipo: `${formData.catalizador_pct}% (Ref: ${formData.catalizador_tipo})`,
-           disolvente_tipo: `${formData.disolvente_pct}% (${formData.disolvente_tipo})`,
-           procedimiento_preparacion: {
-             ...prevProc,
-             id_ficha_tecnica: idFichaTecnica,
-             sustrato_base: formData.sustrato_muestra,
-             catalizador: `${formData.catalizador_pct}% (Ref: ${formData.catalizador_tipo})`,
-             disolvente: `${formData.disolvente_pct}% (${formData.disolvente_tipo})`,
-             preparacion: formData.procedimiento_preparacion || prevProc.preparacion || '',
-             fondo: {
-                tipo: formData.base_tipo,
-                color: formData.base_color,
-                manos: formData.base_manos,
-                catalizador: `${formData.base_catalizador_pct}% (${formData.base_catalizador_tipo})`,
-                disolvente: `${formData.base_disolvente_pct}%`
-             },
-             color: prevProc.color || 'Aplicar 2 manos cruzadas homogéneas respetando tiempo de oreo de 10-15 min.',
-             acabado: prevProc.acabado || 'Aplicar barniz poliuretano ajustado al porcentaje de brillo de producción.',
-             coordenadas_color: {
-               ...(prevProc.coordenadas_color || {}),
-               deltaE: `ΔE = ${formData.tolerancia_delta_e}`
-             },
-             imagen_muestra: imagenMuestra || prevProc.imagen_muestra || null
+      const updatePayload = sanitizeColorEtpPayload({
+         sustrato_muestra: textValidations[0].value,
+         tolerancia_delta_e: String(formData.tolerancia_delta_e ?? '').slice(0, 20),
+         porcentaje_pasta_mateante: Number(formData.porcentaje_pasta_mateante) || 0,
+         catalizador_tipo: `${formData.catalizador_pct}% (Ref: ${textValidations[5].value})`,
+         disolvente_tipo: `${formData.disolvente_pct}% (${textValidations[6].value})`,
+         procedimiento_preparacion: {
+           ...prevProc,
+           id_ficha_tecnica: idFichaTecnica,
+           sustrato_base: textValidations[0].value,
+           catalizador: `${formData.catalizador_pct}% (Ref: ${textValidations[5].value})`,
+           disolvente: `${formData.disolvente_pct}% (${textValidations[6].value})`,
+           preparacion: textValidations[7].value || prevProc.preparacion || '',
+           fondo: {
+              tipo: textValidations[1].value,
+              color: textValidations[2].value,
+              manos: textValidations[3].value,
+              catalizador: `${formData.base_catalizador_pct}% (${textValidations[4].value})`,
+              disolvente: `${formData.base_disolvente_pct}%`
            },
-           estado_aprobacion: 'pendiente_revision' 
-        })
+           color: prevProc.color || 'Aplicar 2 manos cruzadas homogéneas respetando tiempo de oreo de 10-15 min.',
+           acabado: prevProc.acabado || 'Aplicar barniz poliuretano ajustado al porcentaje de brillo de producción.',
+           coordenadas_color: {
+             ...(prevProc.coordenadas_color || {}),
+             deltaE: `ΔE = ${String(formData.tolerancia_delta_e ?? '').slice(0, 20)}`
+           },
+           imagen_muestra: sanitizeImageDataUrl(imagenMuestra) || prevProc.imagen_muestra || null
+         },
+         estado_aprobacion: 'pendiente_revision'
+      });
+
+      const { error } = await supabase.from('colores_aprobados')
+        .update(updatePayload)
         .eq('id', colorBorradorId);
         
       if (error) throw error;

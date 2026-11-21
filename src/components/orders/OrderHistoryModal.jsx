@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ArrowRightLeft, Clock, CheckCircle, AlertTriangle, ImageIcon, Calendar, User, Package, MapPin, Activity, History, ChevronDown } from 'lucide-react';
 import { getDaysLeft } from '../../utils/helpers';
+import { safeOpenEvidenceUrl } from '../../utils/inputSecurity';
 
 const OrderHistoryModal = ({ order, allOrders, onClose }) => {
     if (!order) return null;
@@ -325,7 +326,7 @@ const OrderHistoryModal = ({ order, allOrders, onClose }) => {
                                                                         <span>AUTOR: {ev.supervisor}</span>
                                                                         {ev.operario && <span>OPERARIO: {ev.operario}</span>}
                                                                         {ev.foto && (
-                                                                            <button type="button" onClick={(e) => { e.preventDefault(); window.open(ev.foto); }} className="theme-text-main hover:underline flex items-center gap-1">
+                                                                            <button type="button" onClick={(e) => { e.preventDefault(); safeOpenEvidenceUrl(ev.foto); }} className="theme-text-main hover:underline flex items-center gap-1">
                                                                                 <ImageIcon size="1.2em" /> FOTO / ACTA
                                                                             </button>
                                                                         )}

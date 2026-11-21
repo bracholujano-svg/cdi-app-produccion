@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CryptoJS from 'crypto-js';
 import { Lock, Sun, Moon, Info, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeStorage, safeSessionStorage } from '../../utils/helpers';
 import { AREAS } from '../../utils/constants';
-import { SESSION_SECRET, validateSafeText } from '../../utils/security';
+import { SESSION_SECRET } from '../../utils/security';
+import {
+  validateLoginCredentials,
+  validateRegisterInput,
+  sanitizePlantText
+} from '../../utils/inputSecurity';
 import { loginEnGoogle, registrarEnGoogle } from '../../services/api';
 import CDILogo from '../ui/CDILogo';
 
@@ -18,83 +23,93 @@ const LoginScreen = () => {
     setAreaFilter
   } = useAppContext();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleVirtualLogin = async (e) => {
-    e.preventDefault(); 
-    setAuthError("⏳ VERIFICANDO CREDENCIALES EN GOOGLE..."); 
-    const userStr = validateSafeText(e.target.username?.value || '', 100).toLowerCase();
-    const passStr = String(e.target.password?.value || '').trim();
+    e.preventDefault();
+    if (isSubmitting) return;
 
-    if (!userStr) {
-      setAuthError("⚠️ INGRESA TU USUARIO CORPORATIVO.");
+    const validation = validateLoginCredentials({
+      username: e.target.username?.value || '',
+      password: e.target.password?.value || ''
+    });
+
+    if (!validation.valid) {
+      setAuthError(validation.error.toUpperCase());
       return;
     }
-    if (!passStr) {
-      setAuthError("⚠️ INGRESA TU CLAVE DE ACCESO.");
-      return;
-    }
 
-    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
+    setIsSubmitting(true);
+    setAuthError("⏳ VERIFICANDO CREDENCIALES...");
+    try {
+      const res = await loginEnGoogle(validation.email, validation.password);
 
-    const res = await loginEnGoogle(emailFull, passStr);
-    
-    if (res.success) {
-      setAuthError("");
-      const newProfile = {
-        id: res.result.id || undefined,
-        name: res.result.nombre,
-        email: res.result.email || emailFull,
-        area: res.result.rol
-      };
-      const signature = CryptoJS.SHA256(JSON.stringify(newProfile) + SESSION_SECRET).toString();
-      
-      setSupervisorProfile(newProfile);
-      safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: newProfile, signature }));
-      
-      const newRecent = [{ username: userStr, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userStr)].slice(0, 3);
-      setSavedLogins(newRecent); 
-      safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
-      
-      if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
-        setAreaFilter(newProfile.area);
+      if (res.success) {
+        setAuthError("");
+        const newProfile = {
+          id: res.result.id || undefined,
+          name: res.result.nombre,
+          email: res.result.email || validation.email,
+          area: res.result.rol,
+          appRoles: res.result.appRoles || [],
+          isAdmin: Boolean(res.result.isAdmin),
+          isPaintSupervisor: Boolean(res.result.isPaintSupervisor)
+        };
+        const signature = CryptoJS.SHA256(JSON.stringify(newProfile) + SESSION_SECRET).toString();
+        
+        setSupervisorProfile(newProfile);
+        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: newProfile, signature }));
+        
+        const userShort = validation.usernameClean;
+        const newRecent = [{ username: userShort, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userShort)].slice(0, 3);
+        setSavedLogins(newRecent); 
+        safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
+        
+        if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
+          setAreaFilter(newProfile.area);
+        }
+      } else {
+        setAuthError(res.error || "❌ NO SE PUDO INICIAR SESIÓN. VERIFICA TUS DATOS.");
       }
-    } else {
-      setAuthError(res.error || "❌ NO SE PUDO INICIAR SESIÓN. VERIFICA TUS DATOS.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleVirtualRegister = async (e) => {
-    e.preventDefault(); 
-    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA DE GOOGLE...");
-    const name = validateSafeText(e.target.name?.value || '', 80).toUpperCase();
-    const userStr = validateSafeText(e.target.username?.value || '', 100).toLowerCase();
-    const pass = String(e.target.password?.value || '').trim();
-    const area = e.target.area ? e.target.area.value : 'Pendiente';
+    e.preventDefault();
+    if (isSubmitting) return;
 
-    if (!name || name.length < 2) {
-      setAuthError("⚠️ INGRESA TU NOMBRE COMPLETO.");
+    const validation = validateRegisterInput({
+      name: e.target.name?.value || '',
+      username: e.target.username?.value || '',
+      password: e.target.password?.value || '',
+      area: e.target.area ? e.target.area.value : ''
+    });
+
+    if (!validation.valid) {
+      setAuthError(validation.error.toUpperCase());
       return;
     }
-    if (!userStr) {
-      setAuthError("⚠️ INGRESA TU USUARIO CORPORATIVO.");
-      return;
-    }
-    if (area === 'Administrador / Todos') {
-      setAuthError("❌ El rol de Administrador general no puede asignarse por auto-registro.");
-      return;
-    }
-    if (pass.length < 6) {
-      setAuthError("La clave debe tener un mínimo de 6 caracteres."); 
-      return;
-    }
-    
-    const emailFull = userStr.includes('@') ? userStr : `${userStr}@cdiexhibiciones.co`;
-    const res = await registrarEnGoogle(emailFull, pass, name, area);
-    
-    if (res.success) {
-      setAuthError("✅ Registro Exitoso. Ahora puedes Iniciar Sesión.");
-      setTimeout(() => { setIsRegistering(false); setAuthError(""); }, 3000);
-    } else {
-      setAuthError(res.error || "❌ NO SE PUDO COMPLETAR EL REGISTRO.");
+
+    setIsSubmitting(true);
+    setAuthError("⏳ REGISTRANDO EN LA BÓVEDA SEGURA...");
+    try {
+      const res = await registrarEnGoogle(
+        validation.email,
+        validation.password,
+        validation.name,
+        validation.area
+      );
+
+      if (res.success) {
+        setAuthError("✅ Registro Exitoso. Ahora puedes Iniciar Sesión.");
+        setTimeout(() => { setIsRegistering(false); setAuthError(""); }, 3000);
+      } else {
+        setAuthError(res.error || "❌ NO SE PUDO COMPLETAR EL REGISTRO.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -115,7 +130,7 @@ const LoginScreen = () => {
           {savedLogins.length > 0 && !isRegistering && (
              <div className="flex flex-wrap gap-2 justify-center mb-4">
                {savedLogins.map((u, i) => (
-                 <button type="button" key={i} onClick={() => { document.getElementsByName('username')[0].value = u.username; }} className="bg-[var(--color-primary)]/10 theme-text-main px-3 py-1.5 rounded-xl text-base lg:text-lg font-black border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/20 transition-colors">
+                 <button type="button" key={i} onClick={() => { const inp = document.getElementsByName('username')[0]; if (inp) inp.value = sanitizePlantText(u?.username || '', { maxLength: 64, allowNewlines: false }); }} className="bg-[var(--color-primary)]/10 theme-text-main px-3 py-1.5 rounded-xl text-base lg:text-lg font-black border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/20 transition-colors">
                    {u?.name?.split(' ')[0]}
                  </button>
                ))}
@@ -127,14 +142,14 @@ const LoginScreen = () => {
           {isRegistering && (
             <div className="space-y-1">
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
-              <input name="name" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="EJ: JUAN PEREZ" />
+              <input name="name" maxLength={80} required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="EJ: JUAN PEREZ" />
             </div>
           )}
 
           <div className="space-y-1">
             <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
             <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--color-primary)] transition-colors">
-              <input name="username" type="text" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
+              <input name="username" type="text" maxLength={100} autoComplete="username" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
               <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-base lg:text-lg sm:text-base lg:text-lg flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
           </div>
@@ -144,7 +159,7 @@ const LoginScreen = () => {
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase">Clave Segura</label>
               <span className="text-base lg:text-lg font-bold theme-text-main uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 caracteres</span>
             </div>
-            <input name="password" type="password" minLength={6} title="Mínimo 6 caracteres (letras y números)" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="••••••" />
+            <input name="password" type="password" minLength={6} maxLength={128} autoComplete={isRegistering ? 'new-password' : 'current-password'} title="Mínimo 6 caracteres (letras y números)" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="••••••" />
           </div>
 
           {isRegistering && (
@@ -156,8 +171,8 @@ const LoginScreen = () => {
             </div>
           )}
 
-          <button type="submit" className="w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4  transition-colors">
-            {isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema'}
+          <button type="submit" disabled={isSubmitting} className={`w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}>
+            {isSubmitting ? 'Procesando...' : (isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema')}
           </button>
           <p className="text-center text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:theme-text-main transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
             {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
