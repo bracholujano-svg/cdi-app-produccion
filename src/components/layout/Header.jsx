@@ -1,7 +1,8 @@
-import React from 'react';
-import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sun, Moon, AlertTriangle, FileText, LogOut, Bell, Activity, Menu, Truck, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { getDaysLeft } from '../../utils/helpers';
+import { showCdiBlueprintToast } from '../../utils/colorQrHelper';
 import CDILogo from '../ui/CDILogo';
 
 const Header = () => {
@@ -16,8 +17,34 @@ const Header = () => {
     showReceptionModal, setShowReceptionModal,
     showDossierModal, setShowDossierModal,
     areaFilter,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    triggerManualDeltaSync,
+    isSyncingOrders,
+    realtimeStatus
   } = useAppContext();
+
+  const [syncCooldown, setSyncCooldown] = useState(0);
+
+  useEffect(() => {
+    if (syncCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setSyncCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [syncCooldown]);
+
+  const handleManualSync = async () => {
+    if (syncCooldown > 0 || isSyncingOrders) return;
+    setSyncCooldown(10);
+    try {
+      if (typeof triggerManualDeltaSync === 'function') {
+        await triggerManualDeltaSync();
+      }
+      showCdiBlueprintToast('Datos sincronizados al día');
+    } catch (_) {
+      showCdiBlueprintToast('No se pudo completar la sincronización');
+    }
+  };
 
   const totalOrders = orders.length;
   const despachadosCount = orders.filter(o => o && o.estadoInterno === 'DESPACHADO').length;
@@ -98,8 +125,61 @@ const Header = () => {
              </button>
           </div>
 
-          {/* LADO DERECHO: TOGGLE THEME DESLIZABLE NEON */}
-          <div className="flex items-center shrink-0 ml-auto">
+          {/* LADO DERECHO: ESTADO DE CONEXIÓN, BOTÓN SINCRONIZAR AHORA Y TOGGLE THEME */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
+             <div
+               className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 border theme-border"
+               title={
+                 realtimeStatus === 'CONNECTED'
+                   ? 'Conectado en tiempo real a Supabase'
+                   : realtimeStatus === 'OFFLINE'
+                   ? 'Sin conexión a internet (trabajando con caché local)'
+                   : 'Conectando en tiempo real...'
+               }
+             >
+               <span
+                 className={`w-2 h-2 rounded-full shrink-0 ${
+                   realtimeStatus === 'CONNECTED'
+                     ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]'
+                     : realtimeStatus === 'OFFLINE'
+                     ? 'bg-rose-500'
+                     : 'bg-amber-400 animate-pulse'
+                 }`}
+               />
+               <span className="text-[10px] font-black uppercase tracking-wide theme-text-muted">
+                 {realtimeStatus === 'CONNECTED'
+                   ? 'En línea'
+                   : realtimeStatus === 'OFFLINE'
+                   ? 'Sin red'
+                   : 'Sincronizando'}
+               </span>
+             </div>
+
+             <button
+               type="button"
+               onClick={handleManualSync}
+               disabled={syncCooldown > 0 || isSyncingOrders}
+               title={
+                 syncCooldown > 0
+                   ? `Sincronizar ahora (disponible en ${syncCooldown}s)`
+                   : 'Sincronizar ahora (traer cambios recientes)'
+               }
+               className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-black uppercase flex items-center gap-1.5 transition-all shrink-0 ${
+                 syncCooldown > 0 || isSyncingOrders
+                   ? 'bg-black/5 dark:bg-white/5 theme-border theme-text-muted opacity-65 cursor-not-allowed'
+                   : 'bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 theme-text-main hover:bg-[var(--color-primary)] hover:text-[var(--color-surface)] hover:border-[var(--color-primary)] cursor-pointer shadow-sm'
+               }`}
+             >
+               <RefreshCw size={13} className={isSyncingOrders ? 'animate-spin' : ''} />
+               <span className="hidden lg:inline">
+                 {isSyncingOrders
+                   ? 'Actualizando...'
+                   : syncCooldown > 0
+                   ? `Al día (${syncCooldown}s)`
+                   : 'Sincronizar ahora'}
+               </span>
+             </button>
+
              <div 
                 onClick={() => setIsDarkMode(!isDarkMode)} 
                 className={`relative w-14 h-7 flex items-center bg-black/10 dark:bg-black/30 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner ${isDarkMode ? 'border border-blue-500/30' : 'border border-black/10'}`}

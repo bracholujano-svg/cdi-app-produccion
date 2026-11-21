@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { safeStorage, safeSessionStorage } from '../utils/helpers';
 import { SESSION_SECRET } from '../utils/security';
@@ -10,8 +10,20 @@ import { supabase } from '../supabaseClient';
 const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
-  const { supabaseData } = useSupabaseData();
-  const { orders, setOrders, coordinationAlerts, setCoordinationAlerts, packingLists, setPackingLists, syncOrderToSupabase, syncAlertToSupabase, syncPackingListToSupabase } = useOrders();
+  const { supabaseData, syncMrpDelta } = useSupabaseData();
+  const {
+    orders, setOrders,
+    coordinationAlerts, setCoordinationAlerts,
+    packingLists, setPackingLists,
+    syncOrderToSupabase, syncAlertToSupabase, syncPackingListToSupabase,
+    syncNowDelta, isSyncingOrders, realtimeStatus
+  } = useOrders();
+  const triggerManualDeltaSync = useCallback(async () => {
+    await Promise.all([
+      syncNowDelta ? syncNowDelta() : Promise.resolve(),
+      syncMrpDelta ? syncMrpDelta() : Promise.resolve()
+    ]);
+  }, [syncNowDelta, syncMrpDelta]);
   const inventoryReservations = useInventoryMRP(orders, supabaseData);
 
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
@@ -358,7 +370,10 @@ export const AppContextProvider = ({ children }) => {
     dispatchOrders, setDispatchOrders,
     openDispatchModal, closeDispatchModal,
     showQRScannerModal, setShowQRScannerModal,
-    scannedQrTarget, setScannedQrTarget
+    scannedQrTarget, setScannedQrTarget,
+    triggerManualDeltaSync,
+    isSyncingOrders,
+    realtimeStatus
   };
 
   return (

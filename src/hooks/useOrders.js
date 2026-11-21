@@ -1,6 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import localforage from 'localforage';
 import { supabase } from '../supabaseClient';
 import { deepSanitize, formatSafeErrorMessage } from '../utils/security';
+
+const ORDERS_CACHE_KEY = 'cdi_orders_cache_v2';
+const ALERTS_CACHE_KEY = 'cdi_alerts_cache_v2';
+const LAST_SYNC_PRODUCCION_KEY = 'last_sync_produccion';
+const DELTA_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 horas
+
+const isMissingColumnError = (err, colName = 'updated_at') => {
+    if (!err) return false;
+    const code = String(err.code || '');
+    const msg = String(err.message || err.details || err.hint || '').toLowerCase();
+    return code === '42703' || (msg.includes(colName.toLowerCase()) && (msg.includes('does not exist') || msg.includes('column')));
+};
+
+const upsertById = (baseList = [], incomingList = []) => {
+    const map = new Map();
+    (baseList || []).forEach((item) => {
+        if (item && item.id) map.set(item.id, item);
+    });
+    (incomingList || []).forEach((item) => {
+        if (item && item.id) map.set(item.id, item);
+    });
+    return Array.from(map.values());
+};
 
 /**
  * Detecta si un registro pertenece al almacenamiento maestro de Listas de Empaque
@@ -351,6 +375,10 @@ export const isUnassignedErpBulkImport = (orderObj) => {
 export const useOrders = () => {
     const [orders, setOrders] = useState([]);
     const [coordinationAlerts, setCoordinationAlerts] = useState([]);
+    const [isSyncingOrders, setIsSyncingOrders] = useState(false);
+    const [realtimeStatus, setRealtimeStatus] = useState(() =>
+        typeof navigator !== 'undefined' && navigator.onLine === false ? 'OFFLINE' : 'CONNECTING'
+    );
     const [packingLists, setPackingLists] = useState(() => {
         try {
             const raw = localStorage.getItem('cdi_packing_lists_v1');
@@ -363,6 +391,32 @@ export const useOrders = () => {
 
     const liveBroadcastChannelRef = useRef(null);
     const packingListsRef = useRef(packingLists);
+    const ordersRef = useRef([]);
+    const alertsRef = useRef([]);
+    const triggerDeltaSyncRef = useRef(null);
+
+    const persistOrdersToCache = useCallback((nextOrders, updateSyncTimestamp = true) => {
+        const safeList = Array.isArray(nextOrders) ? nextOrders : [];
+        ordersRef.current = safeList;
+        localforage.setItem(ORDERS_CACHE_KEY, safeList).catch(() => {});
+        if (updateSyncTimestamp) {
+            localforage.setItem(LAST_SYNC_PRODUCCION_KEY, new Date().toISOString()).catch(() => {});
+        }
+    }, []);
+
+    const persistAlertsToCache = useCallback((nextAlerts) => {
+        const safeList = Array.isArray(nextAlerts) ? nextAlerts : [];
+        alertsRef.current = safeList;
+        localforage.setItem(ALERTS_CACHE_KEY, safeList).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        ordersRef.current = orders;
+    }, [orders]);
+
+    useEffect(() => {
+        alertsRef.current = coordinationAlerts;
+    }, [coordinationAlerts]);
 
     useEffect(() => {
         packingListsRef.current = packingLists;
@@ -429,11 +483,15 @@ export const useOrders = () => {
                     const { error } = await supabase.from('produccion_pedidos').upsert(upsertPayload);
                     dbError = error;
                     if (!dbError) {
+                        const updatedCache = upsertById(ordersRef.current, [sanitizedOrder]);
+                        persistOrdersToCache(updatedCache, true);
                         emitLiveBroadcast('ORDER', 'UPSERT', sanitizedOrder);
                     }
                 }
                 
                 if (isDelete && !dbError) {
+                    const filteredCache = (ordersRef.current || []).filter(o => o && o.id !== orderObject.id);
+                    persistOrdersToCache(filteredCache, true);
                     emitLiveBroadcast('ORDER', 'DELETE', { id: orderObject.id });
                 }
 
@@ -470,7 +528,10 @@ export const useOrders = () => {
             if (isDelete) {
                 const { error } = await supabase.from('coordinacion_alertas').delete().eq('id', alertObject.id);
                 dbError = error;
-                if (!dbError) emitLiveBroadcast('ALERT', 'DELETE', { id: alertObject.id });
+                if (!dbError) {
+                    persistAlertsToCache((alertsRef.current || []).filter(a => a && a.id !== alertObject.id));
+                    emitLiveBroadcast('ALERT', 'DELETE', { id: alertObject.id });
+                }
             } else {
                 const sanitizedAlert = deepSanitize(alertObject);
                 const { error } = await supabase.from('coordinacion_alertas').upsert({
@@ -478,7 +539,10 @@ export const useOrders = () => {
                     data_completa: sanitizedAlert
                 });
                 dbError = error;
-                if (!dbError) emitLiveBroadcast('ALERT', 'UPSERT', sanitizedAlert);
+                if (!dbError) {
+                    persistAlertsToCache(upsertById(alertsRef.current, [sanitizedAlert]));
+                    emitLiveBroadcast('ALERT', 'UPSERT', sanitizedAlert);
+                }
             }
             if (dbError) {
                 console.error("DB Error al sincronizar alerta:", dbError);
@@ -546,134 +610,75 @@ export const useOrders = () => {
     };
 
     useEffect(() => {
+        let isMounted = true;
         let isFetchingProduccion = false;
         let lastFetchProduccionAt = 0;
 
-        const fetchProduccion = async (force = false) => {
-            const now = Date.now();
-            if (isFetchingProduccion) return;
-            // Cooldown mínimo de 2 minutos para recargas no forzadas (evita tormentas de Egress en cambios de pestaña)
-            if (!force && lastFetchProduccionAt > 0 && now - lastFetchProduccionAt < 120000) {
-                return;
+        const parsePedidosRows = (rows = []) => {
+            const validPlantOrders = [];
+            const remotePackingListsFromPedidos = [];
+            const autoImportedIdsToPurge = [];
+
+            for (const row of rows) {
+                if (!row?.data_completa || typeof row.data_completa !== 'object') continue;
+                const d = { ...row.data_completa };
+
+                if (isPackingListRecord(row) || isPackingListRecord(d)) {
+                    if (d.pedidoNum) {
+                        remotePackingListsFromPedidos.push({
+                            ...d,
+                            id: `PACKLIST_PED_${String(d.pedidoNum).trim().toUpperCase()}`,
+                            pedidoNum: String(d.pedidoNum).trim().toUpperCase(),
+                            tipoRegistro: 'PACKING_LIST'
+                        });
+                    }
+                    continue;
+                }
+
+                if (row.codigo_item && !d.codArticulo) {
+                    d.codArticulo = row.codigo_item;
+                    d.codigo_item = row.codigo_item;
+                }
+                if (row.pedido_num && !d.pedidoNum) {
+                    d.pedidoNum = row.pedido_num;
+                }
+                if (row.cliente && !d.cliente) {
+                    d.cliente = row.cliente;
+                }
+                if (!d.id || !d.pedidoNum) continue;
+
+                if (isUnassignedErpBulkImport(d)) {
+                    autoImportedIdsToPurge.push(row.id || d.id);
+                    continue;
+                }
+
+                validPlantOrders.push(d);
             }
-            isFetchingProduccion = true;
-            try {
-                await supabase.auth.getSession();
-                
-                let allPedidosRows = [];
-                let from = 0;
-                const step = 1000;
-                const MAX_ROWS_GUARD = 4000;
-                let hasMore = true;
 
-                while (hasMore && allPedidosRows.length < MAX_ROWS_GUARD) {
-                    const { data: batchData, error: e1 } = await supabase
-                        .from('produccion_pedidos')
-                        .select('id, codigo_item, data_completa')
-                        .range(from, from + step - 1);
+            return { validPlantOrders, remotePackingListsFromPedidos, autoImportedIdsToPurge };
+        };
 
-                    if (e1) {
-                        console.error('RLS Error Pedidos:', e1);
-                        hasMore = false;
-                    } else if (!batchData || batchData.length === 0) {
-                        hasMore = false;
-                    } else {
-                        allPedidosRows = allPedidosRows.concat(batchData);
-                        from += step;
-                        if (batchData.length < step) hasMore = false;
-                    }
-                }
+        const syncPackingListsWithOrders = (finalOrders, remotePackingFromPedidos = [], remotePackingFromAlertas = [], isFullSync = false) => {
+            const allRemotePacking = [...remotePackingFromAlertas, ...remotePackingFromPedidos];
+            const reconstructedFromOrders = reconstructPackingListsFromOrders(finalOrders);
+            const currentLocalLists = packingListsRef.current || [];
+            const mergedPackingLists = mergeAndDeduplicatePackingLists(
+                currentLocalLists,
+                allRemotePacking,
+                reconstructedFromOrders
+            );
 
-                const validPlantOrders = [];
-                const remotePackingListsFromPedidos = [];
-                const autoImportedIdsToPurge = [];
+            setPackingLists(mergedPackingLists);
 
-                if (allPedidosRows.length > 0) {
-                    for (const row of allPedidosRows) {
-                        if (!row?.data_completa || typeof row.data_completa !== 'object') continue;
-                        const d = { ...row.data_completa };
-
-                        // Separar registros maestros de Listas de Empaque guardados en `produccion_pedidos`
-                        if (isPackingListRecord(row) || isPackingListRecord(d)) {
-                            if (d.pedidoNum) {
-                                remotePackingListsFromPedidos.push({
-                                    ...d,
-                                    id: `PACKLIST_PED_${String(d.pedidoNum).trim().toUpperCase()}`,
-                                    pedidoNum: String(d.pedidoNum).trim().toUpperCase(),
-                                    tipoRegistro: 'PACKING_LIST'
-                                });
-                            }
-                            continue;
-                        }
-
-                        if (row.codigo_item && !d.codArticulo) {
-                            d.codArticulo = row.codigo_item;
-                            d.codigo_item = row.codigo_item;
-                        }
-                        if (!d.id || !d.pedidoNum) continue;
-
-                        if (isUnassignedErpBulkImport(d)) {
-                            autoImportedIdsToPurge.push(row.id || d.id);
-                            continue;
-                        }
-
-                        validPlantOrders.push(d);
-                    }
-
-                    setOrders(validPlantOrders);
-
-                    if (autoImportedIdsToPurge.length > 0) {
-                        (async () => {
-                            for (let i = 0; i < autoImportedIdsToPurge.length; i += 200) {
-                                const chunk = autoImportedIdsToPurge.slice(i, i + 200);
-                                await supabase.from('produccion_pedidos').delete().in('id', chunk);
-                            }
-                        })();
-                    }
-                } else {
-                    setOrders([]);
-                }
-                
-                let remotePackingListsFromAlertas = [];
-                try {
-                    const { data: alertasData } = await supabase
-                        .from('coordinacion_alertas')
-                        .select('data_completa')
-                        .limit(500);
-                    if (alertasData) {
-                        const allRows = alertasData
-                            .map(row => row.data_completa)
-                            .filter(a => a && typeof a === 'object' && a.id);
-
-                        const remoteAlerts = allRows.filter(a => a.tipoRegistro !== 'PACKING_LIST' && a.pedidoNum);
-                        remotePackingListsFromAlertas = allRows.filter(a => a.tipoRegistro === 'PACKING_LIST' && a.pedidoNum);
-                        setCoordinationAlerts(remoteAlerts);
-                    }
-                } catch (_) {}
-
-                // Combinar listas remotas (desde produccion_pedidos + coordinacion_alertas), listas locales y reconstruidas desde órdenes
-                const allRemotePacking = [...remotePackingListsFromAlertas, ...remotePackingListsFromPedidos];
-                const reconstructedFromOrders = reconstructPackingListsFromOrders(validPlantOrders);
+            if (isFullSync) {
                 const remotePedidosSet = new Set(
-                    remotePackingListsFromPedidos.map(p => String(p.pedidoNum || '').trim().toUpperCase())
+                    remotePackingFromPedidos.map(p => String(p.pedidoNum || '').trim().toUpperCase())
                 );
-
-                const currentLocalLists = packingListsRef.current || [];
-                const mergedPackingLists = mergeAndDeduplicatePackingLists(
-                    currentLocalLists,
-                    allRemotePacking,
-                    reconstructedFromOrders
-                );
-
-                setPackingLists(mergedPackingLists);
-
-                // Auto-sincronizar hacia `produccion_pedidos` cualquier lista que exista localmente o haya sido reconstruida
-                // pero que aún no esté guardada en `produccion_pedidos` (para que todos los demás computadores la vean de inmediato)
                 const listsToPushToCloud = mergedPackingLists.filter(item => {
                     const ped = String(item.pedidoNum || '').trim().toUpperCase();
                     if (!ped) return false;
                     if (!remotePedidosSet.has(ped)) return true;
-                    const remoteMatch = remotePackingListsFromPedidos.find(
+                    const remoteMatch = remotePackingFromPedidos.find(
                         r => String(r.pedidoNum || '').trim().toUpperCase() === ped
                     );
                     if (!remoteMatch) return true;
@@ -689,20 +694,292 @@ export const useOrders = () => {
                         }
                     })();
                 }
-
-                lastFetchProduccionAt = Date.now();
-            } catch (err) {
-                console.error('Error fetching produccion:', err);
-            } finally {
-                isFetchingProduccion = false;
             }
         };
 
-        fetchProduccion(true);
+        // 1. Carga instantánea Cache-First (0 ms) desde localforage al abrir o iniciar sesión
+        const hydrateFromLocalCache = async () => {
+            try {
+                const [cachedOrders, cachedAlerts] = await Promise.all([
+                    localforage.getItem(ORDERS_CACHE_KEY),
+                    localforage.getItem(ALERTS_CACHE_KEY)
+                ]);
+                if (!isMounted) return;
+                if (Array.isArray(cachedOrders) && cachedOrders.length > 0 && ordersRef.current.length === 0) {
+                    ordersRef.current = cachedOrders;
+                    setOrders(cachedOrders);
+                }
+                if (Array.isArray(cachedAlerts) && cachedAlerts.length > 0 && alertsRef.current.length === 0) {
+                    alertsRef.current = cachedAlerts;
+                    setCoordinationAlerts(cachedAlerts);
+                }
+            } catch (_) {}
+        };
+
+        // 2. Sincronización Híbrida Cache-First + Delta Sync (con fallback ligero de activos si no existe `updated_at`)
+        const fetchProduccion = async (force = false) => {
+            const now = Date.now();
+            if (isFetchingProduccion) return { skipped: true };
+            if (!force && lastFetchProduccionAt > 0 && now - lastFetchProduccionAt < 120000) {
+                return { skipped: true };
+            }
+            isFetchingProduccion = true;
+            if (isMounted) setIsSyncingOrders(true);
+
+            try {
+                await supabase.auth.getSession();
+
+                // Leer caché y timestamp de última sincronización en localforage
+                const [cachedOrdersRaw, cachedAlertsRaw, lastSyncIso] = await Promise.all([
+                    localforage.getItem(ORDERS_CACHE_KEY),
+                    localforage.getItem(ALERTS_CACHE_KEY),
+                    localforage.getItem(LAST_SYNC_PRODUCCION_KEY)
+                ]);
+
+                const cachedOrders = Array.isArray(ordersRef.current) && ordersRef.current.length > 0
+                    ? ordersRef.current
+                    : (Array.isArray(cachedOrdersRaw) ? cachedOrdersRaw : []);
+                const cachedAlerts = Array.isArray(alertsRef.current) && alertsRef.current.length > 0
+                    ? alertsRef.current
+                    : (Array.isArray(cachedAlertsRaw) ? cachedAlertsRaw : []);
+
+                if (isMounted && cachedOrders.length > 0 && ordersRef.current.length === 0) {
+                    ordersRef.current = cachedOrders;
+                    setOrders(cachedOrders);
+                }
+                if (isMounted && cachedAlerts.length > 0 && alertsRef.current.length === 0) {
+                    alertsRef.current = cachedAlerts;
+                    setCoordinationAlerts(cachedAlerts);
+                }
+
+                const lastSyncMs = lastSyncIso ? new Date(lastSyncIso).getTime() : 0;
+                const hasValidDeltaWindow =
+                    cachedOrders.length > 0 &&
+                    Number.isFinite(lastSyncMs) &&
+                    lastSyncMs > 0 &&
+                    (now - lastSyncMs) < DELTA_MAX_AGE_MS;
+
+                let finalOrders = cachedOrders;
+                let remotePackingListsFromPedidos = [];
+                let autoImportedIdsToPurge = [];
+                let isFullSync = false;
+                let syncMode = 'FULL';
+
+                if (hasValidDeltaWindow) {
+                    // Margen de 5s para tolerar pequeñas diferencias de reloj cliente/servidor
+                    const deltaCursor = new Date(Math.max(0, lastSyncMs - 5000)).toISOString();
+                    let useActiveLightFallback = false;
+
+                    try {
+                        const { data: deltaRows, error: deltaErr } = await supabase
+                            .from('produccion_pedidos')
+                            .select('id, pedido_num, codigo_item, cliente, data_completa, updated_at')
+                            .gt('updated_at', deltaCursor)
+                            .limit(1000);
+
+                        if (deltaErr) {
+                            if (isMissingColumnError(deltaErr, 'updated_at')) {
+                                useActiveLightFallback = true;
+                            } else {
+                                console.error('RLS/Delta Error Pedidos:', deltaErr);
+                            }
+                        } else {
+                            syncMode = 'DELTA';
+                            const parsed = parsePedidosRows(deltaRows || []);
+                            remotePackingListsFromPedidos = parsed.remotePackingListsFromPedidos;
+                            autoImportedIdsToPurge = parsed.autoImportedIdsToPurge;
+                            finalOrders = upsertById(cachedOrders, parsed.validPlantOrders);
+                        }
+                    } catch (errDelta) {
+                        if (isMissingColumnError(errDelta, 'updated_at')) {
+                            useActiveLightFallback = true;
+                        } else {
+                            console.error('Error en consulta delta produccion_pedidos:', errDelta);
+                        }
+                    }
+
+                    // Fallback seguro si `updated_at` aún no existe en la tabla: carga ligera SOLO de pedidos activos (excluye DESPACHADO)
+                    if (useActiveLightFallback) {
+                        syncMode = 'ACTIVE_FALLBACK';
+                        let activeRows = [];
+                        let from = 0;
+                        const step = 1000;
+                        const MAX_ACTIVE_GUARD = 2500;
+                        let hasMore = true;
+
+                        while (hasMore && activeRows.length < MAX_ACTIVE_GUARD) {
+                            const { data: batchData, error: eActive } = await supabase
+                                .from('produccion_pedidos')
+                                .select('id, pedido_num, codigo_item, cliente, data_completa')
+                                .or('data_completa->>estadoInterno.is.null,data_completa->>estadoInterno.neq.DESPACHADO')
+                                .range(from, from + step - 1);
+
+                            if (eActive) {
+                                console.warn('Aviso fallback ligero pedidos activos:', eActive.message);
+                                hasMore = false;
+                            } else if (!batchData || batchData.length === 0) {
+                                hasMore = false;
+                            } else {
+                                activeRows = activeRows.concat(batchData);
+                                from += step;
+                                if (batchData.length < step) hasMore = false;
+                            }
+                        }
+
+                        const parsedActive = parsePedidosRows(activeRows);
+                        remotePackingListsFromPedidos = parsedActive.remotePackingListsFromPedidos;
+                        autoImportedIdsToPurge = parsedActive.autoImportedIdsToPurge;
+
+                        const activeRemoteIds = new Set(parsedActive.validPlantOrders.map(o => o.id));
+                        // Detectar si algún pedido previamente activo en caché fue despachado o borrado (consulta puntual por IDs)
+                        const missingActiveIds = cachedOrders
+                            .filter(o => o && o.id && o.estadoInterno !== 'DESPACHADO' && !activeRemoteIds.has(o.id))
+                            .map(o => o.id)
+                            .slice(0, 100);
+
+                        let reconciledUpdates = [];
+                        const deletedIds = new Set();
+                        if (missingActiveIds.length > 0) {
+                            try {
+                                const { data: checkedRows } = await supabase
+                                    .from('produccion_pedidos')
+                                    .select('id, pedido_num, codigo_item, cliente, data_completa')
+                                    .in('id', missingActiveIds);
+                                const foundMap = new Map((checkedRows || []).map(r => [r.id, r]));
+                                missingActiveIds.forEach(id => {
+                                    if (!foundMap.has(id)) deletedIds.add(id);
+                                });
+                                reconciledUpdates = parsePedidosRows(checkedRows || []).validPlantOrders;
+                            } catch (_) {}
+                        }
+
+                        const baseWithoutDeleted = cachedOrders.filter(o => o && !deletedIds.has(o.id));
+                        finalOrders = upsertById(
+                            upsertById(baseWithoutDeleted, reconciledUpdates),
+                            parsedActive.validPlantOrders
+                        );
+                    }
+                } else {
+                    // Carga inicial sin caché o caché con más de 24 horas
+                    isFullSync = true;
+                    syncMode = 'FULL';
+                    let allPedidosRows = [];
+                    let from = 0;
+                    const step = 1000;
+                    const MAX_ROWS_GUARD = 4000;
+                    let hasMore = true;
+
+                    while (hasMore && allPedidosRows.length < MAX_ROWS_GUARD) {
+                        const { data: batchData, error: e1 } = await supabase
+                            .from('produccion_pedidos')
+                            .select('id, pedido_num, codigo_item, cliente, data_completa')
+                            .range(from, from + step - 1);
+
+                        if (e1) {
+                            console.error('RLS Error Pedidos:', e1);
+                            hasMore = false;
+                        } else if (!batchData || batchData.length === 0) {
+                            hasMore = false;
+                        } else {
+                            allPedidosRows = allPedidosRows.concat(batchData);
+                            from += step;
+                            if (batchData.length < step) hasMore = false;
+                        }
+                    }
+
+                    const parsedFull = parsePedidosRows(allPedidosRows);
+                    finalOrders = parsedFull.validPlantOrders;
+                    remotePackingListsFromPedidos = parsedFull.remotePackingListsFromPedidos;
+                    autoImportedIdsToPurge = parsedFull.autoImportedIdsToPurge;
+                }
+
+                if (isMounted) {
+                    setOrders(finalOrders);
+                    persistOrdersToCache(finalOrders, true);
+                }
+
+                if (autoImportedIdsToPurge.length > 0) {
+                    (async () => {
+                        for (let i = 0; i < autoImportedIdsToPurge.length; i += 200) {
+                            const chunk = autoImportedIdsToPurge.slice(i, i + 200);
+                            await supabase.from('produccion_pedidos').delete().in('id', chunk);
+                        }
+                    })();
+                }
+
+                // Sincronización ligera de alertas de coordinación (delta si soporta `updated_at`, sino fallback limitado)
+                let remotePackingListsFromAlertas = [];
+                try {
+                    let alertasData = null;
+                    let usedAlertDelta = false;
+                    if (hasValidDeltaWindow && cachedAlerts.length > 0) {
+                        const deltaCursor = new Date(Math.max(0, lastSyncMs - 5000)).toISOString();
+                        const { data: deltaAlertas, error: alertDeltaErr } = await supabase
+                            .from('coordinacion_alertas')
+                            .select('id, data_completa, updated_at')
+                            .gt('updated_at', deltaCursor)
+                            .limit(200);
+                        if (!alertDeltaErr && deltaAlertas) {
+                            alertasData = deltaAlertas;
+                            usedAlertDelta = true;
+                        }
+                    }
+                    if (!usedAlertDelta) {
+                        const { data: allAlertas } = await supabase
+                            .from('coordinacion_alertas')
+                            .select('data_completa')
+                            .limit(500);
+                        alertasData = allAlertas;
+                    }
+
+                    if (alertasData) {
+                        const parsedRows = alertasData
+                            .map(row => row.data_completa)
+                            .filter(a => a && typeof a === 'object' && a.id);
+                        const incomingAlerts = parsedRows.filter(a => a.tipoRegistro !== 'PACKING_LIST' && a.pedidoNum);
+                        remotePackingListsFromAlertas = parsedRows.filter(a => a.tipoRegistro === 'PACKING_LIST' && a.pedidoNum);
+                        const nextAlerts = usedAlertDelta
+                            ? upsertById(cachedAlerts, incomingAlerts)
+                            : incomingAlerts;
+                        if (isMounted) {
+                            setCoordinationAlerts(nextAlerts);
+                            persistAlertsToCache(nextAlerts);
+                        }
+                    }
+                } catch (_) {}
+
+                if (isMounted) {
+                    syncPackingListsWithOrders(
+                        finalOrders,
+                        remotePackingListsFromPedidos,
+                        remotePackingListsFromAlertas,
+                        isFullSync
+                    );
+                }
+
+                lastFetchProduccionAt = Date.now();
+                return { mode: syncMode, count: finalOrders.length };
+            } catch (err) {
+                console.error('Error fetching produccion:', err);
+                return { error: err };
+            } finally {
+                isFetchingProduccion = false;
+                if (isMounted) setIsSyncingOrders(false);
+            }
+        };
+
+        triggerDeltaSyncRef.current = () => fetchProduccion(true);
+
+        // Arranque inmediato: primero pintar desde caché local (0 ms) y luego sincronizar delta
+        hydrateFromLocalCache().then(() => {
+            if (isMounted) fetchProduccion(true);
+        });
         
         const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                fetchProduccion(true);
+                hydrateFromLocalCache().then(() => {
+                    if (isMounted) fetchProduccion(true);
+                });
             }
         });
 
@@ -712,24 +989,26 @@ export const useOrders = () => {
 
         const handleVisibilityOrFocus = () => {
             if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-                // Respeta cooldown de 2 minutos (NO fuerza descarga completa en cada Alt+Tab)
+                // Sincronización delta ligera respetando cooldown mínimo de 2 minutos
                 fetchProduccion(false);
             }
+        };
+
+        const handleOnline = () => {
+            if (isMounted) setRealtimeStatus('CONNECTED');
+            fetchProduccion(false);
+        };
+        const handleOffline = () => {
+            if (isMounted) setRealtimeStatus('OFFLINE');
         };
 
         if (typeof window !== 'undefined') {
             window.addEventListener('cdi-erp-synced', handleForceSyncEvent);
             window.addEventListener('cdi-force-sync', handleForceSyncEvent);
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
             document.addEventListener('visibilitychange', handleVisibilityOrFocus);
         }
-
-        // Respaldo conservador cada 5 minutos (antes era cada 8s = 450 full-scans/hora).
-        // La sincronización inmediata la manejan los 3 canales Realtime/Broadcast incrementales.
-        const pollInterval = setInterval(() => {
-            if (typeof document === 'undefined' || document.visibilityState === 'visible') {
-                fetchProduccion(false);
-            }
-        }, 300000);
 
         const applyIncomingOrder = (newData) => {
             if (!newData || !newData.id) return;
@@ -741,14 +1020,25 @@ export const useOrders = () => {
 
             setOrders(prev => {
                 const idx = prev.findIndex(o => o.id === newData.id);
-                if (idx >= 0) {
-                    const newArr = [...prev];
-                    newArr[idx] = newData;
-                    return newArr;
-                } else {
-                    return [...prev, newData];
-                }
+                const next = idx >= 0
+                    ? prev.map((o, i) => (i === idx ? newData : o))
+                    : [...prev, newData];
+                persistOrdersToCache(next, true);
+                return next;
             });
+        };
+
+        const removeOrderById = (oldId) => {
+            if (!oldId) return;
+            if (String(oldId).startsWith('PACKLIST_')) {
+                setPackingLists(prev => prev.filter(p => p.id !== oldId));
+            } else {
+                setOrders(prev => {
+                    const next = prev.filter(o => o.id !== oldId);
+                    persistOrdersToCache(next, true);
+                    return next;
+                });
+            }
         };
 
         const handleProduccionPayload = async (payload) => {
@@ -761,7 +1051,7 @@ export const useOrders = () => {
                     try {
                         const { data: singleRow } = await supabase
                             .from('produccion_pedidos')
-                            .select('id, codigo_item, data_completa')
+                            .select('id, pedido_num, codigo_item, cliente, data_completa')
                             .eq('id', rowId)
                             .single();
                         if (singleRow?.data_completa) {
@@ -774,14 +1064,7 @@ export const useOrders = () => {
                     applyIncomingOrder(newData);
                 }
             } else if (payload.eventType === 'DELETE') {
-                const oldId = payload.old?.id;
-                if (oldId) {
-                    if (String(oldId).startsWith('PACKLIST_')) {
-                        setPackingLists(prev => prev.filter(p => p.id !== oldId));
-                    } else {
-                        setOrders(prev => prev.filter(o => o.id !== oldId));
-                    }
-                }
+                removeOrderById(payload.old?.id);
             }
         };
 
@@ -812,18 +1095,20 @@ export const useOrders = () => {
                 
                 setCoordinationAlerts(prev => {
                     const idx = prev.findIndex(a => a.id === newData.id);
-                    if (idx >= 0) {
-                        const newArr = [...prev];
-                        newArr[idx] = newData;
-                        return newArr;
-                    } else {
-                        return [...prev, newData];
-                    }
+                    const next = idx >= 0
+                        ? prev.map((a, i) => (i === idx ? newData : a))
+                        : [...prev, newData];
+                    persistAlertsToCache(next);
+                    return next;
                 });
             } else if (payload.eventType === 'DELETE') {
                 const oldId = payload.old?.id;
                 if (oldId) {
-                    setCoordinationAlerts(prev => prev.filter(a => a.id !== oldId));
+                    setCoordinationAlerts(prev => {
+                        const next = prev.filter(a => a.id !== oldId);
+                        persistAlertsToCache(next);
+                        return next;
+                    });
                     setPackingLists(prev => prev.filter(p => p.id !== oldId));
                 }
             }
@@ -831,7 +1116,13 @@ export const useOrders = () => {
 
         const subPedidos = supabase.channel('pedidos-channel-v2')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion_pedidos' }, handleProduccionPayload)
-            .subscribe();
+            .subscribe((status) => {
+                if (!isMounted) return;
+                if (status === 'SUBSCRIBED') setRealtimeStatus('CONNECTED');
+                else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    setRealtimeStatus(navigator.onLine === false ? 'OFFLINE' : 'CONNECTING');
+                }
+            });
             
         const subAlertas = supabase.channel('alertas-channel-v2')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'coordinacion_alertas' }, handleAlertasPayload)
@@ -844,19 +1135,25 @@ export const useOrders = () => {
                 if (!payload) return;
                 if (payload.kind === 'ORDER') {
                     if (payload.action === 'DELETE' && payload.data?.id) {
-                        setOrders(prev => prev.filter(o => o.id !== payload.data.id));
+                        removeOrderById(payload.data.id);
                     } else if (payload.data) {
                         applyIncomingOrder(payload.data);
                     }
                 } else if (payload.kind === 'ALERT') {
                     if (payload.action === 'DELETE' && payload.data?.id) {
-                        setCoordinationAlerts(prev => prev.filter(a => a.id !== payload.data.id));
+                        setCoordinationAlerts(prev => {
+                            const next = prev.filter(a => a.id !== payload.data.id);
+                            persistAlertsToCache(next);
+                            return next;
+                        });
                     } else if (payload.data?.id) {
                         setCoordinationAlerts(prev => {
                             const exists = prev.some(a => a.id === payload.data.id);
-                            return exists
+                            const next = exists
                                 ? prev.map(a => (a.id === payload.data.id ? payload.data : a))
                                 : [...prev, payload.data];
+                            persistAlertsToCache(next);
+                            return next;
                         });
                     }
                 } else if (payload.kind === 'PACKING_LIST') {
@@ -868,14 +1165,14 @@ export const useOrders = () => {
                         setPackingLists(prev => mergeAndDeduplicatePackingLists(prev, [payload.data], []));
                     }
                 }
-                // Actualización 100% incremental en memoria (sin re-descargar la tabla completa)
             })
             .subscribe();
 
         liveBroadcastChannelRef.current = liveBroadcastChannel;
 
         return () => {
-            clearInterval(pollInterval);
+            isMounted = false;
+            triggerDeltaSyncRef.current = null;
             supabase.removeChannel(subPedidos);
             supabase.removeChannel(subAlertas);
             supabase.removeChannel(liveBroadcastChannel);
@@ -884,9 +1181,18 @@ export const useOrders = () => {
             if (typeof window !== 'undefined') {
                 window.removeEventListener('cdi-erp-synced', handleForceSyncEvent);
                 window.removeEventListener('cdi-force-sync', handleForceSyncEvent);
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
                 document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
             }
         };
+    }, [persistOrdersToCache, persistAlertsToCache]);
+
+    const syncNowDelta = useCallback(async () => {
+        if (triggerDeltaSyncRef.current) {
+            return await triggerDeltaSyncRef.current();
+        }
+        return { skipped: true };
     }, []);
 
     return {
@@ -898,6 +1204,9 @@ export const useOrders = () => {
         setPackingLists,
         syncOrderToSupabase,
         syncAlertToSupabase,
-        syncPackingListToSupabase
+        syncPackingListToSupabase,
+        syncNowDelta,
+        isSyncingOrders,
+        realtimeStatus
     };
 };

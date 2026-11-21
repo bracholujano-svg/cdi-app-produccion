@@ -4,26 +4,42 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// Al abrir, volver a la app o periódicamente: verificar versión desplegada en el servidor, purgar cachés/SW viejos y forzar sincronización de datos
+// Auto-actualización transparente de versión PWA/Vercel (0 consumo Supabase, preserva sesión y caché localforage)
 if (typeof window !== 'undefined') {
   const localBuildId = typeof __CDI_BUILD_ID__ !== 'undefined' ? String(__CDI_BUILD_ID__) : null;
-  let isCheckingUpdate = false;
   let isReloading = false;
 
-  const purgeCachesAndReload = async (remoteBuildId) => {
+  const clearStaticCachesAndReloadOnce = async (remoteVersion) => {
     if (isReloading) return;
+    try {
+      const alreadyReloaded =
+        window.sessionStorage &&
+        window.sessionStorage.getItem('cdi_reloaded_version') === String(remoteVersion);
+      if (alreadyReloaded) return;
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem('cdi_reloaded_version', String(remoteVersion));
+      }
+    } catch (_) {
+      // Continuar incluso si sessionStorage está restringido
+    }
+
     isReloading = true;
     try {
-      if (window.sessionStorage) {
-        window.sessionStorage.setItem('cdi_reloading_build', String(remoteBuildId));
-      }
+      // Limpiar ÚNICAMENTE cachés de assets estáticos (NO tocar localforage ni sesión)
       if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((k) => caches.delete(k)));
       }
       if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations.map(async (reg) => {
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            await reg.update().catch(() => {});
+          })
+        );
       }
     } catch (_) {
       // Continuar con recarga aunque falle limpieza parcial
@@ -31,49 +47,46 @@ if (typeof window !== 'undefined') {
     window.location.reload();
   };
 
-  let lastVersionCheckAt = 0;
-
-  const verifyLatestBuild = async (force = false) => {
-    const now = Date.now();
-    if (!force && lastVersionCheckAt > 0 && now - lastVersionCheckAt < 120000) {
-      return;
-    }
-    lastVersionCheckAt = now;
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then((registrations) => {
-          registrations.forEach((reg) => {
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-            reg.update().catch(() => {});
-          });
-        })
-        .catch(() => {});
-    }
-
-    if (!localBuildId || isCheckingUpdate || isReloading) return;
-    isCheckingUpdate = true;
+  const checkAppVersionOnBoot = async () => {
     try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) => {
+            registrations.forEach((reg) => {
+              if (reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+              reg.update().catch(() => {});
+            });
+          })
+          .catch(() => {});
+      }
+
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const remote = await res.json();
-        const remoteBuildId = remote?.buildId ? String(remote.buildId) : null;
-        if (remoteBuildId && remoteBuildId !== localBuildId) {
-          const alreadyAttempted =
-            window.sessionStorage &&
-            window.sessionStorage.getItem('cdi_reloading_build') === remoteBuildId;
-          if (!alreadyAttempted) {
-            await purgeCachesAndReload(remoteBuildId);
-            return;
-          }
-        }
+      if (!res.ok) return;
+
+      const remote = await res.json();
+      const remoteVersion = String(remote?.version || remote?.buildId || '').trim();
+      if (!remoteVersion) return;
+
+      let storedVersion = null;
+      try {
+        storedVersion = window.localStorage.getItem('cdi_app_version');
+      } catch (_) {}
+
+      const differsFromStored = Boolean(storedVersion && storedVersion !== remoteVersion);
+      const differsFromBundle = Boolean(localBuildId && localBuildId !== remoteVersion);
+
+      try {
+        window.localStorage.setItem('cdi_app_version', remoteVersion);
+      } catch (_) {}
+
+      if (differsFromStored || differsFromBundle) {
+        await clearStaticCachesAndReloadOnce(remoteVersion);
       }
     } catch (_) {
-      // Sin conexión o version.json aún no disponible en entorno local
-    } finally {
-      isCheckingUpdate = false;
+      // Sin conexión o version.json aún no disponible en entorno de desarrollo
     }
   };
 
@@ -86,15 +99,8 @@ if (typeof window !== 'undefined') {
     });
   }
 
-  // Verificar nueva versión desplegada únicamente al cargar, al volver tras >= 2 min, o cada 10 minutos.
-  // NUNCA disparar `cdi-force-sync` ni purgar cachés de datos periódicamente (evita fuga masiva de Egress en Supabase).
-  window.addEventListener('load', () => verifyLatestBuild(true));
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      verifyLatestBuild(false);
-    }
-  });
-  window.setInterval(() => verifyLatestBuild(false), 600000);
+  // Consultar version.json una sola vez en el arranque inicial (sin polling repetitivo)
+  checkAppVersionOnBoot();
 }
 
 createRoot(document.getElementById('root')).render(

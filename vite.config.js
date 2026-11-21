@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
         this.emitFile({
           type: 'asset',
           fileName: 'version.json',
-          source: JSON.stringify({ buildId })
+          source: JSON.stringify({ version: buildId, buildId })
         })
       }
     },
@@ -56,17 +56,21 @@ export default defineConfig(({ mode }) => {
       }
     },
     VitePWA({
-      selfDestroying: true,
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        navigateFallback: null,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: /\/version\.json(\?.*)?$/i,
+            handler: 'NetworkOnly'
+          },
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkOnly'
