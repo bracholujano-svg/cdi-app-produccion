@@ -1,37 +1,67 @@
-import React, { useState } from 'react';
-import CryptoJS from 'crypto-js';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Lock, Sun, Moon, Info, AlertCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { safeStorage, safeSessionStorage } from '../../utils/helpers';
 import { AREAS } from '../../utils/constants';
-import { SESSION_SECRET } from '../../utils/security';
+import { purgeBrowserAuthArtifacts } from '../../supabaseClient';
 import {
   validateLoginCredentials,
-  validateRegisterInput,
-  sanitizePlantText
+  validateRegisterInput
 } from '../../utils/inputSecurity';
 import { loginEnGoogle, registrarEnGoogle } from '../../services/api';
 import CDILogo from '../ui/CDILogo';
 
+const REGISTERABLE_AREAS = AREAS.filter((a) => a !== 'Administrador / Todos');
+
 const LoginScreen = () => {
   const {
-    supervisorProfile, setSupervisorProfile,
+    setSupervisorProfile,
     isRegistering, setIsRegistering,
     authError, setAuthError,
     appTheme, setAppTheme,
-    savedLogins, setSavedLogins,
     setAreaFilter
   } = useAppContext();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [selectedArea, setSelectedArea] = useState(REGISTERABLE_AREAS[0] || '');
+  // Mantiene los inputs en readOnly al montar para impedir autofill automático del navegador antes de interacción manual
+  const [isInputUnlocked, setIsInputUnlocked] = useState(false);
+
+  // En Chrome/Edge/Safari/WebView usar type="text" + -webkit-text-security evita el popup "¿Guardar contraseña?"
+  const supportsWebkitTextSecurity = useMemo(() => {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        typeof window.CSS !== 'undefined' &&
+        typeof window.CSS.supports === 'function' &&
+        window.CSS.supports('-webkit-text-security', 'disc')
+      );
+    } catch (_) {
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    purgeBrowserAuthArtifacts();
+    setUsernameInput('');
+    setPasswordInput('');
+    setFullName('');
+    setIsInputUnlocked(false);
+  }, [isRegistering]);
+
+  const unlockInputsOnUserGesture = () => {
+    if (!isInputUnlocked) setIsInputUnlocked(true);
+  };
 
   const handleVirtualLogin = async (e) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (isSubmitting) return;
 
     const validation = validateLoginCredentials({
-      username: e.target.username?.value || '',
-      password: e.target.password?.value || ''
+      username: usernameInput,
+      password: passwordInput
     });
 
     if (!validation.valid) {
@@ -55,16 +85,13 @@ const LoginScreen = () => {
           isAdmin: Boolean(res.result.isAdmin),
           isPaintSupervisor: Boolean(res.result.isPaintSupervisor)
         };
-        const signature = CryptoJS.SHA256(JSON.stringify(newProfile) + SESSION_SECRET).toString();
-        
+
+        // Limpiar credenciales de memoria inmediatamente y mantener sesión únicamente en RAM (0 storage en disco)
+        setUsernameInput('');
+        setPasswordInput('');
+        purgeBrowserAuthArtifacts();
         setSupervisorProfile(newProfile);
-        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: newProfile, signature }));
-        
-        const userShort = validation.usernameClean;
-        const newRecent = [{ username: userShort, name: newProfile.name }, ...savedLogins.filter(u => u?.username !== userShort)].slice(0, 3);
-        setSavedLogins(newRecent); 
-        safeStorage.set('cdi_recent_logins', JSON.stringify(newRecent));
-        
+
         if (newProfile.area !== "Administrador / Todos" && AREAS.includes(newProfile.area)) {
           setAreaFilter(newProfile.area);
         }
@@ -77,14 +104,14 @@ const LoginScreen = () => {
   };
 
   const handleVirtualRegister = async (e) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (isSubmitting) return;
 
     const validation = validateRegisterInput({
-      name: e.target.name?.value || '',
-      username: e.target.username?.value || '',
-      password: e.target.password?.value || '',
-      area: e.target.area ? e.target.area.value : ''
+      name: fullName,
+      username: usernameInput,
+      password: passwordInput,
+      area: selectedArea
     });
 
     if (!validation.valid) {
@@ -103,6 +130,9 @@ const LoginScreen = () => {
       );
 
       if (res.success) {
+        setFullName('');
+        setUsernameInput('');
+        setPasswordInput('');
         setAuthError("✅ Registro Exitoso. Ahora puedes Iniciar Sesión.");
         setTimeout(() => { setIsRegistering(false); setAuthError(""); }, 3000);
       } else {
@@ -126,30 +156,76 @@ const LoginScreen = () => {
           <h2 className="theme-text-main font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2"><Lock size={"1.2em"}/> {isRegistering ? 'Registro Seguro' : 'Acceso Planta'}</h2>
         </div>
         
-        <form onSubmit={isRegistering ? handleVirtualRegister : handleVirtualLogin} className="p-8 space-y-5">
-          {savedLogins.length > 0 && !isRegistering && (
-             <div className="flex flex-wrap gap-2 justify-center mb-4">
-               {savedLogins.map((u, i) => (
-                 <button type="button" key={i} onClick={() => { const inp = document.getElementsByName('username')[0]; if (inp) inp.value = sanitizePlantText(u?.username || '', { maxLength: 64, allowNewlines: false }); }} className="bg-[var(--color-primary)]/10 theme-text-main px-3 py-1.5 rounded-xl text-base lg:text-lg font-black border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/20 transition-colors">
-                   {u?.name?.split(' ')[0]}
-                 </button>
-               ))}
-             </div>
-          )}
-
+        {/* Contenedor sin <form> para bloquear heurísticas de autocompletado y el diálogo "¿Guardar contraseña?" del navegador */}
+        <div
+          role="region"
+          aria-label={isRegistering ? 'Registro seguro de planta' : 'Acceso seguro de planta'}
+          data-form-type="other"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (isRegistering) {
+                handleVirtualRegister(e);
+              } else {
+                handleVirtualLogin(e);
+              }
+            }
+          }}
+          className="p-8 space-y-5"
+        >
           {authError && <div className="bg-red-500/10 border border-red-500 text-red-600 dark:text-red-300 p-3 rounded-xl text-base lg:text-lg font-bold uppercase flex items-center gap-2"><AlertCircle size={"1.2em"} className="shrink-0"/><span>{authError}</span></div>}
           
           {isRegistering && (
             <div className="space-y-1">
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Nombre Completo</label>
-              <input name="name" maxLength={80} required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="EJ: JUAN PEREZ" />
+              <input
+                name="cdi_nombre_personal"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                onFocus={unlockInputsOnUserGesture}
+                onPointerDown={unlockInputsOnUserGesture}
+                readOnly={!isInputUnlocked}
+                maxLength={80}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
+                required
+                className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase focus:ring-2 focus:ring-[var(--color-primary)]"
+                placeholder="EJ: JUAN PEREZ"
+              />
             </div>
           )}
 
           <div className="space-y-1">
             <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Usuario Corporativo</label>
             <div className="flex theme-bg-input rounded-2xl overflow-hidden border theme-border focus-within:ring-2 focus-within:ring-[var(--color-primary)] transition-colors">
-              <input name="username" type="text" maxLength={100} autoComplete="username" required className="w-full p-4 bg-transparent outline-none font-bold" placeholder="nombre.apellido" />
+              <input
+                name="cdi_operador_acceso"
+                type="text"
+                inputMode="email"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                onFocus={unlockInputsOnUserGesture}
+                onPointerDown={unlockInputsOnUserGesture}
+                readOnly={!isInputUnlocked}
+                maxLength={100}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
+                required
+                className="w-full p-4 bg-transparent outline-none font-bold"
+                placeholder="nombre.apellido"
+              />
               <div className="px-3 sm:px-4 theme-bg-header theme-text-muted font-black text-base lg:text-lg sm:text-base lg:text-lg flex items-center select-none border-l theme-border">@cdiexhibiciones.co</div>
             </div>
           </div>
@@ -159,25 +235,59 @@ const LoginScreen = () => {
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase">Clave Segura</label>
               <span className="text-base lg:text-lg font-bold theme-text-main uppercase flex items-center gap-1"><Info size={"1.2em"}/> Mín. 6 caracteres</span>
             </div>
-            <input name="password" type="password" minLength={6} maxLength={128} autoComplete={isRegistering ? 'new-password' : 'current-password'} title="Mínimo 6 caracteres (letras y números)" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--color-primary)]" placeholder="••••••" />
+            <input
+              name="cdi_codigo_verificacion"
+              type={supportsWebkitTextSecurity ? 'text' : 'password'}
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onFocus={unlockInputsOnUserGesture}
+              onPointerDown={unlockInputsOnUserGesture}
+              readOnly={!isInputUnlocked}
+              minLength={6}
+              maxLength={128}
+              autoComplete={supportsWebkitTextSecurity ? 'off' : 'new-password'}
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-bwignore="true"
+              data-form-type="other"
+              style={supportsWebkitTextSecurity ? { WebkitTextSecurity: 'disc' } : undefined}
+              title="Mínimo 6 caracteres (letras y números)"
+              required
+              className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold tracking-widest text-lg focus:ring-2 focus:ring-[var(--color-primary)]"
+              placeholder="••••••"
+            />
           </div>
 
           {isRegistering && (
             <div className="space-y-1">
               <label className="text-base lg:text-lg font-black theme-text-muted uppercase ml-1">Área Asignada (Solo Registro)</label>
-              <select name="area" required className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-base lg:text-lg focus:ring-2 focus:ring-[var(--color-primary)]">
-                {AREAS.filter(a => a !== 'Administrador / Todos').map(a => <option key={a} value={a}>{a}</option>)}
+              <select
+                name="cdi_area_operativa"
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                required
+                className="w-full p-4 theme-bg-input rounded-2xl border theme-border outline-none font-bold uppercase text-base lg:text-lg focus:ring-2 focus:ring-[var(--color-primary)]"
+              >
+                {REGISTERABLE_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
           )}
 
-          <button type="submit" disabled={isSubmitting} className={`w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}>
+          <button
+            type="button"
+            onClick={isRegistering ? handleVirtualRegister : handleVirtualLogin}
+            disabled={isSubmitting}
+            className={`w-full bg-[var(--color-primary)] text-[var(--color-surface)] font-black uppercase py-4 rounded-2xl shadow-xl hover:brightness-110 active:translate-y-1 border-b-4 transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
             {isSubmitting ? 'Procesando...' : (isRegistering ? 'Crear Perfil Seguro' : 'Ingresar al Sistema')}
           </button>
           <p className="text-center text-base lg:text-lg font-black theme-text-muted uppercase tracking-widest cursor-pointer hover:theme-text-main transition-colors" onClick={() => { setIsRegistering(!isRegistering); setAuthError(""); }}>
             {isRegistering ? '¿Ya tienes cuenta? Iniciar Sesión' : '¿Nuevo supervisor? Registrarse'}
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

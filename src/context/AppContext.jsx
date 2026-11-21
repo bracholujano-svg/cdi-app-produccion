@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import CryptoJS from 'crypto-js';
 import { safeStorage, safeSessionStorage } from '../utils/helpers';
-import { SESSION_SECRET, resolveTrustedUserRole } from '../utils/security';
+import { resolveTrustedUserRole } from '../utils/security';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useOrders } from '../hooks/useOrders';
 import { useInventoryMRP } from '../hooks/useInventoryMRP';
-import { supabase } from '../supabaseClient';
+import { supabase, purgeBrowserAuthArtifacts } from '../supabaseClient';
 
 const AppContext = createContext();
 
@@ -29,58 +28,17 @@ export const AppContextProvider = ({ children }) => {
   const [showMaterialsAlertModal, setShowMaterialsAlertModal] = useState(false);
   const [activeAlertMaterials, setActiveAlertMaterials] = useState([]);
 
-  const [supervisorProfile, setSupervisorProfile] = useState(() => {
-    const saved = safeSessionStorage.get('cdi_supervisor_session');
-    try { 
-        if (!saved) return null;
-        const parsed = JSON.parse(saved);
-        if (parsed.profile && parsed.signature) {
-            const expectedSig = CryptoJS.SHA256(JSON.stringify(parsed.profile) + SESSION_SECRET).toString();
-            if (expectedSig === parsed.signature) {
-                return parsed.profile;
-            }
-        }
-        return null; 
-    } catch(e) { return null; }
-  });
+  // Sesión estrictamente en memoria RAM (0 persistencia en localStorage / sessionStorage; prohíbe auto-login)
+  const [supervisorProfile, setSupervisorProfile] = useState(null);
 
-  // Verificación continua del Token JWT de Supabase y prevención de suplantación o sesiones huérfanas
+  // Purga inicial de artefactos de sesión en disco y escucha de cambios de autenticación en memoria
   useEffect(() => {
-    let isMounted = true;
-
-    const syncSessionWithSupabaseJwt = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-
-        if (!session?.user) {
-          setSupervisorProfile(null);
-          safeSessionStorage.remove('cdi_supervisor_session');
-          return;
-        }
-
-        const trusted = resolveTrustedUserRole(session.user);
-        const verifiedProfile = {
-          id: session.user.id,
-          name: trusted.name,
-          email: session.user.email,
-          area: trusted.area,
-          appRoles: trusted.appRoles,
-          isAdmin: trusted.isAdmin,
-          isPaintSupervisor: trusted.isPaintSupervisor
-        };
-        const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
-        setSupervisorProfile(verifiedProfile);
-        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: verifiedProfile, signature }));
-      } catch (_) {}
-    };
-
-    syncSessionWithSupabaseJwt();
+    purgeBrowserAuthArtifacts();
 
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session?.user) {
         setSupervisorProfile(null);
-        safeSessionStorage.remove('cdi_supervisor_session');
+        purgeBrowserAuthArtifacts();
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         const trusted = resolveTrustedUserRole(session.user);
         const verifiedProfile = {
@@ -92,14 +50,11 @@ export const AppContextProvider = ({ children }) => {
           isAdmin: trusted.isAdmin,
           isPaintSupervisor: trusted.isPaintSupervisor
         };
-        const signature = CryptoJS.SHA256(JSON.stringify(verifiedProfile) + SESSION_SECRET).toString();
         setSupervisorProfile(verifiedProfile);
-        safeSessionStorage.set('cdi_supervisor_session', JSON.stringify({ profile: verifiedProfile, signature }));
       }
     });
 
     return () => {
-      isMounted = false;
       authSub?.subscription?.unsubscribe();
     };
   }, []);
@@ -115,7 +70,7 @@ export const AppContextProvider = ({ children }) => {
       idleTimer = setTimeout(async () => {
         await supabase.auth.signOut().catch(() => {});
         setSupervisorProfile(null);
-        safeSessionStorage.remove('cdi_supervisor_session');
+        purgeBrowserAuthArtifacts();
       }, IDLE_TIMEOUT_MS);
     };
 
@@ -234,13 +189,8 @@ export const AppContextProvider = ({ children }) => {
     localStorage.setItem('dark-mode', isDarkMode);
   }, [isDarkMode]);
 
-  const [savedLogins, setSavedLogins] = useState(() => {
-    const saved = safeStorage.get('cdi_recent_logins');
-    try { 
-      const parsed = saved ? JSON.parse(saved) : []; 
-      return Array.isArray(parsed) ? parsed.filter(u => u && typeof u === 'object') : [];
-    } catch(e) { return []; }
-  });
+  // Deshabilitado almacenamiento de usuarios recientes en el equipo por política de cero persistencia
+  const [savedLogins, setSavedLogins] = useState([]);
 
   const [openSection, setOpenSection] = useState(null);
   const [showHistoryPlanta, setShowHistoryPlanta] = useState(false);

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Map, X, BarChart2, ShieldCheck, Megaphone, Plus, FlaskConical, FileText, LogOut, Monitor, Activity, Palette, AlertCircle, Package, QrCode } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { safeSessionStorage } from '../../utils/helpers';
-import { supabase } from '../../supabaseClient';
+import { supabase, purgeBrowserAuthArtifacts } from '../../supabaseClient';
 import CDILogo from '../ui/CDILogo';
 
 const Sidebar = () => {
@@ -69,9 +69,9 @@ const Sidebar = () => {
   };
 
   const handleLogout = async () => { 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => {});
     setSupervisorProfile(null); 
-    safeSessionStorage.remove('cdi_supervisor_session'); 
+    purgeBrowserAuthArtifacts();
     setAreaFilter('Todas'); 
   };
 
