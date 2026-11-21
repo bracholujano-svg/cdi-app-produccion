@@ -1,7 +1,30 @@
+import CryptoJS from 'crypto-js';
 import { supabase } from '../supabaseClient';
 import { cleanErpCode, cleanExcelDate, normalizeProductName } from './ribisoftExcelImporter';
 import { buildProductBlueprintQrPayload, showCdiBlueprintToast } from '../utils/colorQrHelper';
 import { deepSanitize } from '../utils/security';
+
+const RIBISOFT_NEUTRAL_COLS =
+  '"PedidoSIN", "Código Ítem", "Descripción", "Cliente", "Nombre Proyecto", "Programador", "Cantidad", dim_1, dim_2, dim_3, acabado_1, acabado_2, acabado_3, caracteristicas, programador, categoria, notas, observaciones_erp, fecha_asigna';
+
+/**
+ * Genera un UUID determinístico RFC 4122 v5 estricto (solo hex `0-9a-f`, versión 5,
+ * variante 8/9/a/b) a partir de una clave legible (`neutralKey`).
+ * Compatible 100% con columnas `uuid` de PostgreSQL (evita error `22P02`) y evita duplicados.
+ */
+export const buildDeterministicNeutralUuid = (neutralKey) => {
+  const hashHex = CryptoJS.SHA256(
+    `cdi-neutral-v5::${String(neutralKey || '').trim().toUpperCase()}`
+  ).toString(CryptoJS.enc.Hex);
+  const chars = hashHex.slice(0, 32).split('');
+  // Byte 6 (índice 12): versión 5 (0101xxxx)
+  chars[12] = '5';
+  // Byte 8 (índice 16): variante RFC 4122 (10xx -> 8, 9, a, b)
+  const variantNibble = (parseInt(chars[16], 16) & 0x3) | 0x8;
+  chars[16] = variantNibble.toString(16);
+  const h = chars.join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
 
 /**
  * Parsea cualquier representación de fecha (ISO, YYYY-MM-DD, DD/MM/YYYY, serial de Excel)
@@ -135,24 +158,61 @@ const extractRowDeliveryDate = (row) => {
 };
 
 /**
- * Descarga todas las filas de una tabla paginando de 1000 en 1000
+ * Descarga filas filtradas server-side en lotes de `.in(column, chunk)` para evitar
+ * full-table scans de decenas de miles de registros (ahorro masivo de Egress).
  */
-const fetchAllRows = async (tableName, selectCols = '*') => {
-  let all = [];
+const fetchRowsByInBatches = async (tableName, selectCols, filterColumn, values = [], extraFilterFn = null) => {
+  const uniqueVals = Array.from(new Set((values || []).map((v) => String(v || '').trim()).filter(Boolean)));
+  if (uniqueVals.length === 0) return [];
+
+  const all = [];
+  const batchSize = 100;
+  for (let i = 0; i < uniqueVals.length; i += batchSize) {
+    const slice = uniqueVals.slice(i, i + batchSize);
+    let from = 0;
+    const step = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      let query = supabase
+        .from(tableName)
+        .select(selectCols)
+        .in(filterColumn, slice);
+      if (typeof extraFilterFn === 'function') {
+        query = extraFilterFn(query);
+      }
+      const { data, error } = await query.range(from, from + step - 1);
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        all.push(...data);
+        from += step;
+        if (data.length < step) hasMore = false;
+      }
+    }
+  }
+  return all;
+};
+
+/**
+ * Descarga filas acotadas por un filtro server-side opcional (máximo `maxRows`)
+ */
+const fetchFilteredRows = async (tableName, selectCols, filterFn = null, maxRows = 3000) => {
+  const all = [];
   let from = 0;
   const step = 1000;
   let hasMore = true;
 
-  while (hasMore) {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select(selectCols)
-      .range(from, from + step - 1);
-
+  while (hasMore && all.length < maxRows) {
+    let query = supabase.from(tableName).select(selectCols);
+    if (typeof filterFn === 'function') {
+      query = filterFn(query);
+    }
+    const { data, error } = await query.range(from, from + step - 1);
     if (error || !data || data.length === 0) {
       hasMore = false;
     } else {
-      all = all.concat(data);
+      all.push(...data);
       from += step;
       if (data.length < step) hasMore = false;
     }
@@ -164,6 +224,7 @@ const fetchAllRows = async (tableName, selectCols = '*') => {
  * Sincroniza hacia el Área Neutra (`AREA_NEUTRA` / `PENDIENTE_INGENIERIA`) todos los pedidos
  * almacenados en las tablas de Supabase (`coordinacion_alertas`, `ribisoft_pedidos`, `produccion_pedidos`)
  * cuya fecha de entrega comercial sea de Noviembre del presente año (2026-11-01) en adelante y los del 2027.
+ * Utiliza proyecciones explícitas y filtros server-side (0 `select('*')` ni full-table scans).
  */
 export const syncNov2026And2027OrdersToNeutralArea = async ({
   currentOrders = [],
@@ -180,26 +241,18 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
       return { syncedOrdersCount: 0, syncedPedidosCount: 0 };
     }
 
-    // 1. Obtener datos completos de `coordinacion_alertas`, `ribisoft_pedidos`, `produccion_pedidos` y `requerimientos_pedido`
-    const [alertasRows, ribisoftRows, produccionRows, reqRows] = await Promise.all([
-      fetchAllRows('coordinacion_alertas', '*').catch(() => []),
-      fetchAllRows('ribisoft_pedidos', '*').catch(() => []),
-      fetchAllRows('produccion_pedidos', 'id, pedido_num, codigo_item, data_completa').catch(() => []),
-      fetchAllRows('requerimientos_pedido', 'pedido_sin, pedidosin, codpt, producto').catch(() => [])
+    // 1. Consulta acotada server-side: alertas comerciales + únicamente filas de `ribisoft_pedidos` con fecha >= 2026-11-01
+    const [alertasRows, ribisoftDatedRows] = await Promise.all([
+      fetchFilteredRows('coordinacion_alertas', 'id, data_completa', null, 1000).catch(() => []),
+      fetchFilteredRows(
+        'ribisoft_pedidos',
+        RIBISOFT_NEUTRAL_COLS,
+        (q) => q.gte('fecha_asigna', '2026-11-01'),
+        3000
+      ).catch(() => [])
     ]);
 
-    // 2. Construir mapa (pedido_sin + producto) -> codpt para enriquecer códigos de ítems
-    const prodToCodptMap = new Map();
-    for (const r of reqRows || []) {
-      const pSin = cleanErpCode(r.pedido_sin ?? r.pedidosin);
-      const codpt = cleanErpCode(r.codpt);
-      const prodNorm = normalizeProductName(r.producto);
-      if (pSin && codpt && prodNorm) {
-        prodToCodptMap.set(`${pSin}__${prodNorm}`, codpt);
-      }
-    }
-
-    // 3. Construir diccionario de Fechas de Entrega Comercial por Pedido (`targetPedidosMap`)
+    // 2. Construir diccionario de Fechas de Entrega Comercial por Pedido (`targetPedidosMap`)
     //    SOLO para pedidos con fecha >= 2026-11-01 y 2027
     const targetPedidosMap = new Map(); // pedidoNum -> { pedidoNum, fechaEntrega, cliente, notas }
 
@@ -224,7 +277,7 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
       });
     };
 
-    // 3.1. Revisar alertas en memoria y en tabla `coordinacion_alertas`
+    // 2.1. Revisar alertas en memoria y en tabla `coordinacion_alertas`
     for (const a of currentAlerts || []) {
       if (!a || a.tipoRegistro === 'PACKING_LIST') continue;
       registerCandidatePedido(
@@ -246,10 +299,10 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
       );
     }
 
-    // 3.2. Revisar filas en `ribisoft_pedidos` que traigan fecha de entrega propia >= Nov 2026 / 2027
-    for (const r of ribisoftRows || []) {
+    // 2.2. Revisar filas en `ribisoft_pedidos` ya filtradas por fecha_asigna >= 2026-11-01
+    for (const r of ribisoftDatedRows || []) {
       const ped = r['PedidoSIN'] ?? r['pedido_sin'] ?? r['pedidosin'] ?? r['Pedido'];
-      const rowDate = extractRowDeliveryDate(r);
+      const rowDate = extractRowDeliveryDate(r) || r['fecha_asigna'];
       if (ped && rowDate) {
         registerCandidatePedido(
           ped,
@@ -260,19 +313,52 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
       }
     }
 
-    // 3.3. Revisar filas en `produccion_pedidos` que ya tengan fechaEntregaPrometida >= Nov 2026 / 2027
-    for (const r of produccionRows || []) {
-      const d = r?.data_completa || {};
-      if (d.tipoRegistro === 'PACKING_LIST' || String(r?.id || '').startsWith('PACKLIST_')) continue;
-      const ped = d.pedidoNum || r.pedido_num;
-      const rowDate = extractRowDeliveryDate(d) || extractRowDeliveryDate(r);
+    // 2.3. Revisar órdenes ya cargadas en memoria que tengan fechaEntregaPrometida >= Nov 2026 / 2027
+    for (const ord of currentOrders || []) {
+      if (!ord || ord.tipoRegistro === 'PACKING_LIST' || String(ord.id || '').startsWith('PACKLIST_')) continue;
+      const ped = ord.pedidoNum || ord.pedido_num;
+      const rowDate = extractRowDeliveryDate(ord);
       if (ped && rowDate) {
-        registerCandidatePedido(ped, rowDate, d.cliente || r.cliente, d.notas);
+        registerCandidatePedido(ped, rowDate, ord.cliente, ord.notas);
       }
     }
 
     if (targetPedidosMap.size === 0) {
       return { syncedOrdersCount: 0, syncedPedidosCount: 0, targetPedidos: [] };
+    }
+
+    const targetPedidoNums = Array.from(targetPedidosMap.keys());
+
+    // 3. Traer ÚNICAMENTE las filas pertenecientes a `targetPedidoNums` mediante `.in(...)` server-side
+    //    (Evita descargar las 42,000 filas de requerimientos_pedido y 9,000 filas de ribisoft_pedidos)
+    const [ribisoftByPedidoRows, produccionRows, reqRows] = await Promise.all([
+      fetchRowsByInBatches('ribisoft_pedidos', RIBISOFT_NEUTRAL_COLS, 'PedidoSIN', targetPedidoNums).catch(() => []),
+      fetchRowsByInBatches(
+        'produccion_pedidos',
+        'id, pedido_num, codigo_item, data_completa',
+        'pedido_num',
+        targetPedidoNums
+      ).catch(() => []),
+      fetchRowsByInBatches(
+        'requerimientos_pedido',
+        'pedido_sin, codpt, producto',
+        'pedido_sin',
+        targetPedidoNums,
+        (q) => q.not('codpt', 'is', null)
+      ).catch(() => [])
+    ]);
+
+    const ribisoftRows = [...(ribisoftByPedidoRows || []), ...(ribisoftDatedRows || [])];
+
+    // 3.1. Construir mapa (pedido_sin + producto) -> codpt solo con los pedidos objetivo
+    const prodToCodptMap = new Map();
+    for (const r of reqRows || []) {
+      const pSin = cleanErpCode(r.pedido_sin ?? r.pedidosin);
+      const codpt = cleanErpCode(r.codpt);
+      const prodNorm = normalizeProductName(r.producto);
+      if (pSin && codpt && prodNorm) {
+        prodToCodptMap.set(`${pSin}__${prodNorm}`, codpt);
+      }
     }
 
     // 4. Agrupar todos los productos de `ribisoft_pedidos` pertenecientes a los pedidos objetivo
@@ -373,15 +459,17 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
           });
 
           if (!matchedExisting) {
-            // Crear nuevo registro en Área Neutra / Backlog
+            // Crear nuevo registro en Área Neutra / Backlog con UUID RFC 4122 v5 determinístico
             const safeCod =
               erpItem.codArticulo && erpItem.codArticulo !== 'S/C'
                 ? erpItem.codArticulo.replace(/[^A-Z0-9_-]/gi, '')
                 : `ITEM_${idx + 1}`;
-            const deterministicId = `NEUTRAL_${pedUpper}_${safeCod}_${idx + 1}`;
+            const neutralKey = `NEUTRAL_${pedUpper}_${safeCod}_${idx + 1}`;
+            const deterministicId = buildDeterministicNeutralUuid(neutralKey);
 
             const newOrderObj = deepSanitize({
               id: deterministicId,
+              neutralKey,
               pedidoNum: pedUpper,
               codArticulo: erpItem.codArticulo,
               codigo_item: erpItem.codArticulo,
@@ -521,10 +609,12 @@ export const syncNov2026And2027OrdersToNeutralArea = async ({
       } else {
         // Caso C: El pedido fue registrado por el asesor comercial en `coordinacion_alertas` con fecha >= Nov 2026 / 2027,
         // pero aún no tiene filas desglosadas en `ribisoft_pedidos` ni en `produccion_pedidos`.
-        const deterministicId = `NEUTRAL_${pedUpper}_COMERCIAL_1`;
+        const neutralKey = `NEUTRAL_${pedUpper}_COMERCIAL_1`;
+        const deterministicId = buildDeterministicNeutralUuid(neutralKey);
         const codArt = `PED-${pedUpper}`;
         const newOrderObj = deepSanitize({
           id: deterministicId,
+          neutralKey,
           pedidoNum: pedUpper,
           codArticulo: codArt,
           codigo_item: codArt,

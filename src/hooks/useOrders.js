@@ -728,7 +728,11 @@ export const useOrders = () => {
             if (isMounted) setIsSyncingOrders(true);
 
             try {
-                await supabase.auth.getSession();
+                // Bloqueo estricto sin sesión: evitar consultas 401/403 en pantalla de login con persistSession: false
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData?.session?.user) {
+                    return { skipped: true };
+                }
 
                 // Leer caché y timestamp de última sincronización en localforage
                 const [cachedOrdersRaw, cachedAlertsRaw, lastSyncIso] = await Promise.all([

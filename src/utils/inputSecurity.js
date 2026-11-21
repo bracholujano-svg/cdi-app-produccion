@@ -436,6 +436,7 @@ const ALLOWED_HISTORY_KEYS = new Set([
 const ALLOWED_ORDER_JSONB_KEYS = new Set([
   'id',
   'master_id',
+  'neutralKey',
   'pedidoNum',
   'codArticulo',
   'codigo_item',

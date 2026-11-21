@@ -863,41 +863,9 @@ const {
     }, 400);
   };
 
-  // Sincronización automática inicial de pedidos Nov 2026 / 2027 hacia Área Neutra
-  // Limitada a máximo 1 ejecución cada 30 minutos por sesión (evita 4 full-table scans en cada F5)
-  const initialBacklogSyncDoneRef = useRef(false);
-  useEffect(() => {
-    if (!supervisorProfile || initialBacklogSyncDoneRef.current) return;
-    try {
-      const lastSyncTs = Number(safeSessionStorage.get('cdi_backlog_autosync_ts') || 0);
-      if (lastSyncTs && Date.now() - lastSyncTs < 30 * 60 * 1000) {
-        initialBacklogSyncDoneRef.current = true;
-        return;
-      }
-    } catch (_) {}
-
-    const timer = setTimeout(() => {
-      initialBacklogSyncDoneRef.current = true;
-      try {
-        safeSessionStorage.set('cdi_backlog_autosync_ts', String(Date.now()));
-      } catch (_) {}
-      syncNov2026And2027OrdersToNeutralArea({
-        currentOrders: orders,
-        currentAlerts: coordinationAlerts,
-        silent: true,
-        onComplete: (newOrUpdatedMap) => {
-          setOrders((prev) => {
-            const byId = new Map((prev || []).map((o) => [o.id, o]));
-            for (const [id, ord] of newOrUpdatedMap.entries()) {
-              byId.set(id, ord);
-            }
-            return Array.from(byId.values());
-          });
-        }
-      });
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [supervisorProfile]);
+  // Sincronización del Área Neutra (Nov 2026 / 2027):
+  // Se ejecuta únicamente bajo demanda (al guardar coordinación comercial o desde el botón manual en Área Neutra)
+  // para evitar full-table scans masivos (~51k filas) en cada inicio de sesión.
 
   const shareToWhatsApp = (type, savedLog = null) => {
     if (!selectedOrder) return;

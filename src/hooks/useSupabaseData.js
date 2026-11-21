@@ -9,6 +9,15 @@ const MRP_LAST_SYNC_KEY = 'last_sync_mrp';
 const MRP_DELTA_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 horas
 const MRP_FALLBACK_TTL_MS = 30 * 60 * 1000; // 30 minutos si la tabla no tiene `updated_at`
 
+// Proyecciones explícitas de columnas verificadas en PostgreSQL (sin `select('*')` para minimizar Egress)
+const INVENTARIO_MRP_COLS =
+    '"Id Referencia", referencia, "Referencia", existencia, "Saldo", ubicacion, "Ubicacion", grupo, subgrupo, linea, "Id Unidad", embalaje';
+const REQUERIMIENTOS_MRP_COLS =
+    'id, numero_rq, pedido_cot, pedido_sin, pedidosin, codpt, producto, idreferencia, referencia, idunidad, fecha_solicitud, pedida_reser, cant_oc, entregada, pendiente, existencia, ubicacion';
+
+const getSelectColsForMrpTable = (table) =>
+    table === 'inventario' ? INVENTARIO_MRP_COLS : REQUERIMIENTOS_MRP_COLS;
+
 const getInvKey = (r) => r?.id ?? r?.idreferencia ?? r?.id_referencia ?? r?.['Id Referencia'];
 const getReqKey = (r) =>
     r?.id ?? `${r?.numero_rq || ''}_${r?.pedido_sin || ''}_${r?.idreferencia || ''}`;
@@ -44,6 +53,7 @@ export const useSupabaseData = () => {
     const rawInvRef = useRef(null);
     const rawReqRef = useRef(null);
     const triggerMrpDeltaRef = useRef(null);
+    const missingUpdatedAtTablesRef = useRef(new Set());
 
     useEffect(() => {
         let isMounted = true;
@@ -87,10 +97,11 @@ export const useSupabaseData = () => {
             let from = 0;
             const step = 1000;
             let hasMore = true;
+            const selectCols = getSelectColsForMrpTable(table);
             while (hasMore && allData.length < maxRows) {
                 let query = supabase
                     .from(table)
-                    .select('*');
+                    .select(selectCols);
                 if (table === 'requerimientos_pedido') {
                     query = query
                         .not('pedido_sin', 'is', null)
@@ -110,10 +121,14 @@ export const useSupabaseData = () => {
         };
 
         const fetchTableDelta = async (table, deltaCursor, maxRows = 2000) => {
+            if (missingUpdatedAtTablesRef.current.has(table)) {
+                return { supported: false, rows: [] };
+            }
             try {
+                const selectCols = getSelectColsForMrpTable(table);
                 let query = supabase
                     .from(table)
-                    .select('*')
+                    .select(`${selectCols}, updated_at`)
                     .gt('updated_at', deltaCursor)
                     .limit(maxRows);
                 if (table === 'requerimientos_pedido') {
@@ -124,6 +139,7 @@ export const useSupabaseData = () => {
                 const { data, error } = await query;
                 if (error) {
                     if (isMissingUpdatedAtError(error)) {
+                        missingUpdatedAtTablesRef.current.add(table);
                         return { supported: false, rows: [] };
                     }
                     return { supported: true, error, rows: [] };
@@ -131,6 +147,7 @@ export const useSupabaseData = () => {
                 return { supported: true, rows: data || [] };
             } catch (err) {
                 if (isMissingUpdatedAtError(err)) {
+                    missingUpdatedAtTablesRef.current.add(table);
                     return { supported: false, rows: [] };
                 }
                 return { supported: true, error: err, rows: [] };
@@ -146,7 +163,11 @@ export const useSupabaseData = () => {
             isFetchingRef.current = true;
 
             try {
-                await supabase.auth.getSession();
+                // 0. Bloqueo estricto sin sesión: no realizar NINGÚN fetch a Supabase si no existe usuario autenticado
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData?.session?.user) {
+                    return;
+                }
 
                 // 1. Carga instantánea Cache-First (0 ms) desde localforage
                 const [cachedProcessed, cachedRawInv, cachedRawReq, lastSyncIso] = await Promise.all([
